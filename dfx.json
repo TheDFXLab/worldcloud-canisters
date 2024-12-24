@@ -1,0 +1,26 @@
+{
+  "canisters": {
+    "migrator-management-canister-backend": {
+      "main": "src/migrator-management-canister-backend/main.mo",
+      "type": "motoko"
+    },
+    "migrator-management-canister-frontend": {
+      "dependencies": [
+        "migrator-management-canister-backend"
+      ],
+      "source": [
+        "src/migrator-management-canister-frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "migrator-management-canister-frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
