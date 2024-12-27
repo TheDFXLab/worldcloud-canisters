@@ -7,6 +7,12 @@ import "./FileUploader.css";
 import { extractZip, StaticFile } from "../../utility/compression";
 
 function FileUploader() {
+  const [state, setState] = useState({
+    selectedFile: null,
+    uploadProgress: 0,
+    message: "",
+  });
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [canisterId, setCanisterId] = useState("");
   const [status, setStatus] = useState("");
@@ -99,13 +105,7 @@ function FileUploader() {
         (file) => !file.path.includes("MACOS")
       );
 
-      // const indexHtmlIndex = sanitizedFiles.findIndex(
-      //   (file) => file.path == "index.html"
-      // );
-      // if (indexHtmlIndex !== -1) {
-      //   sanitizedFiles[indexHtmlIndex].path = "/index.html";
-      // }
-
+      // Handle paths
       sanitizedFiles.map((file) => {
         file.path = file.path.startsWith("/") ? file.path : `/${file.path}`;
       });
@@ -139,35 +139,36 @@ function FileUploader() {
       setIsLoading(true);
       setStatus("Reading zip file...");
 
+      // Update progress
+      setState((prev) => ({
+        ...prev,
+        uploadProgress: 0,
+        message: `Uploading files: 0%`,
+      }));
+
       const unzippedFiles = await extractZip(selectedFile);
       console.log(`Unzipped ${unzippedFiles.length} files`);
 
       setStatus("Uploading files to canister...");
 
-      // if (!Principal.isPrincipal(canisterId) || canisterId === "") {
-      //   setStatus("Please enter a valid canister ID");
-      //   return;
-      // }
-
-      // const totalSize = unzippedFiles.reduce(
-      //   (acc, file) => acc + file.content.length,
-      //   0
-      // );
-      // console.log(`Total size of unzipped files: ${totalSize} bytes`);
-
       const result = await handleUploadToCanister(unzippedFiles);
-
-      // console.log(`Unzipped files`, unzippedFiles);
-      // const result =
-      //   await migrator_management_canister_backend.storeInAssetCanister(
-      //     Principal.fromText(canisterId),
-      //     unzippedFiles
-      //   );
 
       if (result) {
         setStatus(result.message);
+        // Update progress
+        setState((prev) => ({
+          ...prev,
+          uploadProgress: 100,
+          message: `Uploading files: 100%`,
+        }));
       } else {
         setStatus(`Error: ${result}`);
+        // Update progress
+        setState((prev) => ({
+          ...prev,
+          uploadProgress: 0,
+          message: `Upload failed.`,
+        }));
       }
     } catch (error: any) {
       setStatus(`Error: ${error.message}`);
@@ -209,6 +210,12 @@ function FileUploader() {
           </div>
         )}
       </form>
+      <div className="progress">
+        {state.uploadProgress > 0 && (
+          <progress value={state.uploadProgress} max="100" />
+        )}
+      </div>
+      <div className="message">{state.message}</div>
     </div>
   );
 }

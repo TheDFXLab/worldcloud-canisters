@@ -2,6 +2,11 @@ import React, { useState } from "react";
 import { migrator_management_canister_backend } from "declarations/migrator-management-canister-backend";
 import "./WasmUploader.css";
 function WasmUploader() {
+  const [state, setState] = useState({
+    selectedFile: null,
+    uploadProgress: 0,
+    message: "",
+  });
   const [selectedFile, setSelectedFile] = useState(null);
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +31,13 @@ function WasmUploader() {
       setIsLoading(true);
       setStatus("Reading WASM file...");
 
+      // Update progress
+      setState((prev) => ({
+        ...prev,
+        uploadProgress: 0 / 100,
+        message: `Uploading: 0%`,
+      }));
+
       // Read the file as ArrayBuffer
       const arrayBuffer = await selectedFile.arrayBuffer();
       // Convert ArrayBuffer to Uint8Array
@@ -48,6 +60,13 @@ function WasmUploader() {
     } finally {
       setIsLoading(false);
     }
+
+    // Update progress
+    setState((prev) => ({
+      ...prev,
+      uploadProgress: 100,
+      message: `Uploading: 100%`,
+    }));
   };
 
   return (
@@ -77,6 +96,13 @@ function WasmUploader() {
           </div>
         )}
       </form>
+
+      <div className="progress">
+        {state.uploadProgress > 0 && (
+          <progress value={state.uploadProgress} max="100" />
+        )}
+      </div>
+      <div className="message">{state.message}</div>
     </div>
   );
 }
