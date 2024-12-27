@@ -13,6 +13,9 @@ import Types "types";
 import ExperimentalCycles "mo:base/ExperimentalCycles";
 import Principal "mo:base/Principal";
 
+// TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
+// TODO: Handle stable variables (if needed)
+// TODO: Remove unneeded if else in `storeInAssetCanister` for handling files larger than ±2MB (since its handled by frontend)
 actor CanisterManager {
 
   // var IC_MANAGEMENT_CANISTER : Text = "rwlgt-iiaaa-aaaaa-aaaaa-cai"; // Local replica
