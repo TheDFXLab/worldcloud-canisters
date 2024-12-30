@@ -6,8 +6,9 @@ import { Principal } from "@dfinity/principal";
 import "./FileUploader.css";
 import { extractZip, StaticFile } from "../../utility/compression";
 import { sanitizeUnzippedFiles } from "../../utility/sanitize";
+import CompleteDeployment from "../CompleteDeployment/CompleteDeployment";
 
-function FileUploader() {
+function FileUploader({ canisterId }: { canisterId: string }) {
   const [state, setState] = useState({
     selectedFile: null,
     uploadProgress: 0,
@@ -15,9 +16,11 @@ function FileUploader() {
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [canisterId, setCanisterId] = useState("");
+  // const [canisterId, setCanisterId] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+  const [totalSize, setTotalSize] = useState(0);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -146,6 +149,7 @@ function FileUploader() {
         file.path = file.path.startsWith("/") ? file.path : `/${file.path}`;
       });
 
+      console.log(`Target canister: ${canisterId}`);
       const result =
         await migrator_management_canister_backend.storeInAssetCanister(
           Principal.fromText(canisterId),
@@ -200,6 +204,14 @@ function FileUploader() {
           uploadProgress: 100,
           message: `Uploading files: 100%`,
         }));
+
+        // Calculate total size from unzipped files
+        const totalSize = unzippedFiles.reduce(
+          (acc, file) => acc + file.content.length,
+          0
+        );
+        setTotalSize(totalSize);
+        setIsComplete(true);
       } else {
         setStatus(`Error: ${result}`);
         // Update progress
@@ -216,45 +228,60 @@ function FileUploader() {
     }
   };
 
+  if (isComplete) {
+    return (
+      <CompleteDeployment
+        canisterId={canisterId}
+        totalSize={totalSize}
+        dateCreated={new Date()}
+      />
+    );
+  }
+
   return (
     <div className="zip-uploader">
-      <h2>Upload Zip Folder</h2>
+      <h2>Website Assets</h2>
+      <p className="step-title">
+        Your website canister is deployed with principal:{" "}
+        <span style={{ fontWeight: "bold" }}>{canisterId}</span>
+      </p>
+      <p className="step-title">
+        Upload the zip file containing your website assets.
+      </p>
       <form onSubmit={handleUpload}>
-        <div className="form-group">
-          <input
-            type="text"
-            placeholder="Canister ID"
-            value={canisterId}
-            onChange={(e) => setCanisterId(e.target.value)}
-          />
-          <input
-            type="file"
-            accept=".zip"
-            onChange={handleFileSelect}
-            disabled={isLoading}
-          />
-        </div>
-        <div className="form-group">
-          <button type="submit" disabled={!selectedFile || isLoading}>
-            {isLoading ? "Uploading..." : "Upload Zip"}
-          </button>
-        </div>
-        {status && (
-          <div
-            className={`status ${
-              status.includes("Error") ? "error" : "success"
-            }`}
-          >
-            {status}
+        <div className="upload-container">
+          <div className="file-input-group">
+            <input
+              type="file"
+              accept=".zip"
+              onChange={handleFileSelect}
+              disabled={isLoading}
+            />
           </div>
-        )}
+          <div className="button-container">
+            <button type="submit" disabled={!selectedFile || isLoading}>
+              {isLoading ? "Uploading..." : "Upload Zip"}
+            </button>
+          </div>
+        </div>
+        <div className="status-container">
+          {status && (
+            <div
+              className={`status ${
+                status.includes("Error") ? "error" : "success"
+              }`}
+            >
+              {status}
+            </div>
+          )}
+          <div className="progress">
+            {state.uploadProgress > 0 && (
+              <progress value={state.uploadProgress} max="100" />
+            )}
+          </div>
+          <div className="message">{state.message}</div>
+        </div>
       </form>
-      <div className="progress">
-        {state.uploadProgress > 0 && (
-          <progress value={state.uploadProgress} max="100" />
-        )}
-      </div>
-      <div className="message">{state.message}</div>
     </div>
   );
 }

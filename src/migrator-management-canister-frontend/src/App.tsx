@@ -1,8 +1,11 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { migrator_management_canister_backend } from "../../declarations/migrator-management-canister-backend";
 import { useState, useEffect } from "react";
 import FileUploader from "./components/FileUploader/FileUploader";
 import CanisterDeployer from "./components/CanisterDeployer/CanisterDeployer";
 import WasmUploader from "./components/WasmUploader/WasmUploader";
+import LandingPage from "./components/LandingPage/LandingPage";
+import AppLayout from "./components/AppLayout/AppLayout";
 
 function App() {
   const [state, setState] = useState({
@@ -21,17 +24,12 @@ function App() {
   }, []);
 
   return (
-    <main>
-      <h1>Asset Canister</h1>
-      <WasmUploader />
-
-      <h1>Deploy Asset Canister</h1>
-      <CanisterDeployer />
-      <h1>File Uploader</h1>
-      <FileUploader />
-
-      <h1>Upload file to canister</h1>
-    </main>
+    <Router>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/app" element={<AppLayout />} />
+      </Routes>
+    </Router>
   );
 }
 
