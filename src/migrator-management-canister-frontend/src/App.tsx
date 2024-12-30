@@ -1,8 +1,8 @@
-import { migrator_management_canister_backend } from "declarations/migrator-management-canister-backend";
+import { migrator_management_canister_backend } from "../../declarations/migrator-management-canister-backend";
 import { useState, useEffect } from "react";
-import WasmUploader from "./components/WasmUploader/WasmUploader";
 import FileUploader from "./components/FileUploader/FileUploader";
 import CanisterDeployer from "./components/CanisterDeployer/CanisterDeployer";
+import WasmUploader from "./components/WasmUploader/WasmUploader";
 
 function App() {
   const [state, setState] = useState({
