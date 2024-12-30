@@ -206,7 +206,7 @@ actor CanisterManager {
       // After successful deployment, add to tracking
       deployed_canisters.put(new_canister_id, true);
 
-      return #ok("Asset canister deployed with ID: " # Principal.toText(new_canister_id));
+      return #ok(Principal.toText(new_canister_id));
     } catch (error) {
       return #err("Failed to deploy asset canister: " # Error.message(error));
     };

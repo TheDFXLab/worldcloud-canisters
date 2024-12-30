@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { migrator_management_canister_backend } from "declarations/migrator-management-canister-backend";
+import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
 import "./WasmUploader.css";
 function WasmUploader() {
   const [state, setState] = useState({
@@ -7,19 +7,19 @@ function WasmUploader() {
     uploadProgress: 0,
     message: "",
   });
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleFileSelect = (event) => {
-    const file = event.target.files[0];
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
       setStatus(`Selected file: ${file.name}`);
     }
   };
 
-  const handleUpload = async (event) => {
+  const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!selectedFile) {
@@ -55,7 +55,7 @@ function WasmUploader() {
       } else {
         setStatus(`Error: ${result.err}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       setStatus(`Error: ${error.message}`);
     } finally {
       setIsLoading(false);
