@@ -5,6 +5,10 @@ export interface StaticFile {
     content_type: string;
     content_encoding: [string] | [];
     content: Uint8Array;
+    is_chunked: boolean;
+    chunk_id: bigint;
+    batch_id: bigint;
+    is_last_chunk: boolean;
 }
 
 export const extractZip = async (zipFile: File) => {
@@ -28,6 +32,10 @@ export const extractZip = async (zipFile: File) => {
             content_type: contentType,
             content_encoding: [],
             content: content,
+            is_chunked: false,
+            chunk_id: 0n,
+            batch_id: 0n,
+            is_last_chunk: false,
         });
     }
 

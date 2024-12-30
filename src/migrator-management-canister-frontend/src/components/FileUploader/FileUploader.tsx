@@ -5,6 +5,7 @@ import { Principal } from "@dfinity/principal";
 
 import "./FileUploader.css";
 import { extractZip, StaticFile } from "../../utility/compression";
+import { sanitizeUnzippedFiles } from "../../utility/sanitize";
 
 function FileUploader() {
   const [state, setState] = useState({
@@ -22,7 +23,6 @@ function FileUploader() {
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      setStatus(`Selected file: ${file.name}`);
     }
   };
 
@@ -38,22 +38,49 @@ function FileUploader() {
 
       // 2MB limit
       if (totalSize < 2000000) {
-        console.log(`File length under threhsold`);
         return await storeAssetsInCanister(unzippedFiles);
       } else {
-        const totalBatches = Math.ceil(totalSize / 2000000);
-        console.log(`total batches`, totalBatches);
-        const BATCH_SIZE_LIMIT = 2000000; // 2MB
+        const BATCH_SIZE_LIMIT = 2000000; // 1.8MB
+
+        const totalBatches = Math.ceil(totalSize / BATCH_SIZE_LIMIT);
+
+        let batchCount = 0;
+        // Split large files into chunks
+        const processedFiles: StaticFile[] = [];
+        for (const file of unzippedFiles) {
+          if (file.content.length > BATCH_SIZE_LIMIT) {
+            batchCount++;
+
+            // Split large file into chunks
+            const chunks = Math.ceil(file.content.length / BATCH_SIZE_LIMIT);
+            for (let i = 0; i < chunks; i++) {
+              const start = i * BATCH_SIZE_LIMIT;
+              const end = Math.min(
+                (i + 1) * BATCH_SIZE_LIMIT,
+                file.content.length
+              );
+              const chunk = file.content.slice(start, end);
+              processedFiles.push({
+                ...file,
+                path: file.path,
+                content: chunk,
+                is_chunked: true,
+                chunk_id: BigInt(i),
+                batch_id: BigInt(batchCount),
+                is_last_chunk: i === chunks - 1,
+              });
+            }
+          } else {
+            processedFiles.push(file);
+          }
+        }
 
         // Create batches based on cumulative file sizes
         const batches: StaticFile[][] = [];
         let currentBatch: StaticFile[] = [];
         let currentBatchSize = 0;
 
-        for (const file of unzippedFiles) {
-          if (file.path == "index.html") {
-            file.path = "/index.html";
-          }
+        for (const file of processedFiles) {
           if (currentBatchSize + file.content.length > BATCH_SIZE_LIMIT) {
             // Current batch would exceed limit, start a new batch
             if (currentBatch.length > 0) {
@@ -76,12 +103,13 @@ function FileUploader() {
         for (let i = 0; i < batches.length; i++) {
           console.log(`Storing batch ${i + 1} of ${batches.length}`);
           const files = batches[i];
-          console.log(`Files: `, files);
+
+          const totalSize = calculateTotalSize(files);
+          console.log(`Total size of files: ${totalSize / 1000000} MBytes`);
 
           const result = await storeAssetsInCanister(files);
           if (!result) {
             setStatus(`Error: Failed to store batch ${i + 1}`);
-            // throw { status: false, message: `Failed to store batch ${i + 1}` };
           }
         }
       }
@@ -98,19 +126,26 @@ function FileUploader() {
     }
   };
 
+  const calculateTotalSize = (files: StaticFile[]) => {
+    return files.reduce((acc, file) => acc + file.content.length, 0);
+  };
+
   const storeAssetsInCanister = async (files: StaticFile[]) => {
     try {
-      console.log(`Storing ${files.length} files in canister`, files);
+      console.log(`Storing ${files.length} files in canister`);
+
       const sanitizedFiles = files.filter(
         (file) => !file.path.includes("MACOS")
       );
+
+      const totalSize = calculateTotalSize(sanitizedFiles);
+      console.log(`Total size of files: ${totalSize / 1000000} MBytes`);
 
       // Handle paths
       sanitizedFiles.map((file) => {
         file.path = file.path.startsWith("/") ? file.path : `/${file.path}`;
       });
 
-      console.log(`sanitized files`, sanitizedFiles);
       const result =
         await migrator_management_canister_backend.storeInAssetCanister(
           Principal.fromText(canisterId),
@@ -147,11 +182,15 @@ function FileUploader() {
       }));
 
       const unzippedFiles = await extractZip(selectedFile);
-      console.log(`Unzipped ${unzippedFiles.length} files`);
+
+      const sanitizedFiles = sanitizeUnzippedFiles(unzippedFiles);
+
+      console.log(`Unzipped ${unzippedFiles.length} files`, unzippedFiles);
+      console.log(`Sanitized files`, sanitizedFiles);
 
       setStatus("Uploading files to canister...");
 
-      const result = await handleUploadToCanister(unzippedFiles);
+      const result = await handleUploadToCanister(sanitizedFiles);
 
       if (result) {
         setStatus(result.message);
