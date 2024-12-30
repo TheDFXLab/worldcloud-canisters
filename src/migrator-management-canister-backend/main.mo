@@ -4,6 +4,7 @@ import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
 import HashMap "mo:base/HashMap";
+import Hash "mo:base/Hash";
 import Nat "mo:base/Nat";
 import Nat32 "mo:base/Nat32";
 import Text "mo:base/Text";
@@ -12,6 +13,7 @@ import Iter "mo:base/Iter";
 import Types "types";
 import ExperimentalCycles "mo:base/ExperimentalCycles";
 import Principal "mo:base/Principal";
+import Bool "mo:base/Bool";
 
 // TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
 // TODO: Handle stable variables (if needed)
@@ -38,6 +40,10 @@ actor CanisterManager {
   //Key format: "assetId:chunkId"
   private var chunks = HashMap.HashMap<Text, Blob>(0, Text.equal, Text.hash);
   private stable var stable_chunks_array : [Types.AssetChunk] = [];
+
+  // private var batchMap: HashMap.HashMap<Nat, Nat> = HashMap.HashMap<Nat, Nat>(0, Nat.equal, Hash.hash);
+  private var canisterBatchMap: Types.CanisterBatchMap = HashMap.HashMap<Principal, (Types.BatchMap, Types.BatchChunks)>(0, Principal.equal, Principal.hash);
+  
 
   system func preupgrade() {
     Debug.print("Preupgrade: Starting with defensive approach");
@@ -158,10 +164,7 @@ actor CanisterManager {
 
   // Function to deploy new asset canister
   public shared (msg) func deployAssetCanister() : async Types.Result {
-    Debug.print("Deploying asset canister");
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
-
-    Debug.print("Getting wasm bytes...");
     // Get the stored WASM
     let wasm_module = switch (asset_canister_wasm) {
       case null { return #err("Asset canister WASM not uploaded yet") };
@@ -169,8 +172,7 @@ actor CanisterManager {
     };
 
     try {
-
-      Debug.print("Adding cycles...");
+      Debug.print("[Identity " # Principal.toText(msg.caller) # "] Adding cycles...");
       // Create new canister
       let cyclesForCanister = 1_000_000_000_000; // 1T cycles
       ExperimentalCycles.add(cyclesForCanister);
@@ -189,7 +191,7 @@ actor CanisterManager {
 
       let new_canister_id = create_result.canister_id;
 
-      Debug.print("Installing code on canister " # Principal.toText(new_canister_id));
+      Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Installing code");
 
       // Install the asset canister code
       await IC.install_code({
@@ -199,7 +201,7 @@ actor CanisterManager {
         canister_id = new_canister_id;
       });
 
-      Debug.print("Code installed");
+      Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Code installed");
 
       // After successful deployment, add to tracking
       deployed_canisters.put(new_canister_id, true);
@@ -219,128 +221,119 @@ actor CanisterManager {
 
   public func getCanisterAsset(canister_id : Principal, asset_key : Text) : async Types.AssetCanisterAsset {
     let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
-    Debug.print("Getting asset: " # asset_key);
     let asset = await asset_canister.get({
       key = asset_key;
-      accept_encodings = ["identity"];
+      accept_encodings =["identity", "gzip", "compress"];
     });
-
-    Debug.print("Got asset: " # asset_key);
 
     return asset;
   };
 
+
+/**
+  * Store files in asset canister
+  * @param canister_id - The ID of the asset canister to store the files in
+  * @param files - The files to store in the asset canister
+  * @returns A result indicating the success or failure of the operation
+*/
   public shared (msg) func storeInAssetCanister(
     canister_id : Principal,
     files : [Types.StaticFile],
   ) : async Types.Result {
 
-    // let files = getCanisterFiles(canister_id);
+    // Check if the asset canister is deployed
     switch (deployed_canisters.get(canister_id)) {
-      case null return #err("Asset canister not found");
+      case null return #err("[Canister " # Principal.toText(canister_id) # "] Asset canister not found");
       case (?_) {
         try {
           let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
 
+          // Iterate over the files
           for (file in files.vals()) {
-            let content = file.content;
-            let contentSize = content.size();
-            let chunkSize = 1900000; // ~1.9MB, slightly below the 2MB limit
 
-            Debug.print("Attempting to upload file " # file.path);
-            Debug.print("Content size: " # Nat.toText(contentSize));
-            Debug.print("Chunk size: " # Nat.toText(chunkSize));
-            if (contentSize <= chunkSize) {
-              Debug.print("Small file, uploading directly");
-              Debug.print("Key: " # file.path);
-              Debug.print("Content type: " # file.content_type);
+            // Upload chunks if file is chunked
+            if (file.is_chunked) {
 
+                // Create a new batch for this chunked file
+                if (file.chunk_id == 0) {
+                  Debug.print("[Canister " # Principal.toText(canister_id) # "] Processing chunked file: " # file.path);
+
+                  // Create a new batch for this chunked file and save the batch id in the batch map
+                  let batch = await asset_canister.create_batch();
+                  _setBatchMap(canister_id, file.batch_id, batch.batch_id);
+                };
+
+                let (exists, batch_id) = _getBatchId(canister_id, file.batch_id);
+                if (exists == false) {
+                  Debug.print("[Canister " # Principal.toText(canister_id) # "] Batch ID does not exist");
+                  throw Error.reject("[Canister " # Principal.toText(canister_id) # "] Batch ID does not exist");
+                };
+
+                await _handleChunkedFile(file, asset_canister, batch_id, canister_id);
+
+                if (file.is_last_chunk) {
+                  
+                  let chunk_ids = _getChunkIdsForCanister(canister_id, batch_id);
+                  Debug.print("[Canister " # Principal.toText(canister_id) # "] Commiting chunk IDs: " # Text.join(", ", Iter.map<Nat, Text>(Array.vals(chunk_ids), func(id) = Nat.toText(id))));
+
+
+                 try {
+                  await asset_canister.commit_batch({
+                      batch_id = batch_id;
+                      operations = [
+                          #CreateAsset {
+                              key = file.path;
+                              content_type = file.content_type;
+                              headers = ?[
+                                  ("Content-Type", file.content_type),
+                                  ("Content-Encoding", "identity")
+                              ];
+                          },
+                          #SetAssetContent {
+                              key = file.path;
+                              content_encoding = "identity";
+                              chunk_ids = chunk_ids;
+                              sha256 = null;
+                          }
+                      ]
+                  });
+                  Debug.print("[Canister " # Principal.toText(canister_id) # "] Committed batch " # Nat.toText(file.batch_id));
+              } catch (error) {
+                  Debug.print("[Canister " # Principal.toText(canister_id) # "] Failed to commit batch: " # Error.message(error));
+                  throw Error.reject("[Canister " # Principal.toText(canister_id) # "] Failed to commit batch: " # Error.message(error));
+              };
+                }
+                        
+            } else {
+              let content = file.content;
+              let contentSize = content.size();
+              
               // Small file, upload directly
               try {
-                if (file.path == "index.html") {
-                  await asset_canister.store({
+                await asset_canister.store({
                     key = file.path;
                     content_type = file.content_type;
                     content_encoding = "identity";
                     content = content;
                     sha256 = null;
-                    headers = [
-                      ("Cache-Control", "public, no-cache, no-store"),
-                      ("X-IC-Certification-Path", "*"),
-                    ];
+                    headers =  if (file.path == "index.html") {
+                      [
+                        ("Cache-Control", "public, no-cache, no-store"),
+                        ("X-IC-Certification-Path", "*"),
+                      ]
+                    } else {
+                      []
+                    };
                   });
-
-                  Debug.print("index.html stored with special certification");
-                } else {
-                  await asset_canister.store({
-                    key = file.path;
-                    content_type = file.content_type;
-                    content_encoding = "identity";
-                    content = content;
-                    sha256 = null;
-                    headers = [];
-                  });
-                };
-                Debug.print("Stored file!");
+                Debug.print("[Canister " # Principal.toText(canister_id) # "] Stored file at " # file.path # " with size " # Nat.toText(contentSize) # " bytes");
 
               } catch (error) {
-                Debug.print("Failed to upload file: " # Error.message(error));
-                throw error; // Re-throw to be caught by the outer try-catch
+                Debug.print("[Canister " # Principal.toText(canister_id) # "] Failed to upload file: " # Error.message(error));
+                throw error;
               };
-
-              Debug.print("File uploaded successfully");
-            } else {
-
-              try {
-                Debug.print("Large file, using chunked upload.... Creating batch");
-
-                // Large file, use chunked upload
-                let batch = await asset_canister.create_batch();
-                Debug.print("Batch created id: " # Nat.toText(batch.batch_id));
-
-                let contentArray = Blob.toArray(content);
-                var offset = 0;
-
-                while (offset < contentSize) {
-                  let chunkEnd = Nat.min(offset + chunkSize, contentSize);
-                  Debug.print("Chunk end: " # Nat.toText(chunkEnd));
-                  let chunkArray = Array.subArray(contentArray, offset, chunkEnd - offset);
-                  let chunk = Blob.fromArray(chunkArray);
-
-                  Debug.print("Chunk size: " # Nat.toText(chunk.size()));
-
-                  let chunk_id = await asset_canister.create_chunk({
-                    batch_id = batch.batch_id;
-                    content = chunk;
-                  });
-                  Debug.print("Chunk created id: " # Nat.toText(chunk_id.chunk_id));
-
-                  offset := chunkEnd;
-                };
-
-                Debug.print("Batch ID: " # Nat.toText(batch.batch_id));
-
-                // Commit the batch
-                await asset_canister.commit_batch({
-                  batch_id = batch.batch_id;
-                  operations = [
-                    #CreateAsset {
-                      key = file.path;
-                      content_type = file.content_type;
-                    },
-                  ];
-                });
-
-                Debug.print("Batch committed!!");
-
-              } catch (error) {
-                Debug.print("Failed to create batch: " # Error.message(error));
-              };
-
             };
 
           };
-
           #ok("Files uploaded successfully");
         } catch (error) {
           #err("Failed to upload files: " # Error.message(error));
@@ -349,120 +342,94 @@ actor CanisterManager {
     };
   };
 
-  // // Function to upload static files to an asset canister
-  // public shared (msg) func uploadToAssetCanister(
-  //   canister_id : Principal,
-  //   files : [Types.StaticFile],
-  // ) : async Types.Result {
-  //   // Verify the canister exists
-  //   switch (deployed_canisters.get(canister_id)) {
-  //     case null return #err("Asset canister not found");
-  //     case (?_) {
-  //       try {
-  //         let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
 
-  //         // Upload each file
-  //         for (file in files.vals()) {
-  //           // Store the asset metadata
-  //           await asset_canister.store({
-  //             key = file.path;
-  //             content_type = file.content_type;
-  //             content_encoding = file.content_encoding;
-  //             content = file.content;
-  //             sha256 = null;
-  //           });
-  //         };
+  private func _handleChunkedFile(file: Types.StaticFile, asset_canister: Types.AssetCanister, batch_id: Nat, canister_id: Principal): async () {
+      let chunk = await asset_canister.create_chunk({
+        batch_id = batch_id;
+        content = file.content;
+      });
+      
+      _addChunkId(canister_id, batch_id, chunk.chunk_id);
+                
+      Debug.print("Creating chunk for batch id " # Nat.toText(batch_id) # "with chunk id " # Nat.toText(chunk.chunk_id));
 
-  //         return #ok("Files uploaded successfully");
-  //       } catch (error) {
-  //         return #err("Failed to upload files: " # Error.message(error));
-  //       };
-  //     };
-  //   };
-  // };
+      Debug.print("Uploaded chunk ID: " # Nat.toText(chunk.chunk_id));
+  };
 
-  // // Initialize a new asset upload
-  public func initializeAsset(id : Types.AssetId, asset : Types.Asset) : async Types.Result {
-    Debug.print("Initializing asset in canister: " #id);
-    switch (assets.get(id)) {
-      case (?existing) {
-        Debug.print("Asset ID already exists");
-        return #err("Asset ID already exists");
+  private func _addChunkId(canister_id: Principal, batch_id: Nat, chunk_id: Nat) {
+    switch(canisterBatchMap.get(canister_id)) {
+        case (?(_, batchChunks)) {
+            let existing = switch(batchChunks.get(batch_id)) {
+                case null { [] };
+                case (?chunks) { chunks };
+            };
+            batchChunks.put(batch_id, Array.append(existing, [chunk_id]));
+        };
+        case null { };
+    };
+};
+
+  // Gets the chunk ids for a given batch id
+  private func _getChunkIdsForCanister(canister_id: Principal, batch_id: Nat): [Nat] {
+    switch(canisterBatchMap.get(canister_id)) {
+      case (?(_, batchChunks)) {
+        switch(batchChunks.get(batch_id)) {
+          case (?chunks) { chunks };
+          case null { [] };
+        };
       };
+      case null { [] };
+    };
+  };
+
+
+// Gets the actual batch id for a given file id
+  private func _getBatchId(canister_id: Principal, file_batch_id: Nat): (Bool, Nat) {
+    let batchMap = canisterBatchMap.get(canister_id);
+    switch(batchMap) {  
       case null {
-        Debug.print("Asset ID does not exist. Initializing new asset.");
-        assets.put(id, asset);
-        return #ok("Asset initialized");
+        Debug.print("Batch map does not exist");
+        return (false, 0);
+      };
+      case (?(batchMap, _)) {
+        let actual_batch_id = batchMap.get(file_batch_id);
+        Debug.print("Getting batch id for batch " # Nat.toText(file_batch_id));
+        
+        switch(actual_batch_id) {
+            case null {
+              Debug.print("Batch ID does not exist");
+              return (false, 0);
+            };
+            case (?actual_batch_id) {
+              Debug.print("Batch ID exists: " # Nat.toText(actual_batch_id));
+              return (true, actual_batch_id);
+            }
+        }
       };
     };
   };
 
-  // Upload a chunk of an asset
-  public shared (msg) func uploadChunk(chunk : Types.AssetChunk) : async Types.Result {
-    // Verify asset exists
-    switch (assets.get(chunk.asset_id)) {
-      case null return #err("Asset not found");
-      case (?asset) {
-        if (chunk.chunk_id >= asset.chunks) {
-          return #err("Invalid chunk ID");
-        };
+  // Initializes a file batch map for a given canister (called only on first chunk of file)
+  private func _setBatchMap(canister_id: Principal, file_batch_id: Nat, batch_id: Nat) {
+    let batchMap = canisterBatchMap.get(canister_id);
 
-        // Store the chunk
-        let chunk_key = chunk.asset_id # ":" # Nat32.toText(chunk.chunk_id);
-        chunks.put(chunk_key, chunk.data);
-
-        return #ok("Chunk uploaded");
+    switch(batchMap) {
+      case null {
+        let newBatchMap = HashMap.HashMap<Nat, Nat>(0, Nat.equal, Hash.hash);
+        let newBatchChunks = HashMap.HashMap<Nat, [Nat]>(0, Nat.equal, Hash.hash);
+        // Create new maps
+        newBatchMap.put(file_batch_id, batch_id);
+        newBatchChunks.put(batch_id, []);
+        // Initialize empty batch map and chunks
+        canisterBatchMap.put(canister_id, (newBatchMap, newBatchChunks));
+      };
+      case (?(batchMap, batchChunks)) {
+        // Map the file id to the actual batch id
+        batchMap.put(file_batch_id, batch_id);
+        // Update the canister's batch map
+        canisterBatchMap.put(canister_id, (batchMap, batchChunks));
       };
     };
   };
 
-  // Get asset metadata
-  public query func getAsset(id : Types.AssetId) : async ?Types.Asset {
-    assets.get(id);
-  };
-
-  // Get a specific chunk
-  public query func getChunk(asset_id : Types.AssetId, chunk_id : Types.ChunkId) : async ?Blob {
-    let chunk_key = asset_id # ":" # Nat32.toText(chunk_id);
-    chunks.get(chunk_key);
-  };
-
-  // Check if all chunks are uploaded
-  public query func isAssetComplete(id : Types.AssetId) : async Bool {
-    switch (assets.get(id)) {
-      case null return false;
-      case (?asset) {
-        var i : Nat32 = 0;
-        while (i < asset.chunks) {
-          let chunk_key = id # ":" # Nat32.toText(i);
-          switch (chunks.get(chunk_key)) {
-            case null return false;
-            case (?_) {};
-          };
-          i += 1;
-        };
-        return true;
-      };
-    };
-  };
-
-  // Delete an asset and its chunks
-  public shared (msg) func deleteAsset(id : Types.AssetId) : async Types.Result {
-    switch (assets.get(id)) {
-      case null return #err("Asset not found");
-      case (?asset) {
-        assets.delete(id);
-
-        // Delete all chunks
-        var i : Nat32 = 0;
-        while (i < asset.chunks) {
-          let chunk_key = id # ":" # Nat32.toText(i);
-          chunks.delete(chunk_key);
-          i += 1;
-        };
-
-        return #ok("Asset deleted");
-      };
-    };
-  };
 };

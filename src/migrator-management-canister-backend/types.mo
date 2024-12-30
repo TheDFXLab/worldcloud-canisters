@@ -1,4 +1,7 @@
+import Int "mo:base/Int";
+import HashMap "mo:base/HashMap";
 module {
+    public type Key = Text;
     // Type definitions
     public type AssetId = Text;
     public type ChunkId = Nat32;
@@ -8,6 +11,10 @@ module {
         content_type : Text;
         content_encoding : ?Text;
         content : Blob;
+        is_chunked : Bool;
+        chunk_id : Nat;
+        batch_id : Nat;
+        is_last_chunk : Bool;
     };
 
     // Asset canister operations
@@ -15,11 +22,12 @@ module {
         #CreateAsset : {
             key : Text;
             content_type : Text;
+            headers : ?[(Text, Text)];
         };
         #SetAssetContent : {
-            key : Text;
+            key : Key;
             content_encoding : Text;
-            chunk_ids : [Nat32];
+            chunk_ids : [Nat];
             sha256 : ?Blob;
         };
         #DeleteAsset : {
@@ -119,4 +127,9 @@ module {
             canister_id : Principal;
         } -> async ();
     };
+
+    // public type CanisterBatchMap = HashMap.HashMap<Principal, BatchMap>;
+    public type BatchMap = HashMap.HashMap<Nat, Nat>;
+    public type BatchChunks = HashMap.HashMap<Nat, [Nat]>; // batch_id -> chunk_ids
+    public type CanisterBatchMap = HashMap.HashMap<Principal, (BatchMap, BatchChunks)>;
 };
