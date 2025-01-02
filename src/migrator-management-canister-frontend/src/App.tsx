@@ -6,6 +6,7 @@ import CanisterDeployer from "./components/CanisterDeployer/CanisterDeployer";
 import WasmUploader from "./components/WasmUploader/WasmUploader";
 import LandingPage from "./components/LandingPage/LandingPage";
 import AppLayout from "./components/AppLayout/AppLayout";
+import "bootstrap/dist/css/bootstrap.min.css";
 
 function App() {
   const [state, setState] = useState({
