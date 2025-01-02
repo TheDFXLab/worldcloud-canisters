@@ -1,5 +1,6 @@
-import Int "mo:base/Int";
 import HashMap "mo:base/HashMap";
+import Time "mo:base/Time";
+
 module {
     public type Key = Text;
     // Type definitions
@@ -128,8 +129,24 @@ module {
         } -> async ();
     };
 
+    public type CanisterDeploymentStatus = {
+        #uninitialized;
+        #installing;
+        #installed;
+        #failed;
+    };
+
     // public type CanisterBatchMap = HashMap.HashMap<Principal, BatchMap>;
     public type BatchMap = HashMap.HashMap<Nat, Nat>;
     public type BatchChunks = HashMap.HashMap<Nat, [Nat]>; // batch_id -> chunk_ids
     public type CanisterBatchMap = HashMap.HashMap<Principal, (BatchMap, BatchChunks)>;
+    public type CanisterDeployment = {
+        canister_id : Principal;
+        status : CanisterDeploymentStatus;
+        size : Nat;
+        date_created : Time.Time;
+        date_updated : Time.Time;
+    };
+
+    public type UserCanisters = HashMap.HashMap<Principal, [Principal]>;
 };
