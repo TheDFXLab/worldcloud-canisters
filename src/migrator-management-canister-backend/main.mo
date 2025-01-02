@@ -14,6 +14,7 @@ import Types "types";
 import ExperimentalCycles "mo:base/ExperimentalCycles";
 import Principal "mo:base/Principal";
 import Bool "mo:base/Bool";
+import Time "mo:base/Time";
 
 // TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
 // TODO: Handle stable variables (if needed)
@@ -44,6 +45,10 @@ actor CanisterManager {
   // private var batchMap: HashMap.HashMap<Nat, Nat> = HashMap.HashMap<Nat, Nat>(0, Nat.equal, Hash.hash);
   private var canisterBatchMap: Types.CanisterBatchMap = HashMap.HashMap<Principal, (Types.BatchMap, Types.BatchChunks)>(0, Principal.equal, Principal.hash);
   
+  private var canister_table: HashMap.HashMap<Principal, Types.CanisterDeployment> = HashMap.HashMap<Principal, Types.CanisterDeployment>(0, Principal.equal, Principal.hash);
+  private stable var stable_canister_table: [(Principal, Types.CanisterDeployment)] = [];
+  private var user_canisters: Types.UserCanisters = HashMap.HashMap<Principal, [Principal]>(0, Principal.equal, Principal.hash);
+  private stable var stable_user_canisters: [(Principal, [Principal])] = [];
 
   system func preupgrade() {
     Debug.print("Preupgrade: Starting with defensive approach");
@@ -52,6 +57,9 @@ actor CanisterManager {
     stable_assets_array := [];
     stable_chunks_array := [];
     stable_canister_files := [];
+
+    canister_deployments_to_stable_array();
+    canister_table_to_stable_array();
 
     Debug.print("Preupgrade: Variables initialized, beginning conversion");
     Debug.print("Preupgrade: Preparing to sync assets and chunks.");
@@ -70,11 +78,33 @@ actor CanisterManager {
     Debug.print("Postupgrade: Assets: " # Nat.toText(assets.size()));
     Debug.print("Postupgrade: Chunks: " # Nat.toText(chunks.size()));
     Debug.print("Postupgrade: Canister files: " # Nat.toText(canister_files.size()));
+    canister_deployments_from_stable_array();
+    canister_table_from_stable_array();
     sync_assets();
     sync_chunks();
     Debug.print("Postupgrade: Syncing deployed canisters.");
     deployed_canisters := HashMap.fromIter(stable_deployed_canisters.vals(), 0, Principal.equal, Principal.hash);
     Debug.print("Postupgrade: Finished postupgrade procedure. Synced stable variables. ");
+  };
+  
+  private func canister_table_to_stable_array() {
+    stable_canister_table := Iter.toArray(canister_table.entries());
+    Debug.print("Preupgrade: Backing up canister deployments: " # Nat.toText(stable_user_canisters.size()));
+  };
+
+  private func canister_table_from_stable_array() {
+    canister_table := HashMap.fromIter(stable_canister_table.vals(), 0, Principal.equal, Principal.hash);
+    Debug.print("Postupgrade: Restored canister deployments: " # Nat.toText(canister_table.size()));
+  };
+
+  private func canister_deployments_to_stable_array() {
+    stable_user_canisters := Iter.toArray(user_canisters.entries());
+    Debug.print("Preupgrade: Backing up canister deployments: " # Nat.toText(stable_user_canisters.size()));
+  };
+
+  private func canister_deployments_from_stable_array() {
+    user_canisters := HashMap.fromIter(stable_user_canisters.vals(), 0, Principal.equal, Principal.hash);
+    Debug.print("Postupgrade: Restored canister deployments: " # Nat.toText(user_canisters.size()));
   };
 
   // Convert assets to stable array
@@ -162,6 +192,51 @@ actor CanisterManager {
     return wasm_module;
   };
 
+  public shared (msg) func getCanisterDeployments() : async [Types.CanisterDeployment] {
+    switch (user_canisters.get(msg.caller)) {
+      case null { [] };
+      case (?canisters) { 
+        // canisters 
+        var all_canisters: [Types.CanisterDeployment] = [];
+        for (canister in canisters.vals()) {
+          let deployment = canister_table.get(canister);
+          switch(deployment) {
+            case null {
+              Debug.print("Deployment not found for canister " # Principal.toText(canister));
+            };
+            case (?deployment) {
+                all_canisters := Array.append(all_canisters, [deployment]);
+            };
+          };
+        };
+        return all_canisters;
+        };
+    };
+  };
+
+  public query func getCanisterFiles(canister_id : Principal) : async [Types.StaticFile] {
+    switch (canister_files.get(canister_id)) {
+      case null return [];
+      case (?files) return files;
+    };
+  };
+
+  public func getCanisterAsset(canister_id : Principal, asset_key : Text) : async Types.AssetCanisterAsset {
+    let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
+    let asset = await asset_canister.get({
+      key = asset_key;
+      accept_encodings =["identity", "gzip", "compress"];
+    });
+
+    return asset;
+  };
+
+
+
+/**********
+  * Write Methods
+  **********/
+
   // Function to deploy new asset canister
   public shared (msg) func deployAssetCanister() : async Types.Result {
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
@@ -206,27 +281,12 @@ actor CanisterManager {
       // After successful deployment, add to tracking
       deployed_canisters.put(new_canister_id, true);
 
+      _addCanisterDeployment(msg.caller, new_canister_id);
+
       return #ok(Principal.toText(new_canister_id));
     } catch (error) {
       return #err("Failed to deploy asset canister: " # Error.message(error));
     };
-  };
-
-  public query func getCanisterFiles(canister_id : Principal) : async [Types.StaticFile] {
-    switch (canister_files.get(canister_id)) {
-      case null return [];
-      case (?files) return files;
-    };
-  };
-
-  public func getCanisterAsset(canister_id : Principal, asset_key : Text) : async Types.AssetCanisterAsset {
-    let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
-    let asset = await asset_canister.get({
-      key = asset_key;
-      accept_encodings =["identity", "gzip", "compress"];
-    });
-
-    return asset;
   };
 
 
@@ -240,6 +300,8 @@ actor CanisterManager {
     canister_id : Principal,
     files : [Types.StaticFile],
   ) : async Types.Result {
+
+    _updateCanisterDeployment(canister_id, #installing); // Update canister deployment status to installing
 
     // Check if the asset canister is deployed
     switch (deployed_canisters.get(canister_id)) {
@@ -334,12 +396,57 @@ actor CanisterManager {
             };
 
           };
+          _updateCanisterDeployment(canister_id, #installed); // Update canister deployment status to installed
           #ok("Files uploaded successfully");
         } catch (error) {
           #err("Failed to upload files: " # Error.message(error));
         };
       };
     };
+
+  };
+
+  private func _updateCanisterDeployment(canister_id: Principal, status: Types.CanisterDeploymentStatus) {
+    let deployment = canister_table.get(canister_id);
+
+    switch(deployment) {
+      case null {
+        Debug.print("Canister deployment not found");
+      };
+      case (?deployment) {
+        Debug.print("Canister deployment found");
+         let updated_deployment = {
+          canister_id = canister_id;
+          status = status;
+          date_created = deployment.date_created;
+          date_updated = Time.now();
+          size = deployment.size;
+        };
+        canister_table.put(canister_id, updated_deployment);
+      };
+    };
+
+  };
+
+  private func _addCanisterDeployment(caller: Principal, canister_id: Principal) {
+    let deployment = {
+      canister_id = canister_id;
+      status = #uninitialized;
+      date_created = Time.now();
+      date_updated = Time.now();
+      size = 0;
+    };
+
+    let canisters = switch (user_canisters.get(caller)) {
+      case null { [] };
+      case (?d) { d };
+    };
+
+    let new_canisters = Array.append(canisters, [canister_id]);
+
+    user_canisters.put(caller, new_canisters);
+    canister_table.put(canister_id, deployment); // Add to canister table
+    Debug.print("Added canister deployment by " # Principal.toText(caller) # " for " # Principal.toText(canister_id) # ". Total deployments: " # Nat.toText(new_canisters.size()));
   };
 
 
