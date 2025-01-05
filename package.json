@@ -14,5 +14,8 @@
   "type": "module",
   "workspaces": [
     "src/migrator-management-canister-frontend"
-  ]
+  ],
+  "dependencies": {
+    "react-icons": "^5.4.0"
+  }
 }

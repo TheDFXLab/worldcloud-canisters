@@ -6,8 +6,7 @@ import {
   ReactNode,
 } from "react";
 import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
-import { Deployment } from "../AppLayout/interfaces";
-// import { Deployment } from "../AppLayout/AppLayout";
+import { Deployment } from "../../components/AppLayout/interfaces";
 
 interface DeploymentsContextType {
   deployments: Deployment[];
@@ -27,7 +26,6 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
 
   const refreshDeployments = async () => {
     try {
-      console.log(`refreshing((((((()))))))`);
       const result =
         await migrator_management_canister_backend.getCanisterDeployments();
 

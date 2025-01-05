@@ -1,12 +1,16 @@
 import React, { useState } from "react";
 import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
 import "./CanisterDeployer.css";
+import { Principal } from "@dfinity/principal";
+import ProgressBar from "../ProgressBar/ProgressBar";
+import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 
 function CanisterDeployer({
   onDeploy,
 }: {
   onDeploy: (canisterId: string) => void;
 }) {
+  const { addDeployment, refreshDeployments } = useDeployments();
   const [state, setState] = useState({
     selectedFile: null,
     uploadProgress: 0,
@@ -32,8 +36,16 @@ function CanisterDeployer({
     const result =
       await migrator_management_canister_backend.deployAssetCanister();
     if ("ok" in result) {
+      const newDeployment = {
+        canister_id: Principal.fromText(result.ok),
+        status: "uninitialized" as const,
+        date_created: Date.now(),
+        date_updated: Date.now(),
+        size: 0,
+      };
+      addDeployment(newDeployment);
+      await refreshDeployments();
       setCanisterId(result.ok);
-      setStatus(`Canister deployed with ID: ${result.ok}`);
       onDeploy(result.ok);
     } else {
       setStatus(`Error: ${result.err}`);
@@ -76,12 +88,18 @@ function CanisterDeployer({
               </div>
             )}
           </form>
-          <div className="progress">
+          <ProgressBar
+            progress={state.uploadProgress}
+            status={state.message}
+            isLoading={isLoading}
+            isError={false}
+          />
+          {/* <div className="progress">
             {state.uploadProgress > 0 && (
               <progress value={state.uploadProgress} max="100" />
             )}
-          </div>
-          <div className="message">{state.message}</div>
+          </div> */}
+          {/* <div className="message">{state.message}</div> */}
         </div>
       </div>
     </section>

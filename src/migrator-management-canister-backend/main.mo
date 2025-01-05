@@ -241,7 +241,10 @@ actor CanisterManager {
     };
   };
 
-  public func getCanisterAsset(canister_id : Principal, asset_key : Text) : async Types.AssetCanisterAsset {
+  public shared (msg)func getCanisterAsset(canister_id : Principal, asset_key : Text) : async Types.AssetCanisterAsset {
+    // Check if the caller is a controller
+    assert(await _isController(canister_id, msg.caller));
+    
     let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
     let asset = await asset_canister.get({
       key = asset_key;
@@ -251,13 +254,46 @@ actor CanisterManager {
     return asset;
   };
 
+  public shared (msg) func getCanisterStatus(canister_id: Principal) : async Types.CanisterStatusResponse {
+     // Check if the caller is a controller
+    assert(await _isController(canister_id, msg.caller));
 
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    let current_settings = await IC.canister_status({ canister_id = canister_id });
+    return current_settings;
+  };
+
+  public shared (msg) func getControllers(canister_id: Principal) : async [Principal] {
+    // Check if the caller is a controller
+    assert(await _isController(canister_id, msg.caller));
+
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    let current_settings = await IC.canister_status({ canister_id = canister_id });
+    Debug.print("Current settings..");
+    let current_controllers = switch (current_settings.settings.controllers) {
+      case null [];
+      case (?controllers) controllers;
+    };
+    return current_controllers;
+  };
+
+  private func _isController(canister_id: Principal, caller: Principal) :async Bool {
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    let current_settings = await IC.canister_status({ canister_id = canister_id });
+    let current_controllers = switch (current_settings.settings.controllers) {
+      case null false;
+      case (?controllers) { 
+        let matches = Array.filter(controllers, func (p: Principal) : Bool { p == caller });
+        return matches.size() > 0;
+        };
+    };
+  };
 
 /**********
   * Write Methods
   **********/
 
-  public shared(msg) func addController(canister_id: Principal, new_controller: Principal) : async () {
+  public shared(msg) func addController(canister_id: Principal, new_controller: Principal) : async Types.Result {
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     let current_settings = await IC.canister_status({ canister_id = canister_id });
     Debug.print("Current settings..");
@@ -278,9 +314,10 @@ actor CanisterManager {
       }
     });
     Debug.print("Canister settings updated");
+    return #ok("Added permission for controller");
   };
 
-  public shared(msg) func removeController(canister_id: Principal, controller_to_remove: Principal) : async () {
+  public shared(msg) func removeController(canister_id: Principal, controller_to_remove: Principal) : async (Types.Result) {
      let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     let current_settings = await IC.canister_status({ canister_id = canister_id });
     let current_controllers = switch (current_settings.settings.controllers) {
@@ -298,6 +335,7 @@ actor CanisterManager {
         freezing_threshold = null;
       }
     });
+    return #ok("Removed permission for controller");
   };
 
   // Function to deploy new asset canister

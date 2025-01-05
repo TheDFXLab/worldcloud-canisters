@@ -135,11 +135,19 @@ module {
         memory_allocation : ?Nat;
         compute_allocation : ?Nat;
     };
+    public type CanisterStatus = {
+        #running;
+        #stopping;
+        #stopped;
+    };
+
+    public type CanisterStatusResponse = {
+        status : CanisterStatus;
+        settings : CanisterSettings;
+    };
 
     public type IC = actor {
-        canister_status : shared { canister_id : Principal } -> async {
-            settings : CanisterSettings;
-        };
+        canister_status : shared { canister_id : Principal } -> async CanisterStatusResponse;
         create_canister : shared {
             settings : ?CanisterSettings;
         } -> async {

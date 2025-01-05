@@ -7,8 +7,8 @@ import "./FileUploader.css";
 import { extractZip, StaticFile } from "../../utility/compression";
 import { sanitizeUnzippedFiles } from "../../utility/sanitize";
 import CompleteDeployment from "../CompleteDeployment/CompleteDeployment";
-import { useDeployments } from "../DeploymentContext/DeploymentContext";
 import ProgressBar from "../ProgressBar/ProgressBar";
+import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 
 function FileUploader({
   canisterId,
