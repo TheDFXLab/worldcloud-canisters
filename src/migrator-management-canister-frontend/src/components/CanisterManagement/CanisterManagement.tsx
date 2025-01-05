@@ -11,6 +11,7 @@ import { Deployment } from "../AppLayout/interfaces";
 import { CanisterOverview } from "../CanisterOverview.tsx/CanisterOverview";
 import { getCanisterUrl } from "../../config/config";
 import { AuthorityProvider } from "../../context/AuthorityContext/AuthorityContext";
+import { AssetProvider } from "../../context/AssetContext/AssetContext";
 
 interface CanisterManagementProps {
   deployment: Deployment | null;
@@ -45,8 +46,10 @@ export const CanisterManagement: React.FC<CanisterManagementProps> = ({
     },
     {
       label: "Assets",
-      content: (
-        <AssetManager canisterId={deployment?.canister_id.toText() || ""} />
+      content: deployment && (
+        <AssetProvider canisterId={deployment.canister_id}>
+          <AssetManager canisterId={deployment?.canister_id.toText() || ""} />
+        </AssetProvider>
       ),
     },
     {

@@ -1,5 +1,6 @@
 import { Principal } from "@dfinity/principal";
 import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
+import { ListResponse } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 
 export interface CanisterStatus {
     status: string;
@@ -34,6 +35,11 @@ class AuthorityApi {
 
     async removeController(controller: Principal) {
         const response = await migrator_management_canister_backend.removeController(this.canisterId, controller);
+        return response;
+    }
+
+    async getAssetList(canister_id: Principal): Promise<ListResponse> {
+        const response = await migrator_management_canister_backend.getAssetList(canister_id);
         return response;
     }
 }
