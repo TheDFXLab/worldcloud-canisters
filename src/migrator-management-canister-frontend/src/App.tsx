@@ -7,6 +7,8 @@ import WasmUploader from "./components/WasmUploader/WasmUploader";
 import LandingPage from "./components/LandingPage/LandingPage";
 import AppLayout from "./components/AppLayout/AppLayout";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { DeploymentsProvider } from "./components/DeploymentContext/DeploymentContext";
+import { CanisterManagement } from "./components/CanisterManagement/CanisterManagement";
 
 function App() {
   const [state, setState] = useState({
@@ -28,7 +30,17 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/app" element={<AppLayout />} />
+        <Route
+          path="/app"
+          element={
+            <DeploymentsProvider>
+              <AppLayout />
+            </DeploymentsProvider>
+          }
+        />
+        <Route path="/" element={<AppLayout />}>
+          {/* <Route path="canister/:canisterId" element={<CanisterManagement />} /> */}
+        </Route>
       </Routes>
     </Router>
   );

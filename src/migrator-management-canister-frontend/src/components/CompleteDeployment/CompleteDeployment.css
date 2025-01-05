@@ -4,6 +4,10 @@
   padding: 2rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   font-size: 0.9rem;
+  position: relative;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
 }
 
 .success-header {
@@ -100,4 +104,11 @@
 
 .value a:hover {
   text-decoration: underline;
+}
+
+.bottom-actions {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 2rem;
 }

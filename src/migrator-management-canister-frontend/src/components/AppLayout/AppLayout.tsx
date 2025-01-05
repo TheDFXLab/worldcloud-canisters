@@ -3,42 +3,88 @@ import CanisterDeployer from "../CanisterDeployer/CanisterDeployer";
 import FileUploader from "../FileUploader/FileUploader";
 import "./AppLayout.css";
 import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
-import { Badge, Table } from "react-bootstrap";
+import { Badge, Modal, Table } from "react-bootstrap";
 import { Principal } from "@dfinity/principal";
+import { CiEdit } from "react-icons/ci";
+import CanisterOptions from "../CanisterOptions/CanisterOptions";
+import { useDeployments } from "../DeploymentContext/DeploymentContext";
+import { Deployment } from "./interfaces";
 
 type MenuItem = "publish" | "websites";
-type CanisterDeploymentStatus =
-  | "uninitialized"
-  | "installing"
-  | "installed"
-  | "failed";
 
-interface Deployment {
-  canister_id: Principal;
-  date_created: string;
-  date_updated: string;
-  size: number;
-  status: CanisterDeploymentStatus;
+enum BadgeColor {
+  "uninitialized" = "secondary",
+  "installing" = "warning",
+  "installed" = "success",
+  "failed" = "danger",
 }
 
 function AppLayout() {
   const [activeMenuItem, setActiveMenuItem] = useState<MenuItem>("websites");
+  // const { deployments, isLoading } = useDeployments();
   const [deployedCanisterId, setDeployedCanisterId] = useState<string>("");
   const [userDeployments, setUserDeployments] = useState<Deployment[]>([]);
+  const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
+  const [selectedDeployment, setSelectedDeployment] =
+    useState<Deployment | null>(null);
+
+  const { deployments, refreshDeployments } = useDeployments();
 
   const handleCanisterDeployed = (canisterId: string) => {
     setDeployedCanisterId(canisterId);
   };
 
   useEffect(() => {
-    const getUserDeployments = async () => {
-      const deployments =
-        await migrator_management_canister_backend.getCanisterDeployments();
-      console.log(`deployments: `, deployments);
-      setUserDeployments(deployments as unknown as Deployment[]);
-    };
-    getUserDeployments();
+    console.log(`userDeployments changed: `, userDeployments);
+    console.log(
+      `deployedCanisterId changed: `,
+      deployedCanisterId,
+      selectedDeployment?.canister_id.toText()
+    );
+    const selectedDeploymentUpdated = userDeployments.find(
+      (deployment) =>
+        deployment.canister_id.toText() ===
+        selectedDeployment?.canister_id.toText()
+    );
+    console.log(`selectedDeploymentUpdated: `, selectedDeploymentUpdated);
+    if (selectedDeploymentUpdated) {
+      setSelectedDeployment(selectedDeploymentUpdated);
+    }
+  }, [userDeployments, deployedCanisterId]);
+
+  useEffect(() => {
+    console.log(`deployments changed: `, deployments.length, deployments);
+    setUserDeployments(deployments);
+  }, [deployments]);
+
+  useEffect(() => {
+    console.log(`deployedCanisterId changed: `, deployedCanisterId);
+  }, [deployedCanisterId]);
+
+  useEffect(() => {
+    refreshDeployments();
   }, []);
+
+  const handleOptionsModal = (deployment: Deployment) => {
+    setShowOptionsModal(true);
+    setSelectedDeployment(deployment);
+  };
+
+  const handleHideOptionsModal = () => {
+    setShowOptionsModal(false);
+    setSelectedDeployment(null);
+  };
+
+  if (showOptionsModal && selectedDeployment) {
+    return (
+      <CanisterOptions
+        deployment={selectedDeployment}
+        show={showOptionsModal}
+        onHide={handleHideOptionsModal}
+        setCanisterId={setDeployedCanisterId}
+      />
+    );
+  }
 
   return (
     <div className="app-layout">
@@ -64,18 +110,29 @@ function AppLayout() {
       </aside>
 
       <main className="main-content">
-        {activeMenuItem === "publish" && (
-          <div className="publish-flow">
+        {
+          <div
+            className="publish-flow"
+            style={{ display: activeMenuItem === "publish" ? "block" : "none" }}
+          >
             {!deployedCanisterId ? (
               <CanisterDeployer onDeploy={handleCanisterDeployed} />
             ) : (
-              <FileUploader canisterId={deployedCanisterId} />
+              <FileUploader
+                canisterId={deployedCanisterId}
+                setCanisterId={setDeployedCanisterId}
+              />
             )}
           </div>
-        )}
+        }
 
-        {activeMenuItem === "websites" && (
-          <div className="websites-list">
+        {
+          <div
+            className="websites-list"
+            style={{
+              display: activeMenuItem === "websites" ? "block" : "none",
+            }}
+          >
             <h2>My Websites</h2>
             <Table striped bordered hover>
               <thead>
@@ -83,6 +140,7 @@ function AppLayout() {
                   <th>Canister ID</th>
                   <th>Status</th>
                   <th>Created At</th>
+                  <th>Updated At</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -91,33 +149,48 @@ function AppLayout() {
                   <tr key={deployment.canister_id.toString()}>
                     <td>{deployment.canister_id.toText()}</td>
                     <td>
-                      <Badge bg="success">Active</Badge>
+                      <Badge bg={BadgeColor[deployment.status]}>
+                        {deployment.status}
+                      </Badge>
                     </td>
                     <td>
                       {new Date(
                         Number(deployment.date_created) / 1000000
-                      ).toLocaleString()}
+                      ).toLocaleString("en-GB", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: false,
+                      })}
                     </td>
                     <td>
-                      <a
-                        href={
-                          process.env.REACT_APP_ENVIRONMENT === "production"
-                            ? `https://${deployment.canister_id.toString()}.icp0.io`
-                            : `http://${deployment.canister_id.toString()}.localhost:4943`
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-sm btn-primary"
-                      >
-                        Visit Site
-                      </a>
+                      {new Date(
+                        Number(deployment.date_updated) / 1000000
+                      ).toLocaleString("en-GB", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: false,
+                      })}
+                    </td>
+                    <td>
+                      <CiEdit
+                        style={{ cursor: "pointer" }}
+                        onClick={() => handleOptionsModal(deployment)}
+                      />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </Table>
           </div>
-        )}
+        }
       </main>
     </div>
   );

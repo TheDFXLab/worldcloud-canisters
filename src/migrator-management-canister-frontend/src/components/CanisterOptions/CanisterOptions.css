@@ -1,0 +1,33 @@
+.canister-details {
+  padding: 1rem;
+}
+
+.detail-row {
+  display: flex;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.label {
+  font-weight: 600;
+  min-width: 120px;
+  color: #666;
+}
+
+.value {
+  margin-left: 1rem;
+}
+
+.value a {
+  text-decoration: none;
+  color: #0d6efd;
+}
+
+.value a:hover {
+  text-decoration: underline;
+}
+
+.upload-section {
+  border-top: 1px solid #dee2e6;
+  padding-top: 1rem;
+}
