@@ -35,9 +35,6 @@ function App() {
             </DeploymentsProvider>
           }
         />
-        <Route path="/" element={<AppLayout />}>
-          {/* <Route path="canister/:canisterId" element={<CanisterManagement />} /> */}
-        </Route>
       </Routes>
     </Router>
   );
