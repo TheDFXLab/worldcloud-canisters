@@ -192,6 +192,26 @@ actor CanisterManager {
     return wasm_module;
   };
 
+  public shared (msg) func getAssetList(canister_id: Principal) : async Types.ListResponse {
+    try {
+        let asset_canister: Types.AssetCanister = actor(Principal.toText(canister_id));
+        Debug.print("Getting asset list for canister " # Principal.toText(canister_id));
+        let response = await asset_canister.list({});
+        Debug.print("Got asset list for canister " # Principal.toText(canister_id));
+        
+        return {
+            count = response.size();
+            assets = response;
+        };
+    } catch (error) {
+        Debug.print("Error getting asset list: " # Error.message(error));
+        return {
+            count = 0;
+            assets = [];
+        };
+    };
+  };
+
   public shared (msg) func getCanisterDeployments() : async [Types.CanisterDeployment] {
     switch (user_canisters.get(msg.caller)) {
       case null { [] };
@@ -236,6 +256,49 @@ actor CanisterManager {
 /**********
   * Write Methods
   **********/
+
+  public shared(msg) func addController(canister_id: Principal, new_controller: Principal) : async () {
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    let current_settings = await IC.canister_status({ canister_id = canister_id });
+    Debug.print("Current settings..");
+    let current_controllers = switch (current_settings.settings.controllers) {
+      case null [];
+      case (?controllers) controllers;
+    };
+    Debug.print("Current controllers: " # Nat.toText(current_controllers.size()));
+    let updated_controllers = Array.append(current_controllers, [new_controller]);
+    Debug.print("Updated controllers: " # Nat.toText(updated_controllers.size()));
+    let canister_settings = await IC.update_settings({
+      canister_id;
+      settings = {
+        controllers = ?updated_controllers;
+        compute_allocation = null;
+        memory_allocation = null;
+        freezing_threshold = null;
+      }
+    });
+    Debug.print("Canister settings updated");
+  };
+
+  public shared(msg) func removeController(canister_id: Principal, controller_to_remove: Principal) : async () {
+     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    let current_settings = await IC.canister_status({ canister_id = canister_id });
+    let current_controllers = switch (current_settings.settings.controllers) {
+      case null [];
+      case (?controllers) controllers;
+    };
+    let updated_controllers = Array.filter(current_controllers, func (p: Principal) : Bool { p != controller_to_remove });
+    
+    let canister_settings = await IC.update_settings({
+      canister_id;
+      settings = {
+        controllers = ?updated_controllers;
+        compute_allocation = null;
+        memory_allocation = null;
+        freezing_threshold = null;
+      }
+    });
+  };
 
   // Function to deploy new asset canister
   public shared (msg) func deployAssetCanister() : async Types.Result {

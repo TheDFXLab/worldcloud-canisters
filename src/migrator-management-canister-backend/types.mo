@@ -1,8 +1,9 @@
 import HashMap "mo:base/HashMap";
-import Time "mo:base/Time";
+import TimeLib "mo:base/Time";
+import Array "mo:base/Array";
+import Blob "mo:base/Blob";
 
 module {
-    public type Key = Text;
     // Type definitions
     public type AssetId = Text;
     public type ChunkId = Nat32;
@@ -52,10 +53,31 @@ module {
         proofs : [Blob];
     };
 
+    public type Key = Text;
+    public type Time = Int;
+
+    public type AssetEncoding = {
+        content_encoding : Text;
+        sha256 : ?[Nat8];
+        length : Nat;
+        modified : Int;
+    };
+
+    public type CanisterAsset = {
+        key : Key;
+        content_type : Text;
+        encodings : [AssetEncoding];
+    };
+
+    public type ListResponse = {
+        count : Nat;
+        assets : [CanisterAsset];
+    };
+
     // Asset canister
     public type AssetCanister = actor {
         get : shared ({ key : Text; accept_encodings : [Text] }) -> async AssetCanisterAsset;
-
+        list : shared query {} -> async [CanisterAsset];
         store : shared ({
             key : Text;
             content_type : Text;
@@ -115,12 +137,19 @@ module {
     };
 
     public type IC = actor {
+        canister_status : shared { canister_id : Principal } -> async {
+            settings : CanisterSettings;
+        };
         create_canister : shared {
             settings : ?CanisterSettings;
         } -> async {
             canister_id : Principal;
         };
 
+        update_settings : shared ({
+            canister_id : Principal;
+            settings : CanisterSettings;
+        }) -> async ();
         install_code : shared {
             arg : [Nat8];
             wasm_module : [Nat8];
@@ -144,8 +173,8 @@ module {
         canister_id : Principal;
         status : CanisterDeploymentStatus;
         size : Nat;
-        date_created : Time.Time;
-        date_updated : Time.Time;
+        date_created : TimeLib.Time;
+        date_updated : TimeLib.Time;
     };
 
     public type UserCanisters = HashMap.HashMap<Principal, [Principal]>;
