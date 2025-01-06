@@ -294,6 +294,11 @@ actor CanisterManager {
   **********/
 
   public shared(msg) func addController(canister_id: Principal, new_controller: Principal) : async Types.Result {
+    // Check if the caller is a controller
+    if (not (await _isController(canister_id, msg.caller))) {
+      return #err("You are not a controller");
+    };
+
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     let current_settings = await IC.canister_status({ canister_id = canister_id });
     Debug.print("Current settings..");
@@ -318,7 +323,12 @@ actor CanisterManager {
   };
 
   public shared(msg) func removeController(canister_id: Principal, controller_to_remove: Principal) : async (Types.Result) {
-     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+     // Check if the caller is a controller
+    if (not (await _isController(canister_id, msg.caller))) {
+      return #err("You are not a controller");
+    };
+
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     let current_settings = await IC.canister_status({ canister_id = canister_id });
     let current_controllers = switch (current_settings.settings.controllers) {
       case null [];
