@@ -15,7 +15,6 @@ interface ProgressBarProps {
 }
 
 function ProgressBar({
-  // progress,
   status,
   isLoading,
   isError = false,
@@ -32,9 +31,6 @@ function ProgressBar({
       return;
     }
 
-    console.log("uploadedSize", uploadedSize);
-    console.log("totalBytes", totalBytes);
-    console.log("progress", Math.round((uploadedSize / totalBytes) * 100));
     setDisplayProgress(Math.round((uploadedSize / totalBytes) * 100));
   }, [uploadedSize]);
 
@@ -53,12 +49,15 @@ function ProgressBar({
 
   return (
     <div className="progress-container">
-      <div className="progress-bar-wrapper">
-        <div
-          className={`progress-bar ${isError ? "error" : ""}`}
-          style={{ width: `${displayProgress}%` }}
-        />
-      </div>
+      {isLoading && (
+        <div className="progress-bar-wrapper">
+          <div
+            className={`progress-bar ${isError ? "error" : ""}`}
+            style={{ width: `${displayProgress}%` }}
+          />
+        </div>
+      )}
+
       {showPercentage && (
         <div className="progress-info">
           <div className={`progress-status ${isError ? "error" : ""}`}>
@@ -68,15 +67,30 @@ function ProgressBar({
       )}
 
       {files && files.length > 0 && (
-        <Accordion className="files-accordion mt-2">
+        <Accordion style={{ color: "black" }} className="files-accordion mt-2">
           <Accordion.Item eventKey="0">
-            <Accordion.Header>Copying Files ({files.length})</Accordion.Header>
-            <Accordion.Body>
-              {files.map((file, index) => (
-                <div key={index} className="file-item">
-                  {file.path}
-                </div>
-              ))}
+            <Accordion.Header>
+              <div
+                style={{
+                  color: "black",
+                  zIndex: "10000",
+                  fontFamily: "times new roman",
+                }}
+                className="files-accordion-title"
+              >
+                <span style={{ color: "black" }}>
+                  Copying Files ({files.length})
+                </span>
+              </div>
+            </Accordion.Header>
+            <Accordion.Body className="files-accordion-body">
+              <div className="files-list">
+                {files.map((file, index) => (
+                  <div key={index} className="file-item">
+                    {file.path}
+                  </div>
+                ))}
+              </div>
             </Accordion.Body>
           </Accordion.Item>
         </Accordion>

@@ -2,12 +2,16 @@ import { Button } from "react-bootstrap";
 import "./CanisterOverview.css";
 import { Deployment } from "../AppLayout/interfaces";
 import { getCanisterUrl } from "../../config/config";
+import FileUploader from "../FileUploader/FileUploader";
+import { ToasterData } from "../Toast/Toaster";
 
 interface CanisterOverviewProps {
   deployment: Deployment | null;
   canisterId: string;
   onCloseModal: () => void;
   setCanisterId: (id: string) => void;
+  setToasterData: (data: ToasterData) => void;
+  setShowToaster: (show: boolean) => void;
 }
 
 export const CanisterOverview = ({
@@ -15,6 +19,8 @@ export const CanisterOverview = ({
   canisterId,
   onCloseModal,
   setCanisterId,
+  setToasterData,
+  setShowToaster,
 }: CanisterOverviewProps) => {
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
@@ -89,6 +95,21 @@ export const CanisterOverview = ({
           </span>
         </div>
       </div>
+      {deployment && deployment.status === "uninitialized" && (
+        <div className="upload-section mt-4">
+          <span className="label">Pending Actions:</span>
+          <br />
+          <span className="label">
+            You have pending actions. Please upload your website files.
+          </span>
+          <FileUploader
+            canisterId={deployment.canister_id.toText()}
+            setCanisterId={setCanisterId}
+            setToasterData={setToasterData}
+            setShowToaster={setShowToaster}
+          />
+        </div>
+      )}
     </div>
   );
 };

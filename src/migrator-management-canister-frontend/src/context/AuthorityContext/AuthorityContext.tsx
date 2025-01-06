@@ -7,25 +7,14 @@ import {
 } from "react";
 import { Principal } from "@dfinity/principal";
 import AuthorityApi, { CanisterStatus } from "../../api/authority";
+import { decodeError } from "../../utility/errors";
 
 interface AuthorityContextType {
   status: CanisterStatus | null;
   isLoadingStatus: boolean;
   refreshStatus: () => Promise<void>;
-  handleAddController: (newController: string) => Promise<void>;
-  handleRemoveController: (controller: string) => Promise<void>;
-}
-
-interface AuthorityProviderProps {
-  children: ReactNode;
-  canisterId: string;
-}
-
-interface CanisterSettings {
-  controllers: string[];
-  freezing_threshold: number;
-  memory_allocation: number;
-  compute_allocation: number;
+  handleAddController: (newController: string) => Promise<boolean>;
+  handleRemoveController: (controller: string) => Promise<boolean>;
 }
 
 const AuthorityContext = createContext<AuthorityContextType | undefined>(
@@ -41,6 +30,7 @@ export function AuthorityProvider({
 }) {
   const [status, setStatus] = useState<CanisterStatus | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+
   const authApi = new AuthorityApi(canisterId);
 
   const refreshStatus = async () => {
@@ -70,10 +60,14 @@ export function AuthorityProvider({
         setIsLoadingStatus(false);
 
         console.log(`Controller added successfully`);
-        await refreshStatus();
+        // await refreshStatus();
       }
-    } catch (error) {
+      return true;
+    } catch (error: any) {
+      console.log(`error:`, decodeError(error.toString()));
+
       setIsLoadingStatus(false);
+      return false;
     } finally {
       setIsLoadingStatus(false);
     }
@@ -93,10 +87,13 @@ export function AuthorityProvider({
         setIsLoadingStatus(false);
 
         console.log(`Controller removed successfully`);
-        await refreshStatus();
+        // await refreshStatus();
       }
-    } catch (error) {
+      return true;
+    } catch (error: any) {
+      console.log(`Error:`, decodeError(error.toString()));
       setIsLoadingStatus(false);
+      return false;
     } finally {
       setIsLoadingStatus(false);
     }

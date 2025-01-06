@@ -48,24 +48,42 @@
   margin-top: 1rem;
 }
 
-.accordion-button {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
+.files-accordion .accordion-button {
+  padding: 0.75rem 1rem !important;
+  background-color: #ffffff !important;
 }
 
-.accordion-body {
-  padding: 0.5rem 1rem;
+.files-accordion .accordion-button::after {
+  color: #000000 !important;
+}
+
+.files-accordion-title {
+  color: #000000 !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+}
+
+.files-accordion-body {
+  padding: 0 !important;
   max-height: 200px;
   overflow-y: auto;
 }
 
+.files-list {
+  padding: 0.5rem;
+}
+
 .file-item {
-  padding: 0.25rem 0;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #eee;
   font-size: 0.875rem;
-  color: #666;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.file-item:last-child {
+  border-bottom: none;
 }
 
 /* Custom scrollbar for the file list */

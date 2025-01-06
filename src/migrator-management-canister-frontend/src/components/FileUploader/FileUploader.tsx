@@ -9,14 +9,21 @@ import { sanitizeUnzippedFiles } from "../../utility/sanitize";
 import CompleteDeployment from "../CompleteDeployment/CompleteDeployment";
 import ProgressBar from "../ProgressBar/ProgressBar";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
+import { ToasterData } from "../Toast/Toaster";
+
+interface FileUploaderProps {
+  canisterId: string;
+  setCanisterId: (canisterId: string) => void;
+  setToasterData: (data: ToasterData) => void;
+  setShowToaster: (show: boolean) => void;
+}
 
 function FileUploader({
   canisterId,
   setCanisterId,
-}: {
-  canisterId: string;
-  setCanisterId: (id: string) => void;
-}) {
+  setToasterData,
+  setShowToaster,
+}: FileUploaderProps) {
   const { updateDeployment, refreshDeployments } = useDeployments();
   const [currentBytes, setCurrentBytes] = useState(0);
   const [state, setState] = useState({
@@ -200,8 +207,24 @@ function FileUploader({
       if (!selectedFile) {
         setIsError(true);
         setStatus("Please select a zip file first");
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: true,
+          toastData: "Please select a zip file first",
+          textColor: "red",
+        });
+        setShowToaster(true);
         return;
       }
+
+      setToasterData({
+        headerContent: "Uploading",
+        toastStatus: true,
+        toastData: "Uploading zip file. Do not refresh the page.",
+        textColor: "green",
+        timeout: 5000,
+      });
+      setShowToaster(true);
 
       // Simulate file reading progress
       setProgress(10);
@@ -215,6 +238,14 @@ function FileUploader({
 
       const result = await handleUploadToCanister(sanitizedFiles);
 
+      setToasterData({
+        headerContent: "Success",
+        toastStatus: true,
+        toastData: `Upload complete!`,
+        textColor: "green",
+      });
+      setShowToaster(true);
+
       if (result.status) {
         setProgress(100);
         setStatus("Upload complete!");
@@ -226,6 +257,14 @@ function FileUploader({
     } catch (error: any) {
       setIsError(true);
       setStatus(`Error: ${error.message}`);
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: true,
+        toastData: `Error: ${error.message}`,
+        textColor: "red",
+        timeout: 5000,
+      });
+      setShowToaster(true);
     } finally {
       setIsLoading(false);
     }

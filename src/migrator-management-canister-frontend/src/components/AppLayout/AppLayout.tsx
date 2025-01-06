@@ -16,6 +16,7 @@ import {
   AuthorityProvider,
   useAuthority,
 } from "../../context/AuthorityContext/AuthorityContext";
+import Toaster, { ToasterData } from "../Toast/Toaster";
 
 type MenuItem = "publish" | "websites";
 
@@ -34,6 +35,16 @@ function AppLayout() {
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
   const [selectedDeployment, setSelectedDeployment] =
     useState<Deployment | null>(null);
+
+  const [showToaster, setShowToaster] = useState(false);
+  const [toasterData, setToasterData] = useState<ToasterData>({
+    headerContent: "Success",
+    toastStatus: true,
+    toastData: "Controller added",
+    textColor: "green",
+    timeout: 2000,
+  });
+
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const { deployments, refreshDeployments, isLoading } = useDeployments();
 
@@ -95,12 +106,27 @@ function AppLayout() {
         show={showOptionsModal}
         onHide={handleHideOptionsModal}
         setCanisterId={setDeployedCanisterId}
+        setToasterData={setToasterData}
+        setShowToaster={setShowToaster}
       />
     );
   }
 
   return (
     <div className="app-layout">
+      {showToaster && (
+        <Toaster
+          headerContent={toasterData.headerContent}
+          toastStatus={toasterData.toastStatus}
+          toastData={toasterData.toastData}
+          textColor={toasterData.textColor}
+          show={showToaster}
+          onHide={() => setShowToaster(false)}
+          timeout={toasterData.timeout ? toasterData.timeout : 3000}
+          link=""
+          overrideTextStyle=""
+        />
+      )}
       <ProgressBar isLoading={isLoading} />
 
       <aside className="sidebar">
@@ -131,11 +157,17 @@ function AppLayout() {
             style={{ display: activeMenuItem === "publish" ? "block" : "none" }}
           >
             {!deployedCanisterId ? (
-              <CanisterDeployer onDeploy={handleCanisterDeployed} />
+              <CanisterDeployer
+                onDeploy={handleCanisterDeployed}
+                setShowToaster={setShowToaster}
+                setToasterData={setToasterData}
+              />
             ) : (
               <FileUploader
                 canisterId={deployedCanisterId}
                 setCanisterId={setDeployedCanisterId}
+                setToasterData={setToasterData}
+                setShowToaster={setShowToaster}
               />
             )}
           </div>
@@ -152,6 +184,8 @@ function AppLayout() {
               <CanisterManagement
                 deployment={selectedDeployment}
                 setShowDetails={setShowDetails}
+                setShowToaster={setShowToaster}
+                setToasterData={setToasterData}
               />
             ) : (
               <>

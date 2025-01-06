@@ -5,10 +5,14 @@ import "./AuthorityManager.css";
 import { Principal } from "@dfinity/principal";
 import AuthorityApi from "../../api/authority";
 import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
+import { ToasterData } from "../Toast/Toaster";
+import { isValidPrincipal } from "../../validation/principal";
 
-export const AuthorityManager: React.FC<{ canisterId: string }> = ({
-  canisterId,
-}) => {
+export const AuthorityManager: React.FC<{
+  canisterId: string;
+  setShowToaster: (showToaster: boolean) => void;
+  setToasterData: (toasterData: ToasterData) => void;
+}> = ({ canisterId, setShowToaster, setToasterData }) => {
   const [newController, setNewController] = useState("");
   const {
     status,
@@ -21,6 +25,84 @@ export const AuthorityManager: React.FC<{ canisterId: string }> = ({
   useEffect(() => {
     console.log(`isLoadingStatus changed: `, isLoadingStatus);
   }, [isLoadingStatus]);
+
+  const addController = async () => {
+    try {
+      if (!isValidPrincipal(newController)) {
+        throw { message: "Invalid principal ID" };
+      }
+
+      setToasterData({
+        headerContent: "Adding controller",
+        toastStatus: true,
+        toastData: "Adding controller. Please wait...",
+        textColor: "blue",
+      });
+      setShowToaster(true);
+
+      const success = await handleAddController(newController);
+      if (success) {
+        setShowToaster(true);
+        setToasterData({
+          headerContent: "Success",
+          toastStatus: true,
+          toastData: "Controller added",
+          textColor: "green",
+        });
+
+        await refreshStatus(); // Update controllers list
+      }
+    } catch (error: any) {
+      setShowToaster(true);
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: error.message,
+        textColor: "red",
+      });
+    }
+  };
+
+  const removeController = async (controller: string) => {
+    try {
+      setToasterData({
+        headerContent: "Removing controller",
+        toastStatus: true,
+        toastData: "Removing controller. Please wait...",
+        textColor: "blue",
+      });
+      setShowToaster(true);
+
+      const isRemoved = await handleRemoveController(controller);
+      if (isRemoved) {
+        setShowToaster(true);
+        setToasterData({
+          headerContent: "Success",
+          toastStatus: true,
+          toastData: "Controller removed",
+          textColor: "green",
+        });
+
+        await refreshStatus();
+      } else {
+        setShowToaster(true);
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: false,
+          toastData: "Failed to remove controller",
+          textColor: "red",
+        });
+      }
+    } catch (error: any) {
+      setShowToaster(true);
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: error.message,
+        textColor: "red",
+      });
+    }
+  };
 
   return (
     <>
@@ -35,9 +117,7 @@ export const AuthorityManager: React.FC<{ canisterId: string }> = ({
               placeholder="Principal ID"
               className="flex-grow-1"
             />
-            <Button onClick={() => handleAddController(newController)}>
-              Add Controller
-            </Button>
+            <Button onClick={() => addController()}>Add Controller</Button>
           </Form.Group>
         </div>
 
@@ -58,7 +138,7 @@ export const AuthorityManager: React.FC<{ canisterId: string }> = ({
                   <Button
                     variant="danger"
                     size="sm"
-                    onClick={() => handleRemoveController(controller)}
+                    onClick={() => removeController(controller)}
                   >
                     Remove
                   </Button>
