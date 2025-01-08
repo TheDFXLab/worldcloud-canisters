@@ -2,9 +2,7 @@ import { useEffect, useState } from "react";
 import CanisterDeployer from "../CanisterDeployer/CanisterDeployer";
 import FileUploader from "../FileUploader/FileUploader";
 import "./AppLayout.css";
-import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
-import { Badge, Modal, Table } from "react-bootstrap";
-import { Principal } from "@dfinity/principal";
+import { Badge, Table } from "react-bootstrap";
 import { CiEdit } from "react-icons/ci";
 import CanisterOptions from "../CanisterOptions/CanisterOptions";
 
@@ -12,13 +10,10 @@ import { Deployment } from "./interfaces";
 import { CanisterManagement } from "../CanisterManagement/CanisterManagement";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
-import {
-  AuthorityProvider,
-  useAuthority,
-} from "../../context/AuthorityContext/AuthorityContext";
 import Toaster, { ToasterData } from "../Toast/Toaster";
+import WasmUploader from "../WasmUploader/WasmUploader";
 
-type MenuItem = "publish" | "websites";
+type MenuItem = "publish" | "websites" | "admin";
 
 enum BadgeColor {
   "uninitialized" = "secondary",
@@ -29,7 +24,6 @@ enum BadgeColor {
 
 function AppLayout() {
   const [activeMenuItem, setActiveMenuItem] = useState<MenuItem>("websites");
-  // const { deployments, isLoading } = useDeployments();
   const [deployedCanisterId, setDeployedCanisterId] = useState<string>("");
   const [userDeployments, setUserDeployments] = useState<Deployment[]>([]);
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
@@ -47,6 +41,7 @@ function AppLayout() {
 
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const { deployments, refreshDeployments, isLoading } = useDeployments();
+  const [showLoadbar, setShowLoadbar] = useState<boolean>(false);
 
   const handleCanisterDeployed = (canisterId: string) => {
     setDeployedCanisterId(canisterId);
@@ -127,10 +122,16 @@ function AppLayout() {
           overrideTextStyle=""
         />
       )}
-      <ProgressBar isLoading={isLoading} />
+      <ProgressBar isLoading={isLoading || showLoadbar} />
 
       <aside className="sidebar">
         <nav className="sidebar-nav">
+          <button
+            className={`nav-item ${activeMenuItem === "admin" ? "active" : ""}`}
+            onClick={() => setActiveMenuItem("admin")}
+          >
+            Admin
+          </button>
           <button
             className={`nav-item ${
               activeMenuItem === "publish" ? "active" : ""
@@ -151,6 +152,16 @@ function AppLayout() {
       </aside>
 
       <main className="main-content">
+        {
+          <div
+            className="admin-flow"
+            style={{ display: activeMenuItem === "admin" ? "block" : "none" }}
+          >
+            <div>
+              <WasmUploader onClick={() => setShowLoadbar(true)} />
+            </div>
+          </div>
+        }
         {
           <div
             className="publish-flow"
