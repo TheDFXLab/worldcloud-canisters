@@ -143,6 +143,7 @@ module {
 
     public type CanisterStatusResponse = {
         status : CanisterStatus;
+        cycles : Nat;
         settings : CanisterSettings;
     };
 
@@ -162,6 +163,10 @@ module {
             arg : [Nat8];
             wasm_module : [Nat8];
             mode : { #install; #reinstall; #upgrade };
+            canister_id : Principal;
+        } -> async ();
+
+        deposit_cycles : shared {
             canister_id : Principal;
         } -> async ();
     };

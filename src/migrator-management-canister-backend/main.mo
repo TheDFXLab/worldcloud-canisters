@@ -15,6 +15,7 @@ import ExperimentalCycles "mo:base/ExperimentalCycles";
 import Principal "mo:base/Principal";
 import Bool "mo:base/Bool";
 import Time "mo:base/Time";
+import Account "Account";
 
 // TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
 // TODO: Handle stable variables (if needed)
@@ -50,127 +51,8 @@ actor CanisterManager {
   private var user_canisters: Types.UserCanisters = HashMap.HashMap<Principal, [Principal]>(0, Principal.equal, Principal.hash);
   private stable var stable_user_canisters: [(Principal, [Principal])] = [];
 
-  system func preupgrade() {
-    Debug.print("Preupgrade: Starting with defensive approach");
-
-    stable_deployed_canisters := [];
-    stable_assets_array := [];
-    stable_chunks_array := [];
-    stable_canister_files := [];
-
-    canister_deployments_to_stable_array();
-    canister_table_to_stable_array();
-
-    Debug.print("Preupgrade: Variables initialized, beginning conversion");
-    Debug.print("Preupgrade: Preparing to sync assets and chunks.");
-    Debug.print("Preupgrade: Assets: " # Nat.toText(assets.size()));
-    Debug.print("Preupgrade: Chunks: " # Nat.toText(chunks.size()));
-    Debug.print("Preupgrade: Canister files: " # Nat.toText(canister_files.size()));
-    assets_to_stable_array();
-    chunks_to_stable_array();
-
-    stable_deployed_canisters := Iter.toArray(deployed_canisters.entries());
-    Debug.print("Preupgrade: Finished preupgrade procedure. Ready for upgrade. ");
-  };
-
-  system func postupgrade() {
-    Debug.print("Postupgrade: Syncing assets and chunks.");
-    Debug.print("Postupgrade: Assets: " # Nat.toText(assets.size()));
-    Debug.print("Postupgrade: Chunks: " # Nat.toText(chunks.size()));
-    Debug.print("Postupgrade: Canister files: " # Nat.toText(canister_files.size()));
-    canister_deployments_from_stable_array();
-    canister_table_from_stable_array();
-    sync_assets();
-    sync_chunks();
-    Debug.print("Postupgrade: Syncing deployed canisters.");
-    deployed_canisters := HashMap.fromIter(stable_deployed_canisters.vals(), 0, Principal.equal, Principal.hash);
-    Debug.print("Postupgrade: Finished postupgrade procedure. Synced stable variables. ");
-  };
-  
-  private func canister_table_to_stable_array() {
-    stable_canister_table := Iter.toArray(canister_table.entries());
-    Debug.print("Preupgrade: Backing up canister deployments: " # Nat.toText(stable_user_canisters.size()));
-  };
-
-  private func canister_table_from_stable_array() {
-    canister_table := HashMap.fromIter(stable_canister_table.vals(), 0, Principal.equal, Principal.hash);
-    Debug.print("Postupgrade: Restored canister deployments: " # Nat.toText(canister_table.size()));
-  };
-
-  private func canister_deployments_to_stable_array() {
-    stable_user_canisters := Iter.toArray(user_canisters.entries());
-    Debug.print("Preupgrade: Backing up canister deployments: " # Nat.toText(stable_user_canisters.size()));
-  };
-
-  private func canister_deployments_from_stable_array() {
-    user_canisters := HashMap.fromIter(stable_user_canisters.vals(), 0, Principal.equal, Principal.hash);
-    Debug.print("Postupgrade: Restored canister deployments: " # Nat.toText(user_canisters.size()));
-  };
-
-  // Convert assets to stable array
-  private func assets_to_stable_array() {
-    stable_assets_array := Iter.toArray(assets.vals());
-  };
-
-  // Convert chunks to stable array
-  private func chunks_to_stable_array() {
-    stable_chunks_array := Array.map<(Text, Blob), Types.AssetChunk>(
-      Iter.toArray(chunks.entries()),
-      func((key : Text, data : Blob)) : Types.AssetChunk {
-        let parts = Text.split(key, #char ':');
-        let parts_array = Iter.toArray(parts);
-        let asset_id = parts_array[0];
-
-        let chunk_id = switch (Nat.fromText(parts_array[1])) {
-          case (?num) Nat32.fromNat(num);
-          case null Debug.trap("Invalid chunk ID");
-        };
-        {
-          asset_id;
-          chunk_id;
-          data;
-        };
-      },
-    );
-  };
-
-  // Sync assets from stable array to map
-  private func sync_assets() {
-    Debug.print("Syncing all assets");
-
-    assets := HashMap.fromIter<Types.AssetId, Types.Asset>(
-      Array.map<Types.Asset, (Types.AssetId, Types.Asset)>(
-        stable_assets_array,
-        func(asset : Types.Asset) : (Types.AssetId, Types.Asset) {
-          Debug.print("Syncing asset: " # asset.id # asset.name);
-          (asset.id, asset);
-        },
-      ).vals(),
-      0,
-      Text.equal,
-      Text.hash,
-    );
-
-    Debug.print("Synced assets: " # Nat.toText(assets.size()));
-  };
-
-  // Sync chunks from stable array to map
-  private func sync_chunks() {
-    chunks := HashMap.fromIter<Text, Blob>(
-      Array.map<Types.AssetChunk, (Text, Blob)>(
-        stable_chunks_array,
-        func(chunk : Types.AssetChunk) : (Text, Blob) {
-          let chunk_key = chunk.asset_id # ":" # Nat32.toText(chunk.chunk_id);
-          (chunk_key, chunk.data);
-        },
-      ).vals(),
-      0,
-      Text.equal,
-      Text.hash,
-    );
-
-    Debug.print("Synced chunks: " # Nat.toText(chunks.size()));
-  };
+  private var pending_cycles: HashMap.HashMap<Principal, Nat> = HashMap.HashMap<Principal, Nat>(0, Principal.equal, Principal.hash);
+  private stable var stable_pending_cycles: [(Principal, Nat)] = [];
 
   // Function to upload the asset canister WASM
   public shared (msg) func uploadAssetCanisterWasm(wasm : [Nat8]) : async Types.Result {
@@ -190,6 +72,11 @@ actor CanisterManager {
       case (?wasm) { wasm };
     };
     return wasm_module;
+  };
+
+    public func get_deposit_account_id(canisterPrincipal : Principal, caller : Principal) : async Blob {
+    let accountIdentifier = Account.accountIdentifier(canisterPrincipal, Account.principalToSubaccount(caller));
+    return accountIdentifier;
   };
 
   public shared (msg) func getAssetList(canister_id: Principal) : async Types.ListResponse {
@@ -348,6 +235,48 @@ actor CanisterManager {
     return #ok("Removed permission for controller");
   };
 
+
+
+
+  public shared (msg) func wallet_receive() : async Nat {
+    let amount = ExperimentalCycles.available();
+    let accepted = ExperimentalCycles.accept(amount);
+
+    let user_cycles = switch (pending_cycles.get(msg.caller)) {
+      case null { 0 };
+      case (?cycles) { cycles };
+    };
+    pending_cycles.put(msg.caller, user_cycles + accepted);
+    Debug.print("Accepted cycles: " # Nat.toText(accepted));
+    return accepted;
+  };
+
+   public shared(msg) func wallet_send(amount : Nat, destination: Principal) : async Nat {
+    assert(await _isController(destination, msg.caller));
+    ExperimentalCycles.add(amount);
+    let canister : actor { wallet_receive : () -> async Nat } = actor(Principal.toText(destination));
+    let result = await canister.wallet_receive();
+
+    let user_cycles = switch (pending_cycles.get(msg.caller)) {
+      case null { 0 };
+      case (?cycles) { cycles };
+    };
+
+    if (user_cycles < amount) {
+      throw Error.reject("Insufficient cycles");
+    };
+
+    pending_cycles.put(msg.caller, user_cycles - amount);
+    let remaining_cycles = switch (pending_cycles.get(msg.caller)) {
+      case null { 0 };
+      case (?cycles) { cycles };
+    };
+    Debug.print("Remaining cycles: " # Nat.toText(remaining_cycles));
+    return result;
+  };
+
+
+
   // Function to deploy new asset canister
   public shared (msg) func deployAssetCanister() : async Types.Result {
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
@@ -358,7 +287,7 @@ actor CanisterManager {
     };
 
     try {
-      Debug.print("[Identity " # Principal.toText(msg.caller) # "] Adding cycles...");
+      Debug.print("[Identity " # Principal.toText(msg.caller) # "] Adding cycles....");
       // Create new canister
       let cyclesForCanister = 1_000_000_000_000; // 1T cycles
       ExperimentalCycles.add(cyclesForCanister);
@@ -648,6 +577,131 @@ actor CanisterManager {
         canisterBatchMap.put(canister_id, (batchMap, batchChunks));
       };
     };
+  };
+
+
+  /** Handle canister upgrades */
+
+  system func preupgrade() {
+    Debug.print("Preupgrade: Starting with defensive approach");
+
+    stable_deployed_canisters := [];
+    stable_assets_array := [];
+    stable_chunks_array := [];
+    stable_canister_files := [];
+
+    canister_deployments_to_stable_array();
+    canister_table_to_stable_array();
+
+    Debug.print("Preupgrade: Variables initialized, beginning conversion");
+    Debug.print("Preupgrade: Preparing to sync assets and chunks.");
+    Debug.print("Preupgrade: Assets: " # Nat.toText(assets.size()));
+    Debug.print("Preupgrade: Chunks: " # Nat.toText(chunks.size()));
+    Debug.print("Preupgrade: Canister files: " # Nat.toText(canister_files.size()));
+    assets_to_stable_array();
+    chunks_to_stable_array();
+
+    stable_deployed_canisters := Iter.toArray(deployed_canisters.entries());
+    Debug.print("Preupgrade: Finished preupgrade procedure. Ready for upgrade. ");
+  };
+
+  system func postupgrade() {
+    Debug.print("Postupgrade: Syncing assets and chunks.");
+    Debug.print("Postupgrade: Assets: " # Nat.toText(assets.size()));
+    Debug.print("Postupgrade: Chunks: " # Nat.toText(chunks.size()));
+    Debug.print("Postupgrade: Canister files: " # Nat.toText(canister_files.size()));
+    canister_deployments_from_stable_array();
+    canister_table_from_stable_array();
+    sync_assets();
+    sync_chunks();
+    Debug.print("Postupgrade: Syncing deployed canisters.");
+    deployed_canisters := HashMap.fromIter(stable_deployed_canisters.vals(), 0, Principal.equal, Principal.hash);
+    Debug.print("Postupgrade: Finished postupgrade procedure. Synced stable variables. ");
+  };
+  
+  private func canister_table_to_stable_array() {
+    stable_canister_table := Iter.toArray(canister_table.entries());
+    Debug.print("Preupgrade: Backing up canister deployments: " # Nat.toText(stable_user_canisters.size()));
+  };
+
+  private func canister_table_from_stable_array() {
+    canister_table := HashMap.fromIter(stable_canister_table.vals(), 0, Principal.equal, Principal.hash);
+    Debug.print("Postupgrade: Restored canister deployments: " # Nat.toText(canister_table.size()));
+  };
+
+  private func canister_deployments_to_stable_array() {
+    stable_user_canisters := Iter.toArray(user_canisters.entries());
+    Debug.print("Preupgrade: Backing up canister deployments: " # Nat.toText(stable_user_canisters.size()));
+  };
+
+  private func canister_deployments_from_stable_array() {
+    user_canisters := HashMap.fromIter(stable_user_canisters.vals(), 0, Principal.equal, Principal.hash);
+    Debug.print("Postupgrade: Restored canister deployments: " # Nat.toText(user_canisters.size()));
+  };
+
+  // Convert assets to stable array
+  private func assets_to_stable_array() {
+    stable_assets_array := Iter.toArray(assets.vals());
+  };
+
+  // Convert chunks to stable array
+  private func chunks_to_stable_array() {
+    stable_chunks_array := Array.map<(Text, Blob), Types.AssetChunk>(
+      Iter.toArray(chunks.entries()),
+      func((key : Text, data : Blob)) : Types.AssetChunk {
+        let parts = Text.split(key, #char ':');
+        let parts_array = Iter.toArray(parts);
+        let asset_id = parts_array[0];
+
+        let chunk_id = switch (Nat.fromText(parts_array[1])) {
+          case (?num) Nat32.fromNat(num);
+          case null Debug.trap("Invalid chunk ID");
+        };
+        {
+          asset_id;
+          chunk_id;
+          data;
+        };
+      },
+    );
+  };
+
+  // Sync assets from stable array to map
+  private func sync_assets() {
+    Debug.print("Syncing all assets");
+
+    assets := HashMap.fromIter<Types.AssetId, Types.Asset>(
+      Array.map<Types.Asset, (Types.AssetId, Types.Asset)>(
+        stable_assets_array,
+        func(asset : Types.Asset) : (Types.AssetId, Types.Asset) {
+          Debug.print("Syncing asset: " # asset.id # asset.name);
+          (asset.id, asset);
+        },
+      ).vals(),
+      0,
+      Text.equal,
+      Text.hash,
+    );
+
+    Debug.print("Synced assets: " # Nat.toText(assets.size()));
+  };
+
+  // Sync chunks from stable array to map
+  private func sync_chunks() {
+    chunks := HashMap.fromIter<Text, Blob>(
+      Array.map<Types.AssetChunk, (Text, Blob)>(
+        stable_chunks_array,
+        func(chunk : Types.AssetChunk) : (Text, Blob) {
+          let chunk_key = chunk.asset_id # ":" # Nat32.toText(chunk.chunk_id);
+          (chunk_key, chunk.data);
+        },
+      ).vals(),
+      0,
+      Text.equal,
+      Text.hash,
+    );
+
+    Debug.print("Synced chunks: " # Nat.toText(chunks.size()));
   };
 
 };
