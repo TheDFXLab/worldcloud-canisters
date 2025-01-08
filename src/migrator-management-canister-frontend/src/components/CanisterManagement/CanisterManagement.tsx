@@ -30,15 +30,17 @@ export const CanisterManagement: React.FC<CanisterManagementProps> = ({
   const tabs = [
     {
       label: "Overview",
-      content: (
-        <CanisterOverview
-          deployment={deployment}
-          canisterId={deployment?.canister_id.toText() || ""}
-          onCloseModal={() => {}}
-          setCanisterId={() => {}}
-          setToasterData={setToasterData}
-          setShowToaster={setShowToaster}
-        />
+      content: deployment && (
+        <AuthorityProvider canisterId={deployment.canister_id}>
+          <CanisterOverview
+            deployment={deployment}
+            canisterId={deployment?.canister_id.toText() || ""}
+            onCloseModal={() => {}}
+            setCanisterId={() => {}}
+            setToasterData={setToasterData}
+            setShowToaster={setShowToaster}
+          />
+        </AuthorityProvider>
       ),
     },
     {

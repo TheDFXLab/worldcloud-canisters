@@ -1,9 +1,15 @@
-import { Button } from "react-bootstrap";
+import { Button, Spinner } from "react-bootstrap";
 import "./CanisterOverview.css";
 import { Deployment } from "../AppLayout/interfaces";
 import { getCanisterUrl } from "../../config/config";
 import FileUploader from "../FileUploader/FileUploader";
 import { ToasterData } from "../Toast/Toaster";
+import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
+import { terraToCycles } from "../../utility/e8s";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import IconTextRowView from "../IconTextRowView/IconTextRowView";
+import CyclesApi from "../../api/cycles";
+import { Principal } from "@dfinity/principal";
 
 interface CanisterOverviewProps {
   deployment: Deployment | null;
@@ -22,6 +28,8 @@ export const CanisterOverview = ({
   setToasterData,
   setShowToaster,
 }: CanisterOverviewProps) => {
+  const { status } = useAuthority();
+
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
@@ -38,6 +46,13 @@ export const CanisterOverview = ({
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const handleAddCycles = async () => {
+    console.log("adding cycles");
+    const userAddress = "2vxsx-fae";
+    const cyclesApi = new CyclesApi(Principal.fromText(canisterId));
+    await cyclesApi.transferICPAndReceive(1, userAddress);
   };
 
   return (
@@ -92,6 +107,27 @@ export const CanisterOverview = ({
 
               <span className="external-link">↗</span>
             </a>
+          </span>
+        </div>
+        <div className="detail-row">
+          <span className="label">Available Cycles:</span>
+          <span className="value">
+            {status?.cycles ? (
+              <>
+                {/* {`${terraToCycles(status.cycles)} T cycles`} */}
+
+                <div onClick={handleAddCycles}>
+                  <IconTextRowView
+                    onClickIcon={handleAddCycles}
+                    IconComponent={AddCircleOutlineIcon}
+                    iconColor="green"
+                    text={`${terraToCycles(status.cycles).toFixed(2)} T cycles`}
+                  />
+                </div>
+              </>
+            ) : (
+              <Spinner animation="border" variant="primary" />
+            )}
           </span>
         </div>
       </div>
