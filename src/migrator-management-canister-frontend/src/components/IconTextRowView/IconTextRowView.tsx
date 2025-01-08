@@ -1,52 +1,33 @@
+import React from "react";
+
 interface IconTextRowViewProps {
-  IconComponent: React.ElementType;
   text: string;
+  IconComponent: React.ElementType;
   iconColor: string;
-  overrideContainerStyle?: React.CSSProperties;
-  overrideTextStyle?: React.CSSProperties;
-  clickHandler?: () => void;
+  onClickIcon: () => void;
 }
 
-function IconTextRowView({
-  IconComponent,
+const IconTextRowView: React.FC<IconTextRowViewProps> = ({
   text,
+  IconComponent,
   iconColor,
-  overrideContainerStyle = {},
-  overrideTextStyle = {},
-  clickHandler,
-}: IconTextRowViewProps) {
-  const textMutedStyle = {
-    color: "grey",
-    fontStyle: "italic",
-    fontSize: "16px",
-    textAlign: "right" as const,
-    margin: "0",
-  };
-  const containerStyleDefault = {
-    display: "flex",
-    flexDirection: "row" as const,
-    justifyContent: "flex-start",
-    flexWrap: "nowrap" as const,
-    alignItems: "center",
-    columnGap: "10px",
-    width: "100%",
-  };
-  const containerStyle = {
-    ...containerStyleDefault,
-    ...overrideContainerStyle,
-  };
-
-  const textStyle = { ...textMutedStyle, ...overrideTextStyle };
-
+  onClickIcon,
+}) => {
   return (
-    <div onClick={clickHandler} style={containerStyle}>
-      <IconComponent
-        className="clickable"
-        sx={{ fontSize: 16 }}
-        style={{ color: iconColor }}
-      />
-      <p style={textStyle}>{text}</p>
+    <div
+      style={{
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+      }}
+      onClick={onClickIcon}
+    >
+      <IconComponent style={{ color: iconColor }} />
+      <span>{text}</span>
     </div>
   );
-}
+};
+
 export default IconTextRowView;
+export type { IconTextRowViewProps };
