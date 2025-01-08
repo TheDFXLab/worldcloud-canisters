@@ -93,12 +93,18 @@ export default function Toaster({
             text={headerContent}
             IconComponent={CheckCircleOutlineIcon}
             iconColor={"#50FF97"}
+            onClickIcon={() => {
+              console.log("clicked");
+            }}
           />
         ) : (
           <IconTextRowView
             text={headerContent}
             IconComponent={WarningAmberIcon}
             iconColor={"#FF3131"}
+            onClickIcon={() => {
+              console.log("clicked");
+            }}
           />
         )}
         <small style={{ color: "white" }}>{"now"}</small>

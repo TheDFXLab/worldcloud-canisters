@@ -22,9 +22,29 @@
 
 .toast-header {
   background-color: rgb(212, 213, 212) !important;
-
   border-bottom: 1px solid #f0f0f0 !important;
-  color: #0066ff !important;
+  color: #333 !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 0.5rem 1rem !important;
+}
+
+/* Add styles for the header content */
+.toast-header > div {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.toast-header small {
+  margin-left: auto;
+  padding: 0 1rem;
+}
+
+.toast-header button {
+  padding: 0;
+  margin-left: 0.5rem;
 }
 
 .toast-body {
@@ -34,7 +54,7 @@
 }
 
 .toast a {
-  color: #0066ff !important;
+  color: #333 !important;
   text-decoration: none !important;
 }
 
