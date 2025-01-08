@@ -4,6 +4,7 @@ import { ListResponse } from "../../../../declarations/migrator-management-canis
 
 export interface CanisterStatus {
     status: string;
+    cycles: number;
     controllers: string[];
 }
 
@@ -22,7 +23,8 @@ class AuthorityApi {
         const response = await migrator_management_canister_backend.getCanisterStatus(canister_id);
         const status = {
             status: Object.keys(response.status)[0],
-            controllers: response.settings.controllers[0]?.map((controller) => controller.toString()) || []
+            controllers: response.settings.controllers[0]?.map((controller) => controller.toString()) || [],
+            cycles: Number(response.cycles)
         }
         console.log(`Canister statusss:`, status);
         return status;
