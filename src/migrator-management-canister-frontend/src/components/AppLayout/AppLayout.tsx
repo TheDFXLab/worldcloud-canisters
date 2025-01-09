@@ -12,8 +12,16 @@ import { useDeployments } from "../../context/DeploymentContext/DeploymentContex
 import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
 import Toaster, { ToasterData } from "../Toast/Toaster";
 import WasmUploader from "../WasmUploader/WasmUploader";
+import { useIdentity } from "../../context/IdentityContext/IdentityContext";
+import LogoutIcon from "@mui/icons-material/Logout";
+import IconTextRowView from "../IconTextRowView/IconTextRowView";
+import StorageIcon from "@mui/icons-material/Storage";
+import AddIcon from "@mui/icons-material/Add";
+import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount";
+import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
+import { State } from "../../App";
 
-type MenuItem = "publish" | "websites" | "admin";
+type MenuItem = "publish" | "websites" | "admin" | "logout";
 
 enum BadgeColor {
   "uninitialized" = "secondary",
@@ -21,8 +29,14 @@ enum BadgeColor {
   "installed" = "success",
   "failed" = "danger",
 }
+interface AppLayoutProps {
+  state: State;
+  setState: (state: State) => void;
+}
 
-function AppLayout() {
+function AppLayout({ state, setState }: AppLayoutProps) {
+  const { disconnect, refreshIdentity } = useIdentity();
+  const { isLoadingStatus } = useAuthority();
   const [activeMenuItem, setActiveMenuItem] = useState<MenuItem>("websites");
   const [deployedCanisterId, setDeployedCanisterId] = useState<string>("");
   const [userDeployments, setUserDeployments] = useState<Deployment[]>([]);
@@ -42,37 +56,36 @@ function AppLayout() {
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const { deployments, refreshDeployments, isLoading } = useDeployments();
   const [showLoadbar, setShowLoadbar] = useState<boolean>(false);
+  const [completeLoadbar, setCompleteLoadbar] = useState<boolean>(false);
 
   const handleCanisterDeployed = (canisterId: string) => {
     setDeployedCanisterId(canisterId);
   };
 
   useEffect(() => {
-    console.log(`userDeployments changed: `, userDeployments);
-    console.log(
-      `deployedCanisterId changed: `,
-      deployedCanisterId,
-      selectedDeployment?.canister_id.toText()
-    );
+    console.log(`refreshIdentity`);
+    refreshIdentity();
+  }, [activeMenuItem]);
+
+  useEffect(() => {
     const selectedDeploymentUpdated = userDeployments.find(
       (deployment) =>
         deployment.canister_id.toText() ===
         selectedDeployment?.canister_id.toText()
     );
-    console.log(`selectedDeploymentUpdated: `, selectedDeploymentUpdated);
     if (selectedDeploymentUpdated) {
       setSelectedDeployment(selectedDeploymentUpdated);
+      setState({
+        canister_id: selectedDeploymentUpdated.canister_id.toText(),
+      });
     }
   }, [userDeployments, deployedCanisterId]);
 
   useEffect(() => {
-    console.log(`deployments changed: `, deployments.length, deployments);
     setUserDeployments(deployments);
   }, [deployments]);
 
-  useEffect(() => {
-    console.log(`deployedCanisterId changed: `, deployedCanisterId);
-  }, [deployedCanisterId]);
+  useEffect(() => {}, [deployedCanisterId]);
 
   useEffect(() => {
     refreshDeployments();
@@ -81,17 +94,19 @@ function AppLayout() {
   const handleOptionsModal = (deployment: Deployment) => {
     setShowOptionsModal(true);
     setSelectedDeployment(deployment);
+    setState({ canister_id: deployment.canister_id.toText() });
   };
 
   const handleHideOptionsModal = () => {
     setShowOptionsModal(false);
     setSelectedDeployment(null);
+    setState({ canister_id: "" });
   };
 
   const handleSelectDeployment = (deployment: Deployment) => {
     setShowDetails(true);
     setSelectedDeployment(deployment);
-    console.log(`selectedDeployment: `, selectedDeployment);
+    setState({ canister_id: deployment.canister_id.toText() });
   };
 
   if (showOptionsModal && selectedDeployment) {
@@ -122,32 +137,49 @@ function AppLayout() {
           overrideTextStyle=""
         />
       )}
-      <ProgressBar isLoading={isLoading || showLoadbar} />
+      <ProgressBar
+        isLoading={isLoading || showLoadbar || isLoadingStatus}
+        isEnded={completeLoadbar}
+      />
 
       <aside className="sidebar">
         <nav className="sidebar-nav">
-          <button
+          <IconTextRowView
             className={`nav-item ${activeMenuItem === "admin" ? "active" : ""}`}
-            onClick={() => setActiveMenuItem("admin")}
-          >
-            Admin
-          </button>
-          <button
+            text="Admin"
+            IconComponent={SupervisorAccountIcon}
+            onClickIcon={() => setActiveMenuItem("admin")}
+            iconColor="black"
+          />
+          <IconTextRowView
             className={`nav-item ${
               activeMenuItem === "publish" ? "active" : ""
             }`}
-            onClick={() => setActiveMenuItem("publish")}
-          >
-            Publish New Website
-          </button>
-          <button
+            text="New Drive"
+            IconComponent={AddIcon}
+            onClickIcon={() => setActiveMenuItem("publish")}
+            iconColor="black"
+          />
+
+          <IconTextRowView
             className={`nav-item ${
               activeMenuItem === "websites" ? "active" : ""
             }`}
-            onClick={() => setActiveMenuItem("websites")}
-          >
-            My Websites
-          </button>
+            text="My Drives"
+            IconComponent={StorageIcon}
+            onClickIcon={() => setActiveMenuItem("websites")}
+            iconColor="black"
+          />
+
+          <IconTextRowView
+            className={`nav-item logout ${
+              activeMenuItem === "logout" ? "active" : ""
+            }`}
+            text="Logout"
+            IconComponent={LogoutIcon}
+            onClickIcon={() => disconnect()}
+            iconColor="red"
+          />
         </nav>
       </aside>
 
@@ -165,7 +197,9 @@ function AppLayout() {
         {
           <div
             className="publish-flow"
-            style={{ display: activeMenuItem === "publish" ? "block" : "none" }}
+            style={{
+              display: activeMenuItem === "publish" ? "block" : "none",
+            }}
           >
             {!deployedCanisterId ? (
               <CanisterDeployer
@@ -197,6 +231,9 @@ function AppLayout() {
                 setShowDetails={setShowDetails}
                 setShowToaster={setShowToaster}
                 setToasterData={setToasterData}
+                setShowLoadBar={setShowLoadbar}
+                setCompleteLoadbar={setCompleteLoadbar}
+                state={state}
               />
             ) : (
               <>
