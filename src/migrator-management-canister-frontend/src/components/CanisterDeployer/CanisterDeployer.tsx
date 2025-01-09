@@ -48,7 +48,6 @@ function CanisterDeployer({
         message: `Deploying Canister: 0%`,
       }));
 
-      console.log("deploying canister...");
       setIsLoading(true);
       const result =
         await migrator_management_canister_backend.deployAssetCanister();

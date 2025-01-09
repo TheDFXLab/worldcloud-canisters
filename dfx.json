@@ -6,7 +6,8 @@
     },
     "migrator-management-canister-frontend": {
       "dependencies": [
-        "migrator-management-canister-backend"
+        "migrator-management-canister-backend",
+        "internet_identity"
       ],
       "source": [
         "src/migrator-management-canister-frontend/dist"
@@ -23,6 +24,17 @@
           "ic": "ryjl3-tyaaa-aaaaa-aaaba-cai"
         }
       }
+    },
+    "internet_identity": {
+      "type": "custom",
+      "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",
+      "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz",
+      "remote": {
+        "id": {
+          "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai"
+        }
+      },
+      "frontend": {}
     }
   },
   "defaults": {

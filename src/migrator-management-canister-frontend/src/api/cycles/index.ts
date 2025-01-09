@@ -5,25 +5,25 @@ import { _SERVICE } from "../../../../declarations/migrator-management-canister-
 // import { idlFactory as ledgerIDL, _SERVICE as LEDGER_SERVICE } from "../../../../declarations/icp_ledger_canister/icp_ledger_canister.did";
 
 
-import { icpToE8s } from "../../utility/e8s";
+import { cyclesToTerra, icpToE8s, terraToCycles } from "../../utility/e8s";
 import { ICPLedger } from "../../class/ICPLedger/ICPLedger";
 import { TransferArgs } from "../../../../declarations/icp_ledger_canister/icp_ledger_canister.did";
-import { TransferRequest } from "@dfinity/ledger-icp";
+import { Identity } from "@dfinity/agent";
+
 class CyclesApi {
     private agent: HttpAgent;
     private actor: ActorSubclass<_SERVICE>;
     private backendCanisterId: string;
-    // private ledgerActor: ActorSubclass<LEDGER_SERVICE>;
     private ledgerInstance: ICPLedger;
 
-    constructor(public canisterId: Principal) {
+    constructor(public canisterId: Principal, identity: Identity) {
         const backendCanisterId = process.env.CANISTER_ID_MIGRATOR_MANAGEMENT_CANISTER_BACKEND || '';
         this.backendCanisterId = backendCanisterId;
 
         if (!backendCanisterId) {
             throw new Error("CANISTER_ID_MIGRATOR_MANAGEMENT_CANISTER_BACKEND is not set");
         }
-        this.agent = new HttpAgent();
+        this.agent = new HttpAgent({ identity });
         const actor = createActor(this.backendCanisterId, { agent: this.agent });
         this.actor = actor;
 
@@ -47,6 +47,22 @@ class CyclesApi {
         } catch (error) {
             return null;
         }
+    }
+
+    async addCycles(icpAmount: number, canisterId: Principal) {
+        try {
+            const price = 10;
+            const cycleCost = 1.33; // USD cost of 1 cycle
+            const amountInTCycles = icpAmount * price / cycleCost;
+            const amountInCycles = Math.floor(terraToCycles(amountInTCycles));
+            console.log(`Adding cycles for ${icpAmount} ICP /${price * icpAmount} USD / ${amountInTCycles} TCycles. `);
+            const result = await this.actor.addCycles(canisterId, BigInt(amountInCycles));
+            return result;
+        } catch (error) {
+            console.error("Error adding cycles:", error);
+            throw error;
+        }
+
     }
 
     async transferICPAndReceive(amount: number, userAddress: string) {
@@ -76,8 +92,12 @@ class CyclesApi {
         try {
             // Transfer ICP
             const transferResult = await this.ledgerInstance.actor?.transfer(transferArgs)
-            console.log("Transfer result:", transferResult);
+            console.log("Transfer result:", Object.keys(transferResult)[0]);
 
+            if (Object.keys(transferResult)[0] !== "Ok") {
+                console.log("Transfer resulssssst:", Object.keys(Object.values(transferResult)[0])[0]);
+                throw { message: `Transfer failed: ${Object.keys(Object.values(transferResult)[0])[0]}` };
+            }
             // Call wallet_receive
             const receiveResult = await this.actor.wallet_receive();
             console.log("Receive result:", receiveResult);
