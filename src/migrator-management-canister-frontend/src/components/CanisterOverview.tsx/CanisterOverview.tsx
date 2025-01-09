@@ -5,11 +5,13 @@ import { getCanisterUrl } from "../../config/config";
 import FileUploader from "../FileUploader/FileUploader";
 import { ToasterData } from "../Toast/Toaster";
 import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
-import { terraToCycles } from "../../utility/e8s";
+import { cyclesToTerra, terraToCycles } from "../../utility/e8s";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import IconTextRowView from "../IconTextRowView/IconTextRowView";
 import CyclesApi from "../../api/cycles";
 import { Principal } from "@dfinity/principal";
+import { useIdentity } from "../../context/IdentityContext/IdentityContext";
+import { useState, useCallback, useRef } from "react";
 
 interface CanisterOverviewProps {
   deployment: Deployment | null;
@@ -18,6 +20,8 @@ interface CanisterOverviewProps {
   setCanisterId: (id: string) => void;
   setToasterData: (data: ToasterData) => void;
   setShowToaster: (show: boolean) => void;
+  setShowLoadBar: (show: boolean) => void;
+  setCompleteLoadbar: (complete: boolean) => void;
 }
 
 export const CanisterOverview = ({
@@ -27,8 +31,12 @@ export const CanisterOverview = ({
   setCanisterId,
   setToasterData,
   setShowToaster,
+  setShowLoadBar,
+  setCompleteLoadbar,
 }: CanisterOverviewProps) => {
-  const { status } = useAuthority();
+  const { status, refreshStatus } = useAuthority();
+  const { identity } = useIdentity();
+  const isTransferringRef = useRef(false);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
@@ -48,12 +56,51 @@ export const CanisterOverview = ({
     });
   };
 
-  const handleAddCycles = async () => {
-    console.log("adding cycles");
-    const userAddress = "2vxsx-fae";
-    const cyclesApi = new CyclesApi(Principal.fromText(canisterId));
-    await cyclesApi.transferICPAndReceive(1, userAddress);
-  };
+  const handleAddCycles = useCallback(async () => {
+    setShowLoadBar(true);
+    // Prevent concurrent executions
+    if (isTransferringRef.current) return;
+    isTransferringRef.current = true;
+
+    try {
+      if (!identity) {
+        console.log("identity not found");
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: false,
+          toastData: "Identity not found",
+          textColor: "white",
+        });
+        setShowToaster(true);
+        return;
+      }
+      const cyclesApi = new CyclesApi(Principal.fromText(canisterId), identity);
+
+      await cyclesApi.addCycles(0.001, Principal.fromText(canisterId));
+      setCompleteLoadbar(true);
+
+      refreshStatus();
+      setToasterData({
+        headerContent: "Success",
+        toastStatus: true,
+        toastData: "Cycles added successfully",
+        textColor: "white",
+      });
+      setShowToaster(true);
+      setCompleteLoadbar(true);
+    } catch (error: any) {
+      console.log("error adding cycles", error);
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: error.message,
+        textColor: "white",
+      });
+      setShowToaster(true);
+    } finally {
+      isTransferringRef.current = false;
+    }
+  }, [identity, canisterId, setToasterData, setShowToaster]);
 
   return (
     <div className="final-step">
@@ -121,7 +168,7 @@ export const CanisterOverview = ({
                     onClickIcon={handleAddCycles}
                     IconComponent={AddCircleOutlineIcon}
                     iconColor="green"
-                    text={`${terraToCycles(status.cycles).toFixed(2)} T cycles`}
+                    text={`${cyclesToTerra(status.cycles).toFixed(2)} T cycles`}
                   />
                 </div>
               </>
