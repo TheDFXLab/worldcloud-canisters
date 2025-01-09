@@ -13,12 +13,16 @@ import { getCanisterUrl } from "../../config/config";
 import { AuthorityProvider } from "../../context/AuthorityContext/AuthorityContext";
 import { AssetProvider } from "../../context/AssetContext/AssetContext";
 import { ToasterData } from "../Toast/Toaster";
+import { State } from "../../App";
 
 interface CanisterManagementProps {
   deployment: Deployment | null;
   setShowDetails: (showDetails: boolean) => void;
   setShowToaster: (showToaster: boolean) => void;
   setToasterData: (toasterData: ToasterData) => void;
+  setShowLoadBar: (showLoadBar: boolean) => void;
+  setCompleteLoadbar: (completeLoadbar: boolean) => void;
+  state: State;
 }
 
 export const CanisterManagement: React.FC<CanisterManagementProps> = ({
@@ -26,12 +30,15 @@ export const CanisterManagement: React.FC<CanisterManagementProps> = ({
   setShowDetails,
   setShowToaster,
   setToasterData,
+  setShowLoadBar,
+  setCompleteLoadbar,
+  state,
 }) => {
   const tabs = [
     {
       label: "Overview",
       content: deployment && (
-        <AuthorityProvider canisterId={deployment.canister_id}>
+        <AuthorityProvider state={state}>
           <CanisterOverview
             deployment={deployment}
             canisterId={deployment?.canister_id.toText() || ""}
@@ -39,6 +46,8 @@ export const CanisterManagement: React.FC<CanisterManagementProps> = ({
             setCanisterId={() => {}}
             setToasterData={setToasterData}
             setShowToaster={setShowToaster}
+            setShowLoadBar={setShowLoadBar}
+            setCompleteLoadbar={setCompleteLoadbar}
           />
         </AuthorityProvider>
       ),
@@ -46,7 +55,7 @@ export const CanisterManagement: React.FC<CanisterManagementProps> = ({
     {
       label: "Authority",
       content: deployment && (
-        <AuthorityProvider canisterId={deployment.canister_id}>
+        <AuthorityProvider state={state}>
           <AuthorityManager
             setShowToaster={setShowToaster}
             setToasterData={setToasterData}

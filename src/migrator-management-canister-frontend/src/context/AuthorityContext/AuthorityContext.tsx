@@ -8,6 +8,7 @@ import {
 import { Principal } from "@dfinity/principal";
 import AuthorityApi, { CanisterStatus } from "../../api/authority";
 import { decodeError } from "../../utility/errors";
+import { State } from "../../App";
 
 interface AuthorityContextType {
   status: CanisterStatus | null;
@@ -23,23 +24,22 @@ const AuthorityContext = createContext<AuthorityContextType | undefined>(
 
 export function AuthorityProvider({
   children,
-  canisterId,
+  state,
 }: {
   children: ReactNode;
-  canisterId: Principal;
+  state: State;
 }) {
   const [status, setStatus] = useState<CanisterStatus | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
 
-  const authApi = new AuthorityApi(canisterId);
+  if (!state.canister_id) return;
+  const authApi = new AuthorityApi(Principal.fromText(state.canister_id));
 
   const refreshStatus = async () => {
     try {
-      console.log(`Refreshing status for canister: `, canisterId);
       setIsLoadingStatus(true);
       const result = await authApi.getCanisterStatus(authApi.canisterId);
       setStatus(result);
-      console.log(`Status: `, result);
     } catch (error) {
       setIsLoadingStatus(false);
     } finally {
@@ -49,18 +49,15 @@ export function AuthorityProvider({
 
   const handleAddController = async (newController: string) => {
     try {
-      console.log(`adding controller: `, newController);
       setIsLoadingStatus(true);
       // Implement add controller logic
       const result = await authApi.addController(
         Principal.fromText(newController)
       );
-      console.log(`Result:`, result);
       if (Object.keys(result)[0] === "ok") {
         setIsLoadingStatus(false);
 
         console.log(`Controller added successfully`);
-        // await refreshStatus();
       }
       return true;
     } catch (error: any) {
@@ -76,18 +73,14 @@ export function AuthorityProvider({
   const handleRemoveController = async (controller: string) => {
     try {
       setIsLoadingStatus(true);
-      console.log(`Removing controller:`, controller);
       // Implement remove controller logic
       const result = await authApi.removeController(
         Principal.fromText(controller)
       );
-      console.log(`Result:`, result);
 
       if (Object.keys(result)[0] === "ok") {
         setIsLoadingStatus(false);
-
         console.log(`Controller removed successfully`);
-        // await refreshStatus();
       }
       return true;
     } catch (error: any) {
