@@ -10,10 +10,10 @@ export const icpToE8s = (amountInIcp: number) => {
     return e8sAmount;
 }
 
-export const terraToCycles = (amountInTerra: number) => {
+export const cyclesToTerra = (amountInTerra: number) => {
     return amountInTerra / 1e12
 }
 
-export const cyclesToTerra = (amountInCycles: number) => {
+export const terraToCycles = (amountInCycles: number) => {
     return amountInCycles * 1e12
 }
