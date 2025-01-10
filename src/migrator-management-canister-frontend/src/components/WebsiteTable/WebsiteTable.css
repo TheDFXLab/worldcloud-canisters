@@ -1,0 +1,19 @@
+.website-table {
+  margin-bottom: 2rem;
+}
+
+.website-table__loading {
+  padding: 2rem;
+  text-align: center;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.website-table__error {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-danger);
+  background: var(--color-danger-light);
+  border-radius: 8px;
+}

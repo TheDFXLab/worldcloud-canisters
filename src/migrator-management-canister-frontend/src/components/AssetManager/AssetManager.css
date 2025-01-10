@@ -1,0 +1,25 @@
+.asset-manager {
+  padding: 1.5rem;
+}
+
+.asset-manager__controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.file-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.file-item {
+  padding: 1rem;
+  background: var(--color-background-light);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}

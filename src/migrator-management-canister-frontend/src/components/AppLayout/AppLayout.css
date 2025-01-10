@@ -8,12 +8,17 @@
   background: var(--glass-bg);
   border-right: 1px solid var(--glass-border);
   padding: 2rem 1rem;
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  flex: 1;
 }
 
 .nav-item {
@@ -35,6 +40,12 @@
 .nav-item.active {
   background: var(--primary-color);
   color: white;
+}
+
+.nav-item.logout {
+  margin-top: auto;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 1.5rem;
 }
 
 .main-content {

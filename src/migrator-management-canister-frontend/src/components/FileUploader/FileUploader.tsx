@@ -7,8 +7,25 @@ import "./FileUploader.css";
 import { extractZip, StaticFile } from "../../utility/compression";
 import { sanitizeUnzippedFiles } from "../../utility/sanitize";
 import CompleteDeployment from "../CompleteDeployment/CompleteDeployment";
+import ProgressBar from "../ProgressBar/ProgressBar";
+import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
+import { ToasterData } from "../Toast/Toaster";
 
-function FileUploader({ canisterId }: { canisterId: string }) {
+interface FileUploaderProps {
+  canisterId: string;
+  setCanisterId: (canisterId: string) => void;
+  setToasterData: (data: ToasterData) => void;
+  setShowToaster: (show: boolean) => void;
+}
+
+function FileUploader({
+  canisterId,
+  setCanisterId,
+  setToasterData,
+  setShowToaster,
+}: FileUploaderProps) {
+  const { updateDeployment, refreshDeployments } = useDeployments();
+  const [currentBytes, setCurrentBytes] = useState(0);
   const [state, setState] = useState({
     selectedFile: null,
     uploadProgress: 0,
@@ -16,12 +33,15 @@ function FileUploader({ canisterId }: { canisterId: string }) {
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  // const [canisterId, setCanisterId] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [totalSize, setTotalSize] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [isError, setIsError] = useState(false);
 
+  const [uploadedSize, setUploadedSize] = useState(0);
+  const [currentFiles, setCurrentFiles] = useState<StaticFile[] | null>(null);
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -31,17 +51,20 @@ function FileUploader({ canisterId }: { canisterId: string }) {
 
   const handleUploadToCanister = async (unzippedFiles: StaticFile[]) => {
     try {
-      console.log(`Unzipped files`, unzippedFiles);
-
       const totalSize = unzippedFiles.reduce(
         (acc, file) => acc + file.content.length,
         0
       );
+
+      setTotalSize(totalSize);
       console.log(`Total size of unzipped files: ${totalSize} bytes`);
 
+      let totalUploadedSize = 0;
       // 2MB limit
       if (totalSize < 2000000) {
-        return await storeAssetsInCanister(unzippedFiles);
+        const result = await storeAssetsInCanister(unzippedFiles);
+        totalUploadedSize += result.uploadedSize ?? 0;
+        setUploadedSize(totalUploadedSize);
       } else {
         const BATCH_SIZE_LIMIT = 2000000; // 1.8MB
 
@@ -104,19 +127,24 @@ function FileUploader({ canisterId }: { canisterId: string }) {
         }
 
         for (let i = 0; i < batches.length; i++) {
-          console.log(`Storing batch ${i + 1} of ${batches.length}`);
           const files = batches[i];
 
           const totalSize = calculateTotalSize(files);
-          console.log(`Total size of files: ${totalSize / 1000000} MBytes`);
+
+          setCurrentBytes(currentBytes + totalSize);
 
           const result = await storeAssetsInCanister(files);
           if (!result) {
             setStatus(`Error: Failed to store batch ${i + 1}`);
           }
+
+          totalUploadedSize += result.uploadedSize ?? 0;
+
+          setUploadedSize(totalUploadedSize);
         }
       }
 
+      await refreshDeployments();
       return {
         status: true,
         message: "Successfully uploaded all files to canister",
@@ -135,21 +163,19 @@ function FileUploader({ canisterId }: { canisterId: string }) {
 
   const storeAssetsInCanister = async (files: StaticFile[]) => {
     try {
-      console.log(`Storing ${files.length} files in canister`);
-
       const sanitizedFiles = files.filter(
         (file) => !file.path.includes("MACOS")
       );
 
       const totalSize = calculateTotalSize(sanitizedFiles);
-      console.log(`Total size of files: ${totalSize / 1000000} MBytes`);
 
       // Handle paths
       sanitizedFiles.map((file) => {
         file.path = file.path.startsWith("/") ? file.path : `/${file.path}`;
       });
 
-      console.log(`Target canister: ${canisterId}`);
+      setCurrentFiles(sanitizedFiles);
+
       const result =
         await migrator_management_canister_backend.storeInAssetCanister(
           Principal.fromText(canisterId),
@@ -157,7 +183,12 @@ function FileUploader({ canisterId }: { canisterId: string }) {
         );
 
       if ("ok" in result) {
-        return { status: true, message: `Success ${result.ok}` };
+        setUploadedSize(uploadedSize + totalSize);
+        return {
+          status: true,
+          message: `Success ${result.ok}`,
+          uploadedSize: totalSize,
+        };
       } else {
         return { status: false, message: `Error: ${result.err}` };
       }
@@ -168,64 +199,80 @@ function FileUploader({ canisterId }: { canisterId: string }) {
 
   const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    if (!selectedFile) {
-      setStatus("Please select a zip file first");
-      return;
-    }
+    setIsLoading(true);
+    setProgress(0);
+    setStatus("Reading zip file...");
 
     try {
-      setIsLoading(true);
-      setStatus("Reading zip file...");
+      if (!selectedFile) {
+        setIsError(true);
+        setStatus("Please select a zip file first");
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: true,
+          toastData: "Please select a zip file first",
+          textColor: "red",
+        });
+        setShowToaster(true);
+        return;
+      }
 
-      // Update progress
-      setState((prev) => ({
-        ...prev,
-        uploadProgress: 0,
-        message: `Uploading files: 0%`,
-      }));
+      setToasterData({
+        headerContent: "Uploading",
+        toastStatus: true,
+        toastData: "Uploading zip file. Do not refresh the page.",
+        textColor: "green",
+        timeout: 5000,
+      });
+      setShowToaster(true);
 
+      // Simulate file reading progress
+      setProgress(10);
       const unzippedFiles = await extractZip(selectedFile);
+      setProgress(30);
+      setStatus("Processing files...");
 
       const sanitizedFiles = sanitizeUnzippedFiles(unzippedFiles);
-
-      console.log(`Unzipped ${unzippedFiles.length} files`, unzippedFiles);
-      console.log(`Sanitized files`, sanitizedFiles);
-
-      setStatus("Uploading files to canister...");
+      setProgress(50);
+      setStatus("Uploading to canister...");
 
       const result = await handleUploadToCanister(sanitizedFiles);
 
-      if (result) {
-        setStatus(result.message);
-        // Update progress
-        setState((prev) => ({
-          ...prev,
-          uploadProgress: 100,
-          message: `Uploading files: 100%`,
-        }));
+      setToasterData({
+        headerContent: "Success",
+        toastStatus: true,
+        toastData: `Upload complete!`,
+        textColor: "green",
+      });
+      setShowToaster(true);
 
-        // Calculate total size from unzipped files
-        const totalSize = unzippedFiles.reduce(
-          (acc, file) => acc + file.content.length,
-          0
-        );
-        setTotalSize(totalSize);
+      if (result.status) {
+        setProgress(100);
+        setStatus("Upload complete!");
         setIsComplete(true);
       } else {
-        setStatus(`Error: ${result}`);
-        // Update progress
-        setState((prev) => ({
-          ...prev,
-          uploadProgress: 0,
-          message: `Upload failed.`,
-        }));
+        setIsError(true);
+        setStatus(`Error: ${result.message}`);
       }
     } catch (error: any) {
+      setIsError(true);
       setStatus(`Error: ${error.message}`);
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: true,
+        toastData: `Error: ${error.message}`,
+        textColor: "red",
+        timeout: 5000,
+      });
+      setShowToaster(true);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCloseSummary = () => {
+    setIsComplete(true);
+    setCanisterId("");
   };
 
   if (isComplete) {
@@ -234,13 +281,15 @@ function FileUploader({ canisterId }: { canisterId: string }) {
         canisterId={canisterId}
         totalSize={totalSize}
         dateCreated={new Date()}
+        setCanisterId={setCanisterId}
+        onCloseModal={handleCloseSummary}
       />
     );
   }
 
   return (
     <div className="zip-uploader">
-      <h2>Website Assets</h2>
+      {/* <h2>Website Assets</h2> */}
       <p className="step-title">
         Your website canister is deployed with principal:{" "}
         <span style={{ fontWeight: "bold" }}>{canisterId}</span>
@@ -264,7 +313,7 @@ function FileUploader({ canisterId }: { canisterId: string }) {
             </button>
           </div>
         </div>
-        <div className="status-container">
+        {/* <div className="status-container">
           {status && (
             <div
               className={`status ${
@@ -274,13 +323,19 @@ function FileUploader({ canisterId }: { canisterId: string }) {
               {status}
             </div>
           )}
-          <div className="progress">
-            {state.uploadProgress > 0 && (
-              <progress value={state.uploadProgress} max="100" />
-            )}
-          </div>
           <div className="message">{state.message}</div>
-        </div>
+        </div> */}
+
+        <ProgressBar
+          progress={progress}
+          status={status}
+          isLoading={isLoading}
+          isError={isError}
+          showPercentage={true}
+          files={currentFiles}
+          totalBytes={totalSize}
+          uploadedSize={uploadedSize}
+        />
       </form>
     </div>
   );

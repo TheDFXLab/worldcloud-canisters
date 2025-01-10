@@ -1,15 +1,20 @@
+import { Button } from "react-bootstrap";
 import "./CompleteDeployment.css";
 
 interface CompleteDeploymentProps {
   canisterId: string;
   totalSize: number;
   dateCreated: Date;
+  onCloseModal: () => void;
+  setCanisterId: (id: string) => void;
 }
 
 function CompleteDeployment({
   canisterId,
   totalSize,
   dateCreated,
+  onCloseModal,
+  setCanisterId,
 }: CompleteDeploymentProps) {
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
@@ -81,6 +86,11 @@ function CompleteDeployment({
             </a>
           </span>
         </div>
+      </div>
+      <div className="bottom-actions">
+        <Button variant="secondary" onClick={onCloseModal}>
+          Close
+        </Button>
       </div>
     </div>
   );

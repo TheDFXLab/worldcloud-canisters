@@ -1,12 +1,24 @@
 import React, { useState } from "react";
 import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
 import "./CanisterDeployer.css";
+import { Principal } from "@dfinity/principal";
+// import ProgressBar from "../ProgressBar/ProgressBar";
+import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
+import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
+import { ToasterData } from "../Toast/Toaster";
+
+interface CanisterDeployerProps {
+  onDeploy: (canisterId: string) => void;
+  setToasterData: (data: ToasterData) => void;
+  setShowToaster: (show: boolean) => void;
+}
 
 function CanisterDeployer({
   onDeploy,
-}: {
-  onDeploy: (canisterId: string) => void;
-}) {
+  setToasterData,
+  setShowToaster,
+}: CanisterDeployerProps) {
+  const { addDeployment, refreshDeployments } = useDeployments();
   const [state, setState] = useState({
     selectedFile: null,
     uploadProgress: 0,
@@ -20,36 +32,70 @@ function CanisterDeployer({
   const handleDeploy = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    // Update progress
-    setState((prev) => ({
-      ...prev,
-      uploadProgress: 0 / 100,
-      message: `Deploying Canister: 0%`,
-    }));
+    try {
+      setToasterData({
+        headerContent: "Deploying",
+        toastStatus: true,
+        toastData: "Canister is being deployed. Please wait...",
+        textColor: "green",
+      });
+      setShowToaster(true);
 
-    console.log("deploying canister...");
-    setIsLoading(true);
-    const result =
-      await migrator_management_canister_backend.deployAssetCanister();
-    if ("ok" in result) {
-      setCanisterId(result.ok);
-      setStatus(`Canister deployed with ID: ${result.ok}`);
-      onDeploy(result.ok);
-    } else {
-      setStatus(`Error: ${result.err}`);
+      // Update progress
+      setState((prev) => ({
+        ...prev,
+        uploadProgress: 0 / 100,
+        message: `Deploying Canister: 0%`,
+      }));
+
+      setIsLoading(true);
+      const result =
+        await migrator_management_canister_backend.deployAssetCanister();
+      if ("ok" in result) {
+        const newDeployment = {
+          canister_id: Principal.fromText(result.ok),
+          status: "uninitialized" as const,
+          date_created: Date.now(),
+          date_updated: Date.now(),
+          size: 0,
+        };
+        setToasterData({
+          headerContent: "Success",
+          toastStatus: true,
+          toastData: `Canister deployed at ${result.ok}`,
+          textColor: "green",
+        });
+        setShowToaster(true);
+        addDeployment(newDeployment);
+        await refreshDeployments();
+        setCanisterId(result.ok);
+        onDeploy(result.ok);
+      } else {
+        setStatus(`Error: ${result.err}`);
+      }
+      setIsLoading(false);
+
+      // Update progress
+      setState((prev) => ({
+        ...prev,
+        uploadProgress: 100,
+        message: `Deployed: 100%`,
+      }));
+    } catch (error) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: true,
+        toastData: `Error: ${error}`,
+        textColor: "red",
+        timeout: 5000,
+      });
+      setShowToaster(true);
     }
-    setIsLoading(false);
-
-    // Update progress
-    setState((prev) => ({
-      ...prev,
-      uploadProgress: 100,
-      message: `Deployed: 100%`,
-    }));
   };
 
   return (
     <section className="beta-test-section">
+      <ProgressBar isLoading={isLoading} />
       <h2> Canister Deployment</h2>
       <div className="container">
         <div className="canister-deployer">
@@ -76,12 +122,18 @@ function CanisterDeployer({
               </div>
             )}
           </form>
-          <div className="progress">
+          {/* <ProgressBar
+            progress={state.uploadProgress}
+            status={state.message}
+            isLoading={isLoading}
+            isError={false}
+          /> */}
+          {/* <div className="progress">
             {state.uploadProgress > 0 && (
               <progress value={state.uploadProgress} max="100" />
             )}
-          </div>
-          <div className="message">{state.message}</div>
+          </div> */}
+          {/* <div className="message">{state.message}</div> */}
         </div>
       </div>
     </section>
