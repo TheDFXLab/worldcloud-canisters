@@ -20,6 +20,7 @@ import AddIcon from "@mui/icons-material/Add";
 import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount";
 import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
 import { State } from "../../App";
+import AssetApi from "../../api/assets/AssetApi";
 
 type MenuItem = "publish" | "websites" | "admin" | "logout";
 
@@ -35,8 +36,12 @@ interface AppLayoutProps {
 }
 
 function AppLayout({ state, setState }: AppLayoutProps) {
-  const { disconnect, refreshIdentity } = useIdentity();
+  /** Hooks */
+  const { disconnect, refreshIdentity, identity } = useIdentity();
   const { isLoadingStatus } = useAuthority();
+  const { deployments, refreshDeployments, isLoading } = useDeployments();
+
+  /** State */
   const [activeMenuItem, setActiveMenuItem] = useState<MenuItem>("websites");
   const [deployedCanisterId, setDeployedCanisterId] = useState<string>("");
   const [userDeployments, setUserDeployments] = useState<Deployment[]>([]);
@@ -54,10 +59,10 @@ function AppLayout({ state, setState }: AppLayoutProps) {
   });
 
   const [showDetails, setShowDetails] = useState<boolean>(false);
-  const { deployments, refreshDeployments, isLoading } = useDeployments();
   const [showLoadbar, setShowLoadbar] = useState<boolean>(false);
   const [completeLoadbar, setCompleteLoadbar] = useState<boolean>(false);
 
+  /** Functions */
   const handleCanisterDeployed = (canisterId: string) => {
     setDeployedCanisterId(canisterId);
   };
@@ -86,6 +91,20 @@ function AppLayout({ state, setState }: AppLayoutProps) {
   }, [deployments]);
 
   useEffect(() => {}, [deployedCanisterId]);
+
+  useEffect(() => {
+    const get = async () => {
+      if (!deployments.length) {
+        return;
+      }
+      const assetApi = new AssetApi();
+      const files = await assetApi.getCanisterFiles(
+        deployments[1].canister_id.toText(),
+        identity
+      );
+    };
+    get();
+  }, [deployedCanisterId, deployments]);
 
   useEffect(() => {
     refreshDeployments();
