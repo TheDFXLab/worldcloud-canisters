@@ -7,23 +7,38 @@ import HashMap "mo:base/HashMap";
 import Hash "mo:base/Hash";
 import Nat "mo:base/Nat";
 import Nat32 "mo:base/Nat32";
+import Nat64 "mo:base/Nat64";
 import Text "mo:base/Text";
 import Error "mo:base/Error";
 import Iter "mo:base/Iter";
+import Int "mo:base/Int";
 import Types "types";
 import ExperimentalCycles "mo:base/ExperimentalCycles";
 import Principal "mo:base/Principal";
 import Bool "mo:base/Bool";
 import Time "mo:base/Time";
+import Float "mo:base/Float";
 import Account "Account";
+import Book "./book";
+import IcpLedger "canister:icp_ledger_canister";
+
 
 // TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
 // TODO: Handle stable variables (if needed)
 // TODO: Remove unneeded if else in `storeInAssetCanister` for handling files larger than ±2MB (since its handled by frontend)
-actor CanisterManager {
+shared (deployMsg) actor class CanisterManager() = this {
+  Debug.print("CanisterManager deployed by " # Principal.toText(deployMsg.caller));
 
   // var IC_MANAGEMENT_CANISTER : Text = "rwlgt-iiaaa-aaaaa-aaaaa-cai"; // Local replica
   let IC_MANAGEMENT_CANISTER = "aaaaa-aa"; // Production
+
+  // TODO: Get these from price oracle canister
+  let ICP_PRICE: Float = 10;
+  let XDR_PRICE: Float = 1.33;
+
+  let icp_fee : Nat = 10_000;
+  let ledger : Principal = Principal.fromActor(IcpLedger);
+  let Ledger: Types.Ledger = actor(Principal.toText(ledger));
 
   // Store the WASM bytes in stable memory
   private stable var asset_canister_wasm : ?[Nat8] = null;
@@ -54,6 +69,9 @@ actor CanisterManager {
   private var pending_cycles: HashMap.HashMap<Principal, Nat> = HashMap.HashMap<Principal, Nat>(0, Principal.equal, Principal.hash);
   private stable var stable_pending_cycles: [(Principal, Nat)] = [];
 
+  private var book: Book.Book = Book.Book();
+  private stable var stable_book: [(Principal, [(Types.Token, Nat)])] = [];
+
   // Function to upload the asset canister WASM
   public shared (msg) func uploadAssetCanisterWasm(wasm : [Nat8]) : async Types.Result {
     // Add authorization check here
@@ -74,9 +92,32 @@ actor CanisterManager {
     return wasm_module;
   };
 
-    public func get_deposit_account_id(canisterPrincipal : Principal, caller : Principal) : async Blob {
+  public func get_deposit_account_id(canisterPrincipal : Principal, caller : Principal) : async Blob {
     let accountIdentifier = Account.accountIdentifier(canisterPrincipal, Account.principalToSubaccount(caller));
     return accountIdentifier;
+  };
+
+  // Get pending deposits for the caller
+  public shared (msg) func getMyPendingDeposits() : async Types.Tokens {
+    return await getPendingDeposits(msg.caller);
+  };
+
+  // Get pending deposits for the specified caller
+  public func getPendingDeposits(caller : Principal) : async Types.Tokens {
+    // Calculate target subaccount
+    let source_account = Account.accountIdentifier(Principal.fromActor(this), Account.principalToSubaccount(caller));
+
+    // Check ledger for value
+    let balance = await Ledger.account_balance({
+        account = source_account;
+    });
+
+    return balance;
+  };
+
+   // Returns the caller's available credits in book
+  public shared (msg) func getMyCredits() : async Nat {
+    return book.fetchUserIcpBalance(msg.caller, ledger);
   };
 
   public shared (msg) func getAssetList(canister_id: Principal) : async Types.ListResponse {
@@ -179,6 +220,82 @@ actor CanisterManager {
   /**********
   * Write Methods
   **********/
+  // After user transfers ICP to the target subaccount
+  public shared (msg) func depositIcp() : async Types.DepositReceipt {
+    // Get amount of ICP in the caller's subaccount
+    // let balance = await getMyPendingDeposits();
+    let balance = await getPendingDeposits(msg.caller);
+    Debug.print("User balance: " # Nat64.toText(balance.e8s));
+
+    // Transfer to default subaccount of this canister
+    let result = await deposit(msg.caller, Nat64.toNat(balance.e8s));
+    switch result {
+      case (#Ok(available)) {
+        Debug.print("Deposit result: " # Nat.toText(available));
+        return #Ok(available);
+      };
+      case (#Err(error)) {
+        Debug.print("Deposit error: ");
+        return #Err(error);
+      };
+    };
+  };
+
+  // Transfers a user's ICP deposit from their respective subaccount to the default subaccount of this canister
+  private func deposit(from : Principal, balance : Nat) : async Types.DepositReceipt {
+    let subAcc = Account.principalToSubaccount(from);
+    let destination_deposit_identifier: Types.AccountIdentifier = Account.accountIdentifier(Principal.fromActor(this), Account.defaultSubaccount());
+
+    // Transfer to default subaccount of this canister
+    let icp_receipt = if ((balance) > icp_fee) {
+      await Ledger.transfer({
+        memo : Nat64 = 0;
+        from_subaccount = ?subAcc;
+        to = destination_deposit_identifier;
+        amount = { e8s = Nat64.fromNat(balance - icp_fee) };
+        fee = { e8s = Nat64.fromNat(icp_fee) };
+        created_at_time = ?{
+          timestamp_nanos = Nat64.fromNat(Int.abs(Time.now()));
+        };
+      });
+
+    } else {
+      return #Err(#BalanceLow);
+    };
+
+    switch icp_receipt {
+      case (#Err _) {
+        return #Err(#TransferFailure);
+      };
+      case _ {};
+    };
+    let available = { e8s : Nat = balance - icp_fee };
+
+    // Keep track of deposited ICP
+    _addCredit(from, ledger, available.e8s);
+
+    return #Ok(available.e8s);
+  };
+
+  // Increase deposited amount for `to` principal
+  private func _addCredit(to : Principal, token : Types.Token, amount : Nat) {
+    book.addTokens(to, token, amount);
+  };
+
+  // Decrease deposited amount for `from` principal
+  private func _removeCredit(from : Principal, token : Types.Token, amount : Nat) : Nat {
+    let newBalanceOpt = book.removeTokens(from, token, amount);
+    switch (newBalanceOpt) {
+      case (?newBalance) {
+        Debug.print("User new balance: " # Principal.toText(from) # Nat.toText(newBalance));
+        return newBalance;
+      };
+      case (null) {
+        return 0;
+      };
+    };
+
+  };
 
   public shared(msg) func addController(canister_id: Principal, new_controller: Principal) : async Types.Result {
     // Check if the caller is a controller
@@ -236,54 +353,26 @@ actor CanisterManager {
   };
 
 
-  public shared (msg) func addCycles(canister_id: Principal, amountInCycles: Nat) {
+  public shared (msg) func addCycles(canister_id: Principal): async Types.Result {
     let IC: Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    let claimable = book.fetchUserIcpBalance(msg.caller, ledger);
+    if (claimable <= 0) {
+      return #err("No credits available");
+    };
 
-    ExperimentalCycles.add(amountInCycles);
-    Debug.print("Depositing..." # Nat.toText(amountInCycles) # " cycles to canister " # Principal.toText(canister_id));
+    let cyclesToAdd = Float.fromInt(claimable) * ICP_PRICE / XDR_PRICE;
+
+    Debug.print("Claimable: " # Nat.toText(claimable) # " ICP");
+    Debug.print("Depositing..." # Float.toText(cyclesToAdd) # " cycles to canister " # Principal.toText(canister_id));
+    ExperimentalCycles.add(Int.abs(Float.toInt(Float.floor(cyclesToAdd))));
+    // Debug.print("Depositing..." # Nat.toText(amountInCycles) # " cycles to canister " # Principal.toText(canister_id));
     await IC.deposit_cycles({canister_id});
     Debug.print("Added cycles to canister " # Principal.toText(canister_id));
+
+    let _remaining = _removeCredit(msg.caller, ledger, claimable);
+    Debug.print("Remaining credits: " # Nat.toText(_remaining));
+    return #ok("Cycles added successfully");
   };
-
-
-  // TODO: Remove
-  public shared (msg) func wallet_receive() : async Nat {
-    let amount = ExperimentalCycles.available();
-    let accepted = ExperimentalCycles.accept(amount);
-
-    let user_cycles = switch (pending_cycles.get(msg.caller)) {
-      case null { 0 };
-      case (?cycles) { cycles };
-    };
-    pending_cycles.put(msg.caller, user_cycles + accepted);
-    Debug.print("Accepted cycles: " # Nat.toText(accepted));
-    return accepted;
-  };
-
-  // TODO: Remove
-  public shared(msg) func wallet_send(amount : Nat, destination: Principal) : async Nat {
-  assert(await _isController(destination, msg.caller));
-  ExperimentalCycles.add(amount);
-  let canister : actor { wallet_receive : () -> async Nat } = actor(Principal.toText(destination));
-  let result = await canister.wallet_receive();
-
-  let user_cycles = switch (pending_cycles.get(msg.caller)) {
-    case null { 0 };
-    case (?cycles) { cycles };
-  };
-
-  if (user_cycles < amount) {
-    throw Error.reject("Insufficient cycles");
-  };
-
-  pending_cycles.put(msg.caller, user_cycles - amount);
-  let remaining_cycles = switch (pending_cycles.get(msg.caller)) {
-    case null { 0 };
-    case (?cycles) { cycles };
-  };
-  Debug.print("Remaining cycles: " # Nat.toText(remaining_cycles));
-  return result;
-};
 
 
 // Function to deploy new asset canister
@@ -304,7 +393,7 @@ public shared (msg) func deployAssetCanister() : async Types.Result {
     Debug.print("Creating canister...");
     let settings : Types.CanisterSettings = {
       freezing_threshold = null;
-      controllers = ?[Principal.fromActor(CanisterManager), msg.caller];
+      controllers = ?[Principal.fromActor(this), msg.caller];
       memory_allocation = null;
       compute_allocation = null;
     };
@@ -349,7 +438,7 @@ public shared (msg) func storeInAssetCanister(
   canister_id : Principal,
   files : [Types.StaticFile],
 ) : async Types.Result {
-
+  Debug.print("Storing files in asset canister for user: " # Principal.toText(msg.caller));
   _updateCanisterDeployment(canister_id, #installing); // Update canister deployment status to installing
 
   // Check if the asset canister is deployed
@@ -436,6 +525,9 @@ public shared (msg) func storeInAssetCanister(
                     []
                   };
                 });
+
+              // Update canister deployment size
+              _updateCanisterDeploymentSize(canister_id, contentSize);
               Debug.print("[Canister " # Principal.toText(canister_id) # "] Stored file at " # file.path # " with size " # Nat.toText(contentSize) # " bytes");
 
             } catch (error) {
@@ -453,6 +545,25 @@ public shared (msg) func storeInAssetCanister(
     };
   };
 
+};
+
+private func _updateCanisterDeploymentSize(canister_id: Principal, new_file_size: Nat) {
+  let deployment = canister_table.get(canister_id);
+  switch(deployment) {
+    case null {
+      Debug.print("Canister deployment not found");
+    };
+    case (?deployment) {
+      let updated_deployment = {
+        canister_id = deployment.canister_id;
+        status = deployment.status;
+        date_created = deployment.date_created;
+        date_updated = Time.now();
+        size = deployment.size + new_file_size;
+      };
+      canister_table.put(canister_id, updated_deployment);
+    };
+  };
 };
 
   private func _updateCanisterDeployment(canister_id: Principal, status: Types.CanisterDeploymentStatus) {
@@ -506,6 +617,9 @@ public shared (msg) func storeInAssetCanister(
       });
       
       _addChunkId(canister_id, batch_id, chunk.chunk_id);
+      
+       // Update canister deployment size
+      _updateCanisterDeploymentSize(canister_id, file.content.size());
                 
       Debug.print("Creating chunk for batch id " # Nat.toText(batch_id) # "with chunk id " # Nat.toText(chunk.chunk_id));
 
@@ -602,6 +716,9 @@ public shared (msg) func storeInAssetCanister(
     canister_deployments_to_stable_array();
     canister_table_to_stable_array();
 
+    // Save book to stable array
+    stable_book := book.toStable();
+
     Debug.print("Preupgrade: Variables initialized, beginning conversion");
     Debug.print("Preupgrade: Preparing to sync assets and chunks.");
     Debug.print("Preupgrade: Assets: " # Nat.toText(assets.size()));
@@ -621,6 +738,11 @@ public shared (msg) func storeInAssetCanister(
     Debug.print("Postupgrade: Canister files: " # Nat.toText(canister_files.size()));
     canister_deployments_from_stable_array();
     canister_table_from_stable_array();
+
+    // Restore book
+    book.fromStable(stable_book);
+    stable_book := [];
+
     sync_assets();
     sync_chunks();
     Debug.print("Postupgrade: Syncing deployed canisters.");
