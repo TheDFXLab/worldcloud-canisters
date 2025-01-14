@@ -1,7 +1,4 @@
 import React from "react";
-// import { AuthorityManager } from "./AuthorityManager";
-// import { AssetManager } from "./AssetManager";
-// import { DangerZone } from "./DangerZone";
 import "./CanisterManagement.css";
 import { AuthorityManager } from "../AuthorityManager/AuthorityManager";
 import { AssetManager } from "../AssetManager/AssetManager";
@@ -14,6 +11,7 @@ import { AuthorityProvider } from "../../context/AuthorityContext/AuthorityConte
 import { AssetProvider } from "../../context/AssetContext/AssetContext";
 import { ToasterData } from "../Toast/Toaster";
 import { State } from "../../App";
+import { LedgerProvider } from "../../context/LedgerContext/LedgerContext";
 
 interface CanisterManagementProps {
   deployment: Deployment | null;
@@ -39,16 +37,18 @@ export const CanisterManagement: React.FC<CanisterManagementProps> = ({
       label: "Overview",
       content: deployment && (
         <AuthorityProvider state={state}>
-          <CanisterOverview
-            deployment={deployment}
-            canisterId={deployment?.canister_id.toText() || ""}
-            onCloseModal={() => {}}
-            setCanisterId={() => {}}
-            setToasterData={setToasterData}
-            setShowToaster={setShowToaster}
-            setShowLoadBar={setShowLoadBar}
-            setCompleteLoadbar={setCompleteLoadbar}
-          />
+          <LedgerProvider>
+            <CanisterOverview
+              deployment={deployment}
+              canisterId={deployment?.canister_id.toText() || ""}
+              onCloseModal={() => {}}
+              setCanisterId={() => {}}
+              setToasterData={setToasterData}
+              setShowToaster={setShowToaster}
+              setShowLoadBar={setShowLoadBar}
+              setCompleteLoadbar={setCompleteLoadbar}
+            />
+          </LedgerProvider>
         </AuthorityProvider>
       ),
     },

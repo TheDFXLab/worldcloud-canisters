@@ -1,17 +1,20 @@
-import { Button, Spinner } from "react-bootstrap";
+import { Spinner } from "react-bootstrap";
 import "./CanisterOverview.css";
 import { Deployment } from "../AppLayout/interfaces";
-import { getCanisterUrl } from "../../config/config";
+import { backend_canister_id, getCanisterUrl } from "../../config/config";
 import FileUploader from "../FileUploader/FileUploader";
 import { ToasterData } from "../Toast/Toaster";
 import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
-import { cyclesToTerra, terraToCycles } from "../../utility/e8s";
+import { cyclesToTerra } from "../../utility/e8s";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import IconTextRowView from "../IconTextRowView/IconTextRowView";
 import CyclesApi from "../../api/cycles";
 import { Principal } from "@dfinity/principal";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
-import { useState, useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useLedger } from "../../context/LedgerContext/LedgerContext";
+import { ConfirmationModal } from "../ConfirmationPopup/ConfirmationModal";
+import MainApi from "../../api/main";
 
 interface CanisterOverviewProps {
   deployment: Deployment | null;
@@ -35,8 +38,12 @@ export const CanisterOverview = ({
   setCompleteLoadbar,
 }: CanisterOverviewProps) => {
   const { status, refreshStatus } = useAuthority();
+  const { transfer } = useLedger();
   const { identity } = useIdentity();
   const isTransferringRef = useRef(false);
+  const [icpToDeposit, setIcpToDeposit] = useState<string>("0");
+
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
@@ -58,6 +65,7 @@ export const CanisterOverview = ({
 
   const handleAddCycles = useCallback(async () => {
     setShowLoadBar(true);
+
     // Prevent concurrent executions
     if (isTransferringRef.current) return;
     isTransferringRef.current = true;
@@ -74,9 +82,50 @@ export const CanisterOverview = ({
         setShowToaster(true);
         return;
       }
+
+      /** Transfer icp from user to backend canister */
+      // const amountInIcp = 0.1;
+      const amountInIcp = Number(icpToDeposit);
+      const destination = backend_canister_id;
+      const isTransferred = await transfer(amountInIcp, destination);
+
+      if (!isTransferred) {
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: false,
+          toastData: "Transfer failed",
+          textColor: "white",
+        });
+        setShowToaster(true);
+        return;
+      }
+
+      setToasterData({
+        headerContent: "Success",
+        toastStatus: true,
+        toastData: `Successfully transferred ${amountInIcp} ICP.`,
+        textColor: "white",
+      });
+      setShowToaster(true);
+
+      const mainApi = await MainApi.create(identity);
+      const isDeposited = await mainApi?.deposit();
+
+      if (!isDeposited) {
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: false,
+          toastData: "Deposit failed",
+          textColor: "white",
+        });
+        setShowToaster(true);
+        return;
+      }
+
+      /** Trigger add cycles for user's canister id*/
       const cyclesApi = new CyclesApi(Principal.fromText(canisterId), identity);
 
-      await cyclesApi.addCycles(0.001, Principal.fromText(canisterId));
+      await cyclesApi.addCycles(Principal.fromText(canisterId));
       setCompleteLoadbar(true);
 
       refreshStatus();
@@ -104,6 +153,19 @@ export const CanisterOverview = ({
 
   return (
     <div className="final-step">
+      <ConfirmationModal
+        show={showConfirmation}
+        amountState={[icpToDeposit, setIcpToDeposit]}
+        onHide={() => setShowConfirmation(false)}
+        onConfirm={() => {
+          setIcpToDeposit(icpToDeposit);
+          handleAddCycles();
+          setShowConfirmation(false);
+        }}
+        title="Add Cycles"
+        message="Are you sure you want to add cycles to this canister? This will transfer 0.1 ICP."
+      />
+
       <div className="canister-details">
         <div className="detail-row">
           <span className="label">Canister ID:</span>
@@ -163,12 +225,14 @@ export const CanisterOverview = ({
               <>
                 {/* {`${terraToCycles(status.cycles)} T cycles`} */}
 
-                <div onClick={handleAddCycles}>
+                <div onClick={() => setShowConfirmation(true)}>
                   <IconTextRowView
-                    onClickIcon={handleAddCycles}
+                    onClickIcon={() => setShowConfirmation(true)}
                     IconComponent={AddCircleOutlineIcon}
                     iconColor="green"
-                    text={`${cyclesToTerra(status.cycles).toFixed(2)} T cycles`}
+                    text={`${cyclesToTerra(status?.cycles || 0).toFixed(
+                      2
+                    )} T cycles`}
                   />
                 </div>
               </>

@@ -5,8 +5,9 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
 import { Deployment } from "../../components/AppLayout/interfaces";
+import MainApi from "../../api/main";
+import { useIdentity } from "../IdentityContext/IdentityContext";
 
 interface DeploymentsContextType {
   deployments: Deployment[];
@@ -21,15 +22,23 @@ const DeploymentsContext = createContext<DeploymentsContextType | undefined>(
 );
 
 export function DeploymentsProvider({ children }: { children: ReactNode }) {
+  const { identity } = useIdentity();
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshDeployments = async () => {
     try {
-      const result =
-        await migrator_management_canister_backend.getCanisterDeployments();
+      if (!identity) {
+        throw new Error("Identity not found");
+      }
 
-      console.log(`refreshed.....`);
+      const mainApi = await MainApi.create(identity);
+      const result = await mainApi?.getCanisterDeployments();
+
+      if (!result) {
+        throw new Error("No deployments found");
+      }
+
       const deploymentsArray = result.map((deployment) => ({
         ...deployment,
         size: Number(deployment.size),

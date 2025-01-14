@@ -9,6 +9,7 @@ import { Principal } from "@dfinity/principal";
 import AuthorityApi, { CanisterStatus } from "../../api/authority";
 import { decodeError } from "../../utility/errors";
 import { State } from "../../App";
+import { useIdentity } from "../IdentityContext/IdentityContext";
 
 interface AuthorityContextType {
   status: CanisterStatus | null;
@@ -31,6 +32,7 @@ export function AuthorityProvider({
 }) {
   const [status, setStatus] = useState<CanisterStatus | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+  const { identity } = useIdentity();
 
   if (!state.canister_id) return;
   const authApi = new AuthorityApi(Principal.fromText(state.canister_id));
@@ -38,7 +40,10 @@ export function AuthorityProvider({
   const refreshStatus = async () => {
     try {
       setIsLoadingStatus(true);
-      const result = await authApi.getCanisterStatus(authApi.canisterId);
+      const result = await authApi.getCanisterStatus(
+        authApi.canisterId,
+        identity
+      );
       setStatus(result);
     } catch (error) {
       setIsLoadingStatus(false);
@@ -52,12 +57,11 @@ export function AuthorityProvider({
       setIsLoadingStatus(true);
       // Implement add controller logic
       const result = await authApi.addController(
-        Principal.fromText(newController)
+        Principal.fromText(newController),
+        identity
       );
       if (Object.keys(result)[0] === "ok") {
         setIsLoadingStatus(false);
-
-        console.log(`Controller added successfully`);
       }
       return true;
     } catch (error: any) {
@@ -73,14 +77,14 @@ export function AuthorityProvider({
   const handleRemoveController = async (controller: string) => {
     try {
       setIsLoadingStatus(true);
-      // Implement remove controller logic
+
       const result = await authApi.removeController(
-        Principal.fromText(controller)
+        Principal.fromText(controller),
+        identity
       );
 
       if (Object.keys(result)[0] === "ok") {
         setIsLoadingStatus(false);
-        console.log(`Controller removed successfully`);
       }
       return true;
     } catch (error: any) {

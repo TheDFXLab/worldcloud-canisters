@@ -5,10 +5,10 @@ import ii from "../../../assets/images/ii.png";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { Principal } from "@dfinity/principal";
 import {
-  icp_ledger_canister_id,
+  internet_identity_canister_id,
   internetIdentityConfig,
 } from "../../config/config";
-import { AuthClient, IdbStorage } from "@dfinity/auth-client";
+import { AuthClient } from "@dfinity/auth-client";
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -31,11 +31,10 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
 
   const login = async () => {
     const identity = await connectWallet(
-      Principal.fromText(icp_ledger_canister_id)
+      Principal.fromText(internet_identity_canister_id)
     );
 
     if (!identity) {
-      console.log(`Failed to load identity.`);
       setIsLoading(false);
       setIsAuthenticated(false);
       return;

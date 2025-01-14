@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
 import "./CanisterDeployer.css";
 import { Principal } from "@dfinity/principal";
-// import ProgressBar from "../ProgressBar/ProgressBar";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
 import { ToasterData } from "../Toast/Toaster";
+import MainApi from "../../api/main";
+import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 
 interface CanisterDeployerProps {
   onDeploy: (canisterId: string) => void;
@@ -19,6 +19,8 @@ function CanisterDeployer({
   setShowToaster,
 }: CanisterDeployerProps) {
   const { addDeployment, refreshDeployments } = useDeployments();
+  const { identity } = useIdentity();
+
   const [state, setState] = useState({
     selectedFile: null,
     uploadProgress: 0,
@@ -49,11 +51,14 @@ function CanisterDeployer({
       }));
 
       setIsLoading(true);
-      const result =
-        await migrator_management_canister_backend.deployAssetCanister();
-      if ("ok" in result) {
+
+      const mainApi = await MainApi.create(identity);
+      const result = await mainApi?.deployAssetCanister();
+      console.log(`Result:`, result);
+
+      if (result && result.status) {
         const newDeployment = {
-          canister_id: Principal.fromText(result.ok),
+          canister_id: Principal.fromText(result?.message as string),
           status: "uninitialized" as const,
           date_created: Date.now(),
           date_updated: Date.now(),
@@ -62,16 +67,16 @@ function CanisterDeployer({
         setToasterData({
           headerContent: "Success",
           toastStatus: true,
-          toastData: `Canister deployed at ${result.ok}`,
+          toastData: `Canister deployed at ${result?.message}`,
           textColor: "green",
         });
         setShowToaster(true);
         addDeployment(newDeployment);
         await refreshDeployments();
-        setCanisterId(result.ok);
-        onDeploy(result.ok);
+        setCanisterId(result?.message as string);
+        onDeploy(result?.message as string);
       } else {
-        setStatus(`Error: ${result.err}`);
+        setStatus(`Error: ${result?.message}`);
       }
       setIsLoading(false);
 

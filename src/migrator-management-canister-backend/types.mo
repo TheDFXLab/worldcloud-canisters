@@ -8,6 +8,19 @@ module {
     public type AssetId = Text;
     public type ChunkId = Nat32;
 
+    public type Token = Principal;
+    public type Tokens = {
+        e8s : Nat64;
+    };
+    public type DepositReceipt = {
+        #Ok : Nat;
+        #Err : DepositErr;
+    };
+    public type DepositErr = {
+        #BalanceLow;
+        #TransferFailure;
+    };
+
     public type StaticFile = {
         path : Text;
         content_type : Text;
@@ -191,4 +204,39 @@ module {
     };
 
     public type UserCanisters = HashMap.HashMap<Principal, [Principal]>;
+
+    public type AccountIdentifier = Blob;
+    public type SubAccount = Blob;
+    public type Memo = Nat64;
+    public type TimeStamp = { timestamp_nanos : Nat64 };
+    public type BlockIndex = Nat64;
+
+    public type AccountBalanceArgs = {
+        account : AccountIdentifier;
+    };
+
+    public type TransferArgs = {
+        memo : Memo;
+        amount : Tokens;
+        fee : Tokens;
+        from_subaccount : ?SubAccount;
+        to : AccountIdentifier;
+        created_at_time : ?TimeStamp;
+    };
+    public type TransferResult = {
+        #Ok : BlockIndex;
+        #Err : TransferError;
+    };
+    public type TransferError = {
+        #BadFee : { expected_fee : Tokens };
+        #InsufficientFunds : { balance : Tokens };
+        #TxTooOld : { allowed_window_nanos : Nat64 };
+        #TxCreatedInFuture : Null;
+        #TxDuplicate : { duplicate_of : BlockIndex };
+    };
+
+    public type Ledger = actor {
+        transfer : shared TransferArgs -> async (TransferResult);
+        account_balance : AccountBalanceArgs -> async (Tokens);
+    };
 };
