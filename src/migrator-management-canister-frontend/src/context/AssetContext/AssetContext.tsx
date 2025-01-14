@@ -6,8 +6,9 @@ import {
   ReactNode,
 } from "react";
 import { Principal } from "@dfinity/principal";
-import AuthorityApi, { CanisterStatus } from "../../api/authority";
+import AuthorityApi from "../../api/authority";
 import { CanisterAsset } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { useIdentity } from "../IdentityContext/IdentityContext";
 
 interface AssetContextType {
   assets: CanisterAsset[];
@@ -24,16 +25,15 @@ export function AssetProvider({
   children: ReactNode;
   canisterId: Principal;
 }) {
+  const { identity } = useIdentity();
   const [isLoadingAssets, setIsLoadingAssets] = useState(true);
   const [assets, setAssets] = useState<CanisterAsset[]>([]);
   const authApi = new AuthorityApi(canisterId);
 
   const refreshAssets = async () => {
     try {
-      console.log(`Refreshing status for canister: `, canisterId);
       setIsLoadingAssets(true);
-      const result = await authApi.getAssetList(canisterId);
-      console.log(`Status: `, result);
+      const result = await authApi.getAssetList(canisterId, identity);
       setAssets(result.assets);
     } catch (error) {
       setIsLoadingAssets(false);
