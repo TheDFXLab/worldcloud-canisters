@@ -1,8 +1,5 @@
 import React, { useState } from "react";
-import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
-
 import { Principal } from "@dfinity/principal";
-
 import "./FileUploader.css";
 import { extractZip, StaticFile } from "../../utility/compression";
 import { sanitizeUnzippedFiles } from "../../utility/sanitize";
@@ -10,6 +7,9 @@ import CompleteDeployment from "../CompleteDeployment/CompleteDeployment";
 import ProgressBar from "../ProgressBar/ProgressBar";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import { ToasterData } from "../Toast/Toaster";
+import AssetApi from "../../api/assets/AssetApi";
+import { useIdentity } from "../../context/IdentityContext/IdentityContext";
+import MainApi from "../../api/main";
 
 interface FileUploaderProps {
   canisterId: string;
@@ -25,6 +25,7 @@ function FileUploader({
   setShowToaster,
 }: FileUploaderProps) {
   const { updateDeployment, refreshDeployments } = useDeployments();
+  const { identity } = useIdentity();
   const [currentBytes, setCurrentBytes] = useState(0);
   const [state, setState] = useState({
     selectedFile: null,
@@ -176,21 +177,30 @@ function FileUploader({
 
       setCurrentFiles(sanitizedFiles);
 
-      const result =
-        await migrator_management_canister_backend.storeInAssetCanister(
-          Principal.fromText(canisterId),
-          sanitizedFiles
-        );
+      console.log(
+        `Storing files in asset canister ${canisterId} for user: ${identity
+          ?.getPrincipal()
+          .toText()}`
+      );
 
-      if ("ok" in result) {
+      const mainApi = await MainApi.create(identity);
+      const result = await mainApi?.storeInAssetCanister(
+        Principal.fromText(canisterId),
+        sanitizedFiles
+      );
+
+      if (result && result.status) {
         setUploadedSize(uploadedSize + totalSize);
         return {
           status: true,
-          message: `Success ${result.ok}`,
+          message: `Upload file batch success.`,
           uploadedSize: totalSize,
         };
       } else {
-        return { status: false, message: `Error: ${result.err}` };
+        return {
+          status: false,
+          message: result?.message ?? "Failed to upload file batch.",
+        };
       }
     } catch (error: any) {
       throw { status: false, message: error.message as string };
@@ -199,6 +209,22 @@ function FileUploader({
 
   const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const assetApi = new AssetApi();
+
+    if (!(await assetApi.isIdentified(identity))) {
+      setIsError(true);
+      setStatus("Please connect your wallet first");
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: true,
+        toastData: "Please connect your wallet first",
+        textColor: "red",
+      });
+      setShowToaster(true);
+      return;
+    }
+
     setIsLoading(true);
     setProgress(0);
     setStatus("Reading zip file...");
