@@ -6,7 +6,7 @@ import {
   ReactNode,
 } from "react";
 import { Principal } from "@dfinity/principal";
-import { AuthClient, IdbStorage } from "@dfinity/auth-client";
+import { AuthClient } from "@dfinity/auth-client";
 import { HttpAgent } from "@dfinity/agent";
 
 import { Identity } from "@dfinity/agent";
@@ -45,8 +45,8 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       internetIdentityConfig.loggedOutPrincipal
     ) {
       setIsConnected(false);
-
       setIdentity(null);
+      return identity;
     }
     setIdentity(identity);
     setIsConnected(true);
