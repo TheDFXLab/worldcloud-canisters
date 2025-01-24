@@ -26,6 +26,14 @@ class AssetApi {
         }
         return files;
     }
+
+    async getAsset(canisterId: string, key: string, identity: Identity | null) {
+        const mainApi = await MainApi.create(identity);
+        if (!mainApi) {
+            throw new Error("Failed to create main api");
+        }
+        return mainApi.actor?.getCanisterAsset(Principal.fromText(canisterId), key);
+    }
 }
 
 export default AssetApi;

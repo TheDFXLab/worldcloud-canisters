@@ -32,7 +32,7 @@ echo ">Balance: $ICP_BALANCE ICP"
 # Get receiver ID and ID in bytes
 echo ""
 echo "===========RECEIVER==========="
-RECEIVER_PRINCIPAL="f46bi-xzsy2-ovuv4-qaweg-se3d2-rdkir-suvfl-smh3h-pgv62-ps4ja-mae"
+RECEIVER_PRINCIPAL="cs2rn-25rlw-qs7ct-kql6i-wzvwv-askah-y5gty-pdqos-qche6-65swv-rae"
 RECEIVER_ID=$(dfx ledger account-id --of-principal $RECEIVER_PRINCIPAL)
 RECEIVER_ID_IN_BYTES="$(python3 -c 'print("vec{" + ";".join([str(b) for b in bytes.fromhex("'$RECEIVER_ID'")]) + "}")')"
 

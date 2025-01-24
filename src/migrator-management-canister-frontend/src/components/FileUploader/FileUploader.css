@@ -133,3 +133,17 @@ progress::-webkit-progress-value {
 .files-accordion {
   width: 100%;
 }
+
+.type-selector {
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.type-selector select {
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 0.5rem;
+  border-radius: 8px;
+  width: 100%;
+}

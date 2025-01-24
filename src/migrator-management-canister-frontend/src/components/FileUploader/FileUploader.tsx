@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { Principal } from "@dfinity/principal";
 import "./FileUploader.css";
-import { extractZip, StaticFile } from "../../utility/compression";
+import {
+  extractZip,
+  StaticFile,
+  toStaticFiles,
+} from "../../utility/compression";
 import { sanitizeUnzippedFiles } from "../../utility/sanitize";
 import CompleteDeployment from "../CompleteDeployment/CompleteDeployment";
 import ProgressBar from "../ProgressBar/ProgressBar";
@@ -10,6 +14,7 @@ import { ToasterData } from "../Toast/Toaster";
 import AssetApi from "../../api/assets/AssetApi";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import MainApi from "../../api/main";
+import { Form } from "react-bootstrap";
 
 interface FileUploaderProps {
   canisterId: string;
@@ -17,6 +22,8 @@ interface FileUploaderProps {
   setToasterData: (data: ToasterData) => void;
   setShowToaster: (show: boolean) => void;
 }
+
+type CanisterType = "website" | "drive";
 
 function FileUploader({
   canisterId,
@@ -43,10 +50,24 @@ function FileUploader({
 
   const [uploadedSize, setUploadedSize] = useState(0);
   const [currentFiles, setCurrentFiles] = useState<StaticFile[] | null>(null);
+  const [canisterType, setCanisterType] = useState<CanisterType>("website");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
+    if (canisterType === "website") {
+      const file = event.target.files?.[0];
+      if (file) {
+        console.log(`uploaded ${file.name}`);
+        setSelectedFile(file);
+      }
+    } else {
+      const files = event.target.files;
+      console.log(`all files`, files);
+      if (!files) return;
+      if (files) {
+        console.log(`uploaded ${files.length} files`);
+        setSelectedFiles(Array.from(files));
+      }
     }
   };
 
@@ -209,7 +230,6 @@ function FileUploader({
 
   const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
     const assetApi = new AssetApi();
 
     if (!(await assetApi.isIdentified(identity))) {
@@ -230,13 +250,26 @@ function FileUploader({
     setStatus("Reading zip file...");
 
     try {
-      if (!selectedFile) {
+      if (!selectedFile && canisterType === "website") {
         setIsError(true);
         setStatus("Please select a zip file first");
         setToasterData({
           headerContent: "Error",
           toastStatus: true,
           toastData: "Please select a zip file first",
+          textColor: "red",
+        });
+        setShowToaster(true);
+        return;
+      }
+
+      if (selectedFiles.length === 0 && canisterType === "drive") {
+        setIsError(true);
+        setStatus("Please select at least one file");
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: true,
+          toastData: "Please select at least one file",
           textColor: "red",
         });
         setShowToaster(true);
@@ -254,11 +287,27 @@ function FileUploader({
 
       // Simulate file reading progress
       setProgress(10);
-      const unzippedFiles = await extractZip(selectedFile);
+      let files: StaticFile[] = [];
+      if (canisterType === "website") {
+        if (!selectedFile) {
+          throw new Error("No file selected");
+        }
+        const unzippedFiles = await extractZip(selectedFile);
+        files = unzippedFiles;
+      } else {
+        if (selectedFiles.length === 0) {
+          throw new Error("No files selected");
+        }
+        const staticFiles = await toStaticFiles(selectedFiles);
+        files = staticFiles;
+      }
+
       setProgress(30);
       setStatus("Processing files...");
 
-      const sanitizedFiles = sanitizeUnzippedFiles(unzippedFiles);
+      const sanitizedFiles =
+        canisterType === "website" ? sanitizeUnzippedFiles(files) : files;
+      console.log(`Sanitized files: `, sanitizedFiles);
       setProgress(50);
       setStatus("Uploading to canister...");
 
@@ -315,42 +364,53 @@ function FileUploader({
 
   return (
     <div className="zip-uploader">
-      {/* <h2>Website Assets</h2> */}
       <p className="step-title">
-        Your website canister is deployed with principal:{" "}
+        Your canister is deployed with principal:{" "}
         <span style={{ fontWeight: "bold" }}>{canisterId}</span>
       </p>
+
+      <div className="type-selector mb-4">
+        <Form.Select
+          value={canisterType}
+          onChange={(e) => setCanisterType(e.target.value as CanisterType)}
+        >
+          <option value="website">Website Canister</option>
+          <option value="drive">Drive Canister</option>
+        </Form.Select>
+      </div>
+
       <p className="step-title">
-        Upload the zip file containing your website assets.
+        {canisterType === "website"
+          ? "Upload the zip file containing your website assets."
+          : "Upload files to your drive canister."}
       </p>
+
       <form onSubmit={handleUpload}>
         <div className="upload-container">
           <div className="file-input-group">
             <input
               type="file"
-              accept=".zip"
+              accept={canisterType === "website" ? ".zip" : "*"}
               onChange={handleFileSelect}
               disabled={isLoading}
+              multiple={canisterType === "drive"}
             />
           </div>
           <div className="button-container">
-            <button type="submit" disabled={!selectedFile || isLoading}>
-              {isLoading ? "Uploading..." : "Upload Zip"}
+            <button
+              type="submit"
+              disabled={
+                (!selectedFile && canisterType === "website") ||
+                (selectedFiles.length === 0 && canisterType === "drive") ||
+                isLoading
+              }
+            >
+              {isLoading
+                ? "Uploading..."
+                : `Upload ${canisterType === "website" ? "Zip" : "Files"}`}
             </button>
           </div>
         </div>
-        {/* <div className="status-container">
-          {status && (
-            <div
-              className={`status ${
-                status.includes("Error") ? "error" : "success"
-              }`}
-            >
-              {status}
-            </div>
-          )}
-          <div className="message">{state.message}</div>
-        </div> */}
 
         <ProgressBar
           progress={progress}

@@ -174,7 +174,7 @@ function AppLayout({ state, setState }: AppLayoutProps) {
             className={`nav-item ${
               activeMenuItem === "publish" ? "active" : ""
             }`}
-            text="New Drive"
+            text="New"
             IconComponent={AddIcon}
             onClickIcon={() => setActiveMenuItem("publish")}
             iconColor="black"
@@ -184,7 +184,7 @@ function AppLayout({ state, setState }: AppLayoutProps) {
             className={`nav-item ${
               activeMenuItem === "websites" ? "active" : ""
             }`}
-            text="My Drives"
+            text="My Cloud"
             IconComponent={StorageIcon}
             onClickIcon={() => setActiveMenuItem("websites")}
             iconColor="black"
