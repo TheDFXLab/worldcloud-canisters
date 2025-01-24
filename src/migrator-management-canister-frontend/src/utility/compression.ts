@@ -42,6 +42,35 @@ export const extractZip = async (zipFile: File) => {
     return files;
 };
 
+export const toStaticFiles = async (files: File[]): Promise<StaticFile[]> => {
+    const readFile = (file: File): Promise<Uint8Array> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const arrayBuffer = reader.result as ArrayBuffer;
+                resolve(new Uint8Array(arrayBuffer));
+            };
+            reader.onerror = () => reject(reader.error);
+            reader.readAsArrayBuffer(file);
+        });
+    };
+
+    const staticFiles: StaticFile[] = await Promise.all(
+        files.map(async (file) => ({
+            path: file.name,
+            content_type: file.type || 'application/octet-stream',
+            content_encoding: [],
+            content: await readFile(file),
+            is_chunked: false,
+            chunk_id: 0n,
+            batch_id: 0n,
+            is_last_chunk: false,
+        }))
+    );
+
+    return staticFiles;
+};
+
 
 const getContentType = (path: string) => {
     const extension = path.split('.').pop()?.toLowerCase();
