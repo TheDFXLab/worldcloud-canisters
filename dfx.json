@@ -10,7 +10,8 @@
         "internet_identity"
       ],
       "source": [
-        "src/migrator-management-canister-frontend/dist"
+        "src/migrator-management-canister-frontend/dist",
+        "src/assets"
       ],
       "type": "assets",
       "workspace": "migrator-management-canister-frontend"
@@ -35,6 +36,11 @@
         }
       },
       "frontend": {}
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "0.0.0.0:8000"
     }
   },
   "defaults": {
