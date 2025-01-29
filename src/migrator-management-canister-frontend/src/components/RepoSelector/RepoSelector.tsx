@@ -8,6 +8,9 @@ import FileUploadApi from "../../api/FileUpload/FileUploadApi";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { ToasterData } from "../Toast/Toaster";
 import { getCanisterUrl } from "../../config/config";
+import DeploymentProgress, {
+  DeploymentStep,
+} from "../DeploymentProgress/DeploymentProgress";
 
 interface PackageLocation {
   path: string;
@@ -21,17 +24,29 @@ interface Branch {
   };
 }
 
+interface ArtifactSummary {
+  // Define the structure of ArtifactSummary
+}
+
 interface RepoState {
   branches: Branch[];
   selectedBranch: string;
   packageLocations: PackageLocation[];
   selectedPath: string;
+  deploymentSteps: DeploymentStep[];
+  currentStep: string | null;
+  artifacts: ArtifactSummary[];
 }
 
 interface RepoSelectorProps {
   canisterId: string | null;
   setShowToaster: (show: boolean) => void;
   setToasterData: (data: ToasterData) => void;
+}
+
+interface RepoSelectorState {
+  selectedRepo: Repository | null;
+  step: "select" | "configure" | "deploy";
 }
 
 const RepoSelector: React.FC<RepoSelectorProps> = ({
@@ -51,6 +66,50 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
   >("idle");
   const [repoStates, setRepoStates] = useState<Record<string, RepoState>>({});
   const github = GithubApi.getInstance();
+  const [state, setState] = useState<RepoSelectorState>({
+    selectedRepo: null,
+    step: "select",
+  });
+
+  const [hideActionBar, setHideActionBar] = useState(false);
+
+  const initialDeploymentSteps: DeploymentStep[] = [
+    {
+      id: "workflow",
+      title: "Creating Workflow",
+      description: "Setting up the build pipeline",
+      status: "pending",
+      timeEstimate: "30 seconds",
+    },
+    {
+      id: "trigger",
+      title: "Triggering Build",
+      description: "Starting the build process",
+      status: "pending",
+      timeEstimate: "1 minute",
+    },
+    {
+      id: "build",
+      title: "Building Project",
+      description: "Compiling and bundling your application",
+      status: "pending",
+      timeEstimate: "2-3 minutes",
+    },
+    {
+      id: "artifact",
+      title: "Processing Build",
+      description: "Preparing build files for deployment",
+      status: "pending",
+      timeEstimate: "1 minute",
+    },
+    {
+      id: "deploy",
+      title: "Deploying to Canister",
+      description: "Uploading to Internet Computer",
+      status: "pending",
+      timeEstimate: "1-2 minutes",
+    },
+  ];
 
   useEffect(() => {
     const loadRepos = async () => {
@@ -71,13 +130,17 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
       setRepoStates((prev) => ({
         ...prev,
         [repo]: {
-          ...prev[repo],
+          ...(prev[repo] || {}), // Preserve existing state if any
           branches: response,
           selectedBranch: "",
           selectedPath: "",
           packageLocations: [],
+          deploymentSteps: initialDeploymentSteps,
+          currentStep: "workflow",
+          artifacts: [],
         },
       }));
+      console.log(`loaded branches for ${repo}`);
     } catch (error) {
       console.error("Failed to load branches:", error);
     }
@@ -105,6 +168,9 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
           ...prev[repo],
           packageLocations: locations,
           selectedPath: locations.length === 1 ? locations[0].path : "",
+          deploymentSteps: initialDeploymentSteps,
+          currentStep: "workflow",
+          artifacts: [],
         },
       }));
     } catch (error) {
@@ -114,6 +180,9 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
         [repo]: {
           ...prev[repo],
           packageLocations: [{ path: ".", hasPackageJson: false }],
+          deploymentSteps: initialDeploymentSteps,
+          currentStep: "workflow",
+          artifacts: [],
         },
       }));
     }
@@ -128,119 +197,256 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
         throw new Error("Please select a source path");
       }
 
-      console.log(
-        `Deploying ${repo} from path: ${repoStates[repo].selectedPath}`
-      );
       setShowToaster(true);
       setToasterData({
-        headerContent: "Deploying",
+        headerContent: "Deploying...",
         toastStatus: true,
         toastData: `Deploying ${repo}`,
         textColor: "green",
-        timeout: 2000,
+        timeout: 5000,
       });
-      setDeployStatus("deploying");
 
-      // Generate workflow with selected path
+      console.log(`Hiding action bar`);
+      setHideActionBar(true);
+
+      setRepoStates((prev) => ({
+        ...prev,
+        [repo]: {
+          ...prev[repo],
+          deploymentSteps: initialDeploymentSteps,
+          currentStep: "workflow",
+        },
+      }));
+
+      // Update workflow step
       const workflowContent = generateWorkflowTemplate(
         repoStates[repo].selectedPath,
         repoStates[repo].selectedBranch
       );
 
-      setShowToaster(true);
-      setToasterData({
-        headerContent: "Creating workflow",
-        toastStatus: true,
-        toastData: `Creating workflow for ${repo}`,
-        textColor: "green",
-        timeout: 2000,
-      });
-
-      // 1. Create/update workflow
       await github.createWorkflow(
         repo,
         workflowContent,
         repoStates[repo].selectedBranch
       );
 
-      // Add delay to ensure workflow is committed
-      console.log("Waiting for workflow to be committed...");
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      updateStepStatus(repo, "workflow", "completed");
+      updateStepStatus(repo, "trigger", "in-progress");
 
-      setShowToaster(true);
-      setToasterData({
-        headerContent: "Triggering workflow",
-        toastStatus: true,
-        toastData: `Triggering workflow for ${repo}`,
-        textColor: "green",
-        timeout: 3000,
-      });
-
-      // 2. Trigger workflow
+      // Trigger workflow
       await github.triggerWorkflow(repo, repoStates[repo].selectedBranch);
 
-      // 3. Wait for artifact
+      updateStepStatus(repo, "trigger", "completed");
+      updateStepStatus(repo, "build", "in-progress");
+
+      // Wait for artifact
       const artifact = await github.pollForArtifact(
         repo,
         repoStates[repo].selectedBranch
       );
 
-      console.log("Artifact found:", artifact);
-      console.log(`Downloading artifact.`);
-      setShowToaster(true);
-      setToasterData({
-        headerContent: "Downloading artifact",
-        toastStatus: true,
-        toastData: `Downloading artifact for ${repo}`,
-        textColor: "green",
-        timeout: 3000,
-      });
-      // 4. Download artifact
+      updateStepStatus(repo, "build", "completed");
+      updateStepStatus(repo, "artifact", "in-progress");
+
+      // Download and process artifact
       const zipBlob = await github.downloadArtifact(
         artifact.archive_download_url
       );
-
-      console.log(`Downloaded artifact.`, zipBlob);
       const zipFile = new File([zipBlob], "build.zip", {
         type: "application/zip",
       });
 
-      console.log(`Zip file ${zipFile.name} with size: ${zipFile.size}`);
-      // 5. Use existing FileUploader
-      setShowToaster(true);
-      setToasterData({
-        headerContent: "Uploading build files to canister",
-        toastStatus: true,
-        toastData: `Uploading build files to canister`,
-        textColor: "green",
-        timeout: 3000,
-      });
+      updateStepStatus(repo, "artifact", "completed");
+      updateStepStatus(repo, "deploy", "in-progress");
 
+      // Deploy to canister
       const fileUploadApi = new FileUploadApi();
       const result = await fileUploadApi.uploadFromZip(
         zipFile,
         canisterId,
         identity
       );
-      console.log(`Upload result: `, result);
+
       if (!result.status) {
         throw new Error(result.message);
       }
-      setShowToaster(true);
+
+      updateStepStatus(repo, "deploy", "completed");
+
+      // Show success toast
       setToasterData({
-        headerContent: `Deployment complete. Visit page ${getCanisterUrl(
-          canisterId
-        )}`,
+        headerContent: `Deployment complete!`,
         toastStatus: true,
         toastData: `Deployed ${repo}`,
         textColor: "green",
-        timeout: 10000,
+        timeout: 5000,
       });
+
+      // Navigate to canister after a short delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       console.error("Deploy failed:", error);
-      setDeployStatus("failed");
+      // Mark current step as error
+      const currentStep = repoStates[repo].currentStep;
+      if (currentStep) {
+        updateStepStatus(repo, currentStep, "error");
+      }
+      setToasterData({
+        headerContent: "Deployment Failed",
+        toastStatus: false,
+        toastData: error instanceof Error ? error.message : "Unknown error",
+        textColor: "red",
+        timeout: 5000,
+      });
     }
   };
+
+  const updateStepStatus = (
+    repo: string,
+    stepId: string,
+    status: DeploymentStep["status"]
+  ) => {
+    setRepoStates((prev) => ({
+      ...prev,
+      [repo]: {
+        ...prev[repo],
+        currentStep: stepId,
+        deploymentSteps: prev[repo].deploymentSteps.map((step) =>
+          step.id === stepId ? { ...step, status } : step
+        ),
+      },
+    }));
+  };
+
+  const renderRepoGrid = () => (
+    <div className="repo-grid">
+      {repos.map((repo) => (
+        <div
+          key={repo.id}
+          className={`repo-card ${
+            state.selectedRepo?.id === repo.id ? "selected" : ""
+          }`}
+          onClick={() => setState((prev) => ({ ...prev, selectedRepo: repo }))}
+        >
+          <div className="repo-name">{repo.name}</div>
+          <div className="repo-info">
+            <span>{repo.full_name}</span>
+            <span className="repo-visibility">{repo.visibility}</span>
+          </div>
+          <div className="repo-actions">
+            <a href={repo.html_url} target="_blank" rel="noopener noreferrer">
+              View on GitHub
+            </a>
+          </div>
+          {repoStates[repo.full_name]?.artifacts?.length > 0 && (
+            <div className="repo-artifacts">
+              <h4>Recent Builds</h4>
+              {/* ... artifacts list ... */}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderConfigureStep = () => {
+    if (!state.selectedRepo) {
+      console.log(`no repo selected`);
+      return null;
+    }
+
+    const repoState = repoStates[state.selectedRepo.full_name];
+
+    return (
+      <div className="deployment-configure">
+        <div className="configure-header">
+          <button
+            className="back-button"
+            onClick={() => setState((prev) => ({ ...prev, step: "select" }))}
+          >
+            ← Back to repositories
+          </button>
+          <h2>Configure Deployment</h2>
+          <p>Configure deployment settings for {state.selectedRepo.name}</p>
+        </div>
+
+        <div className="configure-content">
+          <div className="branch-selector">
+            <label>Branch:</label>
+            <select
+              value={repoState?.selectedBranch || ""}
+              onChange={(e) => {
+                const newBranch = e.target.value;
+                setRepoStates((prev) => ({
+                  ...prev,
+                  [state.selectedRepo!.full_name]: {
+                    ...prev[state.selectedRepo!.full_name],
+                    selectedBranch: newBranch,
+                  },
+                }));
+                if (newBranch) {
+                  findPackageJsonLocations(
+                    state.selectedRepo!.full_name,
+                    newBranch
+                  );
+                }
+              }}
+              onClick={() =>
+                !repoState?.branches.length &&
+                loadBranches(state.selectedRepo!.full_name)
+              }
+            >
+              <option value="">Select branch</option>
+              {repoState?.branches.map((branch) => (
+                <option key={branch.name} value={branch.name}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {repoState?.selectedBranch && (
+            <div className="path-selector">
+              <label>Source Path:</label>
+              <select
+                value={repoState.selectedPath}
+                onChange={(e) => {
+                  setRepoStates((prev) => ({
+                    ...prev,
+                    [state.selectedRepo!.full_name]: {
+                      ...prev[state.selectedRepo!.full_name],
+                      selectedPath: e.target.value,
+                    },
+                  }));
+                }}
+              >
+                <option value="">Select source path</option>
+                {repoState.packageLocations.map((loc) => (
+                  <option key={loc.path} value={loc.path}>
+                    {loc.path}{" "}
+                    {loc.hasPackageJson ? "(package.json found)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {repoState?.currentStep && (
+          <DeploymentProgress
+            steps={repoState.deploymentSteps}
+            currentStep={repoState.currentStep}
+          />
+        )}
+      </div>
+    );
+  };
+
+  useEffect(() => {
+    console.log(`selected step changed:`, state);
+  }, [state.step]);
 
   return (
     <div className="repo-selector">
@@ -249,113 +455,53 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
         <p>Choose a repository to deploy to Internet Computer</p>
       </div>
 
-      <div className="repo-grid">
-        {repos.map((repo) => {
-          const repoState = repoStates[repo.full_name] || {
-            branches: [],
-            selectedBranch: "",
-            packageLocations: [],
-            selectedPath: "",
-          };
+      {state.step === "select" && renderRepoGrid()}
+      {state.step === "configure" && renderConfigureStep()}
 
-          return (
-            <div key={repo.id} className="repo-card">
-              <div className="repo-name">{repo.name}</div>
-              <div className="repo-info">
-                <span>{repo.full_name}</span>
-                <span className="repo-visibility">{repo.visibility}</span>
+      <div className={`action-bar visible ${hideActionBar ? "hidden" : ""}`}>
+        <div className="action-bar-content">
+          {state.step === "select" && (
+            <>
+              <div className="selected-repo">
+                {state.selectedRepo ? (
+                  <>
+                    <span className="repo-icon">📦</span>
+                    <span>{state.selectedRepo.name}</span>
+                  </>
+                ) : (
+                  <span>Select a repository to continue</span>
+                )}
               </div>
-              {deployStatus === "idle" && (
-                <>
-                  <div className="branch-selector">
-                    <label>Branch:</label>
-                    <select
-                      value={repoState.selectedBranch}
-                      onChange={(e) => {
-                        const newBranch = e.target.value;
-                        setRepoStates((prev) => ({
-                          ...prev,
-                          [repo.full_name]: {
-                            ...prev[repo.full_name],
-                            selectedBranch: newBranch,
-                          },
-                        }));
-                        if (newBranch) {
-                          findPackageJsonLocations(repo.full_name, newBranch);
-                        }
-                      }}
-                      onClick={() =>
-                        !repoState.branches.length &&
-                        loadBranches(repo.full_name)
-                      }
-                    >
-                      <option value="">Select branch</option>
-                      {repoState.branches.map((branch) => (
-                        <option key={branch.name} value={branch.name}>
-                          {branch.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {repoState.selectedBranch && (
-                    <div className="path-selector">
-                      <label>Source Path:</label>
-                      <select
-                        value={repoState.selectedPath}
-                        onChange={(e) => {
-                          console.log(`selected path:`, e.target.value);
-                          setRepoStates((prev) => ({
-                            ...prev,
-                            [repo.full_name]: {
-                              ...prev[repo.full_name],
-                              selectedPath: e.target.value,
-                            },
-                          }));
-                        }}
-                      >
-                        <option value="">Select source path</option>
-                        {repoState.packageLocations.map((loc) => (
-                          <option key={loc.path} value={loc.path}>
-                            {loc.path}{" "}
-                            {loc.hasPackageJson ? "(package.json found)" : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </>
-              )}
-              <div className="repo-actions">
-                <a
-                  href={repo.html_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  View on GitHub
-                </a>
-                <button
-                  className="deploy-button"
-                  onClick={() => handleDeploy(repo.full_name)}
-                  disabled={
-                    deployStatus === "deploying" ||
-                    !repoState.selectedBranch ||
-                    !repoState.selectedPath
-                  }
-                >
-                  {deployStatus === "deploying" ? (
-                    <div className="loading-indicator">
-                      <div className="spinner" />
-                      Deploying...
-                    </div>
-                  ) : (
-                    "Deploy"
-                  )}
-                </button>
+              <button
+                className="next-button"
+                disabled={!state.selectedRepo}
+                onClick={() =>
+                  setState((prev) => ({ ...prev, step: "configure" }))
+                }
+              >
+                Configure Deployment →
+              </button>
+            </>
+          )}
+          {state.step === "configure" && (
+            <>
+              <div className="selected-repo">
+                <span className="repo-icon">🚀</span>
+                <span>Ready to deploy {state.selectedRepo?.name}</span>
               </div>
-            </div>
-          );
-        })}
+              <button
+                className="next-button"
+                disabled={
+                  !canisterId ||
+                  !repoStates[state.selectedRepo!.full_name]?.selectedPath
+                }
+                onClick={() => handleDeploy(state.selectedRepo!.full_name)}
+              >
+                Deploy to Internet Computer →
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
