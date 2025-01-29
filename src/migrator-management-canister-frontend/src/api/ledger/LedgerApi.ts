@@ -1,5 +1,5 @@
 import { HttpAgent, Identity, ActorSubclass } from "@dfinity/agent";
-import { icp_ledger_canister_id, internetIdentityConfig } from "../../config/config";
+import { http_host, icp_ledger_canister_id, internetIdentityConfig } from "../../config/config";
 import { _SERVICE, TransferArgs, TransferResult } from "../../../../declarations/icp_ledger_canister/icp_ledger_canister.did";
 import { createActor } from "../../../../declarations/icp_ledger_canister";
 import MainApi from "../main";
@@ -34,7 +34,7 @@ class LedgerApi {
 
             if (this.instance) return this.instance;
 
-            const agent = await HttpAgent.create({ identity: identity ? identity : undefined })
+            const agent = await HttpAgent.create({ identity: identity ? identity : undefined, host: http_host })
             const actor = createActor(icp_ledger_canister_id, {
                 agent: agent
             });

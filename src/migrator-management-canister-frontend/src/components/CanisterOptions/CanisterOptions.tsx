@@ -3,6 +3,7 @@ import FileUploader from "../FileUploader/FileUploader";
 import "./CanisterOptions.css";
 import { Deployment } from "../AppLayout/interfaces";
 import { ToasterData } from "../Toast/Toaster";
+import { http_host } from "../../config/config";
 
 interface CanisterOptionsProps {
   setCanisterId: (id: string) => void;
@@ -92,15 +93,15 @@ function CanisterOptions({
                 <a
                   href={
                     process.env.REACT_APP_ENVIRONMENT === "production"
-                      ? `https://${deployment.canister_id.toText()}.icp0.io`
-                      : `http://${deployment.canister_id.toText()}.localhost:4943`
+                      ? `https://${deployment.canister_id.toText()}.${http_host}`
+                      : `http://${deployment.canister_id.toText()}.${http_host}`
                   }
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   {process.env.REACT_APP_ENVIRONMENT === "production"
-                    ? `https://${deployment.canister_id.toText()}.icp0.io`
-                    : `http://${deployment.canister_id.toText()}.localhost:4943`}
+                    ? `https://${deployment.canister_id.toText()}.${http_host}`
+                    : `http://${deployment.canister_id.toText()}.${http_host}`}
                   <span className="external-link">↗</span>
                 </a>
               </span>

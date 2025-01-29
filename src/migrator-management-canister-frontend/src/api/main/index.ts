@@ -2,7 +2,7 @@ import { Principal } from "@dfinity/principal";
 import { createActor } from "../../../../declarations/migrator-management-canister-backend";
 import { ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
 import { _SERVICE, DepositReceipt } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
-import { backend_canister_id, internetIdentityConfig } from "../../config/config";
+import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
 
 class MainApi {
@@ -32,7 +32,7 @@ class MainApi {
             if (this.instance) return this.instance;
 
             // Create instance if not already created
-            const agent = await HttpAgent.create({ identity: identity ? identity : undefined });
+            const agent = await HttpAgent.create({ identity: identity ? identity : undefined, host: http_host });
             const actor = createActor(backend_canister_id, {
                 agent: agent
             });
@@ -109,6 +109,7 @@ class MainApi {
             if (!this.identity) {
                 throw new Error("Identity not initialized.");
             }
+            console.log(`Cansite backend:`, this.actor);
             const deployments = await this.actor.getCanisterDeployments();
             return deployments;
         } catch (error) {
