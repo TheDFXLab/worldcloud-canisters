@@ -15,6 +15,7 @@ import { useCallback, useRef, useState } from "react";
 import { useLedger } from "../../context/LedgerContext/LedgerContext";
 import { ConfirmationModal } from "../ConfirmationPopup/ConfirmationModal";
 import MainApi from "../../api/main";
+import ProjectDeployment from "../ProjectDeployment/ProjectDeployment";
 
 interface CanisterOverviewProps {
   deployment: Deployment | null;
@@ -249,7 +250,8 @@ export const CanisterOverview = ({
           <span className="label">
             You have pending actions. Please upload your website files.
           </span>
-          <FileUploader
+
+          <ProjectDeployment
             canisterId={deployment.canister_id.toText()}
             setCanisterId={setCanisterId}
             setToasterData={setToasterData}
