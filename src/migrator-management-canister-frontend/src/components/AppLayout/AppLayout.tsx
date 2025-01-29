@@ -21,6 +21,8 @@ import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount";
 import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
 import { State } from "../../App";
 import AssetApi from "../../api/assets/AssetApi";
+import ProjectDeployment from "../ProjectDeployment/ProjectDeployment";
+import MainApi from "../../api/main";
 
 type MenuItem = "publish" | "websites" | "admin" | "logout";
 
@@ -33,9 +35,24 @@ enum BadgeColor {
 interface AppLayoutProps {
   state: State;
   setState: (state: State) => void;
+  selectedDeployment: Deployment | null;
+  setSelectedDeployment: (deployment: Deployment | null) => void;
+  showToaster: boolean;
+  toasterData: ToasterData;
+  setShowToaster: (show: boolean) => void;
+  setToasterData: (data: ToasterData) => void;
 }
 
-function AppLayout({ state, setState }: AppLayoutProps) {
+function AppLayout({
+  state,
+  setState,
+  selectedDeployment,
+  setSelectedDeployment,
+  showToaster,
+  toasterData,
+  setShowToaster,
+  setToasterData,
+}: AppLayoutProps) {
   /** Hooks */
   const { disconnect, refreshIdentity, identity } = useIdentity();
   const { isLoadingStatus } = useAuthority();
@@ -46,17 +63,6 @@ function AppLayout({ state, setState }: AppLayoutProps) {
   const [deployedCanisterId, setDeployedCanisterId] = useState<string>("");
   const [userDeployments, setUserDeployments] = useState<Deployment[]>([]);
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
-  const [selectedDeployment, setSelectedDeployment] =
-    useState<Deployment | null>(null);
-
-  const [showToaster, setShowToaster] = useState(false);
-  const [toasterData, setToasterData] = useState<ToasterData>({
-    headerContent: "Success",
-    toastStatus: true,
-    toastData: "Controller added",
-    textColor: "green",
-    timeout: 2000,
-  });
 
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const [showLoadbar, setShowLoadbar] = useState<boolean>(false);
@@ -66,6 +72,15 @@ function AppLayout({ state, setState }: AppLayoutProps) {
   const handleCanisterDeployed = (canisterId: string) => {
     setDeployedCanisterId(canisterId);
   };
+
+  useEffect(() => {
+    const fetchWasmModule = async () => {
+      const mainApi = await MainApi.create(identity);
+      const wasmModule = await mainApi?.actor?.getWasmModule();
+      console.log(`Wasm Module:`, wasmModule);
+    };
+    fetchWasmModule();
+  }, []);
 
   useEffect(() => {
     console.log(`refreshIdentity`);
@@ -98,10 +113,6 @@ function AppLayout({ state, setState }: AppLayoutProps) {
         return;
       }
       const assetApi = new AssetApi();
-      const files = await assetApi.getCanisterFiles(
-        deployments[1].canister_id.toText(),
-        identity
-      );
     };
     get();
   }, [deployedCanisterId, deployments]);
@@ -227,7 +238,7 @@ function AppLayout({ state, setState }: AppLayoutProps) {
                 setToasterData={setToasterData}
               />
             ) : (
-              <FileUploader
+              <ProjectDeployment
                 canisterId={deployedCanisterId}
                 setCanisterId={setDeployedCanisterId}
                 setToasterData={setToasterData}
