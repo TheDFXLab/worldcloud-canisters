@@ -15,7 +15,7 @@ export const internet_identity_canister_id = process.env.CANISTER_ID_INTERNET_ID
 
 export const frontend_canister_id_url = environment === "local" ? `http://${frontend_canister_id}.${replica_host}:${replica_port}` : `https://${frontend_canister_id}.icp0.io/`;
 export const ledger_canister_id_url = environment === "local" ? `http://${icp_ledger_canister_id}.${replica_host}:${replica_port}` : `https://${icp_ledger_canister_id}.icp0.io/`;
-export const internet_identity_canister_id_url = environment === "local" ? `http://${internet_identity_canister_id}.localhost:${replica_port}` : `https://${internet_identity_canister_id}.icp0.io/`;
+export const internet_identity_canister_id_url = environment === "local" ? `http://${internet_identity_canister_id}.${replica_host}:${replica_port}` : `https://${internet_identity_canister_id}.icp0.io/`;
 
 export const internetIdentityConfig = {
     identityProvider: internet_identity_canister_id_url,
