@@ -94,7 +94,7 @@ export class GithubApi {
         });
 
         if (response.status === 403) {
-            this.logout();
+            await this.logout();
             throw new Error("You are not authorized to use this app");
         }
 
