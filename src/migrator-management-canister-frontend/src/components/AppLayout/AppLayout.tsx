@@ -14,6 +14,7 @@ import Toaster, { ToasterData } from "../Toast/Toaster";
 import WasmUploader from "../WasmUploader/WasmUploader";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import LogoutIcon from "@mui/icons-material/Logout";
+import SettingsIcon from "@mui/icons-material/Settings";
 import IconTextRowView from "../IconTextRowView/IconTextRowView";
 import StorageIcon from "@mui/icons-material/Storage";
 import AddIcon from "@mui/icons-material/Add";
@@ -24,8 +25,22 @@ import AssetApi from "../../api/assets/AssetApi";
 import ProjectDeployment from "../ProjectDeployment/ProjectDeployment";
 import MainApi from "../../api/main";
 import { environment, reverse_proxy_url } from "../../config/config";
+import { useNavigate } from "react-router-dom";
+import HomeIcon from "@mui/icons-material/Home";
+import LanguageIcon from "@mui/icons-material/Language";
+import Settings from "../SettingsPage/Settings";
+import HomePage from "../HomePage/HomePage";
+import MenuIcon from "@mui/icons-material/Menu";
+import CloseIcon from "@mui/icons-material/Close";
+import WebsitesComponent from "../WebsitesComponent/WebsitesComponent";
 
-type MenuItem = "publish" | "websites" | "admin" | "logout";
+type MenuItem =
+  | "publish"
+  | "websites"
+  | "admin"
+  | "logout"
+  | "settings"
+  | "home";
 
 enum BadgeColor {
   "uninitialized" = "secondary",
@@ -33,6 +48,7 @@ enum BadgeColor {
   "installed" = "success",
   "failed" = "danger",
 }
+
 interface AppLayoutProps {
   state: State;
   setState: (state: State) => void;
@@ -58,9 +74,10 @@ function AppLayout({
   const { disconnect, refreshIdentity, identity } = useIdentity();
   const { isLoadingStatus } = useAuthority();
   const { deployments, refreshDeployments, isLoading } = useDeployments();
+  const navigate = useNavigate();
 
   /** State */
-  const [activeMenuItem, setActiveMenuItem] = useState<MenuItem>("websites");
+  const [activeMenuItem, setActiveMenuItem] = useState<MenuItem>("home");
   const [deployedCanisterId, setDeployedCanisterId] = useState<string>("");
   const [userDeployments, setUserDeployments] = useState<Deployment[]>([]);
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
@@ -68,6 +85,7 @@ function AppLayout({
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const [showLoadbar, setShowLoadbar] = useState<boolean>(false);
   const [completeLoadbar, setCompleteLoadbar] = useState<boolean>(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   /** Functions */
   const handleCanisterDeployed = (canisterId: string) => {
@@ -185,33 +203,38 @@ function AppLayout({
 
   return (
     <div className="app-layout">
-      {showToaster && (
-        <Toaster
-          headerContent={toasterData.headerContent}
-          toastStatus={toasterData.toastStatus}
-          toastData={toasterData.toastData}
-          textColor={toasterData.textColor}
-          show={showToaster}
-          onHide={() => setShowToaster(false)}
-          timeout={toasterData.timeout ? toasterData.timeout : 3000}
-          link=""
-          overrideTextStyle=""
-        />
-      )}
-      <ProgressBar
-        isLoading={isLoading || showLoadbar || isLoadingStatus}
-        isEnded={completeLoadbar}
+      <button
+        className={`mobile-menu-button ${isMobileMenuOpen ? "hidden" : ""}`}
+        onClick={() => setIsMobileMenuOpen(true)}
+        aria-label="Open menu"
+      >
+        <MenuIcon />
+      </button>
+
+      <div
+        className={`sidebar-overlay ${isMobileMenuOpen ? "show" : ""}`}
+        onClick={() => setIsMobileMenuOpen(false)}
       />
 
-      <aside className="sidebar">
+      <aside className={`sidebar ${isMobileMenuOpen ? "open" : ""}`}>
         <nav className="sidebar-nav">
           <IconTextRowView
-            className={`nav-item ${activeMenuItem === "admin" ? "active" : ""}`}
-            text="Admin"
-            IconComponent={SupervisorAccountIcon}
-            onClickIcon={() => setActiveMenuItem("admin")}
+            className={`nav-item ${activeMenuItem === "home" ? "active" : ""}`}
+            text="Home"
+            IconComponent={HomeIcon}
+            onClickIcon={() => setActiveMenuItem("home")}
             iconColor="black"
           />
+          <IconTextRowView
+            className={`nav-item ${
+              activeMenuItem === "websites" ? "active" : ""
+            }`}
+            text="Websites"
+            IconComponent={LanguageIcon}
+            onClickIcon={() => setActiveMenuItem("websites")}
+            iconColor="black"
+          />
+
           <IconTextRowView
             className={`nav-item ${
               activeMenuItem === "publish" ? "active" : ""
@@ -221,30 +244,48 @@ function AppLayout({
             onClickIcon={() => setActiveMenuItem("publish")}
             iconColor="black"
           />
-
-          <IconTextRowView
-            className={`nav-item ${
-              activeMenuItem === "websites" ? "active" : ""
-            }`}
-            text="My Cloud"
-            IconComponent={StorageIcon}
-            onClickIcon={() => setActiveMenuItem("websites")}
-            iconColor="black"
-          />
-
-          <IconTextRowView
-            className={`nav-item logout ${
-              activeMenuItem === "logout" ? "active" : ""
-            }`}
-            text="Logout"
-            IconComponent={LogoutIcon}
-            onClickIcon={() => disconnect()}
-            iconColor="red"
-          />
+          <div className="bottom-nav-group">
+            <IconTextRowView
+              className={`nav-item ${
+                activeMenuItem === "admin" ? "active" : ""
+              }`}
+              text="Admin"
+              IconComponent={SupervisorAccountIcon}
+              onClickIcon={() => setActiveMenuItem("admin")}
+              iconColor="black"
+            />
+            <IconTextRowView
+              className={`nav-item ${
+                activeMenuItem === "settings" ? "active" : ""
+              }`}
+              text="Settings"
+              IconComponent={SettingsIcon}
+              onClickIcon={() => setActiveMenuItem("settings")}
+              iconColor="black"
+            />
+            <IconTextRowView
+              className="nav-item logout"
+              text="Logout"
+              IconComponent={LogoutIcon}
+              onClickIcon={() => disconnect()}
+              iconColor="black"
+            />
+          </div>
         </nav>
       </aside>
 
-      <main className="main-content">
+      <main className="main-content" onClick={() => setIsMobileMenuOpen(false)}>
+        {
+          <div
+            style={{
+              display: activeMenuItem === "settings" ? "block" : "none",
+            }}
+          >
+            <div>
+              <Settings />
+            </div>
+          </div>
+        }
         {
           <div
             className="admin-flow"
@@ -252,6 +293,17 @@ function AppLayout({
           >
             <div>
               <WasmUploader onClick={() => setShowLoadbar(true)} />
+            </div>
+          </div>
+        }
+        {
+          <div
+            style={{
+              display: activeMenuItem === "home" ? "block" : "none",
+            }}
+          >
+            <div>
+              <HomePage />
             </div>
           </div>
         }
@@ -286,7 +338,19 @@ function AppLayout({
               display: activeMenuItem === "websites" ? "block" : "none",
             }}
           >
-            {showDetails ? (
+            <WebsitesComponent />
+          </div>
+        }
+      </main>
+    </div>
+  );
+}
+
+export default AppLayout;
+
+/**
+
+{showDetails ? (
               <CanisterManagement
                 deployment={selectedDeployment}
                 setShowDetails={setShowDetails}
@@ -362,11 +426,5 @@ function AppLayout({
                 </Table>
               </>
             )}
-          </div>
-        }
-      </main>
-    </div>
-  );
-}
 
-export default AppLayout;
+ */

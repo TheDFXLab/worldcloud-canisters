@@ -17,8 +17,14 @@
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  flex: 1;
+  height: 100%;
+  position: relative;
+}
+
+.bottom-nav-group {
+  margin-top: auto;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 1rem;
 }
 
 .nav-item {
@@ -43,9 +49,9 @@
 }
 
 .nav-item.logout {
-  margin-top: auto;
+  margin-top: 0.5rem;
   border-top: 1px solid var(--glass-border);
-  padding-top: 1.5rem;
+  padding-top: 1rem;
 }
 
 .main-content {
@@ -74,4 +80,83 @@
   background: rgba(99, 102, 241, 0.1);
   font-weight: 600;
   color: var(--text-primary);
+}
+
+/* Mobile menu button - update */
+.mobile-menu-button {
+  display: none;
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 110;
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+/* Overlay for mobile menu - fix */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.66);
+  z-index: 90;
+}
+
+/* Tablet styles - new */
+@media screen and (max-width: 1000px) {
+  .sidebar {
+    width: 200px;
+  }
+
+  .main-content {
+    padding: 1rem;
+  }
+}
+
+/* Mobile styles - update */
+@media screen and (max-width: 640px) {
+  .sidebar {
+    position: fixed;
+    left: -240px;
+    top: 0;
+    bottom: 0;
+    transition: left 0.3s ease;
+    z-index: 100; /* Higher than overlay */
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  .mobile-menu-button {
+    display: block;
+    opacity: 1;
+  }
+
+  .mobile-menu-button.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .sidebar-overlay.show {
+    display: block;
+  }
+
+  .main-content {
+    padding: 3.5rem 1rem 1rem 1rem;
+  }
+}
+
+/* Very small screens - new */
+@media screen and (max-width: 360px) {
+  .main-content {
+    padding: 3.5rem 0.5rem 0.5rem 0.5rem;
+  }
 }
