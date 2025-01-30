@@ -23,6 +23,7 @@ import { State } from "../../App";
 import AssetApi from "../../api/assets/AssetApi";
 import ProjectDeployment from "../ProjectDeployment/ProjectDeployment";
 import MainApi from "../../api/main";
+import { environment, reverse_proxy_url } from "../../config/config";
 
 type MenuItem = "publish" | "websites" | "admin" | "logout";
 
@@ -86,6 +87,36 @@ function AppLayout({
     console.log(`refreshIdentity`);
     refreshIdentity();
   }, [activeMenuItem]);
+
+  useEffect(() => {
+    const checkRateLimit = async () => {
+      try {
+        const response = await fetch(
+          `${
+            environment === "production" ? "" : reverse_proxy_url
+          }/https://api.github.com/rate_limit`,
+          {
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const data = await response.json();
+        console.log("GitHub Rate Limit Status:", {
+          core: data.resources.core,
+          search: data.resources.search,
+          graphql: data.resources.graphql,
+          integration_manifest: data.resources.integration_manifest,
+          source_import: data.resources.source_import,
+        });
+      } catch (err) {
+        console.error("Failed to check rate limit:", err);
+      }
+    };
+
+    checkRateLimit();
+  }, []);
 
   useEffect(() => {
     const selectedDeploymentUpdated = userDeployments.find(
