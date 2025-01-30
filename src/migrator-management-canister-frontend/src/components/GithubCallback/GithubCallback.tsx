@@ -1,64 +1,187 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { GithubApi } from "../../api/github/GithubApi";
-import { githubClientId } from "../../config/config";
+import {
+  environment,
+  githubClientId,
+  reverse_proxy_url,
+} from "../../config/config";
 // import { useGithub } from "../../context/GithubContext/GithubContext";
 
 const GitHubCallback: React.FC = () => {
   // const { setAccessToken } = useGithub();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  const [deviceCode, setDeviceCode] = useState<string | null>(null);
+  const [userCode, setUserCode] = useState<string | null>(null);
+  const [verificationUri, setVerificationUri] = useState<string | null>(null);
+  const initialized = useRef(false);
+  const pollTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
-    const handleCallback = async () => {
-      console.log(`Calling: ${window.location.search}`);
-      const params = new URLSearchParams(window.location.search);
-
-      // Check if this is the initial redirect from localhost
-      const redirectToGithub = params.get("redirectToGithub");
-      const state = params.get("state");
-
-      console.log(`redirectToGithub: ${redirectToGithub}, state: ${state}`);
-      if (redirectToGithub === "true" && state) {
-        // Redirect to GitHub OAuth with ngrok URL
-        const githubParams = new URLSearchParams({
-          client_id: githubClientId,
-          redirect_uri: window.location.origin + "/github/callback",
-          scope: "repo workflow",
-          state: state,
-        });
-
-        window.location.href = `https://github.com/login/oauth/authorize?${githubParams}`;
-        return;
-      }
-
-      // Handle the actual GitHub callback
-      const code = params.get("code");
-      console.log(`Code: ${code}, State: ${state}`);
-
-      if (!code || !state) {
-        setError("Invalid callback parameters");
-        return;
-      }
-
+    const pollForToken = async (deviceCode: string, interval: number) => {
       try {
-        const github = GithubApi.getInstance();
-        await github.handleAuthCallback(code, state);
-        console.log(`Logged in with gh!`);
-        navigate("/gh-select-repo");
+        console.log("polling for access token");
+        const response = await fetch(
+          `${
+            environment === "production" ? "" : reverse_proxy_url
+          }/https://github.com/login/oauth/access_token`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              client_id: githubClientId,
+              device_code: deviceCode,
+              grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        console.log(`Poll token response status: `, response.status);
+        if (data.error === "authorization_pending") {
+          // Continue polling
+          pollTimeoutRef.current = setTimeout(
+            () => pollForToken(deviceCode, interval),
+            interval * 1000
+          );
+        } else if (data.access_token) {
+          console.log(`Poll token access token found: `, data.access_token);
+          // Success! Store the token and redirect
+          const github = GithubApi.getInstance();
+          github.setAccessToken(data.access_token);
+          navigate("/gh-select-repo");
+        } else {
+          setError("Authentication failed");
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Authentication failed");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to complete authentication"
+        );
       }
     };
 
-    handleCallback();
+    const initiateDeviceFlow = async () => {
+      if (initialized.current) return;
+      initialized.current = true;
+
+      console.log("initiateDeviceFlow");
+      try {
+        const response = await fetch(
+          `${
+            environment === "production" ? "" : reverse_proxy_url
+          }/https://github.com/login/device/code`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              client_id: githubClientId,
+              scope: "repo workflow",
+            }),
+          }
+        );
+
+        const data = await response.json();
+        setDeviceCode(data.device_code);
+        setUserCode(data.user_code);
+        setVerificationUri(data.verification_uri);
+
+        pollForToken(data.device_code, data.interval || 5);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to initiate device flow"
+        );
+      }
+    };
+
+    initiateDeviceFlow();
+
+    // Cleanup polling on unmount
+    return () => {
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+      }
+    };
   }, [navigate]);
 
   if (error) {
     return <div className="error-message">Error: {error}</div>;
   }
 
-  return <div>Completing GitHub authentication...</div>;
+  if (userCode && verificationUri) {
+    return (
+      <div className="device-flow-container">
+        <div className="device-flow-instructions">
+          <div className="header">
+            <h2>Complete GitHub Authentication</h2>
+            <p className="subtitle">
+              Follow these steps to connect your GitHub account
+            </p>
+          </div>
+
+          <div className="steps-container">
+            <div className="step">
+              <div className="step-number">1</div>
+              <div className="step-content">
+                <h3>Visit GitHub Device Activation</h3>
+                <a
+                  href={verificationUri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="verification-link"
+                >
+                  {verificationUri}
+                </a>
+              </div>
+            </div>
+
+            <div className="step">
+              <div className="step-number">2</div>
+              <div className="step-content">
+                <h3>Enter Verification Code</h3>
+                <div className="user-code">{userCode}</div>
+              </div>
+            </div>
+
+            <div className="step">
+              <div className="step-number">3</div>
+              <div className="step-content">
+                <h3>Waiting for Authorization</h3>
+                <p className="waiting-text">
+                  Verifying authentication
+                  <span className="loading-dots">...</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="device-flow-container">
+      <div className="device-flow-instructions">
+        <div className="header">
+          <h2>GitHub Authentication</h2>
+          <p className="subtitle">Initializing secure connection</p>
+        </div>
+        <p className="waiting-text">
+          Please wait
+          <span className="loading-dots">...</span>
+        </p>
+      </div>
+    </div>
+  );
 };
 
 export default GitHubCallback;
