@@ -1,4 +1,4 @@
-import { githubClientId, githubClientSecret, ngrok_tunnel } from "../../config/config";
+import { environment, githubClientId, ngrok_tunnel, reverse_proxy_url } from "../../config/config";
 import { generateWorkflowTemplate } from "../../utility/workflowTemplate";
 
 export interface Repository {
@@ -79,7 +79,7 @@ export class GithubApi {
         }
 
         // Use GitHub's API endpoint
-        const response = await fetch('https://cors-anywhere.herokuapp.com/https://github.com/login/oauth/access_token', {
+        const response = await fetch(`${environment === 'production' ? '' : reverse_proxy_url}/https://github.com/login/oauth/access_token`, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -88,7 +88,6 @@ export class GithubApi {
             },
             body: JSON.stringify({
                 client_id: githubClientId,
-                client_secret: githubClientSecret,
                 code: code,
                 redirect_uri: `${ngrok_tunnel}/github/callback`
             }),
@@ -112,13 +111,33 @@ export class GithubApi {
         localStorage.removeItem('github_oauth_state');
     }
 
-    logout() {
-        // Clear token
-        this.token = null;
+    async logout(): Promise<void> {
+        if (this.token) {
+            try {
+                // Revoke the token
+                await fetch(`${environment === 'production' ? '' : reverse_proxy_url}/https://api.github.com/applications/${githubClientId}/token`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': `token ${this.token}`,
+                    }
+                });
+            } catch (error) {
+                console.error('Error revoking token:', error);
+            }
+        }
 
-        // Clear all GitHub-related items from localStorage
+        // Clear the token
+        this.token = null;
         localStorage.removeItem('github_token');
-        localStorage.removeItem('github_oauth_state');
+
+        // Redirect to GitHub logout to clear session cookies
+        window.location.href = 'https://github.com/logout';
+    }
+
+    public setAccessToken(token: string) {
+        this.token = token;
+        localStorage.setItem('github_token', token);
     }
 
     async listRepositories(): Promise<Repository[]> {
