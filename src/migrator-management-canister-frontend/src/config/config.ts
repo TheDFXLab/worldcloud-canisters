@@ -25,6 +25,7 @@ export const internetIdentityConfig = {
 
 
 export const githubClientId = process.env.REACT_APP_GITHUB_CLIENT_ID || "";
-export const githubClientSecret = process.env.REACT_APP_GITHUB_CLIENT_SECRET || "";
+export const githubClientSecret = process.env.REACT_APP_GITHUB_CLIENT_SECRET || ""; // TODO: Remove this
 
 export const ngrok_tunnel = "https://1172-78-109-71-103.ngrok-free.app";
+export const reverse_proxy_url = "https://cors-anywhere.herokuapp.com";
