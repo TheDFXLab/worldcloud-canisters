@@ -1,22 +1,16 @@
 import { useEffect, useState } from "react";
 import CanisterDeployer from "../CanisterDeployer/CanisterDeployer";
-import FileUploader from "../FileUploader/FileUploader";
 import "./AppLayout.css";
-import { Badge, Table } from "react-bootstrap";
-import { CiEdit } from "react-icons/ci";
 import CanisterOptions from "../CanisterOptions/CanisterOptions";
 
 import { Deployment } from "./interfaces";
-import { CanisterManagement } from "../CanisterManagement/CanisterManagement";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
-import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
-import Toaster, { ToasterData } from "../Toast/Toaster";
+import { ToasterData } from "../Toast/Toaster";
 import WasmUploader from "../WasmUploader/WasmUploader";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings";
 import IconTextRowView from "../IconTextRowView/IconTextRowView";
-import StorageIcon from "@mui/icons-material/Storage";
 import AddIcon from "@mui/icons-material/Add";
 import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount";
 import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
@@ -31,8 +25,8 @@ import LanguageIcon from "@mui/icons-material/Language";
 import Settings from "../SettingsPage/Settings";
 import HomePage from "../HomePage/HomePage";
 import MenuIcon from "@mui/icons-material/Menu";
-import CloseIcon from "@mui/icons-material/Close";
 import WebsitesComponent from "../WebsitesComponent/WebsitesComponent";
+import ActionBar, { ActionBarConfig } from "../ActionBar/ActionBar";
 
 type MenuItem =
   | "publish"
@@ -58,6 +52,8 @@ interface AppLayoutProps {
   toasterData: ToasterData;
   setShowToaster: (show: boolean) => void;
   setToasterData: (data: ToasterData) => void;
+  actionBar?: ActionBarConfig;
+  setActionBar: (actionBar: ActionBarConfig | undefined) => void;
 }
 
 function AppLayout({
@@ -69,6 +65,8 @@ function AppLayout({
   toasterData,
   setShowToaster,
   setToasterData,
+  actionBar,
+  setActionBar,
 }: AppLayoutProps) {
   /** Hooks */
   const { disconnect, refreshIdentity, identity } = useIdentity();
@@ -169,6 +167,11 @@ function AppLayout({
   useEffect(() => {
     refreshDeployments();
   }, []);
+
+  // useEffect(() => {
+  //   setActionBar(undefined);
+  //   console.log(`Disabling action bar`);
+  // }, [activeMenuItem]);
 
   const handleOptionsModal = (deployment: Deployment) => {
     setShowOptionsModal(true);
@@ -319,6 +322,7 @@ function AppLayout({
                 onDeploy={handleCanisterDeployed}
                 setShowToaster={setShowToaster}
                 setToasterData={setToasterData}
+                setActionBar={setActionBar}
               />
             ) : (
               <ProjectDeployment
@@ -326,6 +330,7 @@ function AppLayout({
                 setCanisterId={setDeployedCanisterId}
                 setToasterData={setToasterData}
                 setShowToaster={setShowToaster}
+                setActionBar={setActionBar}
               />
             )}
           </div>
@@ -341,6 +346,13 @@ function AppLayout({
             <WebsitesComponent />
           </div>
         }
+        {/* {actionBar && activeMenuItem === "publish" && (
+          <ActionBar {...actionBar} />
+        )} */}
+
+        {actionBar && activeMenuItem === "publish" && (
+          <ActionBar {...actionBar} />
+        )}
       </main>
     </div>
   );

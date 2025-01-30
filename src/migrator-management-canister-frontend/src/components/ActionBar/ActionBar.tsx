@@ -10,6 +10,15 @@ interface ActionBarProps {
   isHidden?: boolean;
 }
 
+export interface ActionBarConfig {
+  icon?: string;
+  text: string;
+  buttonText: string;
+  onButtonClick: () => void;
+  isButtonDisabled?: boolean;
+  isHidden?: boolean;
+}
+
 const ActionBar: React.FC<ActionBarProps> = ({
   icon = "🚀",
   text,

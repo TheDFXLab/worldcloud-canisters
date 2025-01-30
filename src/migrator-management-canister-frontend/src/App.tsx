@@ -14,6 +14,7 @@ import { GithubProvider } from "./context/GithubContext/GithubContext";
 import RepoSelector from "./components/RepoSelector/RepoSelector";
 import { Deployment } from "./components/AppLayout/interfaces";
 import { ToasterData } from "./components/Toast/Toaster";
+import { ActionBarConfig } from "./components/ActionBar/ActionBar";
 
 export interface State {
   canister_id: string;
@@ -22,6 +23,10 @@ function App() {
   const [state, setState] = useState<State>({
     canister_id: backend_canister_id,
   });
+
+  const [actionBar, setActionBar] = useState<ActionBarConfig | undefined>(
+    undefined
+  );
 
   const [selectedDeployment, setSelectedDeployment] =
     useState<Deployment | null>(null);
@@ -51,6 +56,7 @@ function App() {
                       ? selectedDeployment.canister_id.toText()
                       : null
                   }
+                  setActionBar={setActionBar}
                   setShowToaster={setShowToaster}
                   setToasterData={setToasterData}
                 />
@@ -65,6 +71,8 @@ function App() {
                       <AppLayout
                         setState={setState}
                         state={state}
+                        actionBar={actionBar}
+                        setActionBar={setActionBar}
                         selectedDeployment={selectedDeployment}
                         setSelectedDeployment={setSelectedDeployment}
                         showToaster={showToaster}

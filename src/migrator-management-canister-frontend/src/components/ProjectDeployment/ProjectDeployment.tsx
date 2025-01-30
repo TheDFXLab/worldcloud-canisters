@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card } from "react-bootstrap";
 import { FaGithub, FaFileArchive } from "react-icons/fa";
 
@@ -11,6 +11,7 @@ interface ProjectDeploymentProps {
   setCanisterId: (id: string) => void;
   setToasterData: (data: any) => void;
   setShowToaster: (show: boolean) => void;
+  setActionBar: (action: any) => void;
 }
 
 const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
@@ -18,10 +19,18 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
   setCanisterId,
   setToasterData,
   setShowToaster,
+  setActionBar,
 }) => {
   const [selectedMethod, setSelectedMethod] = useState<
     "github" | "upload" | null
   >(null);
+
+  useEffect(() => {
+    setActionBar((prev: any) => ({
+      ...prev,
+      isHidden: true,
+    }));
+  }, []);
 
   return (
     <div className="project-deployment">
@@ -71,7 +80,10 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
         <div className="deployment-content">
           <button
             className="back-button"
-            onClick={() => setSelectedMethod(null)}
+            onClick={() => {
+              setSelectedMethod(null);
+              setActionBar(undefined);
+            }}
           >
             ← Back to methods
           </button>
@@ -81,6 +93,7 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
               canisterId={canisterId}
               setShowToaster={setShowToaster}
               setToasterData={setToasterData}
+              setActionBar={setActionBar}
             />
           ) : (
             <FileUploader

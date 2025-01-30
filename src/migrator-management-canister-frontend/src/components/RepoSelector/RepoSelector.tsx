@@ -11,6 +11,7 @@ import { getCanisterUrl } from "../../config/config";
 import DeploymentProgress, {
   DeploymentStep,
 } from "../DeploymentProgress/DeploymentProgress";
+import ActionBar, { ActionBarConfig } from "../ActionBar/ActionBar";
 
 interface PackageLocation {
   path: string;
@@ -42,6 +43,7 @@ interface RepoSelectorProps {
   canisterId: string | null;
   setShowToaster: (show: boolean) => void;
   setToasterData: (data: ToasterData) => void;
+  setActionBar: (config: ActionBarConfig) => void;
 }
 
 interface RepoSelectorState {
@@ -53,6 +55,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
   canisterId,
   setShowToaster,
   setToasterData,
+  setActionBar,
 }) => {
   /** Hooks */
   const { getGithubToken } = useGithub();
@@ -72,6 +75,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
   });
 
   const [hideActionBar, setHideActionBar] = useState(false);
+  const [showTitle, setShowTitle] = useState(true);
 
   const initialDeploymentSteps: DeploymentStep[] = [
     {
@@ -364,7 +368,10 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
         <div className="configure-header">
           <button
             className="back-button"
-            onClick={() => setState((prev) => ({ ...prev, step: "select" }))}
+            onClick={() => {
+              setShowTitle(true);
+              setState((prev) => ({ ...prev, step: "select" }));
+            }}
           >
             ← Back to repositories
           </button>
@@ -446,63 +453,59 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
 
   useEffect(() => {
     console.log(`selected step changed:`, state);
+    console.log(`Canister`, canisterId);
+    console.log(
+      `WEveal`,
+      !canisterId || !repoStates[state.selectedRepo!.full_name]?.selectedPath
+    );
   }, [state.step]);
+
+  useEffect(() => {
+    if (state.step === "select") {
+      setActionBar({
+        icon: "📦",
+        text: state.selectedRepo
+          ? state.selectedRepo.name
+          : "Select a repository to continue",
+        buttonText: "Configure Deployment",
+        onButtonClick: () => {
+          setShowTitle(false);
+          setState((prev) => ({ ...prev, step: "configure" }));
+        },
+        isButtonDisabled: !state.selectedRepo,
+        isHidden: hideActionBar,
+      });
+    } else if (state.step === "configure") {
+      setActionBar({
+        icon: "🚀",
+        text: `Ready to deploy ${state.selectedRepo?.name}`,
+        buttonText: "Deploy to Internet Computer",
+        onButtonClick: () => handleDeploy(state.selectedRepo!.full_name),
+        isButtonDisabled:
+          !canisterId ||
+          !repoStates[state.selectedRepo!.full_name]?.selectedPath,
+        isHidden: hideActionBar,
+      });
+    }
+  }, [state.step, state.selectedRepo, hideActionBar, canisterId]);
 
   return (
     <div className="repo-selector">
-      <div className="repo-header">
-        <h2>Select Repository</h2>
-        <p>Choose a repository to deploy to Internet Computer</p>
-      </div>
+      {showTitle && (
+        <div className="repo-header">
+          <h2>Select Repository</h2>
+          <p>Choose a repository to deploy to Internet Computer</p>
+        </div>
+      )}
 
-      {state.step === "select" && renderRepoGrid()}
-      {state.step === "configure" && renderConfigureStep()}
-
-      <div className={`action-bar visible ${hideActionBar ? "hidden" : ""}`}>
-        <div className="action-bar-content">
-          {state.step === "select" && (
-            <>
-              <div className="selected-repo">
-                {state.selectedRepo ? (
-                  <>
-                    <span className="repo-icon">📦</span>
-                    <span>{state.selectedRepo.name}</span>
-                  </>
-                ) : (
-                  <span>Select a repository to continue</span>
-                )}
-              </div>
-              <button
-                className="next-button"
-                disabled={!state.selectedRepo}
-                onClick={() =>
-                  setState((prev) => ({ ...prev, step: "configure" }))
-                }
-              >
-                Configure Deployment →
-              </button>
-            </>
-          )}
-          {state.step === "configure" && (
-            <>
-              <div className="selected-repo">
-                <span className="repo-icon">🚀</span>
-                <span>Ready to deploy {state.selectedRepo?.name}</span>
-              </div>
-              <button
-                className="next-button"
-                disabled={
-                  !canisterId ||
-                  !repoStates[state.selectedRepo!.full_name]?.selectedPath
-                }
-                onClick={() => handleDeploy(state.selectedRepo!.full_name)}
-              >
-                Deploy to Internet Computer →
-              </button>
-            </>
-          )}
+      <div className="repo-grid-container">
+        <div className="repo-grid">
+          {state.step === "select" && renderRepoGrid()}
+          {state.step === "configure" && renderConfigureStep()}
         </div>
       </div>
+
+      {/* {renderActionBar()} */}
     </div>
   );
 };

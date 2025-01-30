@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./CanisterDeployer.css";
 import { Principal } from "@dfinity/principal";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
@@ -6,18 +6,20 @@ import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
 import { ToasterData } from "../Toast/Toaster";
 import MainApi from "../../api/main";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
-import ActionBar from "../ActionBar/ActionBar";
+import ActionBar, { ActionBarConfig } from "../ActionBar/ActionBar";
 
 interface CanisterDeployerProps {
   onDeploy: (canisterId: string) => void;
   setToasterData: (data: ToasterData) => void;
   setShowToaster: (show: boolean) => void;
+  setActionBar: (actionBar: ActionBarConfig) => void;
 }
 
 function CanisterDeployer({
   onDeploy,
   setToasterData,
   setShowToaster,
+  setActionBar,
 }: CanisterDeployerProps) {
   const { addDeployment, refreshDeployments } = useDeployments();
   const { identity } = useIdentity();
@@ -31,6 +33,18 @@ function CanisterDeployer({
   const [canisterId, setCanisterId] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    console.log(`Loading barrrr`);
+    setActionBar({
+      icon: "🔨",
+      text: "Ready to deploy your canister",
+      buttonText: "Deploy Canister",
+      onButtonClick: handleDeploy,
+      isButtonDisabled: isLoading,
+      isHidden: false,
+    });
+  }, [isLoading]);
 
   const handleDeploy = async () => {
     try {
@@ -148,18 +162,6 @@ function CanisterDeployer({
           )}
         </div>
       </div>
-
-      <ActionBar
-        icon="🔨"
-        text="Ready to deploy your canister"
-        buttonText="Deploy Canister"
-        onButtonClick={(e) => {
-          e.preventDefault();
-          handleDeploy();
-        }}
-        isButtonDisabled={isLoading}
-        isHidden={false}
-      />
     </section>
   );
 }
