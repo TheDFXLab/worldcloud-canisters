@@ -9,12 +9,18 @@ import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { GithubApi } from "../../api/github/GithubApi";
 
 const Settings: React.FC = () => {
-  const { githubUser } = useGithub();
+  const { githubUser, setGithubUser } = useGithub();
   const { identity } = useIdentity();
+
+  const handleGithubConnect = async () => {
+    const github = GithubApi.getInstance();
+    await github.authenticate();
+  };
 
   const handleGithubDisconnect = async () => {
     const github = GithubApi.getInstance();
     await github.logout();
+    setGithubUser(null);
   };
 
   return (
@@ -59,7 +65,7 @@ const Settings: React.FC = () => {
                 {githubUser ? "Connected" : "Disconnected"}
               </span>
             </div>
-            {githubUser && (
+            {githubUser ? (
               <>
                 <div className="settings-row">
                   <span className="label">Username</span>
@@ -79,6 +85,11 @@ const Settings: React.FC = () => {
                   Disconnect GitHub
                 </button>
               </>
+            ) : (
+              <button className="connect-button" onClick={handleGithubConnect}>
+                <GitHubIcon />
+                Connect GitHub
+              </button>
             )}
           </div>
         </div>
