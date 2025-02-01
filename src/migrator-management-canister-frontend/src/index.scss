@@ -35,3 +35,41 @@ button[type="submit"] {
 #greeting:empty {
   display: none;
 }
+
+:root {
+  /* Primary colors */
+  --color-primary: #4F46E5;  /* Indigo */
+  --color-primary-dark: #4338CA;
+  
+  /* Status colors */
+  --color-success: #059669;
+  --color-success-bg: rgba(5, 150, 105, 0.1);
+  --color-warning: #D97706;
+  --color-warning-bg: rgba(217, 119, 6, 0.1);
+  --color-error: #DC2626;
+  --color-disabled: #E5E7EB;
+
+  /* Text colors */
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+
+  /* Background and borders */
+  --background: #FFFFFF;
+  --border-color: #E5E7EB;
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.3);
+}
+
+/* Dark mode support if needed */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary: #6366F1;
+    --color-primary-dark: #4F46E5;
+    --text-primary: #F9FAFB;
+    --text-secondary: #D1D5DB;
+    --background: #1F2937;
+    --border-color: #374151;
+    --glass-bg: rgba(31, 41, 55, 0.8);
+    --glass-border: rgba(55, 65, 81, 0.3);
+  }
+}

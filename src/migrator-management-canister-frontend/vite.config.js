@@ -23,7 +23,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:4943",
+        target: "http://0.0.0.0:8000",
         changeOrigin: true,
       },
     },
@@ -33,6 +33,7 @@ export default defineConfig({
     react(),
     environment("all", { prefix: "CANISTER_" }),
     environment("all", { prefix: "DFX_" }),
+    environment("all", { prefix: "REACT_APP_" }),
   ],
   resolve: {
     alias: [

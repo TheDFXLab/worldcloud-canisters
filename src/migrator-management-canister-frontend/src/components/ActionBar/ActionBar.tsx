@@ -1,0 +1,49 @@
+import React from "react";
+import "./ActionBar.css";
+
+interface ActionBarProps {
+  icon?: string;
+  text: string;
+  buttonText: string;
+  onButtonClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  isButtonDisabled?: boolean;
+  isHidden?: boolean;
+}
+
+export interface ActionBarConfig {
+  icon?: string;
+  text: string;
+  buttonText: string;
+  onButtonClick: () => void;
+  isButtonDisabled?: boolean;
+  isHidden?: boolean;
+}
+
+const ActionBar: React.FC<ActionBarProps> = ({
+  icon = "🚀",
+  text,
+  buttonText,
+  onButtonClick,
+  isButtonDisabled = false,
+  isHidden = false,
+}) => {
+  return (
+    <div className={`action-bar visible ${isHidden ? "hidden" : ""}`}>
+      <div className="action-bar-content">
+        <div className="selected-repo">
+          <span className="repo-icon">{icon}</span>
+          <span>{text}</span>
+        </div>
+        <button
+          className="next-button"
+          disabled={isButtonDisabled}
+          onClick={onButtonClick}
+        >
+          {buttonText} →
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default ActionBar;

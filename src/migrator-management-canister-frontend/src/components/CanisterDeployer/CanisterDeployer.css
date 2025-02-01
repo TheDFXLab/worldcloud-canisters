@@ -1,100 +1,134 @@
 .beta-test-section {
-  padding: 10px 0;
-  background-color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 64px);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 2rem 0 2rem;
+  position: relative;
+  overflow: hidden;
 }
 
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-  text-align: center;
-}
-
-h2 {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-  color: #2c3e50;
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1rem;
 }
 
 .canister-deployer {
-  margin: 0 auto;
+  margin: 2rem auto;
   padding: 2rem;
   background: white;
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  position: relative;
-  min-height: 200px;
 }
 
-.form-group {
-  position: absolute;
-  bottom: 2rem;
-  right: 2rem;
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
 }
 
-.cta-button {
-  background-color: #4361ee;
-  color: white;
-  border: none;
-  padding: 12px 24px;
+.header h2 {
+  font-size: 2rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.header .subtitle {
   font-size: 1.1rem;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
+  color: var(--text-secondary);
 }
 
-.cta-button:hover {
-  background-color: #3046c5;
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2rem;
+  margin: 2rem 0;
 }
 
-.cta-button:disabled {
-  background-color: #b4b4b4;
-  cursor: not-allowed;
+.info-card {
+  padding: 1.5rem;
+  background: var(--background);
+  border-radius: 8px;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.info-card:hover {
+  transform: translateY(-2px);
+}
+
+.info-card .icon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.info-card h3 {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.info-card p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 .status {
-  margin-top: 1rem;
+  margin-top: 2rem;
   padding: 1rem;
-  border-radius: 5px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.9rem;
 }
 
 .status.success {
-  background-color: #d4edda;
-  color: #155724;
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
 }
 
 .status.error {
-  background-color: #f8d7da;
-  color: #721c24;
+  background-color: var(--color-error);
+  color: white;
 }
 
-.progress {
-  margin-top: 1rem;
+/* Action bar styling similar to pagination */
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--background);
+  border-top: 1px solid var(--border-color);
+  margin: 0 -2rem;
+  padding: 0.75rem;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 -2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 10;
 }
 
-progress {
-  width: 100%;
-  height: 8px;
-  border-radius: 4px;
-  border: none;
+.action-bar-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  gap: 1rem;
 }
 
-progress::-webkit-progress-bar {
-  background-color: #f0f0f0;
-  border-radius: 4px;
+/* Ensure content doesn't get hidden behind the action bar */
+.info-grid {
+  margin-bottom: 1rem;
 }
 
-progress::-webkit-progress-value {
-  background-color: #4361ee;
-  border-radius: 4px;
-}
+@media (max-width: 768px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
 
-.message {
-  margin-top: 1rem;
-  color: #6c757d;
-}
-
-.step-title {
-  font-size: 18px;
-  text-align: left;
+  .header h2 {
+    font-size: 1.75rem;
+  }
 }

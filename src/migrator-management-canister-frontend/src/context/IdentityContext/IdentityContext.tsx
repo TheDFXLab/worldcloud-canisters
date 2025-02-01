@@ -10,7 +10,11 @@ import { AuthClient } from "@dfinity/auth-client";
 import { HttpAgent } from "@dfinity/agent";
 
 import { Identity } from "@dfinity/agent";
-import { internetIdentityConfig } from "../../config/config";
+import {
+  frontend_canister_id_url,
+  http_host,
+  internetIdentityConfig,
+} from "../../config/config";
 import { ICPLedger } from "../../class/ICPLedger/ICPLedger";
 
 interface IdentityProviderProps {
@@ -80,6 +84,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         //http://bw4dl-smaaa-aaaaa-qaacq-cai.127.0.0.1:4943/
         //
         authClient.login({
+          derivationOrigin: frontend_canister_id_url,
           identityProvider: internetIdentityConfig.identityProvider,
           windowOpenerFeatures: `toolbar=0,location=0,menubar=0,width=${popUpWidth},height=${popUpHeight},left=${left},top=${top}`,
           maxTimeToLive: BigInt(
@@ -104,7 +109,8 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       // Using the identity obtained from the auth client, create an agent to interact with the IC.
       const agent = await HttpAgent.create({
         identity,
-        host: `http://localhost:4943`,
+        // host: `http://localhost:4943`,
+        host: http_host,
       });
 
       await agent.fetchRootKey();
