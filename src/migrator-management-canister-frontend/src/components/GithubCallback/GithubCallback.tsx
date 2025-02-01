@@ -6,6 +6,7 @@ import {
   githubClientId,
   reverse_proxy_url,
 } from "../../config/config";
+import GitHubIcon from "@mui/icons-material/GitHub";
 // import { useGithub } from "../../context/GithubContext/GithubContext";
 
 const GitHubCallback: React.FC = () => {
@@ -54,7 +55,9 @@ const GitHubCallback: React.FC = () => {
           // Success! Store the token and redirect
           const github = GithubApi.getInstance();
           github.setAccessToken(data.access_token);
-          navigate("/gh-select-repo");
+          // navigate("/gh-select-repo");
+          // navigate("/");
+          navigate("/app");
         } else {
           setError("Authentication failed");
         }
@@ -175,9 +178,14 @@ const GitHubCallback: React.FC = () => {
           <h2>GitHub Authentication</h2>
           <p className="subtitle">Initializing secure connection</p>
         </div>
+
+        <div className="github-spinner">
+          <GitHubIcon className="github-icon" />
+        </div>
+
         <p className="waiting-text">
           Please wait
-          <span className="loading-dots">...</span>
+          <span className="loading-dots"></span>
         </p>
       </div>
     </div>
