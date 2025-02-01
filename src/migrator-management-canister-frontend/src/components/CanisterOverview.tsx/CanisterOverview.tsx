@@ -16,6 +16,7 @@ import { useLedger } from "../../context/LedgerContext/LedgerContext";
 import { ConfirmationModal } from "../ConfirmationPopup/ConfirmationModal";
 import MainApi from "../../api/main";
 import ProjectDeployment from "../ProjectDeployment/ProjectDeployment";
+import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 
 interface CanisterOverviewProps {
   deployment: Deployment | null;
@@ -38,9 +39,12 @@ export const CanisterOverview = ({
   setShowLoadBar,
   setCompleteLoadbar,
 }: CanisterOverviewProps) => {
+  /** Hooks */
   const { status, refreshStatus } = useAuthority();
   const { transfer } = useLedger();
   const { identity } = useIdentity();
+  const { actionBar, setActionBar } = useActionBar();
+  /** State */
   const isTransferringRef = useRef(false);
   const [icpToDeposit, setIcpToDeposit] = useState<string>("0");
 

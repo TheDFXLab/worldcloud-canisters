@@ -27,6 +27,7 @@ import HomePage from "../HomePage/HomePage";
 import MenuIcon from "@mui/icons-material/Menu";
 import WebsitesComponent from "../WebsitesComponent/WebsitesComponent";
 import ActionBar, { ActionBarConfig } from "../ActionBar/ActionBar";
+import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 
 type MenuItem =
   | "publish"
@@ -52,8 +53,6 @@ interface AppLayoutProps {
   toasterData: ToasterData;
   setShowToaster: (show: boolean) => void;
   setToasterData: (data: ToasterData) => void;
-  actionBar?: ActionBarConfig;
-  setActionBar: (actionBar: ActionBarConfig | undefined) => void;
 }
 
 function AppLayout({
@@ -65,14 +64,13 @@ function AppLayout({
   toasterData,
   setShowToaster,
   setToasterData,
-  actionBar,
-  setActionBar,
 }: AppLayoutProps) {
   /** Hooks */
   const { disconnect, refreshIdentity, identity } = useIdentity();
   const { isLoadingStatus } = useAuthority();
   const { deployments, refreshDeployments, isLoading } = useDeployments();
   const navigate = useNavigate();
+  const { actionBar, setActionBar } = useActionBar();
 
   /** State */
   const [activeMenuItem, setActiveMenuItem] = useState<MenuItem>("home");
@@ -322,7 +320,6 @@ function AppLayout({
                 onDeploy={handleCanisterDeployed}
                 setShowToaster={setShowToaster}
                 setToasterData={setToasterData}
-                setActionBar={setActionBar}
               />
             ) : (
               <ProjectDeployment
@@ -330,7 +327,6 @@ function AppLayout({
                 setCanisterId={setDeployedCanisterId}
                 setToasterData={setToasterData}
                 setShowToaster={setShowToaster}
-                setActionBar={setActionBar}
               />
             )}
           </div>

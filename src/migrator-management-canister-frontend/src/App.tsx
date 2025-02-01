@@ -15,6 +15,7 @@ import RepoSelector from "./components/RepoSelector/RepoSelector";
 import { Deployment } from "./components/AppLayout/interfaces";
 import { ToasterData } from "./components/Toast/Toaster";
 import { ActionBarConfig } from "./components/ActionBar/ActionBar";
+import { ActionBarProvider } from "./context/ActionBarContext/ActionBarContext";
 
 export interface State {
   canister_id: string;
@@ -44,48 +45,47 @@ function App() {
     <Router>
       <IdentityProvider>
         <GithubProvider>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/github/callback" element={<GitHubCallback />} />
-            <Route
-              path="/gh-select-repo"
-              element={
-                <RepoSelector
-                  canisterId={
-                    selectedDeployment?.canister_id.toText()
-                      ? selectedDeployment.canister_id.toText()
-                      : null
-                  }
-                  setActionBar={setActionBar}
-                  setShowToaster={setShowToaster}
-                  setToasterData={setToasterData}
-                />
-              }
-            />
-            <Route
-              path="/app"
-              element={
-                <AuthWrapper>
-                  <AuthorityProvider state={state}>
-                    <DeploymentsProvider>
-                      <AppLayout
-                        setState={setState}
-                        state={state}
-                        actionBar={actionBar}
-                        setActionBar={setActionBar}
-                        selectedDeployment={selectedDeployment}
-                        setSelectedDeployment={setSelectedDeployment}
-                        showToaster={showToaster}
-                        toasterData={toasterData}
-                        setShowToaster={setShowToaster}
-                        setToasterData={setToasterData}
-                      />
-                    </DeploymentsProvider>
-                  </AuthorityProvider>
-                </AuthWrapper>
-              }
-            />
-          </Routes>
+          <ActionBarProvider>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/github/callback" element={<GitHubCallback />} />
+              <Route
+                path="/gh-select-repo"
+                element={
+                  <RepoSelector
+                    canisterId={
+                      selectedDeployment?.canister_id.toText()
+                        ? selectedDeployment.canister_id.toText()
+                        : null
+                    }
+                    setShowToaster={setShowToaster}
+                    setToasterData={setToasterData}
+                  />
+                }
+              />
+              <Route
+                path="/app"
+                element={
+                  <AuthWrapper>
+                    <AuthorityProvider state={state}>
+                      <DeploymentsProvider>
+                        <AppLayout
+                          setState={setState}
+                          state={state}
+                          selectedDeployment={selectedDeployment}
+                          setSelectedDeployment={setSelectedDeployment}
+                          showToaster={showToaster}
+                          toasterData={toasterData}
+                          setShowToaster={setShowToaster}
+                          setToasterData={setToasterData}
+                        />
+                      </DeploymentsProvider>
+                    </AuthorityProvider>
+                  </AuthWrapper>
+                }
+              />
+            </Routes>
+          </ActionBarProvider>
         </GithubProvider>
       </IdentityProvider>
     </Router>

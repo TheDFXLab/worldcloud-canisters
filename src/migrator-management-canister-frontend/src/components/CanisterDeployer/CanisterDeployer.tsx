@@ -7,22 +7,22 @@ import { ToasterData } from "../Toast/Toaster";
 import MainApi from "../../api/main";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import ActionBar, { ActionBarConfig } from "../ActionBar/ActionBar";
+import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 
 interface CanisterDeployerProps {
   onDeploy: (canisterId: string) => void;
   setToasterData: (data: ToasterData) => void;
   setShowToaster: (show: boolean) => void;
-  setActionBar: (actionBar: ActionBarConfig) => void;
 }
 
 function CanisterDeployer({
   onDeploy,
   setToasterData,
   setShowToaster,
-  setActionBar,
 }: CanisterDeployerProps) {
   const { addDeployment, refreshDeployments } = useDeployments();
   const { identity } = useIdentity();
+  const { actionBar, setActionBar } = useActionBar();
 
   const [state, setState] = useState({
     selectedFile: null,
