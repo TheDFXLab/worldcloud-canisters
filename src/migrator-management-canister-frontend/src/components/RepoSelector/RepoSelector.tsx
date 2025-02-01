@@ -12,6 +12,7 @@ import DeploymentProgress, {
   DeploymentStep,
 } from "../DeploymentProgress/DeploymentProgress";
 import ActionBar, { ActionBarConfig } from "../ActionBar/ActionBar";
+import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 
 interface PackageLocation {
   path: string;
@@ -43,7 +44,6 @@ interface RepoSelectorProps {
   canisterId: string | null;
   setShowToaster: (show: boolean) => void;
   setToasterData: (data: ToasterData) => void;
-  setActionBar: (config: ActionBarConfig) => void;
 }
 
 interface RepoSelectorState {
@@ -55,11 +55,11 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
   canisterId,
   setShowToaster,
   setToasterData,
-  setActionBar,
 }) => {
   /** Hooks */
   const { getGithubToken } = useGithub();
   const { identity } = useIdentity();
+  const { actionBar, setActionBar } = useActionBar();
 
   /** State */
   const [repos, setRepos] = useState<Repository[]>([]);

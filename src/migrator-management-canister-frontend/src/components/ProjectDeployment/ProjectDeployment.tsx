@@ -5,13 +5,13 @@ import { FaGithub, FaFileArchive } from "react-icons/fa";
 import FileUploader from "../FileUploader/FileUploader";
 import "./ProjectDeployment.css";
 import RepoSelector from "../RepoSelector/RepoSelector";
+import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 
 interface ProjectDeploymentProps {
   canisterId: string;
   setCanisterId: (id: string) => void;
   setToasterData: (data: any) => void;
   setShowToaster: (show: boolean) => void;
-  setActionBar: (action: any) => void;
 }
 
 const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
@@ -19,8 +19,8 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
   setCanisterId,
   setToasterData,
   setShowToaster,
-  setActionBar,
 }) => {
+  const { actionBar, setActionBar } = useActionBar();
   const [selectedMethod, setSelectedMethod] = useState<
     "github" | "upload" | null
   >(null);
@@ -93,7 +93,6 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
               canisterId={canisterId}
               setShowToaster={setShowToaster}
               setToasterData={setToasterData}
-              setActionBar={setActionBar}
             />
           ) : (
             <FileUploader
