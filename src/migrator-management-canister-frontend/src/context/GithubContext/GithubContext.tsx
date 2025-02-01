@@ -23,6 +23,7 @@ interface GithubContextType {
   githubUser: GithubUser | null;
   getGithubToken: () => string | null;
   setAccessToken: (token: string) => void;
+  setGithubUser: (user: GithubUser | null) => void;
 }
 
 const GithubContext = createContext<GithubContextType | undefined>(undefined);
@@ -84,7 +85,13 @@ export function GithubProvider({ children }: GithubProviderProps) {
 
   return (
     <GithubContext.Provider
-      value={{ isGithubConnected, githubUser, getGithubToken, setAccessToken }}
+      value={{
+        isGithubConnected,
+        githubUser,
+        getGithubToken,
+        setAccessToken,
+        setGithubUser,
+      }}
     >
       {children}
     </GithubContext.Provider>
