@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import CanisterDeployer from "../CanisterDeployer/CanisterDeployer";
 import "./AppLayout.css";
 import CanisterOptions from "../CanisterOptions/CanisterOptions";
 
 import { Deployment } from "./interfaces";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
-import { ToasterData } from "../Toast/Toaster";
-import WasmUploader from "../WasmUploader/WasmUploader";
+import Toaster from "../Toast/Toaster";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -16,20 +14,18 @@ import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount";
 import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
 import { State } from "../../App";
 import AssetApi from "../../api/assets/AssetApi";
-import ProjectDeployment from "../ProjectDeployment/ProjectDeployment";
 import MainApi from "../../api/main";
-import { environment, reverse_proxy_url } from "../../config/config";
 import { useNavigate } from "react-router-dom";
 import HomeIcon from "@mui/icons-material/Home";
 import LanguageIcon from "@mui/icons-material/Language";
-import Settings from "../SettingsPage/Settings";
-import HomePage from "../HomePage/HomePage";
 import MenuIcon from "@mui/icons-material/Menu";
-import WebsitesComponent from "../WebsitesComponent/WebsitesComponent";
-import ActionBar, { ActionBarConfig } from "../ActionBar/ActionBar";
+import ActionBar from "../ActionBar/ActionBar";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
+import { useToaster } from "../../context/ToasterContext/ToasterContext";
+import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
+import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 
-type MenuItem =
+export type MenuItem =
   | "publish"
   | "websites"
   | "admin"
@@ -37,45 +33,31 @@ type MenuItem =
   | "settings"
   | "home";
 
-enum BadgeColor {
-  "uninitialized" = "secondary",
-  "installing" = "warning",
-  "installed" = "success",
-  "failed" = "danger",
-}
-
 interface AppLayoutProps {
   state: State;
   setState: (state: State) => void;
-  selectedDeployment: Deployment | null;
-  setSelectedDeployment: (deployment: Deployment | null) => void;
-  showToaster: boolean;
-  toasterData: ToasterData;
-  setShowToaster: (show: boolean) => void;
-  setToasterData: (data: ToasterData) => void;
+  children: React.ReactNode;
 }
 
-function AppLayout({
-  state,
-  setState,
-  selectedDeployment,
-  setSelectedDeployment,
-  showToaster,
-  toasterData,
-  setShowToaster,
-  setToasterData,
-}: AppLayoutProps) {
+function AppLayout({ state, setState, children }: AppLayoutProps) {
   /** Hooks */
   const { disconnect, refreshIdentity, identity } = useIdentity();
   const { isLoadingStatus } = useAuthority();
-  const { deployments, refreshDeployments, isLoading } = useDeployments();
+  const {
+    deployments,
+    refreshDeployments,
+    isLoading,
+    selectedDeployment,
+    setSelectedDeployment,
+  } = useDeployments();
   const navigate = useNavigate();
   const { actionBar, setActionBar } = useActionBar();
+  const { toasterData, showToaster, setToasterData, setShowToaster } =
+    useToaster();
+  const { activeTab, setActiveTab } = useSideBar();
 
   /** State */
   const [activeMenuItem, setActiveMenuItem] = useState<MenuItem>("home");
-  const [deployedCanisterId, setDeployedCanisterId] = useState<string>("");
-  const [userDeployments, setUserDeployments] = useState<Deployment[]>([]);
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
 
   const [showDetails, setShowDetails] = useState<boolean>(false);
@@ -84,10 +66,6 @@ function AppLayout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   /** Functions */
-  const handleCanisterDeployed = (canisterId: string) => {
-    setDeployedCanisterId(canisterId);
-  };
-
   useEffect(() => {
     const fetchWasmModule = async () => {
       const mainApi = await MainApi.create(identity);
@@ -103,37 +81,10 @@ function AppLayout({
   }, [activeMenuItem]);
 
   useEffect(() => {
-    const checkRateLimit = async () => {
-      try {
-        const response = await fetch(
-          `${
-            environment === "production" ? "" : reverse_proxy_url
-          }/https://api.github.com/rate_limit`,
-          {
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        const data = await response.json();
-        console.log("GitHub Rate Limit Status:", {
-          core: data.resources.core,
-          search: data.resources.search,
-          graphql: data.resources.graphql,
-          integration_manifest: data.resources.integration_manifest,
-          source_import: data.resources.source_import,
-        });
-      } catch (err) {
-        console.error("Failed to check rate limit:", err);
-      }
-    };
-
-    checkRateLimit();
-  }, []);
-
-  useEffect(() => {
-    const selectedDeploymentUpdated = userDeployments.find(
+    if (!deployments.length) {
+      return;
+    }
+    const selectedDeploymentUpdated = deployments.find(
       (deployment) =>
         deployment.canister_id.toText() ===
         selectedDeployment?.canister_id.toText()
@@ -144,13 +95,7 @@ function AppLayout({
         canister_id: selectedDeploymentUpdated.canister_id.toText(),
       });
     }
-  }, [userDeployments, deployedCanisterId]);
-
-  useEffect(() => {
-    setUserDeployments(deployments);
   }, [deployments]);
-
-  useEffect(() => {}, [deployedCanisterId]);
 
   useEffect(() => {
     const get = async () => {
@@ -160,16 +105,11 @@ function AppLayout({
       const assetApi = new AssetApi();
     };
     get();
-  }, [deployedCanisterId, deployments]);
+  }, [deployments]);
 
   useEffect(() => {
     refreshDeployments();
   }, []);
-
-  // useEffect(() => {
-  //   setActionBar(undefined);
-  //   console.log(`Disabling action bar`);
-  // }, [activeMenuItem]);
 
   const handleOptionsModal = (deployment: Deployment) => {
     setShowOptionsModal(true);
@@ -183,6 +123,8 @@ function AppLayout({
     setState({ canister_id: "" });
   };
 
+  useEffect(() => {}, [selectedDeployment]);
+
   const handleSelectDeployment = (deployment: Deployment) => {
     setShowDetails(true);
     setSelectedDeployment(deployment);
@@ -195,15 +137,51 @@ function AppLayout({
         deployment={selectedDeployment}
         show={showOptionsModal}
         onHide={handleHideOptionsModal}
-        setCanisterId={setDeployedCanisterId}
-        setToasterData={setToasterData}
-        setShowToaster={setShowToaster}
       />
     );
   }
 
+  const handleMenuClick = (menuItem: MenuItem) => {
+    switch (menuItem) {
+      case "settings":
+        navigate("/app/settings");
+        break;
+      case "home":
+        navigate("/app");
+        break;
+      case "publish":
+        navigate("/app/new");
+        break;
+      case "websites":
+        navigate("/app/websites");
+        break;
+      case "admin":
+        navigate("/app/admin");
+        break;
+    }
+    setActiveTab(menuItem);
+  };
+
   return (
     <div className="app-layout">
+      {showToaster && toasterData && (
+        <Toaster
+          headerContent={toasterData.headerContent}
+          toastStatus={toasterData.toastStatus}
+          toastData={toasterData.toastData}
+          textColor={toasterData.textColor}
+          show={showToaster}
+          onHide={() => setShowToaster(false)}
+          timeout={toasterData.timeout ? toasterData.timeout : 3000}
+          link=""
+          overrideTextStyle=""
+        />
+      )}
+
+      <ProgressBar
+        isLoading={isLoading || showLoadbar || isLoadingStatus}
+        isEnded={completeLoadbar}
+      />
       <button
         className={`mobile-menu-button ${isMobileMenuOpen ? "hidden" : ""}`}
         onClick={() => setIsMobileMenuOpen(true)}
@@ -220,48 +198,40 @@ function AppLayout({
       <aside className={`sidebar ${isMobileMenuOpen ? "open" : ""}`}>
         <nav className="sidebar-nav">
           <IconTextRowView
-            className={`nav-item ${activeMenuItem === "home" ? "active" : ""}`}
+            className={`nav-item ${activeTab === "home" ? "active" : ""}`}
             text="Home"
             IconComponent={HomeIcon}
-            onClickIcon={() => setActiveMenuItem("home")}
+            onClickIcon={() => handleMenuClick("home")}
             iconColor="black"
           />
           <IconTextRowView
-            className={`nav-item ${
-              activeMenuItem === "websites" ? "active" : ""
-            }`}
+            className={`nav-item ${activeTab === "websites" ? "active" : ""}`}
             text="Websites"
             IconComponent={LanguageIcon}
-            onClickIcon={() => setActiveMenuItem("websites")}
+            onClickIcon={() => handleMenuClick("websites")}
             iconColor="black"
           />
 
           <IconTextRowView
-            className={`nav-item ${
-              activeMenuItem === "publish" ? "active" : ""
-            }`}
+            className={`nav-item ${activeTab === "publish" ? "active" : ""}`}
             text="New"
             IconComponent={AddIcon}
-            onClickIcon={() => setActiveMenuItem("publish")}
+            onClickIcon={() => handleMenuClick("publish")}
             iconColor="black"
           />
           <div className="bottom-nav-group">
             <IconTextRowView
-              className={`nav-item ${
-                activeMenuItem === "admin" ? "active" : ""
-              }`}
+              className={`nav-item ${activeTab === "admin" ? "active" : ""}`}
               text="Admin"
               IconComponent={SupervisorAccountIcon}
-              onClickIcon={() => setActiveMenuItem("admin")}
+              onClickIcon={() => handleMenuClick("admin")}
               iconColor="black"
             />
             <IconTextRowView
-              className={`nav-item ${
-                activeMenuItem === "settings" ? "active" : ""
-              }`}
+              className={`nav-item ${activeTab === "settings" ? "active" : ""}`}
               text="Settings"
               IconComponent={SettingsIcon}
-              onClickIcon={() => setActiveMenuItem("settings")}
+              onClickIcon={() => handleMenuClick("settings")}
               iconColor="black"
             />
             <IconTextRowView
@@ -276,163 +246,12 @@ function AppLayout({
       </aside>
 
       <main className="main-content" onClick={() => setIsMobileMenuOpen(false)}>
-        {
-          <div
-            style={{
-              display: activeMenuItem === "settings" ? "block" : "none",
-            }}
-          >
-            <div>
-              <Settings />
-            </div>
-          </div>
-        }
-        {
-          <div
-            className="admin-flow"
-            style={{ display: activeMenuItem === "admin" ? "block" : "none" }}
-          >
-            <div>
-              <WasmUploader onClick={() => setShowLoadbar(true)} />
-            </div>
-          </div>
-        }
-        {
-          <div
-            style={{
-              display: activeMenuItem === "home" ? "block" : "none",
-            }}
-          >
-            <div>
-              <HomePage />
-            </div>
-          </div>
-        }
-        {
-          <div
-            className="publish-flow"
-            style={{
-              display: activeMenuItem === "publish" ? "block" : "none",
-            }}
-          >
-            {!deployedCanisterId ? (
-              <CanisterDeployer
-                onDeploy={handleCanisterDeployed}
-                setShowToaster={setShowToaster}
-                setToasterData={setToasterData}
-              />
-            ) : (
-              <ProjectDeployment
-                canisterId={deployedCanisterId}
-                setCanisterId={setDeployedCanisterId}
-                setToasterData={setToasterData}
-                setShowToaster={setShowToaster}
-              />
-            )}
-          </div>
-        }
+        {children}
 
-        {
-          <div
-            className="websites-list"
-            style={{
-              display: activeMenuItem === "websites" ? "block" : "none",
-            }}
-          >
-            <WebsitesComponent />
-          </div>
-        }
-        {/* {actionBar && activeMenuItem === "publish" && (
-          <ActionBar {...actionBar} />
-        )} */}
-
-        {actionBar && activeMenuItem === "publish" && (
-          <ActionBar {...actionBar} />
-        )}
+        {actionBar && activeTab === "publish" && <ActionBar {...actionBar} />}
       </main>
     </div>
   );
 }
 
 export default AppLayout;
-
-/**
-
-{showDetails ? (
-              <CanisterManagement
-                deployment={selectedDeployment}
-                setShowDetails={setShowDetails}
-                setShowToaster={setShowToaster}
-                setToasterData={setToasterData}
-                setShowLoadBar={setShowLoadbar}
-                setCompleteLoadbar={setCompleteLoadbar}
-                state={state}
-              />
-            ) : (
-              <>
-                <h2>My Websites</h2>
-                <Table striped bordered hover>
-                  <thead>
-                    <tr>
-                      <th>Canister ID</th>
-                      <th>Status</th>
-                      <th>Created At</th>
-                      <th>Updated At</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {userDeployments.map((deployment) => (
-                      <tr key={deployment.canister_id.toString()}>
-                        <td
-                          style={{ cursor: "pointer" }}
-                          onClick={() => handleSelectDeployment(deployment)}
-                        >
-                          {" "}
-                          {deployment.canister_id.toText()}
-                        </td>
-                        <td>
-                          <Badge bg={BadgeColor[deployment.status]}>
-                            {deployment.status}
-                          </Badge>
-                        </td>
-                        <td>
-                          {new Date(
-                            Number(deployment.date_created) / 1000000
-                          ).toLocaleString("en-GB", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                            hour12: false,
-                          })}
-                        </td>
-                        <td>
-                          {new Date(
-                            Number(deployment.date_updated) / 1000000
-                          ).toLocaleString("en-GB", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                            hour12: false,
-                          })}
-                        </td>
-                        <td>
-                          <CiEdit
-                            style={{ cursor: "pointer" }}
-                            onClick={() => handleOptionsModal(deployment)}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </>
-            )}
-
- */
