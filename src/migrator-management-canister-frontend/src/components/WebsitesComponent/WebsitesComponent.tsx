@@ -81,9 +81,7 @@ const WebsitesComponent: React.FC = () => {
                 key={deployment.canister_id.toText()}
                 className="website-card"
                 onClick={() =>
-                  navigate(
-                    `/app/canister/${deployment.canister_id}/${deployment.date_created}/${deployment.date_updated}/${deployment.size}/$${deployment.status}`
-                  )
+                  navigate(`/app/canister/${deployment.canister_id}`)
                 }
               >
                 <div className="website-header">
