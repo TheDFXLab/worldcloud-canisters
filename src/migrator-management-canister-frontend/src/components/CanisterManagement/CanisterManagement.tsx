@@ -5,7 +5,7 @@ import { AssetManager } from "../AssetManager/AssetManager";
 import { DangerZone } from "../DangerZone/DangerZone";
 import { Button, Tab, Tabs } from "react-bootstrap";
 import { Deployment } from "../AppLayout/interfaces";
-import { CanisterOverview } from "../CanisterOverview.tsx/CanisterOverview";
+import { CanisterOverview } from "../CanisterOverview/CanisterOverview";
 import { getCanisterUrl } from "../../config/config";
 import { AuthorityProvider } from "../../context/AuthorityContext/AuthorityContext";
 import { AssetProvider } from "../../context/AssetContext/AssetContext";
