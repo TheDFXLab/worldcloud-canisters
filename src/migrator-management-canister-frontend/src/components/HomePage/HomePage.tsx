@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import "./HomePage.css";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import { useGithub } from "../../context/GithubContext/GithubContext";
@@ -9,11 +9,13 @@ import GitHubIcon from "@mui/icons-material/GitHub";
 import SpeedIcon from "@mui/icons-material/Speed";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import UpdateIcon from "@mui/icons-material/Update";
+import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 
 const HomePage: React.FC = () => {
   const { deployments } = useDeployments();
   const { githubUser } = useGithub();
   const { identity } = useIdentity();
+  const { setActiveTab } = useSideBar();
 
   // Calculate metrics
   const totalCanisters = deployments.length;
@@ -23,6 +25,11 @@ const HomePage: React.FC = () => {
   const lastDeployment = deployments[0]?.date_updated
     ? new Date(Number(deployments[0].date_updated) / 1000000).toLocaleString()
     : "No deployments yet";
+
+  // Set the active tab to home
+  useEffect(() => {
+    setActiveTab("home");
+  }, []);
 
   return (
     <div className="home-container">
