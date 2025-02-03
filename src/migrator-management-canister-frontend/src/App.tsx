@@ -20,7 +20,7 @@ import HomePage from "./components/HomePage/HomePage";
 import Settings from "./components/SettingsPage/Settings";
 import ProjectDeployment from "./components/ProjectDeployment/ProjectDeployment";
 import { ToasterProvider } from "./context/ToasterContext/ToasterContext";
-import { CanisterOverview } from "./components/CanisterOverview.tsx/CanisterOverview";
+import { CanisterOverview } from "./components/CanisterOverview/CanisterOverview";
 import WebsitesComponent from "./components/WebsitesComponent/WebsitesComponent";
 import WasmUploader from "./components/WasmUploader/WasmUploader";
 import CanisterDeployer from "./components/CanisterDeployer/CanisterDeployer";
@@ -91,7 +91,7 @@ function App() {
                                     element={<WasmUploader />}
                                   />
                                   <Route
-                                    path="canister/:canisterId"
+                                    path="canister/:canisterId/:dateCreated/:dateUpdated/:size/:canisterStatus"
                                     element={<CanisterOverview />}
                                   />
                                 </Routes>

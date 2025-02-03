@@ -10,6 +10,7 @@ import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import { Principal } from "@dfinity/principal";
 import { getCanisterUrl } from "../../config/config";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
+import { useNavigate } from "react-router-dom";
 
 const ITEMS_PER_PAGE = 6;
 
@@ -17,6 +18,7 @@ const WebsitesComponent: React.FC = () => {
   /** Hooks */
   const { deployments } = useDeployments();
   const { setActiveTab } = useSideBar();
+  const navigate = useNavigate();
 
   /**State */
   const [currentPage, setCurrentPage] = useState(1);
@@ -78,6 +80,11 @@ const WebsitesComponent: React.FC = () => {
               <div
                 key={deployment.canister_id.toText()}
                 className="website-card"
+                onClick={() =>
+                  navigate(
+                    `/app/canister/${deployment.canister_id}/${deployment.date_created}/${deployment.date_updated}/${deployment.size}/$${deployment.status}`
+                  )
+                }
               >
                 <div className="website-header">
                   <LanguageIcon />
