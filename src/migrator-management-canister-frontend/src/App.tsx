@@ -91,7 +91,7 @@ function App() {
                                     element={<WasmUploader />}
                                   />
                                   <Route
-                                    path="canister/:canisterId/:dateCreated/:dateUpdated/:size/:canisterStatus"
+                                    path="canister/:canisterId"
                                     element={<CanisterOverview />}
                                   />
                                 </Routes>
