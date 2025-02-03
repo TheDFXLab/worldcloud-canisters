@@ -4,6 +4,7 @@ import {
   useState,
   ReactNode,
   useEffect,
+  useCallback,
 } from "react";
 import { GithubApi } from "../../api/github/GithubApi";
 
@@ -21,6 +22,7 @@ interface GithubProviderProps {
 interface GithubContextType {
   isGithubConnected: boolean;
   githubUser: GithubUser | null;
+  refreshGithubUser: () => Promise<void>;
   getGithubToken: () => string | null;
   setAccessToken: (token: string) => void;
   setGithubUser: (user: GithubUser | null) => void;
@@ -32,11 +34,7 @@ export function GithubProvider({ children }: GithubProviderProps) {
   const [isGithubConnected, setIsGithubConnected] = useState(false);
   const [githubUser, setGithubUser] = useState<GithubUser | null>(null);
 
-  useEffect(() => {
-    fetchGithubUser();
-  }, []);
-
-  const fetchGithubUser = async () => {
+  const refreshGithubUser = useCallback(async () => {
     const githubApi = GithubApi.getInstance();
     const token = githubApi.token;
 
@@ -54,7 +52,6 @@ export function GithubProvider({ children }: GithubProviderProps) {
           setGithubUser(userData);
           setIsGithubConnected(true);
         } else {
-          // Token might be invalid
           setIsGithubConnected(false);
           setGithubUser(null);
           githubApi.logout();
@@ -68,7 +65,11 @@ export function GithubProvider({ children }: GithubProviderProps) {
       setIsGithubConnected(false);
       setGithubUser(null);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    refreshGithubUser();
+  }, []);
 
   const getGithubToken = () => {
     const githubApi = GithubApi.getInstance();
@@ -80,7 +81,7 @@ export function GithubProvider({ children }: GithubProviderProps) {
     githubApi.setAccessToken(token);
     setIsGithubConnected(true);
     // Fetch user data when token is set
-    fetchGithubUser();
+    refreshGithubUser();
   };
 
   return (
@@ -88,6 +89,7 @@ export function GithubProvider({ children }: GithubProviderProps) {
       value={{
         isGithubConnected,
         githubUser,
+        refreshGithubUser,
         getGithubToken,
         setAccessToken,
         setGithubUser,
