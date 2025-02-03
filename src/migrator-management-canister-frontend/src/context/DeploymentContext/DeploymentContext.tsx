@@ -15,6 +15,7 @@ interface DeploymentsContextType {
   setSelectedDeployment: (deployment: Deployment | null) => void;
   isLoading: boolean;
   refreshDeployments: () => Promise<void>;
+  getDeployment: (canisterId: string) => Deployment | undefined;
   addDeployment: (deployment: Deployment) => void;
   updateDeployment: (canisterId: string, updates: Partial<Deployment>) => void;
 }
@@ -30,6 +31,14 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
     useState<Deployment | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
+
+  const getDeployment = (canisterId: string) => {
+    console.log(`all deps:`, deployments);
+    console.log(`can:`, canisterId);
+    return deployments.find(
+      (deployment) => deployment.canister_id.toText() === canisterId
+    );
+  };
 
   const refreshDeployments = async () => {
     try {
@@ -84,6 +93,7 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
         deployments,
         selectedDeployment,
         setSelectedDeployment,
+        getDeployment,
         isLoading,
         refreshDeployments,
         addDeployment,
