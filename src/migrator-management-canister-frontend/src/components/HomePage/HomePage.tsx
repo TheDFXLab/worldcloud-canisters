@@ -10,6 +10,8 @@ import SpeedIcon from "@mui/icons-material/Speed";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import UpdateIcon from "@mui/icons-material/Update";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
+import HistoryIcon from "@mui/icons-material/History";
+import AccountBoxIcon from "@mui/icons-material/AccountBox";
 
 const HomePage: React.FC = () => {
   const { deployments } = useDeployments();
@@ -34,7 +36,7 @@ const HomePage: React.FC = () => {
   return (
     <div className="home-container">
       <div className="home-header">
-        <h2>Dashboard Overview</h2>
+        <h2>Dashboard</h2>
         <p className="subtitle">
           Welcome back{githubUser ? `, ${githubUser.login}` : ""}
         </p>
@@ -80,7 +82,7 @@ const HomePage: React.FC = () => {
         {/* Recent Activity */}
         <div className="detail-card">
           <div className="detail-card-header">
-            <BarChartIcon />
+            <HistoryIcon />
             <h3>Recent Activity</h3>
           </div>
           <div className="detail-card-content">
@@ -114,7 +116,7 @@ const HomePage: React.FC = () => {
         {/* Account Info */}
         <div className="detail-card">
           <div className="detail-card-header">
-            <GitHubIcon />
+            <AccountBoxIcon />
             <h3>Account Information</h3>
           </div>
           <div className="detail-card-content">

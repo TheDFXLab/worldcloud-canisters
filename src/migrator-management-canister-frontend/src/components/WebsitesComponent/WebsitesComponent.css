@@ -65,6 +65,7 @@
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
+  cursor: pointer;
 }
 
 .website-card:hover {
@@ -89,11 +90,11 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  background: var(--background);
-  font-size: 0.8rem;
-  text-transform: capitalize;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
 }
 
 .status-dot {
@@ -103,15 +104,19 @@
 }
 
 .status-dot.success {
-  background-color: var(--color-success);
+  background-color: #4caf50;
 }
 
 .status-dot.warning {
-  background-color: var(--color-warning);
+  background-color: #ff9800;
 }
 
 .status-dot.error {
-  background-color: var(--color-error);
+  background-color: #f44336;
+}
+
+.status-dot.default {
+  background-color: #2196f3;
 }
 
 .website-title {
