@@ -6,13 +6,12 @@ import { useGithub } from "../../context/GithubContext/GithubContext";
 import { generateWorkflowTemplate } from "../../utility/workflowTemplate";
 import FileUploadApi from "../../api/FileUpload/FileUploadApi";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
-import { ToasterData } from "../Toast/Toaster";
-import { getCanisterUrl } from "../../config/config";
 import DeploymentProgress, {
   DeploymentStep,
 } from "../DeploymentProgress/DeploymentProgress";
-import ActionBar, { ActionBarConfig } from "../ActionBar/ActionBar";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
+import { useNavigate, useParams } from "react-router-dom";
+import { useToaster } from "../../context/ToasterContext/ToasterContext";
 
 interface PackageLocation {
   path: string;
@@ -26,9 +25,7 @@ interface Branch {
   };
 }
 
-interface ArtifactSummary {
-  // Define the structure of ArtifactSummary
-}
+interface ArtifactSummary {}
 
 interface RepoState {
   branches: Branch[];
@@ -40,26 +37,21 @@ interface RepoState {
   artifacts: ArtifactSummary[];
 }
 
-interface RepoSelectorProps {
-  canisterId: string | null;
-  setShowToaster: (show: boolean) => void;
-  setToasterData: (data: ToasterData) => void;
-}
+interface RepoSelectorProps {}
 
 interface RepoSelectorState {
   selectedRepo: Repository | null;
   step: "select" | "configure" | "deploy";
 }
 
-const RepoSelector: React.FC<RepoSelectorProps> = ({
-  canisterId,
-  setShowToaster,
-  setToasterData,
-}) => {
+const RepoSelector: React.FC<RepoSelectorProps> = () => {
   /** Hooks */
   const { getGithubToken } = useGithub();
   const { identity } = useIdentity();
   const { actionBar, setActionBar } = useActionBar();
+  const { canisterId } = useParams();
+  const { toasterData, setToasterData, setShowToaster } = useToaster();
+  const navigate = useNavigate();
 
   /** State */
   const [repos, setRepos] = useState<Repository[]>([]);
@@ -116,13 +108,26 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
   ];
 
   useEffect(() => {
+    console.log(`repoStates:`, repoStates);
+    console.log(`canister id accessing:`, canisterId);
+    if (!canisterId) {
+      navigate("/app/new");
+      return;
+    }
+
+    // loadBranches(repos);
+  }, [canisterId]);
+
+  useEffect(() => {
     const loadRepos = async () => {
       const token = getGithubToken();
       if (!token) {
         console.log(`Not authenticated.`);
         await github.authenticate();
       }
+      console.log(`Fetching repos/....`);
       const repos = await github.listRepositories();
+      console.log(`repos:`, repos);
       setRepos(repos);
     };
     loadRepos();
@@ -131,6 +136,8 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
   const loadBranches = async (repo: string) => {
     try {
       const response = await github.request(`/repos/${repo}/branches`);
+
+      console.log(`branches:`, response);
       setRepoStates((prev) => ({
         ...prev,
         [repo]: {
@@ -454,10 +461,10 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
   useEffect(() => {
     console.log(`selected step changed:`, state);
     console.log(`Canister`, canisterId);
-    console.log(
-      `WEveal`,
-      !canisterId || !repoStates[state.selectedRepo!.full_name]?.selectedPath
-    );
+    // console.log(
+    //   `WEveal`,
+    //   !canisterId || !repoStates[state.selectedRepo!.full_name]?.selectedPath
+    // );
   }, [state.step]);
 
   useEffect(() => {
@@ -488,6 +495,10 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
       });
     }
   }, [state.step, state.selectedRepo, hideActionBar, canisterId]);
+
+  if (!repos.length) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="repo-selector">

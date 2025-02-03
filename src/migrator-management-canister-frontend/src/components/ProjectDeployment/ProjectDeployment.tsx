@@ -6,21 +6,19 @@ import FileUploader from "../FileUploader/FileUploader";
 import "./ProjectDeployment.css";
 import RepoSelector from "../RepoSelector/RepoSelector";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
+import { useNavigate, useParams } from "react-router-dom";
+import { useToaster } from "../../context/ToasterContext/ToasterContext";
 
-interface ProjectDeploymentProps {
-  canisterId: string;
-  setCanisterId: (id: string) => void;
-  setToasterData: (data: any) => void;
-  setShowToaster: (show: boolean) => void;
-}
+interface ProjectDeploymentProps {}
 
-const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
-  canisterId,
-  setCanisterId,
-  setToasterData,
-  setShowToaster,
-}) => {
+const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
+  /** Hooks */
   const { actionBar, setActionBar } = useActionBar();
+  const { canisterId } = useParams();
+  const { toasterData, setToasterData, setShowToaster } = useToaster();
+  const navigate = useNavigate();
+
+  /** State */
   const [selectedMethod, setSelectedMethod] = useState<
     "github" | "upload" | null
   >(null);
@@ -31,6 +29,24 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
       isHidden: true,
     }));
   }, []);
+
+  useEffect(() => {
+    // Redirect to new page if no canister ID provided
+    if (!canisterId) {
+      // return <div>No canister ID</div>;
+      navigate("/app/websites");
+    }
+  }, [canisterId, navigate]);
+
+  if (!canisterId) {
+    return (
+      <div className="project-deployment-container">
+        <div className="deployment-header">
+          <h2>Loading...</h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="project-deployment">
@@ -88,20 +104,7 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
             ← Back to methods
           </button>
 
-          {selectedMethod === "github" ? (
-            <RepoSelector
-              canisterId={canisterId}
-              setShowToaster={setShowToaster}
-              setToasterData={setToasterData}
-            />
-          ) : (
-            <FileUploader
-              canisterId={canisterId}
-              setCanisterId={setCanisterId}
-              setToasterData={setToasterData}
-              setShowToaster={setShowToaster}
-            />
-          )}
+          {selectedMethod === "github" ? <RepoSelector /> : <FileUploader />}
         </div>
       )}
     </div>

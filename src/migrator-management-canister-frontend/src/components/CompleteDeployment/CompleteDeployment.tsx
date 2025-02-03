@@ -2,11 +2,10 @@ import { Button } from "react-bootstrap";
 import "./CompleteDeployment.css";
 
 interface CompleteDeploymentProps {
-  canisterId: string;
+  canisterId: string | null | undefined;
   totalSize: number;
   dateCreated: Date;
   onCloseModal: () => void;
-  setCanisterId: (id: string) => void;
 }
 
 function CompleteDeployment({
@@ -14,7 +13,6 @@ function CompleteDeployment({
   totalSize,
   dateCreated,
   onCloseModal,
-  setCanisterId,
 }: CompleteDeploymentProps) {
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
@@ -48,7 +46,7 @@ function CompleteDeployment({
             <code>{canisterId}</code>
             <button
               className="copy-button"
-              onClick={() => navigator.clipboard.writeText(canisterId)}
+              onClick={() => navigator.clipboard.writeText(canisterId ?? "")}
               title="Copy to clipboard"
             >
               📋
