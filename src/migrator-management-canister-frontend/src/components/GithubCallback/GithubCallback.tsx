@@ -2,22 +2,27 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { GithubApi } from "../../api/github/GithubApi";
 import {
+  cors_sh_api_key,
   environment,
   githubClientId,
   reverse_proxy_url,
 } from "../../config/config";
 import GitHubIcon from "@mui/icons-material/GitHub";
-// import { useGithub } from "../../context/GithubContext/GithubContext";
+import { useGithub } from "../../context/GithubContext/GithubContext";
 
 const GitHubCallback: React.FC = () => {
-  // const { setAccessToken } = useGithub();
+  /** Hooks */
   const navigate = useNavigate();
+  const { refreshGithubUser } = useGithub();
+
+  /** State */
   const [error, setError] = useState<string | null>(null);
   const [deviceCode, setDeviceCode] = useState<string | null>(null);
   const [userCode, setUserCode] = useState<string | null>(null);
   const [verificationUri, setVerificationUri] = useState<string | null>(null);
   const initialized = useRef(false);
   const pollTimeoutRef = useRef<NodeJS.Timeout>();
+  const isInitiatingRef = useRef(false);
 
   useEffect(() => {
     const pollForToken = async (deviceCode: string, interval: number) => {
@@ -32,6 +37,7 @@ const GitHubCallback: React.FC = () => {
             headers: {
               Accept: "application/json",
               "Content-Type": "application/json",
+              "x-cors-api-key": cors_sh_api_key,
             },
             body: JSON.stringify({
               client_id: githubClientId,
@@ -55,9 +61,11 @@ const GitHubCallback: React.FC = () => {
           // Success! Store the token and redirect
           const github = GithubApi.getInstance();
           github.setAccessToken(data.access_token);
+
+          await refreshGithubUser();
           // navigate("/gh-select-repo");
           // navigate("/");
-          navigate("/app");
+          navigate("/app/settings", { replace: true });
         } else {
           setError("Authentication failed");
         }
@@ -71,11 +79,11 @@ const GitHubCallback: React.FC = () => {
     };
 
     const initiateDeviceFlow = async () => {
-      if (initialized.current) return;
-      initialized.current = true;
+      if (initialized.current || isInitiatingRef.current) return;
+      isInitiatingRef.current = true;
 
-      console.log("initiateDeviceFlow");
       try {
+        console.log("initiateDeviceFlow", reverse_proxy_url, cors_sh_api_key);
         const response = await fetch(
           `${
             environment === "production" ? "" : reverse_proxy_url
@@ -85,6 +93,7 @@ const GitHubCallback: React.FC = () => {
             headers: {
               Accept: "application/json",
               "Content-Type": "application/json",
+              "x-cors-api-key": cors_sh_api_key,
             },
             body: JSON.stringify({
               client_id: githubClientId,
@@ -94,6 +103,7 @@ const GitHubCallback: React.FC = () => {
         );
 
         const data = await response.json();
+        initialized.current = true;
         setDeviceCode(data.device_code);
         setUserCode(data.user_code);
         setVerificationUri(data.verification_uri);
@@ -103,18 +113,19 @@ const GitHubCallback: React.FC = () => {
         setError(
           err instanceof Error ? err.message : "Failed to initiate device flow"
         );
+      } finally {
+        isInitiatingRef.current = false;
       }
     };
 
     initiateDeviceFlow();
 
-    // Cleanup polling on unmount
     return () => {
       if (pollTimeoutRef.current) {
         clearTimeout(pollTimeoutRef.current);
       }
     };
-  }, [navigate]);
+  }, []);
 
   if (error) {
     return <div className="error-message">Error: {error}</div>;
