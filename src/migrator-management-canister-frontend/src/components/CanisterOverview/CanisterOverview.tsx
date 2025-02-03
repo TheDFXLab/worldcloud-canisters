@@ -1,6 +1,6 @@
 import { Spinner } from "react-bootstrap";
 import "./CanisterOverview.css";
-import { CanisterDeploymentStatus } from "../AppLayout/interfaces";
+import { Deployment } from "../AppLayout/interfaces";
 import { backend_canister_id, getCanisterUrl } from "../../config/config";
 import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
 import { cyclesToTerra } from "../../utility/e8s";
@@ -9,20 +9,21 @@ import IconTextRowView from "../IconTextRowView/IconTextRowView";
 import CyclesApi from "../../api/cycles";
 import { Principal } from "@dfinity/principal";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLedger } from "../../context/LedgerContext/LedgerContext";
 import { ConfirmationModal } from "../ConfirmationPopup/ConfirmationModal";
 import MainApi from "../../api/main";
 import ProjectDeployment from "../ProjectDeployment/ProjectDeployment";
-import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import { useParams, useNavigate } from "react-router-dom";
 import { useLoadBar } from "../../context/LoadBarContext/LoadBarContext";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 
 export const CanisterOverview = () => {
-  const { canisterId, dateCreated, dateUpdated, size, status } = useParams();
+  const { canisterId } = useParams();
+  const { getDeployment } = useDeployments();
   const navigate = useNavigate();
   const { status: authorityStatus, refreshStatus } = useAuthority();
   const { transfer } = useLedger();
@@ -32,6 +33,18 @@ export const CanisterOverview = () => {
   const { showLoadBar, setShowLoadBar, setCompleteLoadBar } = useLoadBar();
   const { setToasterData, setShowToaster } = useToaster();
   const isTransferringRef = useRef(false);
+
+  const [deploymentDetails, setDeploymentDetails] = useState<Deployment | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (!canisterId) return;
+    const deployment = getDeployment(canisterId);
+    if (deployment) {
+      setDeploymentDetails(deployment);
+    }
+  }, []);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
@@ -194,14 +207,20 @@ export const CanisterOverview = () => {
 
           <div className="detail-row">
             <span className="label">Total Size:</span>
-            <span className="value">{formatBytes(Number(size) || 0)}</span>
+            <span className="value">
+              {deploymentDetails?.size
+                ? formatBytes(Number(deploymentDetails.size))
+                : "N/A"}
+            </span>
           </div>
 
           <div className="detail-row">
             <span className="label">Created On:</span>
             <span className="value">
-              {dateCreated
-                ? formatDate(new Date(Number(dateCreated) / 1000000))
+              {deploymentDetails?.date_created
+                ? formatDate(
+                    new Date(Number(deploymentDetails.date_created) / 1000000)
+                  )
                 : "N/A"}
             </span>
           </div>
@@ -209,8 +228,10 @@ export const CanisterOverview = () => {
           <div className="detail-row">
             <span className="label">Last Updated:</span>
             <span className="value">
-              {dateUpdated
-                ? formatDate(new Date(Number(dateUpdated) / 1000000))
+              {deploymentDetails?.date_updated
+                ? formatDate(
+                    new Date(Number(deploymentDetails.date_updated) / 1000000)
+                  )
                 : "N/A"}
             </span>
           </div>
