@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
 import "./WasmUploader.css";
-interface WasmUploaderProps {
-  onClick: () => void;
-}
-function WasmUploader({ onClick }: WasmUploaderProps) {
+interface WasmUploaderProps {}
+function WasmUploader({}: WasmUploaderProps) {
   const [state, setState] = useState({
     selectedFile: null,
     uploadProgress: 0,
@@ -29,8 +27,6 @@ function WasmUploader({ onClick }: WasmUploaderProps) {
       setStatus("Please select a WASM file first");
       return;
     }
-
-    onClick();
 
     try {
       setIsLoading(true);
