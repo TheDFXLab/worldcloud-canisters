@@ -2,26 +2,17 @@ import { Modal, Button, Badge } from "react-bootstrap";
 import FileUploader from "../FileUploader/FileUploader";
 import "./CanisterOptions.css";
 import { Deployment } from "../AppLayout/interfaces";
-import { ToasterData } from "../Toast/Toaster";
 import { http_host } from "../../config/config";
 
 interface CanisterOptionsProps {
-  setCanisterId: (id: string) => void;
   deployment: Deployment;
   show: boolean;
   onHide: () => void;
-  setToasterData: (data: ToasterData) => void;
-  setShowToaster: (show: boolean) => void;
 }
 
-function CanisterOptions({
-  setCanisterId,
-  deployment,
-  show,
-  onHide,
-  setToasterData,
-  setShowToaster,
-}: CanisterOptionsProps) {
+function CanisterOptions({ deployment, show, onHide }: CanisterOptionsProps) {
+  /** Hooks */
+
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
@@ -112,12 +103,7 @@ function CanisterOptions({
         {deployment.status === "uninitialized" && (
           <div className="upload-section mt-4">
             <span className="label">Pending Actions:</span>
-            <FileUploader
-              canisterId={deployment.canister_id.toText()}
-              setCanisterId={setCanisterId}
-              setToasterData={setToasterData}
-              setShowToaster={setShowToaster}
-            />
+            <FileUploader />
           </div>
         )}
       </Modal.Body>

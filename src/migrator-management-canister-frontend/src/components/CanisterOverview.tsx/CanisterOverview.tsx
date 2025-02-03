@@ -1,9 +1,7 @@
 import { Spinner } from "react-bootstrap";
 import "./CanisterOverview.css";
-import { Deployment } from "../AppLayout/interfaces";
+import { CanisterDeploymentStatus, Deployment } from "../AppLayout/interfaces";
 import { backend_canister_id, getCanisterUrl } from "../../config/config";
-import FileUploader from "../FileUploader/FileUploader";
-import { ToasterData } from "../Toast/Toaster";
 import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
 import { cyclesToTerra } from "../../utility/e8s";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
@@ -17,38 +15,39 @@ import { ConfirmationModal } from "../ConfirmationPopup/ConfirmationModal";
 import MainApi from "../../api/main";
 import ProjectDeployment from "../ProjectDeployment/ProjectDeployment";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
+import { useToaster } from "../../context/ToasterContext/ToasterContext";
+import { useParams } from "react-router-dom";
+import { useLoadBar } from "../../context/LoadBarContext/LoadBarContext";
 
-interface CanisterOverviewProps {
-  deployment: Deployment | null;
-  canisterId: string;
-  onCloseModal: () => void;
-  setCanisterId: (id: string) => void;
-  setToasterData: (data: ToasterData) => void;
-  setShowToaster: (show: boolean) => void;
-  setShowLoadBar: (show: boolean) => void;
-  setCompleteLoadbar: (complete: boolean) => void;
-}
+interface CanisterOverviewProps {}
 
-export const CanisterOverview = ({
-  deployment,
-  canisterId,
-  onCloseModal,
-  setCanisterId,
-  setToasterData,
-  setShowToaster,
-  setShowLoadBar,
-  setCompleteLoadbar,
-}: CanisterOverviewProps) => {
+export const CanisterOverview = ({}: CanisterOverviewProps) => {
   /** Hooks */
   const { status, refreshStatus } = useAuthority();
   const { transfer } = useLedger();
   const { identity } = useIdentity();
   const { actionBar, setActionBar } = useActionBar();
+  const { toasterData, setToasterData, setShowToaster } = useToaster();
+  const { canisterId, dateCreated, dateUpdated, size, canisterStatus } =
+    useParams();
+  const { showLoadBar, setShowLoadBar, completeLoadBar, setCompleteLoadBar } =
+    useLoadBar();
+
   /** State */
   const isTransferringRef = useRef(false);
   const [icpToDeposit, setIcpToDeposit] = useState<string>("0");
 
   const [showConfirmation, setShowConfirmation] = useState(false);
+
+  const deployment: Deployment | null = {
+    canister_id: Principal.fromText(canisterId || ""),
+    date_created: Number(dateCreated),
+    date_updated: Number(dateUpdated),
+    size: Number(size),
+    status: canisterStatus
+      ? (canisterStatus as CanisterDeploymentStatus)
+      : "failed",
+  };
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
@@ -76,6 +75,18 @@ export const CanisterOverview = ({
     isTransferringRef.current = true;
 
     try {
+      if (!canisterId) {
+        console.log("canisterId not found");
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: false,
+          toastData: "Canister ID not found",
+          textColor: "white",
+        });
+        setShowToaster(true);
+        return;
+      }
+
       if (!identity) {
         console.log("identity not found");
         setToasterData({
@@ -89,7 +100,6 @@ export const CanisterOverview = ({
       }
 
       /** Transfer icp from user to backend canister */
-      // const amountInIcp = 0.1;
       const amountInIcp = Number(icpToDeposit);
       const destination = backend_canister_id;
       const isTransferred = await transfer(amountInIcp, destination);
@@ -131,7 +141,7 @@ export const CanisterOverview = ({
       const cyclesApi = new CyclesApi(Principal.fromText(canisterId), identity);
 
       await cyclesApi.addCycles(Principal.fromText(canisterId));
-      setCompleteLoadbar(true);
+      setCompleteLoadBar(true);
 
       refreshStatus();
       setToasterData({
@@ -141,7 +151,7 @@ export const CanisterOverview = ({
         textColor: "white",
       });
       setShowToaster(true);
-      setCompleteLoadbar(true);
+      setCompleteLoadBar(true);
     } catch (error: any) {
       console.log("error adding cycles", error);
       setToasterData({
@@ -155,6 +165,8 @@ export const CanisterOverview = ({
       isTransferringRef.current = false;
     }
   }, [identity, canisterId, setToasterData, setShowToaster]);
+
+  if (!deployment) return <div>Loading...</div>;
 
   return (
     <div className="final-step">
@@ -177,7 +189,7 @@ export const CanisterOverview = ({
           <span className="value">
             <span className="value">
               <a
-                href={getCanisterUrl(canisterId)}
+                href={getCanisterUrl(canisterId || "")}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -187,7 +199,7 @@ export const CanisterOverview = ({
 
             <button
               className="copy-button"
-              onClick={() => navigator.clipboard.writeText(canisterId)}
+              onClick={() => navigator.clipboard.writeText(canisterId || "")}
               title="Copy to clipboard"
             >
               📋
@@ -213,11 +225,11 @@ export const CanisterOverview = ({
           <span className="label">Website URL:</span>
           <span className="value">
             <a
-              href={getCanisterUrl(canisterId)}
+              href={getCanisterUrl(canisterId || "")}
               target="_blank"
               rel="noopener noreferrer"
             >
-              {getCanisterUrl(canisterId)}
+              {getCanisterUrl(canisterId || "")}
 
               <span className="external-link">↗</span>
             </a>
@@ -255,12 +267,7 @@ export const CanisterOverview = ({
             You have pending actions. Please upload your website files.
           </span>
 
-          <ProjectDeployment
-            canisterId={deployment.canister_id.toText()}
-            setCanisterId={setCanisterId}
-            setToasterData={setToasterData}
-            setShowToaster={setShowToaster}
-          />
+          <ProjectDeployment />
         </div>
       )}
     </div>
