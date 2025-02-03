@@ -176,12 +176,10 @@ export class GithubApi {
             const workflowPath = `.github/workflows/icp-deploy.yml`;
             try {
                 const workflowFile = await this.request(`/repos/${repo}/contents/${workflowPath}?ref=${branch}`);
-                console.log(`Workflow file found on branch ${branch}:`, workflowFile);
 
                 // Decode and verify the content
                 const content = atob(workflowFile.content);
                 if (!content.includes('workflow_dispatch')) {
-                    console.log('Invalid workflow file found, updating with correct content...');
 
                     // Generate new workflow content
                     const newWorkflowContent = generateWorkflowTemplate('src', branch);
@@ -206,7 +204,7 @@ export class GithubApi {
             }
 
             // Trigger the workflow
-            await this.request(`/repos/${repo}/actions/workflows/icp-deploy.yml/dispatches`, {
+            const res = await this.request(`/repos/${repo}/actions/workflows/icp-deploy.yml/dispatches`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -219,6 +217,7 @@ export class GithubApi {
                 })
             });
 
+
             console.log(`Workflow triggered for ${repo} on branch ${branch}`);
         } catch (error) {
             console.log(`Error triggering workflow for ${repo}:`, error);
@@ -227,39 +226,88 @@ export class GithubApi {
     }
 
     async getWorkflowRuns(repo: string) {
-        return this.request(`/repos/${repo}/actions/runs?event=repository_dispatch`);
+        return this.request(`/repos/${repo}/actions/runs?event=workflow_dispatch`);
     }
 
-    async getLatestArtifact(repo: string, branch: string): Promise<Artifact | null> {
-        try {
-            // First get the latest successful workflow run for this branch
-            const runsResponse = await this.request(
-                `/repos/${repo}/actions/runs?branch=${branch}&status=completed&conclusion=success`
-            );
+    async getLatestWorkflowRun(repo_name: string) {
+        // First get the workflow ID for our specific workflow file
+        const workflows = await this.request(
+            `/repos/${repo_name}/actions/workflows`
+        );
 
-            if (!runsResponse.workflow_runs || runsResponse.workflow_runs.length === 0) {
-                console.log(`No successful workflow runs found for branch ${branch}`);
+        const deployWorkflow = workflows.workflows.find((workflow: any) => workflow.name === 'Build and Deploy to ICP');
+
+        const workflowRuns = await this.request(`/repos/${repo_name}/actions/workflows/${deployWorkflow.id}/runs?per_page=5`);
+        return workflowRuns.workflow_runs[0];
+    }
+
+    // Find the latest workflow run and the latest artifact file
+    async getWorkflows(repo_name: string, previousRunId: string) {
+        // First get the workflow ID for our specific workflow file
+        const workflows = await this.request(
+            `/repos/${repo_name}/actions/workflows`
+        );
+
+        // Find the workflow file that matches our job
+        const deployWorkflow = workflows.workflows.find((workflow: any) => workflow.name === 'Build and Deploy to ICP');
+
+        // Get list of recent workflow runs
+        const workflowRuns = await this.request(`/repos/${repo_name}/actions/workflows/${deployWorkflow.id}/runs?per_page=5`);
+
+        if (workflowRuns.workflow_runs.length === 0) {
+            return null;
+        }
+
+        // Return if there are no new runs
+        if (workflowRuns.workflow_runs[0].id === previousRunId) {
+            return null;
+        }
+
+
+        // Find the index of the previous run (last run)
+        const previousIndex = workflowRuns.workflow_runs.findIndex(
+            (run: any) => run.id === previousRunId
+        );
+
+        // Return if there are no new runs
+        if (previousIndex === 0) {
+            return null;
+        }
+
+        // New runs since previous run
+        const newRuns = workflowRuns.workflow_runs.slice(0, previousIndex);
+
+        // Sort new runs chronologically
+        const inProgressRunsChronologicallySorted = newRuns.sort((a: any, b: any) => {
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
+
+
+        // Ensure relevant run
+        const relevantRun = inProgressRunsChronologicallySorted[0];
+        if (!relevantRun) {
+            return null;
+        }
+
+        if (relevantRun) {
+            if (relevantRun.status !== 'completed') {
                 return null;
             }
 
-            const latestRun = runsResponse.workflow_runs[0];
-            console.log(`Latest successful run:`, latestRun);
-
-            // Get artifacts for this specific run
-            const { artifacts } = await this.request(
-                `/repos/${repo}/actions/runs/${latestRun.id}/artifacts`
+            // Get artifacts for given run id
+            const artifactsRes = await this.request(
+                `/repos/${repo_name}/actions/runs/${relevantRun.id}/artifacts`
             );
 
-            if (!artifacts || artifacts.length === 0) {
-                console.log(`No artifacts found for run ${latestRun.id}`);
-                return null;
+            if (artifactsRes && artifactsRes.artifacts) {
+                // Find the artifact that matches the run id
+                const targetArtifact = artifactsRes.artifacts.find((artifact: any) => artifact.workflow_run.id === relevantRun.id);
+                return targetArtifact;
             }
 
-            console.log(`Found artifacts:`, artifacts);
-            return artifacts[0];
-        } catch (error) {
-            console.error('Error getting latest artifact:', error);
-            throw error;
+        }
+        else {
+            return null;
         }
     }
 
@@ -277,12 +325,14 @@ export class GithubApi {
         return response.blob();
     }
 
-    async pollForArtifact(repo: string, branch: string, maxAttempts = 100): Promise<Artifact> {
+    async pollForArtifact(repo: string, branch: string, previousRunId: string, maxAttempts = 100): Promise<Artifact> {
         for (let i = 0; i < maxAttempts; i++) {
-            const artifact = await this.getLatestArtifact(repo, branch);
-            console.log(`Artifact:`, artifact);
-            if (artifact) {
-                return artifact;
+            const workflowRun = await this.getWorkflows(repo, previousRunId);
+            console.log(`Workflow run mathcing...`, workflowRun);
+
+            console.log(`Artifact*:`, workflowRun);
+            if (workflowRun) {
+                return workflowRun;
             }
             console.log(`Waiting for artifact... ${i + 1} of ${maxAttempts}`);
             await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
