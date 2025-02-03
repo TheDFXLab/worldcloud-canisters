@@ -111,12 +111,6 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
     refreshDeployments();
   }, []);
 
-  const handleOptionsModal = (deployment: Deployment) => {
-    setShowOptionsModal(true);
-    setSelectedDeployment(deployment);
-    setState({ canister_id: deployment.canister_id.toText() });
-  };
-
   const handleHideOptionsModal = () => {
     setShowOptionsModal(false);
     setSelectedDeployment(null);
@@ -248,7 +242,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
       <main className="main-content" onClick={() => setIsMobileMenuOpen(false)}>
         {children}
 
-        {actionBar && activeTab === "publish" && <ActionBar {...actionBar} />}
+        {actionBar && <ActionBar {...actionBar} />}
       </main>
     </div>
   );
