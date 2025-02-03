@@ -1,38 +1,41 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import "./CanisterDeployer.css";
 import { Principal } from "@dfinity/principal";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
-import { ToasterData } from "../Toast/Toaster";
 import MainApi from "../../api/main";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
-import ActionBar, { ActionBarConfig } from "../ActionBar/ActionBar";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
+import { useToaster } from "../../context/ToasterContext/ToasterContext";
+import { useNavigate } from "react-router-dom";
+import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 
-interface CanisterDeployerProps {
-  onDeploy: (canisterId: string) => void;
-  setToasterData: (data: ToasterData) => void;
-  setShowToaster: (show: boolean) => void;
-}
+interface CanisterDeployerProps {}
 
-function CanisterDeployer({
-  onDeploy,
-  setToasterData,
-  setShowToaster,
-}: CanisterDeployerProps) {
+function CanisterDeployer({}: CanisterDeployerProps) {
+  /** Hooks */
   const { addDeployment, refreshDeployments } = useDeployments();
   const { identity } = useIdentity();
-  const { actionBar, setActionBar } = useActionBar();
+  const { setActionBar } = useActionBar();
+  const { setToasterData, setShowToaster } = useToaster();
+  const navigate = useNavigate();
+  const { setActiveTab } = useSideBar();
 
+  /**State */
   const [state, setState] = useState({
     selectedFile: null,
     uploadProgress: 0,
     message: "",
   });
 
-  const [canisterId, setCanisterId] = useState("");
+  const [, setCanisterId] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Set the active tab to publish
+  useEffect(() => {
+    setActiveTab("publish");
+  }, []);
 
   useEffect(() => {
     console.log(`Loading barrrr`);
@@ -67,7 +70,6 @@ function CanisterDeployer({
 
       const mainApi = await MainApi.create(identity);
       const result = await mainApi?.deployAssetCanister();
-      console.log(`Result:`, result);
 
       if (result && result.status) {
         const newDeployment = {
@@ -87,7 +89,8 @@ function CanisterDeployer({
         addDeployment(newDeployment);
         await refreshDeployments();
         setCanisterId(result?.message as string);
-        onDeploy(result?.message as string);
+
+        navigate(`/app/deploy/${result?.message as string}`);
       } else {
         setStatus(`Error: ${result?.message}`);
       }
@@ -112,57 +115,59 @@ function CanisterDeployer({
   };
 
   return (
-    <section className="beta-test-section">
-      <ProgressBar isLoading={isLoading} />
-      <div className="container">
-        <div className="canister-deployer">
-          <div className="header">
-            <h2>Deploy Your Canister</h2>
-            <p className="subtitle">
-              Get started with Internet Computer hosting
-            </p>
-          </div>
-
-          <div className="info-grid">
-            <div className="info-card">
-              <span className="icon">🚀</span>
-              <h3>Fast Deployment</h3>
-              <p>
-                Deploy your website to IC in minutes with automated build
-                process
+    <div className="publish-flow">
+      <section className="beta-test-section">
+        <ProgressBar isLoading={isLoading} />
+        <div className="container">
+          <div className="canister-deployer">
+            <div className="header">
+              <h2>Deploy Your Canister</h2>
+              <p className="subtitle">
+                Get started with Internet Computer hosting
               </p>
             </div>
-            <div className="info-card">
-              <span className="icon">🔒</span>
-              <h3>Secure Hosting</h3>
-              <p>Your content is distributed across the secure IC network</p>
-            </div>
-            <div className="info-card">
-              <span className="icon">⚡</span>
-              <h3>High Performance</h3>
-              <p>
-                Benefit from IC's distributed infrastructure for optimal speed
-              </p>
-            </div>
-            <div className="info-card">
-              <span className="icon">🌐</span>
-              <h3>Global Access</h3>
-              <p>Your site is accessible worldwide through IC's network</p>
-            </div>
-          </div>
 
-          {status && (
-            <div
-              className={`status ${
-                status.includes("Error") ? "error" : "success"
-              }`}
-            >
-              {status}
+            <div className="info-grid">
+              <div className="info-card">
+                <span className="icon">🚀</span>
+                <h3>Fast Deployment</h3>
+                <p>
+                  Deploy your website to IC in minutes with automated build
+                  process
+                </p>
+              </div>
+              <div className="info-card">
+                <span className="icon">🔒</span>
+                <h3>Secure Hosting</h3>
+                <p>Your content is distributed across the secure IC network</p>
+              </div>
+              <div className="info-card">
+                <span className="icon">⚡</span>
+                <h3>High Performance</h3>
+                <p>
+                  Benefit from IC's distributed infrastructure for optimal speed
+                </p>
+              </div>
+              <div className="info-card">
+                <span className="icon">🌐</span>
+                <h3>Global Access</h3>
+                <p>Your site is accessible worldwide through IC's network</p>
+              </div>
             </div>
-          )}
+
+            {status && (
+              <div
+                className={`status ${
+                  status.includes("Error") ? "error" : "success"
+                }`}
+              >
+                {status}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }
 

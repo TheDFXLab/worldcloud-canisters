@@ -130,9 +130,6 @@ export class GithubApi {
         // Clear the token
         this.token = null;
         localStorage.removeItem('github_token');
-
-        // Redirect to GitHub logout to clear session cookies
-        window.location.href = 'https://github.com/logout';
     }
 
     public setAccessToken(token: string) {

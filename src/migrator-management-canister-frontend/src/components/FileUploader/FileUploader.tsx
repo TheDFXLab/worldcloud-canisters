@@ -15,24 +15,22 @@ import AssetApi from "../../api/assets/AssetApi";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import MainApi from "../../api/main";
 import { Form } from "react-bootstrap";
+import { useNavigate, useParams } from "react-router-dom";
+import { useToaster } from "../../context/ToasterContext/ToasterContext";
 
-interface FileUploaderProps {
-  canisterId: string;
-  setCanisterId: (canisterId: string) => void;
-  setToasterData: (data: ToasterData) => void;
-  setShowToaster: (show: boolean) => void;
-}
+interface FileUploaderProps {}
 
 type CanisterType = "website" | "drive";
 
-function FileUploader({
-  canisterId,
-  setCanisterId,
-  setToasterData,
-  setShowToaster,
-}: FileUploaderProps) {
+function FileUploader() {
+  /** Hooks */
   const { updateDeployment, refreshDeployments } = useDeployments();
+  const { toasterData, setToasterData, setShowToaster } = useToaster();
+  const { canisterId } = useParams();
   const { identity } = useIdentity();
+  const navigate = useNavigate();
+
+  /** State */
   const [currentBytes, setCurrentBytes] = useState(0);
   const [state, setState] = useState({
     selectedFile: null,
@@ -185,6 +183,10 @@ function FileUploader({
 
   const storeAssetsInCanister = async (files: StaticFile[]) => {
     try {
+      if (!canisterId) {
+        throw new Error("Canister ID is required");
+      }
+
       const sanitizedFiles = files.filter(
         (file) => !file.path.includes("MACOS")
       );
@@ -347,7 +349,8 @@ function FileUploader({
 
   const handleCloseSummary = () => {
     setIsComplete(true);
-    setCanisterId("");
+    navigate("/");
+    // setCanisterId("");
   };
 
   if (isComplete) {
@@ -356,7 +359,7 @@ function FileUploader({
         canisterId={canisterId}
         totalSize={totalSize}
         dateCreated={new Date()}
-        setCanisterId={setCanisterId}
+        // setCanisterId={setCanisterId}
         onCloseModal={handleCloseSummary}
       />
     );

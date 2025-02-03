@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./WebsitesComponent.css";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import LanguageIcon from "@mui/icons-material/Language";
@@ -9,11 +9,16 @@ import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import { Principal } from "@dfinity/principal";
 import { getCanisterUrl } from "../../config/config";
+import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 
-const ITEMS_PER_PAGE = 6; // Adjust this number based on your design preference
+const ITEMS_PER_PAGE = 6;
 
 const WebsitesComponent: React.FC = () => {
+  /** Hooks */
   const { deployments } = useDeployments();
+  const { setActiveTab } = useSideBar();
+
+  /**State */
   const [currentPage, setCurrentPage] = useState(1);
 
   const totalPages = Math.ceil(deployments.length / ITEMS_PER_PAGE);
@@ -44,6 +49,10 @@ const WebsitesComponent: React.FC = () => {
     let url = getCanisterUrl(canisterId.toText());
     window.open(url, "_blank");
   };
+
+  useEffect(() => {
+    setActiveTab("websites");
+  }, []);
 
   return (
     <div className="websites-container">

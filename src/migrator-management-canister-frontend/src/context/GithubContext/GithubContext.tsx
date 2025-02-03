@@ -4,8 +4,10 @@ import {
   useState,
   ReactNode,
   useEffect,
+  useCallback,
 } from "react";
 import { GithubApi } from "../../api/github/GithubApi";
+import { environment, reverse_proxy_url } from "../../config/config";
 
 interface GithubUser {
   login: string;
@@ -21,6 +23,7 @@ interface GithubProviderProps {
 interface GithubContextType {
   isGithubConnected: boolean;
   githubUser: GithubUser | null;
+  refreshGithubUser: () => Promise<void>;
   getGithubToken: () => string | null;
   setAccessToken: (token: string) => void;
   setGithubUser: (user: GithubUser | null) => void;
@@ -32,11 +35,7 @@ export function GithubProvider({ children }: GithubProviderProps) {
   const [isGithubConnected, setIsGithubConnected] = useState(false);
   const [githubUser, setGithubUser] = useState<GithubUser | null>(null);
 
-  useEffect(() => {
-    fetchGithubUser();
-  }, []);
-
-  const fetchGithubUser = async () => {
+  const refreshGithubUser = useCallback(async () => {
     const githubApi = GithubApi.getInstance();
     const token = githubApi.token;
 
@@ -54,7 +53,6 @@ export function GithubProvider({ children }: GithubProviderProps) {
           setGithubUser(userData);
           setIsGithubConnected(true);
         } else {
-          // Token might be invalid
           setIsGithubConnected(false);
           setGithubUser(null);
           githubApi.logout();
@@ -68,7 +66,41 @@ export function GithubProvider({ children }: GithubProviderProps) {
       setIsGithubConnected(false);
       setGithubUser(null);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    refreshGithubUser();
+  }, []);
+
+  useEffect(() => {
+    const checkRateLimit = async () => {
+      try {
+        const response = await fetch(
+          `${
+            environment === "production" ? "" : reverse_proxy_url
+          }/https://api.github.com/rate_limit`,
+          {
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const data = await response.json();
+        console.log("GitHub Rate Limit Status:", {
+          core: data.resources.core,
+          search: data.resources.search,
+          graphql: data.resources.graphql,
+          integration_manifest: data.resources.integration_manifest,
+          source_import: data.resources.source_import,
+        });
+      } catch (err) {
+        console.error("Failed to check rate limit:", err);
+      }
+    };
+
+    checkRateLimit();
+  }, []);
 
   const getGithubToken = () => {
     const githubApi = GithubApi.getInstance();
@@ -80,7 +112,7 @@ export function GithubProvider({ children }: GithubProviderProps) {
     githubApi.setAccessToken(token);
     setIsGithubConnected(true);
     // Fetch user data when token is set
-    fetchGithubUser();
+    refreshGithubUser();
   };
 
   return (
@@ -88,6 +120,7 @@ export function GithubProvider({ children }: GithubProviderProps) {
       value={{
         isGithubConnected,
         githubUser,
+        refreshGithubUser,
         getGithubToken,
         setAccessToken,
         setGithubUser,

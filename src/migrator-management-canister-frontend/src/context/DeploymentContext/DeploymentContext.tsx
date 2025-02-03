@@ -11,6 +11,8 @@ import { useIdentity } from "../IdentityContext/IdentityContext";
 
 interface DeploymentsContextType {
   deployments: Deployment[];
+  selectedDeployment: Deployment | null;
+  setSelectedDeployment: (deployment: Deployment | null) => void;
   isLoading: boolean;
   refreshDeployments: () => Promise<void>;
   addDeployment: (deployment: Deployment) => void;
@@ -24,6 +26,9 @@ const DeploymentsContext = createContext<DeploymentsContextType | undefined>(
 export function DeploymentsProvider({ children }: { children: ReactNode }) {
   const { identity } = useIdentity();
   const [deployments, setDeployments] = useState<Deployment[]>([]);
+  const [selectedDeployment, setSelectedDeployment] =
+    useState<Deployment | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshDeployments = async () => {
@@ -77,6 +82,8 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
     <DeploymentsContext.Provider
       value={{
         deployments,
+        selectedDeployment,
+        setSelectedDeployment,
         isLoading,
         refreshDeployments,
         addDeployment,

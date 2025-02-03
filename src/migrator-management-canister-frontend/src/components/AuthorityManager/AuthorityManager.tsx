@@ -1,18 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Button, Form, Table, Spinner } from "react-bootstrap";
+import { Button, Form, Table } from "react-bootstrap";
 import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
 import "./AuthorityManager.css";
-import { Principal } from "@dfinity/principal";
-import AuthorityApi from "../../api/authority";
 import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
-import { ToasterData } from "../Toast/Toaster";
 import { isValidPrincipal } from "../../validation/principal";
+import { useToaster } from "../../context/ToasterContext/ToasterContext";
 
-export const AuthorityManager: React.FC<{
-  canisterId: string;
-  setShowToaster: (showToaster: boolean) => void;
-  setToasterData: (toasterData: ToasterData) => void;
-}> = ({ canisterId, setShowToaster, setToasterData }) => {
+export const AuthorityManager: React.FC<{}> = () => {
+  /** Hooks */
+  const { toasterData, setToasterData, setShowToaster } = useToaster();
+
+  /** State */
   const [newController, setNewController] = useState("");
   const {
     status,

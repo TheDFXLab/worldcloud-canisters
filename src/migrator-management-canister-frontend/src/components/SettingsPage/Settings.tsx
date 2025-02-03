@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import "./Settings.css";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import GitHubIcon from "@mui/icons-material/GitHub";
@@ -7,10 +7,12 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import { useGithub } from "../../context/GithubContext/GithubContext";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { GithubApi } from "../../api/github/GithubApi";
+import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 
 const Settings: React.FC = () => {
   const { githubUser, setGithubUser } = useGithub();
   const { identity } = useIdentity();
+  const { setActiveTab } = useSideBar();
 
   const handleGithubConnect = async () => {
     const github = GithubApi.getInstance();
@@ -22,6 +24,11 @@ const Settings: React.FC = () => {
     await github.logout();
     setGithubUser(null);
   };
+
+  // Set the active tab to settings
+  useEffect(() => {
+    setActiveTab("settings");
+  }, []);
 
   return (
     <div className="settings-container">
