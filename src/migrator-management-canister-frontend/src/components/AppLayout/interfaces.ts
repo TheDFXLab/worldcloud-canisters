@@ -8,7 +8,7 @@ export interface Deployment {
     status: CanisterDeploymentStatus;
 }
 
-type CanisterDeploymentStatus =
+export type CanisterDeploymentStatus =
     | "uninitialized"
     | "installing"
     | "installed"
