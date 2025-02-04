@@ -162,6 +162,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   return (
     <div className="app-layout">
       <ThemeToggle />
+      <ProgressBar />
       {showToaster && toasterData && (
         <Toaster
           headerContent={toasterData.headerContent}
@@ -176,10 +177,6 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
         />
       )}
 
-      <ProgressBar
-        isLoading={isLoading || showLoadbar || isLoadingStatus}
-        isEnded={completeLoadbar}
-      />
       <button
         className={`mobile-menu-button ${isMobileMenuOpen ? "hidden" : ""}`}
         onClick={() => setIsMobileMenuOpen(true)}

@@ -117,7 +117,6 @@ function CanisterDeployer({}: CanisterDeployerProps) {
   return (
     <div className="publish-flow">
       <section className="beta-test-section">
-        <ProgressBar isLoading={isLoading} />
         <div className="container">
           <div className="canister-deployer">
             <div className="header">
