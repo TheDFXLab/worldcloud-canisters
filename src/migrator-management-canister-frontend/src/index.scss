@@ -1,6 +1,10 @@
 body {
   font-family: sans-serif;
   font-size: 1.5rem;
+  background: var(--background);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
 }
 
 img {
@@ -37,45 +41,65 @@ button[type="submit"] {
 }
 
 :root {
-  /* Primary colors */
-  --color-primary: #4F46E5;  /* Indigo */
+  /* Light theme variables */
+  --color-primary: #4F46E5;
   --color-primary-dark: #4338CA;
-  
-  /* Status colors */
   --color-success: #059669;
   --color-success-bg: rgba(5, 150, 105, 0.1);
   --color-warning: #D97706;
   --color-warning-bg: rgba(217, 119, 6, 0.1);
   --color-error: #DC2626;
   --color-disabled: #E5E7EB;
-
-  /* Text colors */
   --text-primary: #111827;
   --text-secondary: #6B7280;
-
-  /* Background and borders */
   --background: #FFFFFF;
   --background-primary: #FFFFFF;
-  --background-secondary: #F9FAFB;  /* Secondary backgrounds */
-  --background-hover: #F3F4F6;      /* Hover states */
+  --background-secondary: #F9FAFB;
+  --background-hover: #F3F4F6;
   --border-color: #E5E7EB;
   --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(255, 255, 255, 0.3);
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-primary: #6366F1;
-    --color-primary-dark: #4F46E5;
-    --text-primary: #F9FAFB;
-    --text-secondary: #D1D5DB;
-    --background: #1F2937;
-    --background-primary: #1F2937;
-    --background-secondary: #374151;  /* Dark mode */
-    --background-hover: #4B5563;      /* Dark mode hover states */
-    --border-color: #374151;
-    --glass-bg: rgba(31, 41, 55, 0.8);
-    --glass-border: rgba(55, 65, 81, 0.3);
-  }
+/* Dark theme variables */
+[data-theme="dark"] {
+  --color-primary: #6366F1;
+  --color-primary-dark: #4F46E5;
+  --color-success: #10B981;
+  --color-success-bg: rgba(16, 185, 129, 0.1);
+  --color-warning: #F59E0B;
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-error: #EF4444;
+  --color-disabled: #374151;
+  --text-primary: #F9FAFB;
+  --text-secondary: #D1D5DB;
+  --background: #111827;
+  --background-primary: #111827;
+  --background-secondary: #1F2937;
+  --background-hover: #374151;
+  --border-color: #374151;
+  --glass-bg: rgba(17, 24, 39, 0.8);
+  --glass-border: rgba(55, 65, 81, 0.3);
+}
+
+/* Update any global text styles */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  margin: 0;
+}
+
+p {
+  color: var(--text-primary);
+}
+
+/* Make sure form elements use theme colors */
+input, textarea, select {
+  background: var(--background-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--color-primary);
+  outline: none;
 }
