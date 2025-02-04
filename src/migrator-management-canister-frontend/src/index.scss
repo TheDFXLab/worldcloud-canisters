@@ -55,12 +55,15 @@ button[type="submit"] {
 
   /* Background and borders */
   --background: #FFFFFF;
+  --background-primary: #FFFFFF;
+  --background-secondary: #F9FAFB;  /* Secondary backgrounds */
+  --background-hover: #F3F4F6;      /* Hover states */
   --border-color: #E5E7EB;
   --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(255, 255, 255, 0.3);
 }
 
-/* Dark mode support if needed */
+/* Dark mode support */
 @media (prefers-color-scheme: dark) {
   :root {
     --color-primary: #6366F1;
@@ -68,6 +71,9 @@ button[type="submit"] {
     --text-primary: #F9FAFB;
     --text-secondary: #D1D5DB;
     --background: #1F2937;
+    --background-primary: #1F2937;
+    --background-secondary: #374151;  /* Dark mode */
+    --background-hover: #4B5563;      /* Dark mode hover states */
     --border-color: #374151;
     --glass-bg: rgba(31, 41, 55, 0.8);
     --glass-border: rgba(55, 65, 81, 0.3);
