@@ -18,9 +18,10 @@
 .canister-deployer {
   margin: 2rem auto;
   padding: 2rem;
-  background: white;
+  background: var(--background-primary);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px var(--glass-border);
 }
 
 .header {
@@ -48,20 +49,23 @@
 
 .info-card {
   padding: 1.5rem;
-  background: var(--background);
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   text-align: center;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
 .info-card:hover {
   transform: translateY(-2px);
+  background: var(--background-hover);
 }
 
 .info-card .icon {
   font-size: 2rem;
   margin-bottom: 1rem;
   display: block;
+  color: var(--color-primary);
 }
 
 .info-card h3 {
@@ -91,7 +95,7 @@
 
 .status.error {
   background-color: var(--color-error);
-  color: white;
+  color: var(--background-primary);
 }
 
 /* Action bar styling similar to pagination */
@@ -100,12 +104,13 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--background);
-  border-top: 1px solid var(--border-color);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--glass-border);
+  border: 1px solid var(--border-color);
   margin: 0 -2rem;
   padding: 0.75rem;
-  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 -2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -4px 6px -1px var(--glass-border);
   z-index: 10;
 }
 

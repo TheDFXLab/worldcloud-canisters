@@ -24,6 +24,8 @@ import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
+import { useTheme } from "../../context/ThemeContext/ThemeContext";
+import ThemeToggle from "../ThemeToggle/ThemeToggle";
 
 export type MenuItem =
   | "publish"
@@ -55,6 +57,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   const { toasterData, showToaster, setToasterData, setShowToaster } =
     useToaster();
   const { activeTab, setActiveTab } = useSideBar();
+  const { isDarkMode, toggleTheme } = useTheme();
 
   /** State */
   const [activeMenuItem, setActiveMenuItem] = useState<MenuItem>("home");
@@ -111,12 +114,6 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
     refreshDeployments();
   }, []);
 
-  const handleOptionsModal = (deployment: Deployment) => {
-    setShowOptionsModal(true);
-    setSelectedDeployment(deployment);
-    setState({ canister_id: deployment.canister_id.toText() });
-  };
-
   const handleHideOptionsModal = () => {
     setShowOptionsModal(false);
     setSelectedDeployment(null);
@@ -164,6 +161,8 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
 
   return (
     <div className="app-layout">
+      <ThemeToggle />
+      <ProgressBar />
       {showToaster && toasterData && (
         <Toaster
           headerContent={toasterData.headerContent}
@@ -178,10 +177,6 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
         />
       )}
 
-      <ProgressBar
-        isLoading={isLoading || showLoadbar || isLoadingStatus}
-        isEnded={completeLoadbar}
-      />
       <button
         className={`mobile-menu-button ${isMobileMenuOpen ? "hidden" : ""}`}
         onClick={() => setIsMobileMenuOpen(true)}
@@ -202,14 +197,12 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
             text="Home"
             IconComponent={HomeIcon}
             onClickIcon={() => handleMenuClick("home")}
-            iconColor="black"
           />
           <IconTextRowView
             className={`nav-item ${activeTab === "websites" ? "active" : ""}`}
             text="Websites"
             IconComponent={LanguageIcon}
             onClickIcon={() => handleMenuClick("websites")}
-            iconColor="black"
           />
 
           <IconTextRowView
@@ -217,7 +210,6 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
             text="New"
             IconComponent={AddIcon}
             onClickIcon={() => handleMenuClick("publish")}
-            iconColor="black"
           />
           <div className="bottom-nav-group">
             <IconTextRowView
@@ -225,21 +217,18 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
               text="Admin"
               IconComponent={SupervisorAccountIcon}
               onClickIcon={() => handleMenuClick("admin")}
-              iconColor="black"
             />
             <IconTextRowView
               className={`nav-item ${activeTab === "settings" ? "active" : ""}`}
               text="Settings"
               IconComponent={SettingsIcon}
               onClickIcon={() => handleMenuClick("settings")}
-              iconColor="black"
             />
             <IconTextRowView
               className="nav-item logout"
               text="Logout"
               IconComponent={LogoutIcon}
               onClickIcon={() => disconnect()}
-              iconColor="black"
             />
           </div>
         </nav>
@@ -248,7 +237,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
       <main className="main-content" onClick={() => setIsMobileMenuOpen(false)}>
         {children}
 
-        {actionBar && activeTab === "publish" && <ActionBar {...actionBar} />}
+        {actionBar && <ActionBar {...actionBar} />}
       </main>
     </div>
   );

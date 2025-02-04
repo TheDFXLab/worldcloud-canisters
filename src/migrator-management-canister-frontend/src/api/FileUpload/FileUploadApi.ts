@@ -3,6 +3,7 @@ import { Principal } from "@dfinity/principal";
 import MainApi from "../main";
 import { extractZip, StaticFile } from "../../utility/compression";
 import { sanitizeUnzippedFiles } from "../../utility/sanitize";
+import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 
 class FileUploadApi {
     constructor() {
@@ -16,18 +17,18 @@ class FileUploadApi {
         return mainApi.idenitified;
     }
 
-    async uploadFromZip(zipFile: File, canisterId: string, identity: Identity | null) {
+    async uploadFromZip(zipFile: File, canisterId: string, identity: Identity | null, workflowRunDetails: WorkflowRunDetails) {
         const mainApi = await MainApi.create(identity);
         if (!mainApi) {
             throw new Error("Failed to create main api");
         }
         const sanitizedFiles = await this.processZipFile(zipFile);
 
-        return await this.handleUploadToCanister(sanitizedFiles, canisterId, identity);
+        return await this.handleUploadToCanister(sanitizedFiles, canisterId, identity, workflowRunDetails);
 
     }
 
-    private async handleUploadToCanister(unzippedFiles: StaticFile[], canisterId: string, identity: Identity | null) {
+    private async handleUploadToCanister(unzippedFiles: StaticFile[], canisterId: string, identity: Identity | null, workflowRunDetails: WorkflowRunDetails) {
         try {
             const totalSize = unzippedFiles.reduce(
                 (acc, file) => acc + file.content.length,
@@ -39,7 +40,7 @@ class FileUploadApi {
             let totalUploadedSize = 0;
             // 2MB limit
             if (totalSize < 2000000) {
-                const result = await this.storeAssetsInCanister(unzippedFiles, canisterId, identity);
+                const result = await this.storeAssetsInCanister(unzippedFiles, canisterId, identity, workflowRunDetails);
                 totalUploadedSize += result.uploadedSize ?? 0;
                 // setUploadedSize(totalUploadedSize);
             } else {
@@ -108,15 +109,13 @@ class FileUploadApi {
 
                     const totalSize = this.calculateTotalSize(files);
 
-                    const result = await this.storeAssetsInCanister(files, canisterId, identity);
+                    const result = await this.storeAssetsInCanister(files, canisterId, identity, workflowRunDetails);
                     if (!result) {
-                        // setStatus(`Error: Failed to store batch ${i + 1}`);
                         console.log(`Error: Failed to store batch ${i + 1}`);
                     }
 
                     totalUploadedSize += result.uploadedSize ?? 0;
 
-                    // setUploadedSize(totalUploadedSize);
                 }
             }
 
@@ -132,7 +131,7 @@ class FileUploadApi {
         }
     };
 
-    private async storeAssetsInCanister(files: StaticFile[], canisterId: string, identity: Identity | null) {
+    private async storeAssetsInCanister(files: StaticFile[], canisterId: string, identity: Identity | null, workflowRunDetails: WorkflowRunDetails) {
         try {
             const sanitizedFiles = files.filter(
                 (file) => !file.path.includes("MACOS")
@@ -154,7 +153,8 @@ class FileUploadApi {
             const mainApi = await MainApi.create(identity);
             const result = await mainApi?.storeInAssetCanister(
                 Principal.fromText(canisterId),
-                sanitizedFiles
+                sanitizedFiles,
+                workflowRunDetails
             );
 
             if (result && result.status) {

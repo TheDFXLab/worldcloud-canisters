@@ -12,12 +12,14 @@ import UpdateIcon from "@mui/icons-material/Update";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 import HistoryIcon from "@mui/icons-material/History";
 import AccountBoxIcon from "@mui/icons-material/AccountBox";
+import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 
 const HomePage: React.FC = () => {
   const { deployments } = useDeployments();
   const { githubUser } = useGithub();
   const { identity } = useIdentity();
   const { setActiveTab } = useSideBar();
+  const { setActionBar } = useActionBar();
 
   // Calculate metrics
   const totalCanisters = deployments.length;
@@ -31,6 +33,7 @@ const HomePage: React.FC = () => {
   // Set the active tab to home
   useEffect(() => {
     setActiveTab("home");
+    setActionBar(null);
   }, []);
 
   return (
@@ -78,9 +81,9 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* Detailed Sections */}
-      <div className="details-grid">
+      <div className="details-grid-homepage">
         {/* Recent Activity */}
-        <div className="detail-card">
+        <div className="detail-card-homepage">
           <div className="detail-card-header">
             <HistoryIcon />
             <h3>Recent Activity</h3>
@@ -114,7 +117,7 @@ const HomePage: React.FC = () => {
         </div>
 
         {/* Account Info */}
-        <div className="detail-card">
+        <div className="detail-card-homepage">
           <div className="detail-card-header">
             <AccountBoxIcon />
             <h3>Account Information</h3>

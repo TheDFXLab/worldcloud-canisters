@@ -1,6 +1,6 @@
 import { Spinner } from "react-bootstrap";
 import "./CanisterOverview.css";
-import { CanisterDeploymentStatus } from "../AppLayout/interfaces";
+import { Deployment } from "../AppLayout/interfaces";
 import { backend_canister_id, getCanisterUrl } from "../../config/config";
 import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
 import { cyclesToTerra } from "../../utility/e8s";
@@ -9,20 +9,33 @@ import IconTextRowView from "../IconTextRowView/IconTextRowView";
 import CyclesApi from "../../api/cycles";
 import { Principal } from "@dfinity/principal";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLedger } from "../../context/LedgerContext/LedgerContext";
 import { ConfirmationModal } from "../ConfirmationPopup/ConfirmationModal";
 import MainApi from "../../api/main";
 import ProjectDeployment from "../ProjectDeployment/ProjectDeployment";
-import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import { useParams, useNavigate } from "react-router-dom";
 import { useLoadBar } from "../../context/LoadBarContext/LoadBarContext";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import {
+  DeploymentDetails,
+  useDeployments,
+} from "../../context/DeploymentContext/DeploymentContext";
+import ReplayIcon from "@mui/icons-material/Replay";
+import GitHubIcon from "@mui/icons-material/GitHub";
+import ScheduleIcon from "@mui/icons-material/Schedule";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import PendingIcon from "@mui/icons-material/Pending";
+import Skeleton from "@mui/material/Skeleton";
+import NoDataIcon from "@mui/icons-material/Description";
+import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 
 export const CanisterOverview = () => {
-  const { canisterId, dateCreated, dateUpdated, size, status } = useParams();
+  const { canisterId } = useParams();
+  const { getDeployment, getWorkflowRunHistory } = useDeployments();
   const navigate = useNavigate();
   const { status: authorityStatus, refreshStatus } = useAuthority();
   const { transfer } = useLedger();
@@ -32,6 +45,45 @@ export const CanisterOverview = () => {
   const { showLoadBar, setShowLoadBar, setCompleteLoadBar } = useLoadBar();
   const { setToasterData, setShowToaster } = useToaster();
   const isTransferringRef = useRef(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [workflowRunHistory, setWorkfowRunHistory] = useState<
+    WorkflowRunDetails[] | undefined
+  >(undefined);
+  const [canisterInfo, setCanisterInfo] = useState<Deployment | undefined>(
+    undefined
+  );
+
+  useEffect(() => {
+    const getCanisterInfo = async () => {
+      if (!canisterId) return;
+      const info = getDeployment(canisterId);
+      if (info) {
+        setCanisterInfo(info);
+      }
+    };
+    getCanisterInfo();
+  }, [canisterId]);
+
+  useEffect(() => {
+    const fetchDeploymentDetails = async () => {
+      try {
+        setIsLoading(true);
+        if (!canisterId) {
+          throw new Error("Canister ID not found");
+        }
+        const runHistory = await getWorkflowRunHistory(canisterId);
+
+        setWorkfowRunHistory(runHistory);
+      } catch (error) {
+        console.error("Failed to fetch deployment details:", error);
+        setWorkfowRunHistory(undefined);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDeploymentDetails();
+  }, []);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
@@ -150,6 +202,144 @@ export const CanisterOverview = () => {
     }
   }, [identity, canisterId, setToasterData, setShowToaster]);
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "completed":
+        return <CheckCircleOutlineIcon className="status-icon completed" />;
+      case "failed":
+        return <ErrorOutlineIcon className="status-icon failed" />;
+      case "pending":
+        return <PendingIcon className="status-icon pending" />;
+      default:
+        return null;
+    }
+  };
+
+  const handleRetryDeployment = async (workflow_run_id: number) => {
+    // Implement retry logic here
+    console.log("Retrying deployment...", workflow_run_id);
+  };
+
+  const renderDeploymentsList = () => {
+    if (isLoading) {
+      return (
+        <div className="deployments-loading">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="deployment-item-skeleton">
+              <Skeleton variant="rectangular" height={24} width={120} />
+              <Skeleton
+                variant="rectangular"
+                height={48}
+                style={{ marginTop: "1rem" }}
+              />
+              <Skeleton
+                variant="rectangular"
+                height={32}
+                style={{ marginTop: "1rem" }}
+              />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (!workflowRunHistory || workflowRunHistory.length === 0) {
+      return (
+        <div className="deployments-empty">
+          <NoDataIcon className="no-data-icon" />
+          <p>No deployment history</p>
+          <span className="empty-hint">
+            Deployment details will appear here once a deployment is initiated
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="deployments-list">
+        {workflowRunHistory.map((deployment, index) => (
+          <div key={deployment.workflow_run_id} className="deployment-item">
+            <div className="deployment-header">
+              <div className="deployment-status-header">
+                {getStatusIcon(deployment.status.toString())}
+                <span className={`deployment-status ${deployment.status}`}>
+                  {Object.keys(deployment.status)[0].toUpperCase()}
+                </span>
+              </div>
+              <span className="deployment-date">
+                <ScheduleIcon className="time-icon" />
+                {formatDate(
+                  new Date(Number(deployment.date_created) / 1000000)
+                )}
+              </span>
+            </div>
+
+            <div className="deployment-content">
+              <div className="detail-row">
+                <span className="label">Repository:</span>
+                <div className="value-with-copy">
+                  <a
+                    href={`https://github.com/${deployment.repo_name}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="repo-link"
+                  >
+                    <GitHubIcon className="github-icon" />
+                    {deployment.repo_name}
+                  </a>
+                </div>
+              </div>
+
+              <div className="detail-row">
+                <span className="label">Workflow Run:</span>
+                <div className="value-with-copy">
+                  <a
+                    href={`https://github.com/${deployment.repo_name}/actions/runs/${deployment.workflow_run_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    #{Number(deployment.workflow_run_id)}
+                  </a>
+                </div>
+              </div>
+
+              {deployment.branch && (
+                <div className="detail-row">
+                  <span className="label">Branch:</span>
+                  <span className="value">{deployment.branch}</span>
+                </div>
+              )}
+
+              {deployment.commit_hash && (
+                <div className="detail-row">
+                  <span className="label">Commit:</span>
+                  <span className="value">{deployment.commit_hash}</span>
+                </div>
+              )}
+
+              {deployment.status.toString() === "failed" &&
+                deployment.error_message && (
+                  <div className="deployment-error">
+                    <p className="error-message">{deployment.error_message}</p>
+                    <button
+                      className="retry-button"
+                      onClick={() =>
+                        handleRetryDeployment(
+                          Number(deployment.workflow_run_id)
+                        )
+                      }
+                    >
+                      <ReplayIcon /> Retry Deployment
+                    </button>
+                  </div>
+                )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="canister-overview">
       <div className="overview-header">
@@ -194,23 +384,20 @@ export const CanisterOverview = () => {
 
           <div className="detail-row">
             <span className="label">Total Size:</span>
-            <span className="value">{formatBytes(Number(size) || 0)}</span>
-          </div>
-
-          <div className="detail-row">
-            <span className="label">Created On:</span>
             <span className="value">
-              {dateCreated
-                ? formatDate(new Date(Number(dateCreated) / 1000000))
+              {canisterInfo?.size
+                ? formatBytes(Number(canisterInfo.size))
                 : "N/A"}
             </span>
           </div>
 
           <div className="detail-row">
-            <span className="label">Last Updated:</span>
+            <span className="label">Created On:</span>
             <span className="value">
-              {dateUpdated
-                ? formatDate(new Date(Number(dateUpdated) / 1000000))
+              {canisterInfo?.date_created
+                ? formatDate(
+                    new Date(Number(canisterInfo.date_created) / 1000000)
+                  )
                 : "N/A"}
             </span>
           </div>
@@ -234,6 +421,11 @@ export const CanisterOverview = () => {
               )}
             </span>
           </div>
+        </div>
+
+        <div className="detail-card deployments-section">
+          <h3 style={{ paddingBottom: "10px" }}>Deployment History</h3>
+          {renderDeploymentsList()}
         </div>
       </div>
 

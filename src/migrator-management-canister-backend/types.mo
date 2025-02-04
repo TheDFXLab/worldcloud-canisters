@@ -203,7 +203,25 @@ module {
         date_updated : TimeLib.Time;
     };
 
+    public type WorkflowRunStatus = {
+        #pending;
+        #completed;
+        #failed;
+    };
+
+    public type WorkflowRunDetails = {
+        workflow_run_id : Nat;
+        repo_name : Text;
+        date_created : Nat;
+        status : WorkflowRunStatus;
+        branch : ?Text;
+        commit_hash : ?Text;
+        error_message : ?Text;
+        size : ?Nat;
+    };
+
     public type UserCanisters = HashMap.HashMap<Principal, [Principal]>;
+    public type WorkflowRunHistory = HashMap.HashMap<Principal, [WorkflowRunDetails]>;
 
     public type AccountIdentifier = Blob;
     public type SubAccount = Blob;

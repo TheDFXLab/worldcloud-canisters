@@ -104,7 +104,6 @@ export const AuthorityManager: React.FC<{}> = () => {
 
   return (
     <>
-      <ProgressBar isLoading={isLoadingStatus} />
       <div className="authority-manager">
         <h2>Controllers</h2>
         <div className="authority-manager__add mb-4">

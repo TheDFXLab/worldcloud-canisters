@@ -12,6 +12,7 @@ import DeploymentProgress, {
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
+import { Principal } from "@dfinity/principal";
 
 interface PackageLocation {
   path: string;
@@ -108,14 +109,10 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
   ];
 
   useEffect(() => {
-    console.log(`repoStates:`, repoStates);
-    console.log(`canister id accessing:`, canisterId);
     if (!canisterId) {
       navigate("/app/new");
       return;
     }
-
-    // loadBranches(repos);
   }, [canisterId]);
 
   useEffect(() => {
@@ -125,9 +122,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         console.log(`Not authenticated.`);
         await github.authenticate();
       }
-      console.log(`Fetching repos/....`);
       const repos = await github.listRepositories();
-      console.log(`repos:`, repos);
       setRepos(repos);
     };
     loadRepos();
@@ -137,7 +132,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
     try {
       const response = await github.request(`/repos/${repo}/branches`);
 
-      console.log(`branches:`, response);
       setRepoStates((prev) => ({
         ...prev,
         [repo]: {
@@ -209,6 +203,9 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   const handleDeploy = async (repo: string) => {
     try {
+      if (!identity) {
+        throw new Error("Please login to deploy");
+      }
       if (!canisterId) {
         throw new Error("Please select a canister");
       }
@@ -252,6 +249,8 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       updateStepStatus(repo, "workflow", "completed");
       updateStepStatus(repo, "trigger", "in-progress");
 
+      const latestRun = await github.getLatestWorkflowRun(repo);
+
       // Trigger workflow
       await github.triggerWorkflow(repo, repoStates[repo].selectedBranch);
 
@@ -259,10 +258,16 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       updateStepStatus(repo, "build", "in-progress");
 
       // Wait for artifact
-      const artifact = await github.pollForArtifact(
+      const pollResponse = await github.pollForArtifact(
+        identity,
+        Principal.fromText(canisterId),
         repo,
-        repoStates[repo].selectedBranch
+        repoStates[repo].selectedBranch,
+        latestRun.id
       );
+
+      const artifact = pollResponse.artifact;
+      const workflowRunDetails = pollResponse.workflowRunDetails;
 
       updateStepStatus(repo, "build", "completed");
       updateStepStatus(repo, "artifact", "in-progress");
@@ -283,7 +288,8 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       const result = await fileUploadApi.uploadFromZip(
         zipFile,
         canisterId,
-        identity
+        identity,
+        workflowRunDetails
       );
 
       if (!result.status) {
@@ -303,7 +309,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
       // Navigate to canister after a short delay
       setTimeout(() => {
-        window.location.reload();
+        navigate(`/app/canister/${canisterId}`); // navigate to canister page
       }, 2000);
     } catch (error) {
       console.error("Deploy failed:", error);
@@ -340,6 +346,30 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
     console.log(`Updated step status:`, repoStates);
   };
 
+  const handleSelectRepo = async (repo: Repository) => {
+    setState((prev) => ({ ...prev, selectedRepo: repo }));
+    console.log(`Selected repo:`, repo);
+    setActionBar({
+      icon: "📦",
+      text: state.selectedRepo
+        ? state.selectedRepo.name
+        : "Select a repository to continue",
+      buttonText: "Configure Deployment",
+      onButtonClick: () => {
+        setShowTitle(false);
+        setState((prev) => ({ ...prev, step: "configure" }));
+      },
+      isButtonDisabled: !state.selectedRepo,
+      isHidden: hideActionBar,
+    });
+
+    // const githubApi = GithubApi.getInstance();
+    // const runs = await githubApi.getWorkflowRuns(repo.full_name);
+    // const workflows = await githubApi.getWorkflows(repo.full_name,);
+    // console.log(`Workflow runs:`, runs);
+    // console.log(`Workflows:`, workflows);
+  };
+
   const renderRepoGrid = () => (
     <div className="repo-grid">
       {repos.map((repo) => (
@@ -348,7 +378,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
           className={`repo-card ${
             state.selectedRepo?.id === repo.id ? "selected" : ""
           }`}
-          onClick={() => setState((prev) => ({ ...prev, selectedRepo: repo }))}
+          onClick={() => handleSelectRepo(repo)}
         >
           <div className="repo-name">{repo.name}</div>
           <div className="repo-info">
@@ -478,6 +508,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   useEffect(() => {
     if (state.step === "select") {
+      console.log(`Setting action bar`, state);
       setActionBar({
         icon: "📦",
         text: state.selectedRepo
@@ -509,7 +540,18 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         isHidden: hideActionBar,
       });
     }
-  }, [state.step, state.selectedRepo, hideActionBar, canisterId, repoStates]);
+  }, [
+    state.step,
+    state.selectedRepo,
+    hideActionBar,
+    canisterId,
+    repoStates,
+    state,
+  ]);
+
+  useEffect(() => {
+    console.log(`state changes`, state);
+  }, [state]);
 
   if (!repos.length) {
     return <div>Loading...</div>;

@@ -1,109 +1,175 @@
-import React, { useState } from "react";
-import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
+import React, { useState, useRef } from "react";
 import "./WasmUploader.css";
-interface WasmUploaderProps {}
-function WasmUploader({}: WasmUploaderProps) {
-  const [state, setState] = useState({
-    selectedFile: null,
-    uploadProgress: 0,
-    message: "",
-  });
+import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ErrorIcon from "@mui/icons-material/Error";
+import DeleteIcon from "@mui/icons-material/Delete";
+
+function WasmUploader() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
-      setStatus(`Selected file: ${file.name}`);
+      if (file.name.endsWith(".wasm")) {
+        setSelectedFile(file);
+        setStatus("ready");
+      } else {
+        setStatus("error");
+        setSelectedFile(null);
+      }
     }
   };
 
-  const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
-    if (!selectedFile) {
-      setStatus("Please select a WASM file first");
-      return;
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith(".wasm")) {
+      setSelectedFile(file);
+      setStatus("ready");
+    } else {
+      setStatus("error");
+      setSelectedFile(null);
     }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
 
     try {
       setIsLoading(true);
-      setStatus("Reading WASM file...");
+      setStatus("uploading");
+      setUploadProgress(0);
 
-      // Update progress
-      setState((prev) => ({
-        ...prev,
-        uploadProgress: 0 / 100,
-        message: `Uploading: 0%`,
-      }));
-
-      // Read the file as ArrayBuffer
       const arrayBuffer = await selectedFile.arrayBuffer();
-      // Convert ArrayBuffer to Uint8Array
       const wasmBytes = Array.from(new Uint8Array(arrayBuffer));
 
-      setStatus("Uploading WASM to canister...");
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 90) clearInterval(progressInterval);
+          return Math.min(prev + 10, 90);
+        });
+      }, 500);
 
       const result =
         await migrator_management_canister_backend.uploadAssetCanisterWasm(
           wasmBytes
         );
 
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
       if ("ok" in result) {
-        setStatus(`Success: ${result.ok}`);
+        setStatus("success");
       } else {
-        setStatus(`Error: ${result.err}`);
+        setStatus("error");
       }
-    } catch (error: any) {
-      setStatus(`Error: ${error.message}`);
+    } catch (error) {
+      setStatus("error");
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
+  };
 
-    // Update progress
-    setState((prev) => ({
-      ...prev,
-      uploadProgress: 100,
-      message: `Uploading: 100%`,
-    }));
+  const clearFile = () => {
+    setSelectedFile(null);
+    setStatus("");
+    setUploadProgress(0);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   return (
     <div className="wasm-uploader">
-      <h2>Upload Asset Canister WASM</h2>
-      <form onSubmit={handleUpload}>
-        <div className="form-group">
-          <input
-            type="file"
-            accept=".wasm"
-            onChange={handleFileSelect}
-            disabled={isLoading}
-          />
-        </div>
-        <div className="form-group">
-          <button type="submit" disabled={!selectedFile || isLoading}>
-            {isLoading ? "Uploading..." : "Upload WASM"}
-          </button>
-        </div>
-        {status && (
-          <div
-            className={`status ${
-              status.includes("Error") ? "error" : "success"
-            }`}
-          >
-            {status}
+      <div
+        className={`upload-zone ${status}`}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onClick={() => !selectedFile && fileInputRef.current?.click()}
+      >
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileSelect}
+          accept=".wasm"
+          style={{ display: "none" }}
+        />
+
+        {!selectedFile && (
+          <div className="upload-prompt">
+            <CloudUploadIcon className="upload-icon" />
+            <p>Drag and drop your WASM file here or click to browse</p>
+            <span className="file-hint">.wasm files only</span>
           </div>
         )}
-      </form>
 
-      <div className="progress">
-        {state.uploadProgress > 0 && (
-          <progress value={state.uploadProgress} max="100" />
+        {selectedFile && (
+          <div className="file-info">
+            <div className="file-details">
+              <span className="file-name">{selectedFile.name}</span>
+              <span className="file-size">
+                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+              </span>
+            </div>
+            {!isLoading && (
+              <button className="remove-file" onClick={clearFile}>
+                <DeleteIcon />
+              </button>
+            )}
+          </div>
+        )}
+
+        {status === "uploading" && (
+          <div className="upload-progress">
+            <div className="progress-bar">
+              <div
+                className="progress-fill"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <span className="progress-text">{uploadProgress}%</span>
+          </div>
+        )}
+
+        {status === "success" && (
+          <div className="status-message success">
+            <CheckCircleIcon />
+            <span>Upload successful!</span>
+          </div>
+        )}
+
+        {status === "error" && (
+          <div className="status-message error">
+            <ErrorIcon />
+            <span>Upload failed. Please try again.</span>
+          </div>
         )}
       </div>
-      <div className="message">{state.message}</div>
+
+      {selectedFile && status !== "success" && !isLoading && (
+        <button
+          className="upload-button"
+          onClick={handleUpload}
+          disabled={isLoading}
+        >
+          {isLoading ? "Uploading..." : "Upload WASM"}
+        </button>
+      )}
     </div>
   );
 }

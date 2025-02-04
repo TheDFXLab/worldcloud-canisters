@@ -11,14 +11,18 @@ import { Principal } from "@dfinity/principal";
 import { getCanisterUrl } from "../../config/config";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 import { useNavigate } from "react-router-dom";
+import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
+import CodeIcon from "@mui/icons-material/Code";
+import { Tooltip } from "@mui/material";
 
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 12;
 
 const WebsitesComponent: React.FC = () => {
   /** Hooks */
   const { deployments } = useDeployments();
   const { setActiveTab } = useSideBar();
   const navigate = useNavigate();
+  const { setActionBar } = useActionBar();
 
   /**State */
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,8 +56,14 @@ const WebsitesComponent: React.FC = () => {
     window.open(url, "_blank");
   };
 
+  const handleUpdate = (e: React.MouseEvent, canisterId: Principal) => {
+    e.stopPropagation();
+    navigate(`/app/deploy/${canisterId}`);
+  };
+
   useEffect(() => {
     setActiveTab("websites");
+    setActionBar(null);
   }, []);
 
   return (
@@ -81,9 +91,7 @@ const WebsitesComponent: React.FC = () => {
                 key={deployment.canister_id.toText()}
                 className="website-card"
                 onClick={() =>
-                  navigate(
-                    `/app/canister/${deployment.canister_id}/${deployment.date_created}/${deployment.date_updated}/${deployment.size}/$${deployment.status}`
-                  )
+                  navigate(`/app/canister/${deployment.canister_id}`)
                 }
               >
                 <div className="website-header">
@@ -133,10 +141,23 @@ const WebsitesComponent: React.FC = () => {
                 <div className="website-actions">
                   <button
                     className="action-button primary"
-                    onClick={() => openCanisterUrl(deployment.canister_id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openCanisterUrl(deployment.canister_id);
+                    }}
+                    style={{ width: "85%" }}
                   >
                     Visit Website
                   </button>
+                  <Tooltip title="Deploy new version" arrow>
+                    <button
+                      className="action-button secondary"
+                      onClick={(e) => handleUpdate(e, deployment.canister_id)}
+                      style={{ width: "28%" }}
+                    >
+                      <CodeIcon />
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             ))}

@@ -1,7 +1,7 @@
 import { Principal } from "@dfinity/principal";
 import { createActor } from "../../../../declarations/migrator-management-canister-backend";
 import { ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
-import { _SERVICE, DepositReceipt } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { _SERVICE, DepositReceipt, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
 
@@ -118,6 +118,13 @@ class MainApi {
         }
     }
 
+    async getWorkflowHistory(canisterId: Principal) {
+        const runsHistory = await this.actor?.getWorkflowRunHistory(
+            canisterId
+        );
+        return runsHistory;
+    }
+
     async deployAssetCanister() {
         try {
             if (!this.actor) {
@@ -136,12 +143,12 @@ class MainApi {
         }
     }
 
-    async storeInAssetCanister(canisterId: Principal, files: StaticFile[]) {
+    async storeInAssetCanister(canisterId: Principal, files: StaticFile[], workflowRunDetails?: WorkflowRunDetails) {
         try {
             if (!this.actor) {
                 throw new Error("Actor not initialized.");
             }
-            const result = await this.actor.storeInAssetCanister(canisterId, files);
+            const result = await this.actor.storeInAssetCanister(canisterId, files, workflowRunDetails ? [workflowRunDetails] : []);
             if ("Ok" in result || "ok" in result) {
                 return { status: true, message: "Stored files successfully." };
             }

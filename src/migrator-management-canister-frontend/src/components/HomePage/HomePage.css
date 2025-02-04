@@ -2,6 +2,7 @@
   padding: 2rem;
   min-height: calc(100vh - 64px);
   background-color: var(--background);
+  height: 100%;
 }
 
 .home-header {
@@ -69,13 +70,13 @@
 }
 
 /* Detailed Sections */
-.details-grid {
+.details-grid-homepage {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 1.5rem;
 }
 
-.detail-card {
+.detail-card-homepage {
   background: var(--background);
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -84,7 +85,7 @@
   transition: all 0.2s ease;
 }
 
-.detail-card:hover {
+.detail-card-homepage:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   border-color: var(--color-primary);
@@ -216,7 +217,7 @@
     grid-template-columns: 1fr;
   }
 
-  .details-grid {
+  .details-grid-homepage {
     grid-template-columns: 1fr;
   }
 
