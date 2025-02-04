@@ -12,7 +12,7 @@ import { getCanisterUrl } from "../../config/config";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 import { useNavigate } from "react-router-dom";
 
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 12;
 
 const WebsitesComponent: React.FC = () => {
   /** Hooks */
