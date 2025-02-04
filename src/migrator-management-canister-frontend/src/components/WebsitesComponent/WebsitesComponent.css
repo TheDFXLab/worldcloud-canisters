@@ -168,9 +168,9 @@
 }
 
 .website-actions {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
 }
 
 .action-button {
@@ -191,6 +191,15 @@
 
 .action-button.primary:hover {
   background-color: var(--color-primary-dark);
+}
+
+.action-button.secondary {
+  background-color: var(--secondary-button-bg, #f0f0f0);
+  color: var(--secondary-button-text, #333);
+}
+
+.action-button.secondary:hover {
+  background-color: var(--secondary-button-hover-bg, #e0e0e0);
 }
 
 .no-websites {

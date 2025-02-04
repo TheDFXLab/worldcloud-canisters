@@ -12,6 +12,8 @@ import { getCanisterUrl } from "../../config/config";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 import { useNavigate } from "react-router-dom";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
+import CodeIcon from "@mui/icons-material/Code";
+import { Tooltip } from "@mui/material";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -52,6 +54,11 @@ const WebsitesComponent: React.FC = () => {
   const openCanisterUrl = (canisterId: Principal) => {
     let url = getCanisterUrl(canisterId.toText());
     window.open(url, "_blank");
+  };
+
+  const handleUpdate = (e: React.MouseEvent, canisterId: Principal) => {
+    e.stopPropagation();
+    navigate(`/app/deploy/${canisterId}`);
   };
 
   useEffect(() => {
@@ -134,10 +141,23 @@ const WebsitesComponent: React.FC = () => {
                 <div className="website-actions">
                   <button
                     className="action-button primary"
-                    onClick={() => openCanisterUrl(deployment.canister_id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openCanisterUrl(deployment.canister_id);
+                    }}
+                    style={{ width: "85%" }}
                   >
                     Visit Website
                   </button>
+                  <Tooltip title="Deploy new version" arrow>
+                    <button
+                      className="action-button secondary"
+                      onClick={(e) => handleUpdate(e, deployment.canister_id)}
+                      style={{ width: "28%" }}
+                    >
+                      <CodeIcon />
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             ))}
