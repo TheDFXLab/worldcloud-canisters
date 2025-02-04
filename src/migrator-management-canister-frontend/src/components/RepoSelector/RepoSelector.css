@@ -214,6 +214,7 @@ select:focus {
   right: 0;
   background: var(--background);
   border-top: 1px solid var(--border-color);
+  border: 1px solid var(--border-color);
   box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1),
     0 -2px 4px -1px rgba(0, 0, 0, 0.06);
   z-index: 10;
