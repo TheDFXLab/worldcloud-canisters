@@ -12,6 +12,7 @@ import DeploymentProgress, {
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
+import { Principal } from "@dfinity/principal";
 
 interface PackageLocation {
   path: string;
@@ -202,6 +203,9 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   const handleDeploy = async (repo: string) => {
     try {
+      if (!identity) {
+        throw new Error("Please login to deploy");
+      }
       if (!canisterId) {
         throw new Error("Please select a canister");
       }
@@ -254,11 +258,16 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       updateStepStatus(repo, "build", "in-progress");
 
       // Wait for artifact
-      const artifact = await github.pollForArtifact(
+      const pollResponse = await github.pollForArtifact(
+        identity,
+        Principal.fromText(canisterId),
         repo,
         repoStates[repo].selectedBranch,
         latestRun.id
       );
+
+      const artifact = pollResponse.artifact;
+      const workflowRunDetails = pollResponse.workflowRunDetails;
 
       updateStepStatus(repo, "build", "completed");
       updateStepStatus(repo, "artifact", "in-progress");
@@ -279,7 +288,8 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       const result = await fileUploadApi.uploadFromZip(
         zipFile,
         canisterId,
-        identity
+        identity,
+        workflowRunDetails
       );
 
       if (!result.status) {
