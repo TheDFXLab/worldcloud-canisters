@@ -8,11 +8,13 @@ import { useGithub } from "../../context/GithubContext/GithubContext";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { GithubApi } from "../../api/github/GithubApi";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
+import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 
 const Settings: React.FC = () => {
   const { githubUser, setGithubUser } = useGithub();
   const { identity } = useIdentity();
   const { setActiveTab } = useSideBar();
+  const { setActionBar } = useActionBar();
 
   const handleGithubConnect = async () => {
     const github = GithubApi.getInstance();
@@ -28,6 +30,7 @@ const Settings: React.FC = () => {
   // Set the active tab to settings
   useEffect(() => {
     setActiveTab("settings");
+    setActionBar(null);
   }, []);
 
   return (
