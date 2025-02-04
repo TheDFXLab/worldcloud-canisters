@@ -81,9 +81,9 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* Detailed Sections */}
-      <div className="details-grid">
+      <div className="details-grid-homepage">
         {/* Recent Activity */}
-        <div className="detail-card">
+        <div className="detail-card-homepage">
           <div className="detail-card-header">
             <HistoryIcon />
             <h3>Recent Activity</h3>
@@ -117,7 +117,7 @@ const HomePage: React.FC = () => {
         </div>
 
         {/* Account Info */}
-        <div className="detail-card">
+        <div className="detail-card-homepage">
           <div className="detail-card-header">
             <AccountBoxIcon />
             <h3>Account Information</h3>
