@@ -26,6 +26,7 @@ import WasmUploader from "./components/WasmUploader/WasmUploader";
 import CanisterDeployer from "./components/CanisterDeployer/CanisterDeployer";
 import { LoadBarProvider } from "./context/LoadBarContext/LoadBarContext";
 import { SideBarProvider } from "./context/SideBarContext/SideBarContext";
+import { AdminPanel } from "./components/AdminPanel/AdminPanel";
 
 export interface State {
   canister_id: string;
@@ -88,7 +89,7 @@ function App() {
                                   />
                                   <Route
                                     path="admin"
-                                    element={<WasmUploader />}
+                                    element={<AdminPanel />}
                                   />
                                   <Route
                                     path="canister/:canisterId"
