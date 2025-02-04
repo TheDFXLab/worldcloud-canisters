@@ -1,5 +1,31 @@
+import { Identity } from "@dfinity/agent";
+import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { environment, githubClientId, ngrok_tunnel, reverse_proxy_url } from "../../config/config";
 import { generateWorkflowTemplate } from "../../utility/workflowTemplate";
+import MainApi from "../main";
+import { Principal } from "@dfinity/principal";
+
+interface GithubWorkflowRunsResponse {
+    workflow_runs: GithubWorkflowRunPartial[];
+}
+
+interface GithubWorkflowArtifactResponse {
+    total_count: number;
+    artifacts: Artifact[];
+}
+
+
+export interface GithubWorkflowRunPartial {
+    id: string;
+    name: string;
+    status: string;
+    workflow_id: number;
+    head_branch: string;
+    run_number: number;
+    head_sha: string;
+    created_at: string;
+    path: string; // workflow file path
+}
 
 export interface Repository {
     id: number;
@@ -10,11 +36,19 @@ export interface Repository {
     visibility: string;
 }
 
+interface Run {
+    id: number;
+    repository_id: number;
+    head_repository_id: number;
+    head_branch: string;
+    head_sha: string;
+}
 interface Artifact {
     id: number;
     name: string;
     size_in_bytes: number;
     archive_download_url: string;
+    workflow_run: Run;
 }
 
 export class GithubApi {
@@ -252,7 +286,7 @@ export class GithubApi {
         const deployWorkflow = workflows.workflows.find((workflow: any) => workflow.name === 'Build and Deploy to ICP');
 
         // Get list of recent workflow runs
-        const workflowRuns = await this.request(`/repos/${repo_name}/actions/workflows/${deployWorkflow.id}/runs?per_page=5`);
+        const workflowRuns: GithubWorkflowRunsResponse = await this.request(`/repos/${repo_name}/actions/workflows/${deployWorkflow.id}/runs?per_page=5`);
 
         if (workflowRuns.workflow_runs.length === 0) {
             return null;
@@ -294,16 +328,22 @@ export class GithubApi {
                 return null;
             }
 
-            // Get artifacts for given run id
-            const artifactsRes = await this.request(
-                `/repos/${repo_name}/actions/runs/${relevantRun.id}/artifacts`
-            );
+            try {
+                // Get artifacts for given run id
+                const artifactsRes: GithubWorkflowArtifactResponse = await this.request(
+                    `/repos/${repo_name}/actions/runs/${relevantRun.id}/artifacts`
+                );
 
-            if (artifactsRes && artifactsRes.artifacts) {
-                // Find the artifact that matches the run id
-                const targetArtifact = artifactsRes.artifacts.find((artifact: any) => artifact.workflow_run.id === relevantRun.id);
-                return targetArtifact;
+                if (artifactsRes && artifactsRes.artifacts) {
+                    // Find the artifact that matches the run id
+                    const targetArtifact: Artifact | undefined = artifactsRes.artifacts.find((artifact: any) => artifact.workflow_run.id === relevantRun.id);
+                    return { targetArtifact, run: relevantRun };
+                }
+            } catch (error) {
+                console.log(`Error getting artifacts for run ${relevantRun.id}:`, error);
+                return null;
             }
+
 
         }
         else {
@@ -325,18 +365,48 @@ export class GithubApi {
         return response.blob();
     }
 
-    async pollForArtifact(repo: string, branch: string, previousRunId: string, maxAttempts = 100): Promise<Artifact> {
+    async pollForArtifact(identity: Identity, canisterId: Principal, repo: string, branch: string, previousRunId: string, maxAttempts = 100): Promise<{ artifact: Artifact, workflowRunDetails: WorkflowRunDetails }> {
         for (let i = 0; i < maxAttempts; i++) {
-            const workflowRun = await this.getWorkflows(repo, previousRunId);
-            console.log(`Workflow run mathcing...`, workflowRun);
+            const workflowRunResult = await this.getWorkflows(repo, previousRunId);
+            console.log(`Workflow run mathcing...`, workflowRunResult);
 
-            console.log(`Artifact*:`, workflowRun);
-            if (workflowRun) {
-                return workflowRun;
+            console.log(`Artifact*:`, workflowRunResult);
+            if (workflowRunResult && workflowRunResult.targetArtifact) {
+                const mainApi = await MainApi.create(identity);
+                if (!mainApi) {
+                    throw new Error("Failed to create main api instance.");
+                }
+
+                const workflowRunDetails: WorkflowRunDetails = {
+                    workflow_run_id: BigInt(workflowRunResult.targetArtifact.id),
+                    repo_name: repo,
+                    branch: [branch],
+                    status: { completed: null },
+                    date_created: BigInt(Date.parse(workflowRunResult.run.created_at)),
+                    error_message: [],
+                    size: [BigInt(workflowRunResult.targetArtifact.size_in_bytes)],
+                    commit_hash: [workflowRunResult.targetArtifact.workflow_run.head_sha],
+                }
+
+                console.log(`Updateing workflow rund etails in contract....`)
+                return { artifact: workflowRunResult.targetArtifact, workflowRunDetails };
+                // const createWorkflowEntry = await mainApi.updateWorkflowRun(
+                //     workflowRunDetails,
+                //     canisterId,
+                // );
+
+                // if (createWorkflowEntry.status) {
+                //     return workflowRunResult.targetArtifact;
+                // }
+                // else {
+                //     throw new Error(`Error updating workflow run: ${createWorkflowEntry.message}`);
+                // }
+
             }
             console.log(`Waiting for artifact... ${i + 1} of ${maxAttempts}`);
             await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
         }
+
         throw new Error('Timeout waiting for build artifact');
     }
 
@@ -386,5 +456,6 @@ export class GithubApi {
             return '';
         }
     }
+
     /*END*/
 }
