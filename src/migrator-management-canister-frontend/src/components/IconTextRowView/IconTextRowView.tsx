@@ -1,32 +1,23 @@
 import React from "react";
+import "./IconTextRowView.css";
 
 interface IconTextRowViewProps {
   text: string;
-  className?: string;
   IconComponent: React.ElementType;
-  iconColor: string;
-  onClickIcon: () => void;
+  onClickIcon?: () => void;
+  className?: string;
+  iconColor?: string; // This can be removed if we're using CSS variables
 }
 
 const IconTextRowView: React.FC<IconTextRowViewProps> = ({
-  className,
   text,
   IconComponent,
-  iconColor,
   onClickIcon,
+  className = "",
 }) => {
   return (
-    <div
-      style={{
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-      }}
-      className={className ? className : ""}
-      onClick={onClickIcon}
-    >
-      <IconComponent style={{ color: iconColor }} />
+    <div className={`icon-text-row ${className}`} onClick={onClickIcon}>
+      <IconComponent />
       <span>{text}</span>
     </div>
   );

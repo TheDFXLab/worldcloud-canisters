@@ -1,0 +1,37 @@
+.icon-text-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  color: var(--text-primary); /* Add this */
+}
+
+.icon-text-row:hover {
+  background: var(--background-hover);
+}
+
+.icon-text-row svg {
+  color: var(--text-primary); /* Add this */
+  font-size: 1.25rem;
+}
+
+.icon-text-row.active {
+  background: var(--background-hover);
+  color: var(--color-primary);
+}
+
+.icon-text-row.active svg {
+  color: var(--color-primary);
+}
+
+/* For the logout icon specifically */
+.icon-text-row.logout {
+  color: var(--color-error);
+}
+
+.icon-text-row.logout svg {
+  color: var(--color-error);
+}
