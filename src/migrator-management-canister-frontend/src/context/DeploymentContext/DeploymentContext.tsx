@@ -10,6 +10,7 @@ import MainApi from "../../api/main";
 import { useIdentity } from "../IdentityContext/IdentityContext";
 import { Principal } from "@dfinity/principal";
 import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { useProgress } from "../ProgressBarContext/ProgressBarContext";
 
 export interface DeploymentDetails {
   workflow_run_id: number;
@@ -41,7 +42,11 @@ const DeploymentsContext = createContext<DeploymentsContextType | undefined>(
 );
 
 export function DeploymentsProvider({ children }: { children: ReactNode }) {
+  /** Hooks */
   const { identity } = useIdentity();
+  const { setIsLoadingProgress, setIsEnded } = useProgress();
+
+  /** State */
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [selectedDeployment, setSelectedDeployment] =
     useState<Deployment | null>(null);
@@ -62,6 +67,8 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
         throw new Error("Identity not found");
       }
 
+      setIsLoadingProgress(true);
+      setIsEnded(false);
       const mainApi = await MainApi.create(identity);
       const result = await mainApi?.getCanisterDeployments();
 
@@ -81,6 +88,8 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
       console.error("Failed to fetch deployments:", error);
     } finally {
       setIsLoading(false);
+      setIsLoadingProgress(false);
+      setIsEnded(true);
     }
   };
 
