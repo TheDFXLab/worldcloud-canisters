@@ -11,6 +11,7 @@ import { Principal } from "@dfinity/principal";
 import { getCanisterUrl } from "../../config/config";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 import { useNavigate } from "react-router-dom";
+import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -19,6 +20,7 @@ const WebsitesComponent: React.FC = () => {
   const { deployments } = useDeployments();
   const { setActiveTab } = useSideBar();
   const navigate = useNavigate();
+  const { setActionBar } = useActionBar();
 
   /**State */
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,6 +56,7 @@ const WebsitesComponent: React.FC = () => {
 
   useEffect(() => {
     setActiveTab("websites");
+    setActionBar(null);
   }, []);
 
   return (
