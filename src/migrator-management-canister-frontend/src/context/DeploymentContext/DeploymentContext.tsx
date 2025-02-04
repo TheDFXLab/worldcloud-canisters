@@ -85,7 +85,7 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshDeployments();
-  }, []);
+  }, [identity]);
 
   return (
     <DeploymentsContext.Provider
