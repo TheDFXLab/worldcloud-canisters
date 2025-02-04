@@ -2,6 +2,7 @@
   padding: 2rem;
   min-height: calc(100vh - 64px);
   background-color: var(--background);
+  height: 100%;
 }
 
 .home-header {
