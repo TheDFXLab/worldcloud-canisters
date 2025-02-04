@@ -31,10 +31,11 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import PendingIcon from "@mui/icons-material/Pending";
 import Skeleton from "@mui/material/Skeleton";
 import NoDataIcon from "@mui/icons-material/Description";
+import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 
 export const CanisterOverview = () => {
   const { canisterId } = useParams();
-  const { getDeployment, getDeploymentDetails } = useDeployments();
+  const { getDeployment, getWorkflowRunHistory } = useDeployments();
   const navigate = useNavigate();
   const { status: authorityStatus, refreshStatus } = useAuthority();
   const { transfer } = useLedger();
@@ -45,8 +46,8 @@ export const CanisterOverview = () => {
   const { setToasterData, setShowToaster } = useToaster();
   const isTransferringRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [deploymentDetails, setDeploymentDetails] = useState<
-    DeploymentDetails[] | undefined
+  const [workflowRunHistory, setWorkfowRunHistory] = useState<
+    WorkflowRunDetails[] | undefined
   >(undefined);
   const [canisterInfo, setCanisterInfo] = useState<Deployment | undefined>(
     undefined
@@ -67,41 +68,15 @@ export const CanisterOverview = () => {
     const fetchDeploymentDetails = async () => {
       try {
         setIsLoading(true);
-        // Replace with actual API call
-        const mockData: DeploymentDetails[] = [
-          {
-            workflow_run_id: 12345678,
-            repo_name: "username/repo-name",
-            date_created: Date.now(),
-            status: "pending",
-            branch: "main",
-            commit_hash: "8d4e9f2",
-          },
-          {
-            workflow_run_id: 12345677,
-            repo_name: "username/repo-name",
-            date_created: Date.now() - 86400000, // 1 day ago
-            status: "completed",
-            branch: "main",
-            commit_hash: "7c3e8d1",
-          },
-          {
-            workflow_run_id: 12345676,
-            repo_name: "username/repo-name",
-            date_created: Date.now() - 172800000, // 2 days ago
-            status: "failed",
-            branch: "feature/new-ui",
-            commit_hash: "9b2a5f4",
-            error_message: "Deployment failed due to insufficient memory",
-          },
-        ];
+        if (!canisterId) {
+          throw new Error("Canister ID not found");
+        }
+        const runHistory = await getWorkflowRunHistory(canisterId);
 
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setDeploymentDetails(mockData);
+        setWorkfowRunHistory(runHistory);
       } catch (error) {
         console.error("Failed to fetch deployment details:", error);
-        setDeploymentDetails(undefined);
+        setWorkfowRunHistory(undefined);
       } finally {
         setIsLoading(false);
       }
@@ -268,7 +243,7 @@ export const CanisterOverview = () => {
       );
     }
 
-    if (!deploymentDetails || deploymentDetails.length === 0) {
+    if (!workflowRunHistory || workflowRunHistory.length === 0) {
       return (
         <div className="deployments-empty">
           <NoDataIcon className="no-data-icon" />
@@ -282,19 +257,20 @@ export const CanisterOverview = () => {
 
     return (
       <div className="deployments-list">
-        {deploymentDetails.map((deployment, index) => (
+        {workflowRunHistory.map((deployment, index) => (
           <div key={deployment.workflow_run_id} className="deployment-item">
             <div className="deployment-header">
               <div className="deployment-status-header">
-                {getStatusIcon(deployment.status)}
+                {getStatusIcon(deployment.status.toString())}
                 <span className={`deployment-status ${deployment.status}`}>
-                  {deployment.status.charAt(0).toUpperCase() +
-                    deployment.status.slice(1)}
+                  {Object.keys(deployment.status)[0].toUpperCase()}
                 </span>
               </div>
               <span className="deployment-date">
                 <ScheduleIcon className="time-icon" />
-                {formatDate(new Date(deployment.date_created))}
+                {formatDate(
+                  new Date(Number(deployment.date_created) / 1000000)
+                )}
               </span>
             </div>
 
@@ -322,7 +298,7 @@ export const CanisterOverview = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    #{deployment.workflow_run_id}
+                    #{Number(deployment.workflow_run_id)}
                   </a>
                 </div>
               </div>
@@ -341,19 +317,22 @@ export const CanisterOverview = () => {
                 </div>
               )}
 
-              {deployment.status === "failed" && deployment.error_message && (
-                <div className="deployment-error">
-                  <p className="error-message">{deployment.error_message}</p>
-                  <button
-                    className="retry-button"
-                    onClick={() =>
-                      handleRetryDeployment(deployment.workflow_run_id)
-                    }
-                  >
-                    <ReplayIcon /> Retry Deployment
-                  </button>
-                </div>
-              )}
+              {deployment.status.toString() === "failed" &&
+                deployment.error_message && (
+                  <div className="deployment-error">
+                    <p className="error-message">{deployment.error_message}</p>
+                    <button
+                      className="retry-button"
+                      onClick={() =>
+                        handleRetryDeployment(
+                          Number(deployment.workflow_run_id)
+                        )
+                      }
+                    >
+                      <ReplayIcon /> Retry Deployment
+                    </button>
+                  </div>
+                )}
             </div>
           </div>
         ))}
@@ -445,7 +424,7 @@ export const CanisterOverview = () => {
         </div>
 
         <div className="detail-card deployments-section">
-          <h3>Deployment History</h3>
+          <h3 style={{ paddingBottom: "10px" }}>Deployment History</h3>
           {renderDeploymentsList()}
         </div>
       </div>
