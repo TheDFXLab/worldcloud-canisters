@@ -209,7 +209,8 @@ function FileUploader() {
       const mainApi = await MainApi.create(identity);
       const result = await mainApi?.storeInAssetCanister(
         Principal.fromText(canisterId),
-        sanitizedFiles
+        sanitizedFiles,
+        undefined // since we are uploading files directly from zip
       );
 
       if (result && result.status) {
