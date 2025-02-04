@@ -9,6 +9,17 @@ import { Deployment } from "../../components/AppLayout/interfaces";
 import MainApi from "../../api/main";
 import { useIdentity } from "../IdentityContext/IdentityContext";
 
+export interface DeploymentDetails {
+  workflow_run_id: number;
+  repo_name: string;
+  date_created: number;
+  status: "pending" | "completed" | "failed";
+  branch?: string;
+  commit_hash?: string;
+  error_message?: string;
+  size?: number;
+}
+
 interface DeploymentsContextType {
   deployments: Deployment[];
   selectedDeployment: Deployment | null;
@@ -16,6 +27,9 @@ interface DeploymentsContextType {
   isLoading: boolean;
   refreshDeployments: () => Promise<void>;
   getDeployment: (canisterId: string) => Deployment | undefined;
+  getDeploymentDetails: (
+    canisterId: string
+  ) => Promise<DeploymentDetails[] | undefined>;
   addDeployment: (deployment: Deployment) => void;
   updateDeployment: (canisterId: string, updates: Partial<Deployment>) => void;
 }
@@ -72,6 +86,27 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
     setDeployments((prev) => [...prev, deployment]);
   };
 
+  const getDeploymentDetails = async (canisterId: string) => {
+    const mainApi = await MainApi.create(identity);
+    if (!mainApi) {
+      throw new Error(`Failed to create main api instance.`);
+    }
+    // const deploymentDetails = await mainApi.getCanisterDeploymentDetails(
+    //   canisterId
+    // );
+    // return deploymentDetails;
+    const mockData: DeploymentDetails = {
+      workflow_run_id: 12345678,
+      repo_name: "username/repo-name",
+      date_created: Date.now(),
+      status: "pending",
+      branch: "main",
+      commit_hash: "8d4e9f2",
+    };
+
+    return [mockData];
+  };
+
   const updateDeployment = (
     canisterId: string,
     updates: Partial<Deployment>
@@ -94,6 +129,7 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
         selectedDeployment,
         setSelectedDeployment,
         getDeployment,
+        getDeploymentDetails,
         isLoading,
         refreshDeployments,
         addDeployment,
