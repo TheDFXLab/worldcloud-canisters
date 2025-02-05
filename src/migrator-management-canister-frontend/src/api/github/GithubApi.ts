@@ -175,25 +175,44 @@ export class GithubApi {
         return this.request('/user/repos?sort=updated&visibility=all');
     }
 
-    private async verifyAndCreateWorkflow(repo: string, workflowPath: string, defaultBranch: string, content: any) {
+    private async verifyAndCreateWorkflow(repo: string, workflowPath: string, branch: string, content: any, repoInfo: Repository) {
         // Check if .github/workflows directory exists in default branch
         try {
-            await this.request(`/repos/${repo}/contents/.github/workflows?ref=${defaultBranch}`);
+            await this.request(`/repos/${repo}/contents/.github/workflows?ref=${repoInfo.default_branch}`);
+            // await this.updateWorkflowFile(repo, workflowPath, defaultBranch, content);
+
+            // If the target branch is not the default, create/update the workflow file there
+            if (branch !== repoInfo.default_branch) {
+                // Check if .github/workflows directory exists in target branch
+                try {
+                    await this.request(`/repos/${repo}/contents/.github/workflows?ref=${branch}`);
+                } catch (error) {
+                    // Directory doesn't exist, create it with a README
+                    await this.createWorkflowFile(repo, branch);
+                }
+
+                // await this.updateWorkflowFile(repo, workflowPath, branch, content);
+            }
+            await this.updateWorkflowFile(repo, workflowPath, branch, content);
+
         } catch (error) {
             // Directory doesn't exist, create it with a README
-            await this.createWorkflowFile(repo, defaultBranch);
+            await this.createWorkflowFile(repo, repoInfo.default_branch);
 
             // Create/update workflow in the default branch first
-            const defaultBranchSha = await this.getFileSha(repo, workflowPath, defaultBranch);
-            await this.request(`/repos/${repo}/contents/${workflowPath}`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    message: `${defaultBranchSha ? 'Update' : 'Add'} ICP deployment workflow`,
-                    content,
-                    branch: defaultBranch,
-                    sha: defaultBranchSha || undefined,
-                }),
-            });
+            // const defaultBranchSha = await this.getFileSha(repo, workflowPath, repoInfo.default_branch);
+            // await this.request(`/repos/${repo}/contents/${workflowPath}`, {
+            //     method: 'PUT',
+            //     body: JSON.stringify({
+            //         message: `${defaultBranchSha ? 'Update' : 'Add'} ICP deployment workflow`,
+            //         content,
+            //         branch: repoInfo.default_branch,
+            //         sha: defaultBranchSha || undefined,
+            //     }),
+            // });
+
+            // Create/update workflow in the default branch first
+            await this.updateWorkflowFile(repo, workflowPath, repoInfo.default_branch, content);
         }
     }
 
@@ -246,20 +265,20 @@ export class GithubApi {
             console.log(`Default branch is: ${defaultBranch}`);
 
             // Create workflow file in default branch if it doesn't exist
-            await this.verifyAndCreateWorkflow(repo, workflowPath, defaultBranch, content);
+            await this.verifyAndCreateWorkflow(repo, workflowPath, branch, content, repoInfo);
 
-            // If the target branch is not the default, create/update the workflow file there
-            if (branch !== defaultBranch) {
-                // Check if .github/workflows directory exists in target branch
-                try {
-                    await this.request(`/repos/${repo}/contents/.github/workflows?ref=${branch}`);
-                } catch (error) {
-                    // Directory doesn't exist, create it with a README
-                    await this.createWorkflowFile(repo, branch);
-                }
+            // // If the target branch is not the default, create/update the workflow file there
+            // if (branch !== defaultBranch) {
+            //     // Check if .github/workflows directory exists in target branch
+            //     try {
+            //         await this.request(`/repos/${repo}/contents/.github/workflows?ref=${branch}`);
+            //     } catch (error) {
+            //         // Directory doesn't exist, create it with a README
+            //         await this.createWorkflowFile(repo, branch);
+            //     }
 
-                await this.updateWorkflowFile(repo, workflowPath, branch, content);
-            }
+            //     await this.updateWorkflowFile(repo, workflowPath, branch, content);
+            // }
 
             await this.verifyWorkflowExists(repo);
         } catch (error) {

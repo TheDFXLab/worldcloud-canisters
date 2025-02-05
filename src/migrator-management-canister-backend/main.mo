@@ -369,30 +369,6 @@ shared (deployMsg) actor class CanisterManager() = this {
     };
 
     return await _addController(canister_id, new_controller);
-
-    // let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
-    // let current_settings = await IC.canister_status({
-    //   canister_id = canister_id;
-    // });
-    // Debug.print("Current settings..");
-    // let current_controllers = switch (current_settings.settings.controllers) {
-    //   case null [];
-    //   case (?controllers) controllers;
-    // };
-    // Debug.print("Current controllers: " # Nat.toText(current_controllers.size()));
-    // let updated_controllers = Array.append(current_controllers, [new_controller]);
-    // Debug.print("Updated controllers: " # Nat.toText(updated_controllers.size()));
-    // let canister_settings = await IC.update_settings({
-    //   canister_id;
-    //   settings = {
-    //     controllers = ?updated_controllers;
-    //     compute_allocation = null;
-    //     memory_allocation = null;
-    //     freezing_threshold = null;
-    //   };
-    // });
-    // Debug.print("Canister settings updated");
-    // return #ok("Added permission for controller");
   };
 
   private func _addController(canister_id : Principal, new_controller : Principal) : async Types.Result {
@@ -437,7 +413,7 @@ shared (deployMsg) actor class CanisterManager() = this {
     };
     let updated_controllers = Array.filter(current_controllers, func(p : Principal) : Bool { p != controller_to_remove });
 
-    let canister_settings = await IC.update_settings({
+    let _canister_settings = await IC.update_settings({
       canister_id;
       settings = {
         controllers = ?updated_controllers;
