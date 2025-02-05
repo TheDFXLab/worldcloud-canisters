@@ -175,33 +175,110 @@ export class GithubApi {
         return this.request('/user/repos?sort=updated&visibility=all');
     }
 
-    async createWorkflow(repo: string, workflowContent: string, branch: string) {
-        console.log(`Creating workflow for ${repo} on branch ${branch}`);
-        const content = btoa(workflowContent);
-        // Keep a consistent name for the workflow file
-        const workflowPath = `.github/workflows/icp-deploy.yml`;
-
+    private async verifyAndCreateWorkflow(repo: string, workflowPath: string, defaultBranch: string, content: any) {
+        // Check if .github/workflows directory exists in default branch
         try {
-            const fileSha = await this.getFileSha(repo, workflowPath, branch);
-            console.log(`Creating/updating workflow on branch ${branch}`);
+            await this.request(`/repos/${repo}/contents/.github/workflows?ref=${defaultBranch}`);
+        } catch (error) {
+            // Directory doesn't exist, create it with a README
+            await this.createWorkflowFile(repo, defaultBranch);
 
+            // Create/update workflow in the default branch first
+            const defaultBranchSha = await this.getFileSha(repo, workflowPath, defaultBranch);
             await this.request(`/repos/${repo}/contents/${workflowPath}`, {
                 method: 'PUT',
                 body: JSON.stringify({
-                    message: `${fileSha ? 'Update' : 'Add'} ICP deployment workflow`,
+                    message: `${defaultBranchSha ? 'Update' : 'Add'} ICP deployment workflow`,
                     content,
-                    branch,
-                    sha: fileSha || undefined,
+                    branch: defaultBranch,
+                    sha: defaultBranchSha || undefined,
                 }),
             });
+        }
+    }
 
-            // Wait for GitHub to process the workflow
-            await new Promise(resolve => setTimeout(resolve, 4000));
+    private async verifyWorkflowExists(repo: string) {
 
+        // Wait and verify the workflow is registered
+        const maxAttempts = 5;
+        for (let i = 0; i < maxAttempts; i++) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            try {
+                const workflows = await this.request(`/repos/${repo}/actions/workflows`);
+                const deployWorkflow = workflows.workflows?.find((w: any) => w.name === 'Build and Deploy to ICP');
+
+                if (deployWorkflow) {
+                    console.log('Workflow successfully registered');
+                    return;
+                }
+                console.log(`Attempt ${i + 1}: Workflow not yet registered...`);
+            } catch (e) {
+                console.log(`Attempt ${i + 1}: Error checking workflow status:`, e);
+            }
+        }
+
+        throw new Error('Workflow file was created but not registered in GitHub Actions. Please check the repository settings to ensure Actions are enabled.');
+
+    }
+
+    private async createWorkflowFile(repo: string, branch: string) {
+        console.log('Creating .github/workflows directory in target branch');
+        await this.request(`/repos/${repo}/contents/.github/workflows/README.md`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                message: 'Create .github/workflows directory',
+                content: btoa('# GitHub Workflows\nThis directory contains GitHub Actions workflow files.'),
+                branch: branch
+            }),
+        });
+    }
+
+    async createWorkflow(repo: string, workflowContent: string, branch: string) {
+        console.log(`Creating workflow for ${repo} on branch ${branch}`);
+        const content = btoa(workflowContent);
+        const workflowPath = `.github/workflows/icp-deploy.yml`;
+
+        try {
+            // First, get the default branch
+            const repoInfo = await this.request(`/repos/${repo}`);
+            const defaultBranch = repoInfo.default_branch;
+            console.log(`Default branch is: ${defaultBranch}`);
+
+            // Create workflow file in default branch if it doesn't exist
+            await this.verifyAndCreateWorkflow(repo, workflowPath, defaultBranch, content);
+
+            // If the target branch is not the default, create/update the workflow file there
+            if (branch !== defaultBranch) {
+                // Check if .github/workflows directory exists in target branch
+                try {
+                    await this.request(`/repos/${repo}/contents/.github/workflows?ref=${branch}`);
+                } catch (error) {
+                    // Directory doesn't exist, create it with a README
+                    await this.createWorkflowFile(repo, branch);
+                }
+
+                await this.updateWorkflowFile(repo, workflowPath, branch, content);
+            }
+
+            await this.verifyWorkflowExists(repo);
         } catch (error) {
             console.error(`Error creating/updating workflow for ${repo}:`, error);
             throw error;
         }
+    }
+
+    private async updateWorkflowFile(repo: string, workflowPath: string, branch: string, content: any) {
+        const targetBranchSha = await this.getFileSha(repo, workflowPath, branch);
+        await this.request(`/repos/${repo}/contents/${workflowPath}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                message: `${targetBranchSha ? 'Update' : 'Add'} ICP deployment workflow`,
+                content,
+                branch: branch,
+                sha: targetBranchSha || undefined,
+            }),
+        });
     }
 
     async triggerWorkflow(repo: string, branch: string) {
@@ -263,16 +340,22 @@ export class GithubApi {
         return this.request(`/repos/${repo}/actions/runs?event=workflow_dispatch`);
     }
 
-    async getLatestWorkflowRun(repo_name: string) {
+    async getLatestWorkflowRunId(repo_name: string) {
         // First get the workflow ID for our specific workflow file
         const workflows = await this.request(
             `/repos/${repo_name}/actions/workflows`
         );
+        console.log(`Workflows:`, workflows);
+
+        if (!workflows || workflows.total_count === 0) {
+            return '0';
+        }
 
         const deployWorkflow = workflows.workflows.find((workflow: any) => workflow.name === 'Build and Deploy to ICP');
+        console.log(`Deploy workflow:`, deployWorkflow);
 
         const workflowRuns = await this.request(`/repos/${repo_name}/actions/workflows/${deployWorkflow.id}/runs?per_page=5`);
-        return workflowRuns.workflow_runs[0];
+        return workflowRuns && workflowRuns.workflow_runs.length > 0 ? workflowRuns.workflow_runs[0].id : '0';
     }
 
     // Find the latest workflow run and the latest artifact file
@@ -297,19 +380,26 @@ export class GithubApi {
             return null;
         }
 
+        let newRuns = [];
+        if (previousRunId === '0') {
+            newRuns = workflowRuns.workflow_runs;
+        }
+        else {
+            // Find the index of the previous run (last run)
+            const previousIndex = workflowRuns.workflow_runs.findIndex(
+                (run: any) => run.id === previousRunId
+            );
 
-        // Find the index of the previous run (last run)
-        const previousIndex = workflowRuns.workflow_runs.findIndex(
-            (run: any) => run.id === previousRunId
-        );
+            // Return if there are no new runs
+            if (previousIndex === 0) {
+                return null;
+            }
 
-        // Return if there are no new runs
-        if (previousIndex === 0) {
-            return null;
+            // New runs since previous run
+            newRuns = workflowRuns.workflow_runs.slice(0, previousIndex);
         }
 
-        // New runs since previous run
-        const newRuns = workflowRuns.workflow_runs.slice(0, previousIndex);
+
 
         // Sort new runs chronologically
         const inProgressRunsChronologicallySorted = newRuns.sort((a: any, b: any) => {
