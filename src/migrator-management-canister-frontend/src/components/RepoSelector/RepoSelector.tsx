@@ -249,7 +249,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       updateStepStatus(repo, "workflow", "completed");
       updateStepStatus(repo, "trigger", "in-progress");
 
-      const latestRun = await github.getLatestWorkflowRun(repo);
+      const latestRunId = await github.getLatestWorkflowRunId(repo);
 
       // Trigger workflow
       await github.triggerWorkflow(repo, repoStates[repo].selectedBranch);
@@ -263,7 +263,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         Principal.fromText(canisterId),
         repo,
         repoStates[repo].selectedBranch,
-        latestRun.id
+        latestRunId
       );
 
       const artifact = pollResponse.artifact;
