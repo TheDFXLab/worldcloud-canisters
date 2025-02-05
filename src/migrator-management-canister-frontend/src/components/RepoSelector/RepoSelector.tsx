@@ -246,6 +246,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         repoStates[repo].selectedBranch
       );
 
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       updateStepStatus(repo, "workflow", "completed");
       updateStepStatus(repo, "trigger", "in-progress");
 
