@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import "./CanisterDeployer.css";
 import { Principal } from "@dfinity/principal";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
-import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
 import MainApi from "../../api/main";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import { useNavigate } from "react-router-dom";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
+import { useProgress } from "../../context/ProgressBarContext/ProgressBarContext";
+import HeaderCard from "../HeaderCard/HeaderCard";
 
 interface CanisterDeployerProps {}
 
@@ -20,6 +21,7 @@ function CanisterDeployer({}: CanisterDeployerProps) {
   const { setToasterData, setShowToaster } = useToaster();
   const navigate = useNavigate();
   const { setActiveTab } = useSideBar();
+  const { setIsLoadingProgress, setIsEnded } = useProgress();
 
   /**State */
   const [state, setState] = useState({
@@ -38,7 +40,6 @@ function CanisterDeployer({}: CanisterDeployerProps) {
   }, []);
 
   useEffect(() => {
-    console.log(`Loading barrrr`);
     setActionBar({
       icon: "🔨",
       text: "Ready to deploy your canister",
@@ -51,6 +52,8 @@ function CanisterDeployer({}: CanisterDeployerProps) {
 
   const handleDeploy = async () => {
     try {
+      setIsLoadingProgress(true);
+      setIsEnded(false);
       setToasterData({
         headerContent: "Deploying",
         toastStatus: true,
@@ -58,13 +61,6 @@ function CanisterDeployer({}: CanisterDeployerProps) {
         textColor: "green",
       });
       setShowToaster(true);
-
-      // Update progress
-      setState((prev) => ({
-        ...prev,
-        uploadProgress: 0 / 100,
-        message: `Deploying Canister: 0%`,
-      }));
 
       setIsLoading(true);
 
@@ -79,6 +75,7 @@ function CanisterDeployer({}: CanisterDeployerProps) {
           date_updated: Date.now(),
           size: 0,
         };
+
         setToasterData({
           headerContent: "Success",
           toastStatus: true,
@@ -87,21 +84,14 @@ function CanisterDeployer({}: CanisterDeployerProps) {
         });
         setShowToaster(true);
         addDeployment(newDeployment);
-        await refreshDeployments();
+        refreshDeployments();
         setCanisterId(result?.message as string);
 
+        // Navigate to publishing page
         navigate(`/app/deploy/${result?.message as string}`);
       } else {
         setStatus(`Error: ${result?.message}`);
       }
-      setIsLoading(false);
-
-      // Update progress
-      setState((prev) => ({
-        ...prev,
-        uploadProgress: 100,
-        message: `Deployed: 100%`,
-      }));
     } catch (error) {
       setToasterData({
         headerContent: "Error",
@@ -111,6 +101,10 @@ function CanisterDeployer({}: CanisterDeployerProps) {
         timeout: 5000,
       });
       setShowToaster(true);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingProgress(false);
+      setIsEnded(true);
     }
   };
 
@@ -119,12 +113,11 @@ function CanisterDeployer({}: CanisterDeployerProps) {
       <section className="beta-test-section">
         <div className="container">
           <div className="canister-deployer">
-            <div className="header">
-              <h2>Deploy Your Canister</h2>
-              <p className="subtitle">
-                Get started with Internet Computer hosting
-              </p>
-            </div>
+            <HeaderCard
+              title="Deploy Your Canister"
+              description="Get started with Internet Computer hosting"
+              className="deployment-header"
+            />
 
             <div className="info-grid">
               <div className="info-card">
