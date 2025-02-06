@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, ReactNode } from "react";
-import { ToasterData } from "../../components/Toast/Toaster";
 
 interface ProgressBarContextType {
   isLoadingProgress: boolean;
