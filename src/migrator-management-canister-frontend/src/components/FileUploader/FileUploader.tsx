@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Principal } from "@dfinity/principal";
 import "./FileUploader.css";
 import {
@@ -8,15 +8,20 @@ import {
 } from "../../utility/compression";
 import { sanitizeUnzippedFiles } from "../../utility/sanitize";
 import CompleteDeployment from "../CompleteDeployment/CompleteDeployment";
-import ProgressBar from "../ProgressBar/ProgressBar";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
-import { ToasterData } from "../Toast/Toaster";
 import AssetApi from "../../api/assets/AssetApi";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import MainApi from "../../api/main";
-import { Form } from "react-bootstrap";
+import { Spinner } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
+import { useProgress } from "../../context/ProgressBarContext/ProgressBarContext";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ErrorIcon from "@mui/icons-material/Error";
+import DeleteIcon from "@mui/icons-material/Delete";
+import HeaderCard from "../HeaderCard/HeaderCard";
+import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 
 interface FileUploaderProps {}
 
@@ -29,6 +34,9 @@ function FileUploader() {
   const { canisterId } = useParams();
   const { identity } = useIdentity();
   const navigate = useNavigate();
+  const { setIsLoadingProgress, setIsEnded } = useProgress();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { setActionBar } = useActionBar();
 
   /** State */
   const [currentBytes, setCurrentBytes] = useState(0);
@@ -50,22 +58,69 @@ function FileUploader() {
   const [currentFiles, setCurrentFiles] = useState<StaticFile[] | null>(null);
   const [canisterType, setCanisterType] = useState<CanisterType>("website");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (canisterType === "website") {
       const file = event.target.files?.[0];
       if (file) {
-        console.log(`uploaded ${file.name}`);
-        setSelectedFile(file);
+        if (file.name.endsWith(".zip")) {
+          setSelectedFile(file);
+          setStatus("ready");
+        } else {
+          setStatus("error");
+          setSelectedFile(null);
+        }
       }
     } else {
       const files = event.target.files;
-      console.log(`all files`, files);
       if (!files) return;
-      if (files) {
-        console.log(`uploaded ${files.length} files`);
-        setSelectedFiles(Array.from(files));
+      setSelectedFiles(Array.from(files));
+      setStatus("ready");
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    if (canisterType === "website") {
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith(".zip")) {
+        setSelectedFile(file);
+        setStatus("ready");
+      } else {
+        setStatus("error");
+        setSelectedFile(null);
       }
+    } else {
+      const files = e.dataTransfer.files;
+      setSelectedFiles(Array.from(files));
+      setStatus("ready");
+    }
+  };
+
+  const clearFile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActionBar(null);
+    setSelectedFile(null);
+    setSelectedFiles([]);
+    setStatus("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -231,8 +286,7 @@ function FileUploader() {
     }
   };
 
-  const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleUpload = async () => {
     const assetApi = new AssetApi();
 
     if (!(await assetApi.isIdentified(identity))) {
@@ -249,6 +303,8 @@ function FileUploader() {
     }
 
     setIsLoading(true);
+    setIsLoadingProgress(true);
+
     setProgress(0);
     setStatus("Reading zip file...");
 
@@ -288,8 +344,6 @@ function FileUploader() {
       });
       setShowToaster(true);
 
-      // Simulate file reading progress
-      setProgress(10);
       let files: StaticFile[] = [];
       if (canisterType === "website") {
         if (!selectedFile) {
@@ -305,13 +359,10 @@ function FileUploader() {
         files = staticFiles;
       }
 
-      setProgress(30);
       setStatus("Processing files...");
 
       const sanitizedFiles =
         canisterType === "website" ? sanitizeUnzippedFiles(files) : files;
-      console.log(`Sanitized files: `, sanitizedFiles);
-      setProgress(50);
       setStatus("Uploading to canister...");
 
       const result = await handleUploadToCanister(sanitizedFiles);
@@ -323,6 +374,8 @@ function FileUploader() {
         textColor: "green",
       });
       setShowToaster(true);
+
+      setActionBar(null);
 
       if (result.status) {
         setProgress(100);
@@ -345,13 +398,55 @@ function FileUploader() {
       setShowToaster(true);
     } finally {
       setIsLoading(false);
+      setIsLoadingProgress(false);
+      setIsEnded(true);
+      setActionBar(null);
+      setStatus("");
+      setSelectedFile(null);
+      setSelectedFiles([]);
     }
   };
 
   const handleCloseSummary = () => {
     setIsComplete(true);
-    navigate("/");
-    // setCanisterId("");
+    navigate("/app/websites");
+  };
+
+  useEffect(() => {
+    if (selectedFile || selectedFiles.length > 0) {
+      setActionBar({
+        icon: "🚀",
+        text: "Ready to deploy your canister",
+        buttonText: "Deploy Canister",
+        onButtonClick: handleUpload,
+        isButtonDisabled: isLoading,
+        isHidden: false,
+        customButton: renderDeployButton(),
+      });
+    } else {
+      setActionBar(null);
+    }
+  }, [selectedFile, selectedFiles, isLoading]);
+
+  const renderDeployButton = () => {
+    return (
+      <div className="button-container">
+        <button
+          className="next-button"
+          onClick={handleUpload}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <div className="loading-container">
+              <Spinner animation="border" style={{ color: "white" }} />
+              <span className="upload-text">Uploading</span>
+            </div>
+          ) : (
+            `Upload ${canisterType === "website" ? "ZIP" : "Files"}`
+          )}
+        </button>
+      </div>
+    );
   };
 
   if (isComplete) {
@@ -360,7 +455,6 @@ function FileUploader() {
         canisterId={canisterId}
         totalSize={totalSize}
         dateCreated={new Date()}
-        // setCanisterId={setCanisterId}
         onCloseModal={handleCloseSummary}
       />
     );
@@ -368,65 +462,97 @@ function FileUploader() {
 
   return (
     <div className="zip-uploader">
-      <p className="step-title">
-        Your canister is deployed with principal:{" "}
-        <span style={{ fontWeight: "bold" }}>{canisterId}</span>
-      </p>
-
-      <div className="type-selector mb-4">
-        <Form.Select
-          value={canisterType}
-          onChange={(e) => setCanisterType(e.target.value as CanisterType)}
-        >
-          <option value="website">Website Canister</option>
-          <option value="drive">Drive Canister</option>
-        </Form.Select>
-      </div>
-
+      <HeaderCard
+        description={`Your canister is deployed with principal ${canisterId}`}
+        title="Upload the zip file containing your website assets."
+        className="deployment-header"
+      />
       <p className="step-title">
         {canisterType === "website"
           ? "Upload the zip file containing your website assets."
           : "Upload files to your drive canister."}
       </p>
 
-      <form onSubmit={handleUpload}>
-        <div className="upload-container">
-          <div className="file-input-group">
-            <input
-              type="file"
-              accept={canisterType === "website" ? ".zip" : "*"}
-              onChange={handleFileSelect}
-              disabled={isLoading}
-              multiple={canisterType === "drive"}
-            />
-          </div>
-          <div className="button-container">
-            <button
-              type="submit"
-              disabled={
-                (!selectedFile && canisterType === "website") ||
-                (selectedFiles.length === 0 && canisterType === "drive") ||
-                isLoading
-              }
-            >
-              {isLoading
-                ? "Uploading..."
-                : `Upload ${canisterType === "website" ? "Zip" : "Files"}`}
-            </button>
-          </div>
-        </div>
-
-        <ProgressBar
-          progress={progress}
-          status={status}
-          isLoading={isLoading}
-          isError={isError}
-          showPercentage={true}
-          files={currentFiles}
-          totalBytes={totalSize}
-          uploadedSize={uploadedSize}
+      <div
+        className={`upload-container ${isDragOver ? "drag-over" : ""}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => !selectedFile && fileInputRef.current?.click()}
+      >
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileSelect}
+          accept={canisterType === "website" ? ".zip" : "*"}
+          multiple={canisterType === "drive"}
+          style={{ display: "none" }}
         />
-      </form>
+
+        {!selectedFile && selectedFiles.length === 0 && (
+          <div className="upload-prompt">
+            <CloudUploadIcon className="upload-icon" />
+            <p>
+              Drag and drop your{" "}
+              {canisterType === "website" ? "ZIP file" : "files"} here or click
+              to browse
+            </p>
+            <span className="file-hint">
+              {canisterType === "website" ? ".zip files only" : "Any file type"}
+            </span>
+          </div>
+        )}
+
+        {(selectedFile || selectedFiles.length > 0) && (
+          <div className="file-info">
+            <div className="file-details">
+              <span className="file-name">
+                {selectedFile?.name || `${selectedFiles.length} files selected`}
+              </span>
+              <span className="file-size">
+                {selectedFile
+                  ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`
+                  : `${
+                      selectedFiles.reduce((acc, file) => acc + file.size, 0) /
+                      1024 /
+                      1024
+                    } MB total`}
+              </span>
+            </div>
+            {!isLoading && (
+              <button className="remove-file" onClick={clearFile}>
+                <DeleteIcon />
+              </button>
+            )}
+          </div>
+        )}
+
+        {status === "uploading" && (
+          <div className="upload-progress">
+            <div className="progress-bar">
+              <div
+                className="progress-fill"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="progress-text">{progress}%</span>
+          </div>
+        )}
+
+        {status === "success" && (
+          <div className="status-message success">
+            <CheckCircleIcon />
+            <span>Upload successful!</span>
+          </div>
+        )}
+
+        {status === "error" && (
+          <div className="status-message error">
+            <ErrorIcon />
+            <span>Upload failed. Please try again.</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
