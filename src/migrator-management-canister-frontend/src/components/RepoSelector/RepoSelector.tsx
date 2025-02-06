@@ -15,6 +15,7 @@ import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import { Principal } from "@dfinity/principal";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
+import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 
 interface PackageLocation {
   path: string;
@@ -56,6 +57,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
   const { canisterId } = useParams();
   const { toasterData, setToasterData, setShowToaster } = useToaster();
   const navigate = useNavigate();
+  const { isDispatched, setIsDispatched } = useDeployments();
 
   /** State */
   const [repos, setRepos] = useState<Repository[]>([]);
@@ -249,6 +251,8 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         },
       }));
 
+      setIsDispatched(true);
+
       // Update workflow step
       const workflowContent = generateWorkflowTemplate(
         repoStates[repo].selectedPath,
@@ -429,15 +433,20 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
     return (
       <div className="deployment-configure">
         <div className="configure-header">
-          <button
-            className="back-button"
-            onClick={() => {
-              setShowTitle(true);
-              setState((prev) => ({ ...prev, step: "select" }));
-            }}
-          >
-            ← Back to repositories
-          </button>
+          {isDispatched ? (
+            <div></div>
+          ) : (
+            <button
+              className="back-button"
+              onClick={() => {
+                setShowTitle(true);
+                setState((prev) => ({ ...prev, step: "select" }));
+              }}
+            >
+              ← Back to repositories
+            </button>
+          )}
+
           <h2>Configure Deployment</h2>
           <p>Configure deployment settings for {state.selectedRepo.name}</p>
         </div>

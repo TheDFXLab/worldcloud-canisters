@@ -35,6 +35,8 @@ interface DeploymentsContextType {
   ) => Promise<WorkflowRunDetails[] | undefined>;
   addDeployment: (deployment: Deployment) => void;
   updateDeployment: (canisterId: string, updates: Partial<Deployment>) => void;
+  isDispatched: boolean;
+  setIsDispatched: (isDispatched: boolean) => void;
 }
 
 const DeploymentsContext = createContext<DeploymentsContextType | undefined>(
@@ -52,6 +54,7 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
     useState<Deployment | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isDispatched, setIsDispatched] = useState(false);
 
   const getDeployment = (canisterId: string) => {
     console.log(`all deps:`, deployments);
@@ -136,6 +139,8 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
         refreshDeployments,
         addDeployment,
         updateDeployment,
+        isDispatched,
+        setIsDispatched,
       }}
     >
       {children}
