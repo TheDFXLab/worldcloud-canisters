@@ -8,6 +8,7 @@ interface ActionBarProps {
   onButtonClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
   isButtonDisabled?: boolean;
   isHidden?: boolean;
+  customButton?: React.ReactNode;
 }
 
 export interface ActionBarConfig {
@@ -26,6 +27,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
   onButtonClick,
   isButtonDisabled = false,
   isHidden = false,
+  customButton,
 }) => {
   return (
     <div className={`action-bar visible ${isHidden ? "hidden" : ""}`}>
@@ -34,13 +36,17 @@ const ActionBar: React.FC<ActionBarProps> = ({
           <span className="repo-icon">{icon}</span>
           <span>{text}</span>
         </div>
-        <button
-          className="next-button"
-          disabled={isButtonDisabled}
-          onClick={onButtonClick}
-        >
-          {buttonText} →
-        </button>
+        {customButton ? (
+          customButton
+        ) : (
+          <button
+            className="next-button"
+            disabled={isButtonDisabled}
+            onClick={onButtonClick}
+          >
+            {buttonText} →
+          </button>
+        )}
       </div>
     </div>
   );
