@@ -9,6 +9,7 @@ import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import HeaderCard from "../HeaderCard/HeaderCard";
+import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 
 interface ProjectDeploymentProps {}
 
@@ -18,6 +19,7 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
   const { canisterId } = useParams();
   const { toasterData, setToasterData, setShowToaster } = useToaster();
   const navigate = useNavigate();
+  const { isDispatched, setIsDispatched } = useDeployments();
 
   /** State */
   const [selectedMethod, setSelectedMethod] = useState<
@@ -94,15 +96,19 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
         </>
       ) : (
         <div className="deployment-content">
-          <button
-            className="back-button"
-            onClick={() => {
-              setSelectedMethod(null);
-              setActionBar(undefined);
-            }}
-          >
-            ← Back to methods
-          </button>
+          {isDispatched ? (
+            <div></div>
+          ) : (
+            <button
+              className="back-button"
+              onClick={() => {
+                setSelectedMethod(null);
+                setActionBar(undefined);
+              }}
+            >
+              ← Back to methods
+            </button>
+          )}
 
           {selectedMethod === "github" ? <RepoSelector /> : <FileUploader />}
         </div>
@@ -112,3 +118,7 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
 };
 
 export default ProjectDeployment;
+
+/*
+
+*/
