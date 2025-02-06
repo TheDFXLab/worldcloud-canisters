@@ -3,73 +3,142 @@
   flex-direction: column;
   height: 100%;
   max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   position: relative;
   overflow: hidden;
+  padding: 2rem;
 }
 
 .deployment-header {
-  text-align: center;
-  margin-bottom: 3rem;
+  text-align: left;
+  margin-bottom: 4rem;
+  position: relative;
+  padding: 2rem;
+  background: linear-gradient(
+    135deg,
+    var(--glass-bg) 0%,
+    var(--background-secondary) 100%
+  );
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.deployment-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary) 0%, transparent 20%);
+  opacity: 0.1;
+  border-radius: 16px;
 }
 
 .deployment-header h2 {
-  font-size: 2rem;
+  font-size: 2.5rem;
   margin-bottom: 1rem;
   color: var(--text-primary);
+  font-weight: 700;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-primary-dark) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  position: relative;
 }
 
 .deployment-header p {
   color: var(--text-secondary);
-  font-size: 1.1rem;
+  font-size: 1.2rem;
+  max-width: 600px;
+  line-height: 1.6;
+  position: relative;
 }
 
 .deployment-methods {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 2rem;
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0 2rem;
 }
 
 .method-card {
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
   text-align: center;
-  padding: 2rem;
+  padding: 2.5rem 2rem;
   border: 1px solid var(--glass-border);
   background: var(--glass-bg);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.method-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--color-primary) 0%,
+    var(--color-primary-dark) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .method-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.method-card:hover::before {
+  opacity: 1;
 }
 
 .method-icon {
   margin-bottom: 1.5rem;
   color: var(--color-primary);
+  transform: scale(1);
+  transition: transform 0.3s ease;
+}
+
+.method-card:hover .method-icon {
+  transform: scale(1.1);
 }
 
 .method-card .card-title {
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   margin-bottom: 1rem;
   color: var(--text-primary);
+  font-weight: 600;
 }
 
 .method-card .card-text {
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 .deployment-content {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  height: 100%;
-  margin-top: 2rem;
+  overflow-y: auto;
+  padding-bottom: 2rem;
+  height: calc(
+    100vh - 200px
+  ); /* Adjust this value based on your header height */
 }
 
 .back-button {
@@ -84,4 +153,14 @@
 
 .back-button:hover {
   color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+  .project-deployment {
+    padding: 1rem;
+  }
+
+  .deployment-content {
+    height: calc(100vh - 150px); /* Adjust for mobile */
+  }
 }

@@ -8,6 +8,7 @@ import RepoSelector from "../RepoSelector/RepoSelector";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
+import HeaderCard from "../HeaderCard/HeaderCard";
 
 interface ProjectDeploymentProps {}
 
@@ -52,12 +53,11 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
     <div className="project-deployment">
       {!selectedMethod ? (
         <>
-          <div className="deployment-header">
-            <h2>Choose Deployment Method</h2>
-            <p>
-              Select how you want to deploy your project to Internet Computer
-            </p>
-          </div>
+          <HeaderCard
+            title={"Choose Deployment Method"}
+            description="Select how you want to deploy your project to Internet Computer"
+            className="deployment-header"
+          />
 
           <div className="deployment-methods">
             <Card
