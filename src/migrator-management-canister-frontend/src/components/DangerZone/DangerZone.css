@@ -1,0 +1,24 @@
+.danger-zone {
+  padding: 1.5rem;
+  border: 1px solid var(--color-danger);
+  border-radius: 4px;
+}
+
+.danger-zone__warning {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--color-danger-light);
+  border-radius: 4px;
+}
+
+.danger-zone__confirmation {
+  padding: 2rem;
+  text-align: center;
+}
+
+.danger-zone__actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}

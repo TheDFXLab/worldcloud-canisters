@@ -1,0 +1,24 @@
+.authority-manager {
+  padding: 1.5rem;
+}
+
+.authority-manager__add {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.authority-manager__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.authority-manager__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--color-background-light);
+  border-radius: 4px;
+}

@@ -1,0 +1,227 @@
+.home-container {
+  padding: 2rem;
+  min-height: calc(100vh - 64px);
+  background-color: var(--background);
+  height: 100%;
+}
+
+.home-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.home-header h2 {
+  color: var(--text-primary);
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.home-header .subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+/* Quick Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--color-primary);
+}
+
+.stat-card svg {
+  color: var(--color-primary);
+  font-size: 2rem;
+}
+
+.stat-content h3 {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.stat-value {
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.stat-value.small {
+  font-size: 1rem;
+}
+
+/* Detailed Sections */
+.details-grid-homepage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+.detail-card-homepage {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.detail-card-homepage:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--color-primary);
+}
+
+.detail-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.detail-card-header svg {
+  color: var(--color-primary);
+  font-size: 1.5rem;
+}
+
+.detail-card-header h3 {
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+/* Activity Items */
+.activity-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-icon {
+  margin-right: 1rem;
+}
+
+.activity-details {
+  flex: 1;
+}
+
+.activity-title {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.activity-time {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.activity-status {
+  font-size: 0.8rem;
+  text-transform: capitalize;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  background: var(--background);
+}
+
+/* Status Dots */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
+.status-dot.installed {
+  background-color: var(--color-success);
+}
+
+.status-dot.installing {
+  background-color: var(--color-warning);
+}
+
+.status-dot.failed {
+  background-color: var(--color-error);
+}
+
+.status-dot.connected {
+  background-color: var(--color-success);
+}
+
+.status-dot.disconnected {
+  background-color: var(--color-error);
+}
+
+/* Info Rows */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.info-value {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.no-data {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 1rem;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .details-grid-homepage {
+    grid-template-columns: 1fr;
+  }
+
+  .home-header h2 {
+    font-size: 1.75rem;
+  }
+}

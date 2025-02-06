@@ -1,72 +1,164 @@
-import React, { useState } from "react";
-import { migrator_management_canister_backend } from "../../../../declarations/migrator-management-canister-backend";
+import { useEffect, useState } from "react";
 import "./CanisterDeployer.css";
+import { Principal } from "@dfinity/principal";
+import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
+import MainApi from "../../api/main";
+import { useIdentity } from "../../context/IdentityContext/IdentityContext";
+import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
+import { useToaster } from "../../context/ToasterContext/ToasterContext";
+import { useNavigate } from "react-router-dom";
+import { useSideBar } from "../../context/SideBarContext/SideBarContext";
+import { useProgress } from "../../context/ProgressBarContext/ProgressBarContext";
+import HeaderCard from "../HeaderCard/HeaderCard";
 
-function CanisterDeployer() {
+interface CanisterDeployerProps {}
+
+function CanisterDeployer({}: CanisterDeployerProps) {
+  /** Hooks */
+  const { addDeployment, refreshDeployments } = useDeployments();
+  const { identity } = useIdentity();
+  const { setActionBar } = useActionBar();
+  const { setToasterData, setShowToaster } = useToaster();
+  const navigate = useNavigate();
+  const { setActiveTab } = useSideBar();
+  const { setIsLoadingProgress, setIsEnded } = useProgress();
+
+  /**State */
   const [state, setState] = useState({
     selectedFile: null,
     uploadProgress: 0,
     message: "",
   });
 
-  const [canisterId, setCanisterId] = useState("");
+  const [, setCanisterId] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleDeploy = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  // Set the active tab to publish
+  useEffect(() => {
+    setActiveTab("publish");
+  }, []);
 
-    // Update progress
-    setState((prev) => ({
-      ...prev,
-      uploadProgress: 0 / 100,
-      message: `Deploying Canister: 0%`,
-    }));
+  useEffect(() => {
+    setActionBar({
+      icon: "🔨",
+      text: "Ready to deploy your canister",
+      buttonText: "Deploy Canister",
+      onButtonClick: handleDeploy,
+      isButtonDisabled: isLoading,
+      isHidden: false,
+    });
+  }, [isLoading]);
 
-    console.log("deploying canister...");
-    setIsLoading(true);
-    const result =
-      await migrator_management_canister_backend.deployAssetCanister();
-    if ("ok" in result) {
-      setCanisterId(result.ok);
-      setStatus(`Canister deployed with ID: ${result.ok}`);
-    } else {
-      setStatus(`Error: ${result.err}`);
+  const handleDeploy = async () => {
+    try {
+      setIsLoadingProgress(true);
+      setIsEnded(false);
+      setToasterData({
+        headerContent: "Deploying",
+        toastStatus: true,
+        toastData: "Canister is being deployed. Please wait...",
+        textColor: "green",
+      });
+      setShowToaster(true);
+
+      setIsLoading(true);
+
+      const mainApi = await MainApi.create(identity);
+      const result = await mainApi?.deployAssetCanister();
+
+      if (result && result.status) {
+        const newDeployment = {
+          canister_id: Principal.fromText(result?.message as string),
+          status: "uninitialized" as const,
+          date_created: Date.now(),
+          date_updated: Date.now(),
+          size: 0,
+        };
+
+        setToasterData({
+          headerContent: "Success",
+          toastStatus: true,
+          toastData: `Canister deployed at ${result?.message}`,
+          textColor: "green",
+        });
+        setShowToaster(true);
+        addDeployment(newDeployment);
+        refreshDeployments();
+        setCanisterId(result?.message as string);
+
+        // Navigate to publishing page
+        navigate(`/app/deploy/${result?.message as string}`);
+      } else {
+        setStatus(`Error: ${result?.message}`);
+      }
+    } catch (error) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: true,
+        toastData: `Error: ${error}`,
+        textColor: "red",
+        timeout: 5000,
+      });
+      setShowToaster(true);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingProgress(false);
+      setIsEnded(true);
     }
-    setIsLoading(false);
-
-    // Update progress
-    setState((prev) => ({
-      ...prev,
-      uploadProgress: 100,
-      message: `Deployed: 100%`,
-    }));
   };
 
   return (
-    <div className="canister-deployer">
-      <form onSubmit={handleDeploy}>
-        <div className="form-group">
-          <button type="submit" disabled={isLoading}>
-            {isLoading ? "Deploying..." : "Deploy Canister"}
-          </button>
-        </div>
-        {status && (
-          <div
-            className={`status ${
-              status.includes("Error") ? "error" : "success"
-            }`}
-          >
-            {status}
+    <div className="publish-flow">
+      <section className="beta-test-section">
+        <div className="container">
+          <div className="canister-deployer">
+            <HeaderCard
+              title="Deploy Your Canister"
+              description="Get started with Internet Computer hosting"
+              className="deployment-header"
+            />
+
+            <div className="info-grid">
+              <div className="info-card">
+                <span className="icon">🚀</span>
+                <h3>Fast Deployment</h3>
+                <p>
+                  Deploy your website to IC in minutes with automated build
+                  process
+                </p>
+              </div>
+              <div className="info-card">
+                <span className="icon">🔒</span>
+                <h3>Secure Hosting</h3>
+                <p>Your content is distributed across the secure IC network</p>
+              </div>
+              <div className="info-card">
+                <span className="icon">⚡</span>
+                <h3>High Performance</h3>
+                <p>
+                  Benefit from IC's distributed infrastructure for optimal speed
+                </p>
+              </div>
+              <div className="info-card">
+                <span className="icon">🌐</span>
+                <h3>Global Access</h3>
+                <p>Your site is accessible worldwide through IC's network</p>
+              </div>
+            </div>
+
+            {status && (
+              <div
+                className={`status ${
+                  status.includes("Error") ? "error" : "success"
+                }`}
+              >
+                {status}
+              </div>
+            )}
           </div>
-        )}
-      </form>
-      <div className="progress">
-        {state.uploadProgress > 0 && (
-          <progress value={state.uploadProgress} max="100" />
-        )}
-      </div>
-      <div className="message">{state.message}</div>
+        </div>
+      </section>
     </div>
   );
 }
