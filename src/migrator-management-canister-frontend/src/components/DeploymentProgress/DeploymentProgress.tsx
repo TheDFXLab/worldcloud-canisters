@@ -1,9 +1,8 @@
 import React from "react";
 import "./DeploymentProgress.css";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
-import PendingIcon from "@mui/icons-material/Pending";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
-import CircularProgress from "@mui/material/CircularProgress";
+import CircleIcon from "@mui/icons-material/Circle";
 
 export type DeploymentStep = {
   id: string;
@@ -38,12 +37,9 @@ const DeploymentProgress: React.FC<DeploymentProgressProps> = ({
               ) : step.status === "error" ? (
                 <ErrorOutlineIcon className="status-icon error" />
               ) : step.status === "in-progress" ? (
-                <CircularProgress
-                  size={24}
-                  className="status-icon in-progress"
-                />
+                <div className="loading-dots">...</div>
               ) : (
-                <PendingIcon className="status-icon pending" />
+                <CircleIcon className="status-icon pending" />
               )}
             </div>
             <div className="step-content">

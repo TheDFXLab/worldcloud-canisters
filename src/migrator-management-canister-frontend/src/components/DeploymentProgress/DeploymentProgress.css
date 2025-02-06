@@ -1,6 +1,6 @@
 .deployment-progress {
   padding: 2rem;
-  background: #f8f9fa;
+  background: var(--background-secondary);
   border-radius: 8px;
   margin: 1rem 0;
 }
@@ -16,8 +16,8 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background: #dee2e6;
-  z-index: 1;
+  background: var(--border-color);
+  z-index: 0;
 }
 
 .progress-step {
@@ -46,7 +46,6 @@
   position: relative;
   z-index: 2;
   flex-shrink: 0;
-  transition: all 0.3s ease;
 }
 
 .progress-step.completed .step-indicator {
@@ -63,18 +62,31 @@
   border-color: var(--color-primary);
 }
 
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #007bff;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.loading-dots {
+  color: var(--color-primary);
+  font-size: 24px;
+  line-height: 24px;
+  width: 24px;
+  text-align: center;
+  position: relative;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+.loading-dots::after {
+  content: ".";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: loadingDots 1.5s steps(1) infinite;
+}
+@keyframes loadingDots {
+  0% {
+    content: ".";
+  }
+  33% {
+    content: "..";
+  }
+  66% {
+    content: "...";
   }
 }
 
@@ -84,13 +96,13 @@
 
 .step-content h4 {
   margin: 0;
-  color: #343a40;
+  color: var(--text-primary);
   font-size: 1rem;
 }
 
 .step-content p {
   margin: 0.25rem 0 0;
-  color: #6c757d;
+  color: var(--text-secondary);
   font-size: 0.875rem;
 }
 
@@ -98,8 +110,8 @@
   display: inline-block;
   margin-top: 0.5rem;
   font-size: 0.75rem;
-  color: #6c757d;
-  background: #e9ecef;
+  color: var(--text-secondary);
+  background: var(--background-secondary);
   padding: 0.25rem 0.5rem;
   border-radius: 12px;
 }
@@ -115,7 +127,7 @@
 }
 
 .status-icon {
-  font-size: 24px;
+  font-size: 24px !important;
 }
 
 .status-icon.completed {
@@ -124,10 +136,6 @@
 
 .status-icon.error {
   color: var(--color-error);
-}
-
-.status-icon.in-progress {
-  color: var(--color-primary);
 }
 
 .status-icon.pending {
