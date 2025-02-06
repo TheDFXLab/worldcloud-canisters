@@ -13,6 +13,8 @@ import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import { Principal } from "@dfinity/principal";
+import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 
 interface PackageLocation {
   path: string;
@@ -44,6 +46,7 @@ interface RepoSelectorState {
   selectedRepo: Repository | null;
   step: "select" | "configure" | "deploy";
 }
+const ITEMS_PER_PAGE = 3;
 
 const RepoSelector: React.FC<RepoSelectorProps> = () => {
   /** Hooks */
@@ -69,6 +72,18 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   const [hideActionBar, setHideActionBar] = useState(false);
   const [showTitle, setShowTitle] = useState(true);
+
+  // Pagingation state
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(repos.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const currentRepos = repos.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const [showPagination, setShowPagination] = useState(false);
+
+  useEffect(() => {
+    if (state.step === "select") setShowPagination(totalPages > 1);
+    // setShowPagination(totalPages > 1);
+  }, [totalPages, state.step]);
 
   const initialDeploymentSteps: DeploymentStep[] = [
     {
@@ -350,6 +365,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
   const handleSelectRepo = async (repo: Repository) => {
     setState((prev) => ({ ...prev, selectedRepo: repo }));
     console.log(`Selected repo:`, repo);
+
     setActionBar({
       icon: "📦",
       text: state.selectedRepo
@@ -373,7 +389,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   const renderRepoGrid = () => (
     <div className="repo-grid">
-      {repos.map((repo) => (
+      {currentRepos.map((repo) => (
         <div
           key={repo.id}
           className={`repo-card ${
@@ -462,7 +478,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
           </div>
 
           {repoState?.selectedBranch && (
-            <div className="path-selector">
+            <div className={`path-selector`}>
               <label>Source Path:</label>
               <select
                 value={repoState.selectedPath}
@@ -488,24 +504,17 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
           )}
         </div>
 
-        {repoState?.currentStep && (
-          <DeploymentProgress
-            steps={repoState.deploymentSteps}
-            currentStep={repoState.currentStep}
-          />
-        )}
+        <div className="configure-step">
+          {repoState?.currentStep && (
+            <DeploymentProgress
+              steps={repoState.deploymentSteps}
+              currentStep={repoState.currentStep}
+            />
+          )}
+        </div>
       </div>
     );
   };
-
-  useEffect(() => {
-    console.log(`selected step changed:`, state);
-    console.log(`Canister`, canisterId);
-    // console.log(
-    //   `WEveal`,
-    //   !canisterId || !repoStates[state.selectedRepo!.full_name]?.selectedPath
-    // );
-  }, [state.step]);
 
   useEffect(() => {
     if (state.step === "select") {
@@ -524,6 +533,8 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         isHidden: hideActionBar,
       });
     } else if (state.step === "configure") {
+      setShowPagination(false);
+
       console.log(`Setting action bar`, {
         canisterId,
         state: state,
@@ -567,12 +578,38 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         </div>
       )}
 
-      <div className="repo-grid-container">
+      <div className={`repo-grid-container`}>
         <div className="repo-grid">
           {state.step === "select" && renderRepoGrid()}
           {state.step === "configure" && renderConfigureStep()}
         </div>
       </div>
+
+      {showPagination && totalPages > 1 && (
+        <div className="pagination-container">
+          <div className="pagination">
+            <button
+              className="pagination-button"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              <NavigateBeforeIcon />
+            </button>
+            <span className="pagination-info">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              className="pagination-button"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages}
+            >
+              <NavigateNextIcon />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* {renderActionBar()} */}
     </div>
