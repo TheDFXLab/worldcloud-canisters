@@ -25,6 +25,7 @@ import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 import { useTheme } from "../../context/ThemeContext/ThemeContext";
 import ThemeToggle from "../ThemeToggle/ThemeToggle";
+import { useLedger } from "../../context/LedgerContext/LedgerContext";
 
 export type MenuItem =
   | "publish"
@@ -43,6 +44,7 @@ interface AppLayoutProps {
 function AppLayout({ state, setState, children }: AppLayoutProps) {
   /** Hooks */
   const { disconnect, refreshIdentity, identity } = useIdentity();
+  const { getBalance } = useLedger();
   const {
     deployments,
     refreshDeployments,
@@ -74,6 +76,10 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
       console.log(`Wasm Module:`, wasmModule);
     };
     fetchWasmModule();
+  }, []);
+
+  useEffect(() => {
+    getBalance();
   }, []);
 
   useEffect(() => {
