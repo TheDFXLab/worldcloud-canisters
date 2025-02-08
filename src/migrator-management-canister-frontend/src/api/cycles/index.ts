@@ -83,7 +83,6 @@ class CyclesApi {
     async getCyclesToAdd(amountInIcp?: number) {
         const amountInE8s = amountInIcp ? BigInt(e8sToIcp(amountInIcp)) : null;
         const result = await this.actor?.getCyclesToAdd(amountInE8s ? [amountInE8s] : [], []);
-        console.log("result:", result);
         if (!result) {
             throw new Error("Error getting cycles to add");
         }
