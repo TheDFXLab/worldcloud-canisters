@@ -17,3 +17,10 @@ export const cyclesToTerra = (amountInTerra: number) => {
 export const terraToCycles = (amountInCycles: number) => {
     return amountInCycles * 1e12
 }
+
+export const fromE8sStable = (e8s: bigint, decimals: number = 8): number => {
+    const str = e8s.toString();
+    const integerPart = str.slice(0, -decimals) || '0';
+    const decimalPart = str.slice(-decimals).padStart(decimals, '0');
+    return parseFloat(`${integerPart}.${decimalPart}`);
+};
