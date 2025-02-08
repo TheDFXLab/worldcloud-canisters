@@ -123,8 +123,12 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 <>
                   {`${fromE8sStable(balance).toFixed(2)} ICP`}
                   <span className="estimated-value">
-                    ≈ {fromE8sStable(BigInt(estimatedMax), 12).toFixed(2)} T
-                    Cycles
+                    ≈{" "}
+                    {fromE8sStable(
+                      BigInt(Math.floor(estimatedMax)),
+                      12
+                    ).toFixed(2)}{" "}
+                    T Cycles
                   </span>
                 </>
               ) : (
