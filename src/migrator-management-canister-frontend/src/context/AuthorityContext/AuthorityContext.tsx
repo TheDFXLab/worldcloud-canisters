@@ -10,6 +10,7 @@ import AuthorityApi, { CanisterStatus } from "../../api/authority";
 import { decodeError } from "../../utility/errors";
 import { State } from "../../App";
 import { useIdentity } from "../IdentityContext/IdentityContext";
+import { useParams } from "react-router-dom";
 
 interface AuthorityContextType {
   status: CanisterStatus | null;
@@ -33,12 +34,16 @@ export function AuthorityProvider({
   const [status, setStatus] = useState<CanisterStatus | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const { identity } = useIdentity();
-
-  if (!state.canister_id) return;
-  const authApi = new AuthorityApi(Principal.fromText(state.canister_id));
+  const { canisterId } = useParams();
 
   const refreshStatus = async () => {
     try {
+      if (!canisterId) {
+        console.log(`Canister ID is not set`);
+        throw new Error("Canister ID is not set");
+      }
+      const authApi = new AuthorityApi(Principal.fromText(canisterId));
+
       setIsLoadingStatus(true);
       const result = await authApi.getCanisterStatus(
         authApi.canisterId,
@@ -46,6 +51,7 @@ export function AuthorityProvider({
       );
       setStatus(result);
     } catch (error) {
+      console.log(`Error:`, error);
       setIsLoadingStatus(false);
     } finally {
       setIsLoadingStatus(false);
@@ -54,6 +60,11 @@ export function AuthorityProvider({
 
   const handleAddController = async (newController: string) => {
     try {
+      if (!canisterId) {
+        throw new Error("Canister ID is not set");
+      }
+      const authApi = new AuthorityApi(Principal.fromText(canisterId));
+
       setIsLoadingStatus(true);
       // Implement add controller logic
       const result = await authApi.addController(
@@ -76,6 +87,11 @@ export function AuthorityProvider({
 
   const handleRemoveController = async (controller: string) => {
     try {
+      if (!canisterId) {
+        throw new Error("Canister ID is not set");
+      }
+      const authApi = new AuthorityApi(Principal.fromText(canisterId));
+
       setIsLoadingStatus(true);
 
       const result = await authApi.removeController(
@@ -96,6 +112,7 @@ export function AuthorityProvider({
     }
   };
 
+  // TODO: remove this and propagate changes in project
   useEffect(() => {
     refreshStatus();
   }, []);
