@@ -45,6 +45,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   const [amount, setAmount] = amountState;
   const [estimatedMax, setEstimatedMax] = useState<number>(0);
   const [estimatedOutput, setEstimatedOutput] = useState<number>(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAmountChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -71,9 +72,17 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       console.log(`Canister ID is not set`);
       return;
     }
-    await onConfirm(parseFloat(amount));
-    getStatus(params.canisterId);
-    getBalance();
+    setIsSubmitting(true);
+    try {
+      await onConfirm(parseFloat(amount));
+      getStatus(params.canisterId);
+      getBalance();
+      onHide();
+    } catch (error) {
+      console.error("Error during submission:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -151,17 +160,40 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         </Form.Group>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="outline-secondary" onClick={onHide}>
+        <Button
+          style={{
+            backgroundColor: "var(--color-secondary)",
+            border: "1px solid var(--color-secondary)",
+            color: "var(--text-primary)",
+          }}
+          onClick={onHide}
+          disabled={isSubmitting}
+        >
           {cancelText}
         </Button>
         <Button
-          variant="primary"
-          onClick={() => {
-            handleClickSubmit();
+          style={{
+            backgroundColor: "var(--color-primary)",
+            border: "1px solid var(--color-secondary)",
           }}
-          disabled={!amount || parseFloat(amount) <= 0}
+          onClick={handleClickSubmit}
+          disabled={!amount || parseFloat(amount) <= 0 || isSubmitting}
         >
-          {confirmText}
+          {isSubmitting ? (
+            <>
+              <Spinner
+                as="span"
+                animation="border"
+                size="sm"
+                role="status"
+                aria-hidden="true"
+                className="me-2"
+              />
+              Please wait...
+            </>
+          ) : (
+            confirmText
+          )}
         </Button>
       </Modal.Footer>
     </Modal>
