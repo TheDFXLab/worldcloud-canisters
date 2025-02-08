@@ -32,6 +32,8 @@ import MemoryIcon from "@mui/icons-material/Memory";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import { Tooltip } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import IconTextRowView from "../IconTextRowView/IconTextRowView";
 
 export const CanisterOverview = () => {
   /** Hooks */
@@ -194,9 +196,11 @@ export const CanisterOverview = () => {
       }
 
       /** Trigger add cycles for user's canister id*/
-      const cyclesApi = new CyclesApi(identity);
-
-      await cyclesApi.addCycles(Principal.fromText(canisterId));
+      const cyclesApi = await CyclesApi.create(identity);
+      if (!cyclesApi) {
+        throw new Error("Cycles API not created");
+      }
+      await cyclesApi.addCycles(Principal.fromText(canisterId), amountInIcp);
       setCompleteLoadBar(true);
 
       refreshStatus();
@@ -233,6 +237,11 @@ export const CanisterOverview = () => {
       default:
         return null;
     }
+  };
+
+  const onConfirmTopUp = async () => {
+    await handleAddCycles();
+    setShowConfirmation(false);
   };
 
   const handleRetryDeployment = async (workflow_run_id: number) => {
@@ -275,18 +284,20 @@ export const CanisterOverview = () => {
 
         <div className="stat-item">
           <div className="stat-label">
-            Available Cycles
+            Convertible to Cycles
             <Tooltip
-              title="Current cycles in the canister"
+              title="Total cycles exchangeable for your ICP balance"
               arrow
               placement="top"
             >
-              <MemoryIcon className="info-icon" />
+              <SwapHorizIcon className="info-icon" />
             </Tooltip>
           </div>
           <div className="stat-value">
-            {cyclesStatus?.cycles ? (
-              `${fromE8sStable(cyclesStatus.cycles).toFixed(2)} T Cycles`
+            {cyclesAvailable !== undefined && cyclesAvailable !== null ? (
+              `${fromE8sStable(BigInt(cyclesAvailable), 12).toFixed(
+                2
+              )} T Cycles`
             ) : (
               <Spinner size="sm" />
             )}
@@ -295,22 +306,33 @@ export const CanisterOverview = () => {
 
         <div className="stat-item">
           <div className="stat-label">
-            Convertible to Cycles
+            Cycles in Canister
             <Tooltip
-              title="Maximum cycles you can add with your current balance"
+              title="Amount of cycles currently in the website canister"
               arrow
               placement="top"
             >
               <SwapHorizIcon className="info-icon" />
             </Tooltip>
           </div>
-          <div className="stat-value">
-            {cyclesAvailable ? (
-              `${cyclesToTerra(cyclesAvailable).toFixed(2)} T Cycles`
+          <span className="stat-value">
+            {cyclesStatus?.cycles ? (
+              <div onClick={() => setShowConfirmation(true)}>
+                <IconTextRowView
+                  onClickIcon={() => setShowConfirmation(true)}
+                  IconComponent={AddCircleOutlineIcon}
+                  iconColor="green"
+                  text={`${
+                    cyclesStatus?.cycles
+                      ? fromE8sStable(cyclesStatus?.cycles, 12).toFixed(2)
+                      : 0
+                  } T cycles`}
+                />
+              </div>
             ) : (
-              <Spinner size="sm" />
+              <Spinner animation="border" variant="primary" />
             )}
-          </div>
+          </span>
         </div>
       </div>
     );
@@ -526,10 +548,7 @@ export const CanisterOverview = () => {
         show={showConfirmation}
         amountState={[icpToDeposit, setIcpToDeposit]}
         onHide={() => setShowConfirmation(false)}
-        onConfirm={() => {
-          handleAddCycles();
-          setShowConfirmation(false);
-        }}
+        onConfirm={onConfirmTopUp}
         title="Add Cycles"
         message="Are you sure you want to add cycles to this canister?"
       />
