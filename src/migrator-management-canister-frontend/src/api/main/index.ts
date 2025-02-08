@@ -125,6 +125,16 @@ class MainApi {
         return runsHistory;
     }
 
+    async getCanisterStatus(canisterId: Principal) {
+        const result = await this.actor?.getCanisterStatus(canisterId);
+
+        if (!result) {
+            throw new Error("Failed to get canister status");
+        }
+
+        return result;
+    }
+
     async deployAssetCanister() {
         try {
             if (!this.actor) {
