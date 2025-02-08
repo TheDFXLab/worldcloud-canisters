@@ -50,7 +50,10 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
   const getCyclesToAdd = async (amountInIcp?: number) => {
     try {
       setIsLoadingCycles(true);
-      const cyclesApi = new CyclesApi(identity);
+      const cyclesApi = await CyclesApi.create(identity);
+      if (!cyclesApi) {
+        throw new Error("Cycles API not created");
+      }
       const cycles = await cyclesApi.getCyclesToAdd(amountInIcp);
       setCyclesAvailable(cycles);
       return cycles;
@@ -67,7 +70,10 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
         return cyclesRate * amountInIcp;
       }
 
-      const cyclesApi = new CyclesApi(identity);
+      const cyclesApi = await CyclesApi.create(identity);
+      if (!cyclesApi) {
+        throw new Error("Cycles API not created");
+      }
       const cycles = await cyclesApi.estimateCyclesToAdd(amountInIcp);
       setCyclesRate(cycles / amountInIcp);
       return cycles;
@@ -84,7 +90,6 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
         throw new Error("Canister ID is not set");
       }
 
-      // const authApi = new AuthorityApi(Principal.fromText(canisterId));
       const mainApi = await MainApi.create(identity);
       if (!mainApi) {
         throw new Error("Main API not created");
