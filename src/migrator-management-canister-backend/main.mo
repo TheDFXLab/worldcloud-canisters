@@ -26,7 +26,6 @@ import IcpLedger "canister:icp_ledger_canister";
 // TODO: Handle stable variables (if needed)
 // TODO: Remove unneeded if else in `storeInAssetCanister` for handling files larger than ±2MB (since its handled by frontend)
 shared (deployMsg) actor class CanisterManager() = this {
-  Debug.print("CanisterManager deployed by " # Principal.toText(deployMsg.caller));
 
   // var IC_MANAGEMENT_CANISTER : Text = "rwlgt-iiaaa-aaaaa-aaaaa-cai"; // Local replica
   let IC_MANAGEMENT_CANISTER = "aaaaa-aa"; // Production
@@ -34,6 +33,8 @@ shared (deployMsg) actor class CanisterManager() = this {
   // TODO: Get these from price oracle canister
   let ICP_PRICE : Float = 10;
   let XDR_PRICE : Float = 1.33;
+  let E8S_PER_ICP : Float = 100_000_000;
+  let CYCLES_PER_XDR : Float = 1_000_000_000_000;
 
   let icp_fee : Nat = 10_000;
   let ledger : Principal = Principal.fromActor(IcpLedger);
@@ -184,7 +185,8 @@ shared (deployMsg) actor class CanisterManager() = this {
 
   public shared (msg) func getCanisterAsset(canister_id : Principal, asset_key : Text) : async Types.AssetCanisterAsset {
     // Check if the caller is a controller
-    assert (await _isController(canister_id, msg.caller));
+    let isController = await _isController(canister_id, msg.caller);
+    assert (isController);
 
     let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
     let asset = await asset_canister.get({
@@ -203,6 +205,7 @@ shared (deployMsg) actor class CanisterManager() = this {
     let current_settings = await IC.canister_status({
       canister_id = canister_id;
     });
+
     return current_settings;
   };
 
@@ -214,7 +217,6 @@ shared (deployMsg) actor class CanisterManager() = this {
     let current_settings = await IC.canister_status({
       canister_id = canister_id;
     });
-    Debug.print("Current settings..");
     let current_controllers = switch (current_settings.settings.controllers) {
       case null [];
       case (?controllers) controllers;
@@ -228,7 +230,9 @@ shared (deployMsg) actor class CanisterManager() = this {
       canister_id = canister_id;
     });
     let current_controllers = switch (current_settings.settings.controllers) {
-      case null false;
+      case null {
+        return false;
+      };
       case (?controllers) {
         let matches = Array.filter(controllers, func(p : Principal) : Bool { p == caller });
         return matches.size() > 0;
@@ -425,25 +429,67 @@ shared (deployMsg) actor class CanisterManager() = this {
     return #ok("Removed permission for controller");
   };
 
-  public shared (msg) func addCycles(canister_id : Principal) : async Types.Result {
-    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
-    let claimable = book.fetchUserIcpBalance(msg.caller, ledger);
-    if (claimable <= 0) {
-      return #err("No credits available");
+  // TODO: get icp and xdr price from api
+  public shared (msg) func getCyclesToAdd(amount_in_e8s : ?Int, caller_principal : ?Principal) : async Types.GetCyclesAvailableResult {
+    let _caller = switch (caller_principal) {
+      case null {
+        msg.caller;
+      };
+      case (?caller) {
+        caller;
+      };
     };
 
-    let cyclesToAdd = Float.fromInt(claimable) * ICP_PRICE / XDR_PRICE;
+    let user_credits = book.fetchUserIcpBalance(_caller, ledger);
 
-    Debug.print("Claimable: " # Nat.toText(claimable) # " ICP");
-    Debug.print("Depositing..." # Float.toText(cyclesToAdd) # " cycles to canister " # Principal.toText(canister_id));
-    ExperimentalCycles.add(Int.abs(Float.toInt(Float.floor(cyclesToAdd))));
-    // Debug.print("Depositing..." # Nat.toText(amountInCycles) # " cycles to canister " # Principal.toText(canister_id));
-    await IC.deposit_cycles({ canister_id });
-    Debug.print("Added cycles to canister " # Principal.toText(canister_id));
+    if (user_credits <= 0) {
+      return #ok(0);
+    };
 
-    let _remaining = _removeCredit(msg.caller, ledger, claimable);
-    Debug.print("Remaining credits: " # Nat.toText(_remaining));
-    return #ok("Cycles added successfully");
+    let cyclesToAdd = switch (amount_in_e8s) {
+      case (?amount) {
+        if (amount > user_credits) {
+          return #err("Insufficient credits");
+        };
+        calculateCyclesToAdd(amount);
+      };
+      case (null) calculateCyclesToAdd(user_credits);
+    };
+    return #ok(cyclesToAdd);
+  };
+
+  public shared (msg) func estimateCyclesToAdd(amount_in_e8s : Int) : async Float {
+    return calculateCyclesToAdd(amount_in_e8s);
+  };
+
+  private func calculateCyclesToAdd(amountInE8s : Int) : Float {
+    let icp_amount = Float.fromInt(amountInE8s) / E8S_PER_ICP;
+    let usd_value = icp_amount * ICP_PRICE;
+    let xdr_value = usd_value / XDR_PRICE;
+
+    let cyclesToAdd = xdr_value * CYCLES_PER_XDR;
+    return cyclesToAdd;
+  };
+
+  public shared (msg) func addCycles(canister_id : Principal, amountInIcp : Float) : async Types.Result {
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    let claimable = book.fetchUserIcpBalance(msg.caller, ledger);
+    let amount_in_e8s = Float.floor(amountInIcp * E8S_PER_ICP);
+
+    let cyclesToAdd = await getCyclesToAdd(?Float.toInt(amount_in_e8s), ?msg.caller);
+
+    switch (cyclesToAdd) {
+      case (#err(error)) {
+        return #err(error);
+      };
+      case (#ok(cyclesToAdd)) {
+        ExperimentalCycles.add(Int.abs(Float.toInt(Float.floor(cyclesToAdd))));
+        await IC.deposit_cycles({ canister_id });
+
+        let _remaining = _removeCredit(msg.caller, ledger, claimable);
+        return #ok("Cycles added successfully");
+      };
+    };
   };
 
   // Function to deploy new asset canister
@@ -461,7 +507,6 @@ shared (deployMsg) actor class CanisterManager() = this {
       let cyclesForCanister = 1_000_000_000_000; // 1T cycles
       ExperimentalCycles.add(cyclesForCanister);
 
-      Debug.print("Creating canister...");
       let settings : Types.CanisterSettings = {
         freezing_threshold = null;
         controllers = ?[Principal.fromActor(this), msg.caller];
