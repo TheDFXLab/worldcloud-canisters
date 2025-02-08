@@ -11,7 +11,6 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import IconTextRowView from "../IconTextRowView/IconTextRowView";
 import AddIcon from "@mui/icons-material/Add";
 import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount";
-import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
 import { State } from "../../App";
 import AssetApi from "../../api/assets/AssetApi";
 import MainApi from "../../api/main";
@@ -44,7 +43,6 @@ interface AppLayoutProps {
 function AppLayout({ state, setState, children }: AppLayoutProps) {
   /** Hooks */
   const { disconnect, refreshIdentity, identity } = useIdentity();
-  const { isLoadingStatus } = useAuthority();
   const {
     deployments,
     refreshDeployments,
