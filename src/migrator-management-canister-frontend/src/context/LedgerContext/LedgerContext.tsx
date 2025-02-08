@@ -6,6 +6,7 @@ import { e8sToIcp } from "../../utility/e8s";
 
 interface LedgerContextType {
   balance: bigint;
+  isLoadingBalance: boolean;
   getBalance: () => Promise<void>;
   transfer: (amount: number, to: string) => Promise<boolean>;
   isTransferring: boolean;
@@ -25,6 +26,7 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
   const [error, setError] = useState<string | null>(null);
   const [pendingDeposits, setPendingDeposits] = useState<number>(0);
   const [balance, setBalance] = useState<bigint>(BigInt(0));
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
 
   const getPendingDeposits = async () => {
     const mainApi = await MainApi.create(identity);
@@ -35,12 +37,19 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const getBalance = async () => {
-    const ledgerApi = await LedgerApi.create(identity);
-    if (!ledgerApi) {
-      throw new Error("Ledger API not initialized");
+    try {
+      const ledgerApi = await LedgerApi.create(identity);
+      if (!ledgerApi) {
+        throw new Error("Ledger API not initialized");
+      }
+      setIsLoadingBalance(true);
+      const balance = await ledgerApi.getBalance();
+      setBalance(balance);
+    } catch (error) {
+      console.error(`Error getting balance`, error);
+    } finally {
+      setIsLoadingBalance(false);
     }
-    const balance = await ledgerApi.getBalance();
-    setBalance(balance);
   };
 
   const transfer = async (amountInIcp: number, to: string) => {
@@ -62,9 +71,10 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // TODO: call directly pending deposits
   useEffect(() => {
-    getPendingDeposits();
-    getBalance();
+    // getPendingDeposits();
+    // getBalance();
   }, []);
 
   return (
@@ -73,6 +83,7 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
         getBalance,
         transfer,
         isTransferring,
+        isLoadingBalance,
         error,
         pendingDeposits,
         balance,

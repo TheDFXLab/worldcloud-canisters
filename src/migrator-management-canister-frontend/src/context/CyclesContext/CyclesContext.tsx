@@ -15,8 +15,10 @@ import { fromE8sStable } from "../../utility/e8s";
 
 interface CyclesContextType {
   isLoadingCycles: boolean;
+  isLoadingStatus: boolean;
   cyclesAvailable: number;
   maxCyclesExchangeable: number;
+  isLoadingEstimateCycles: boolean;
   currentCanisterId: Principal | null;
   setCurrentCanisterId: (canisterId: Principal) => void;
   canisterStatus: CanisterStatusResponse | null;
@@ -46,6 +48,9 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
     useState<CanisterStatusResponse | null>(null);
   const [cyclesRate, setCyclesRate] = useState<number>(0);
   const [maxCyclesExchangeable, setMaxCyclesExchangeable] = useState<number>(0);
+  const [isLoadingEstimateCycles, setIsLoadingEstimateCycles] =
+    useState<boolean>(false);
+
   // Get maximum amount of cycles purchasable by user
   useEffect(() => {
     getCyclesToAdd();
@@ -78,6 +83,7 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
         return cyclesRate * amountInIcp;
       }
 
+      setIsLoadingEstimateCycles(true);
       const cyclesApi = await CyclesApi.create(identity);
       if (!cyclesApi) {
         throw new Error("Cycles API not created");
@@ -89,6 +95,8 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.log(error);
       return 0;
+    } finally {
+      setIsLoadingEstimateCycles(false);
     }
   };
 
@@ -103,7 +111,8 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
       if (!mainApi) {
         throw new Error("Main API not created");
       }
-
+      console.log(`is loading true`);
+      setIsLoadingCycles(true);
       setIsLoadingStatus(true);
       const result = await mainApi.getCanisterStatus(
         Principal.fromText(canisterId)
@@ -111,9 +120,10 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
       setCyclesStatus(result);
     } catch (error) {
       console.log(`Error:`, error);
-      setIsLoadingStatus(false);
     } finally {
       setIsLoadingStatus(false);
+      setIsLoadingCycles(false);
+      console.log(`is loading false`);
     }
   };
 
@@ -121,8 +131,10 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
     <CyclesContext.Provider
       value={{
         isLoadingCycles,
+        isLoadingStatus,
         cyclesAvailable,
         maxCyclesExchangeable,
+        isLoadingEstimateCycles,
         currentCanisterId,
         setCurrentCanisterId,
         canisterStatus,

@@ -42,15 +42,17 @@ export const CanisterOverview = () => {
     useDeployments();
   const navigate = useNavigate();
   const { status: authorityStatus, refreshStatus } = useAuthority();
-  const { balance, transfer } = useLedger();
+  const { balance, isLoadingBalance, transfer, getBalance } = useLedger();
   const { identity } = useIdentity();
   const {
     isLoadingCycles,
+    isLoadingStatus,
     canisterStatus,
     cyclesAvailable,
     getStatus,
     cyclesStatus,
     maxCyclesExchangeable,
+    isLoadingEstimateCycles,
   } = useCycles();
 
   /** States */
@@ -66,6 +68,10 @@ export const CanisterOverview = () => {
   const [canisterInfo, setCanisterInfo] = useState<Deployment | undefined>(
     undefined
   );
+
+  useEffect(() => {
+    console.log(`Is loading cycles`, isLoadingCycles);
+  }, [isLoadingCycles]);
 
   useEffect(() => {
     const getCanisterStatus = async () => {
@@ -204,7 +210,8 @@ export const CanisterOverview = () => {
       await cyclesApi.addCycles(Principal.fromText(canisterId), amountInIcp);
       setCompleteLoadBar(true);
 
-      refreshStatus();
+      refreshStatus(); //Reload canister details
+      getBalance(); // Reload wallet icp balance
       setToasterData({
         headerContent: "Success",
         toastStatus: true,
@@ -251,7 +258,7 @@ export const CanisterOverview = () => {
   };
 
   const renderCyclesList = () => {
-    if (isLoadingCycles) {
+    if (isLoadingBalance) {
       return (
         <div className="cycles-loading">
           {[1, 2, 3].map((i) => (
@@ -295,7 +302,7 @@ export const CanisterOverview = () => {
             </Tooltip>
           </div>
           <div className="stat-value">
-            {cyclesAvailable !== undefined && cyclesAvailable !== null ? (
+            {!isLoadingEstimateCycles ? (
               `${fromE8sStable(
                 BigInt(Math.floor(maxCyclesExchangeable)),
                 12
@@ -318,7 +325,9 @@ export const CanisterOverview = () => {
             </Tooltip>
           </div>
           <span className="stat-value">
-            {cyclesStatus?.cycles ? (
+            {isLoadingCycles ? (
+              <Spinner animation="border" variant="primary" />
+            ) : (
               <div onClick={() => setShowConfirmation(true)}>
                 <IconTextRowView
                   onClickIcon={() => setShowConfirmation(true)}
@@ -331,8 +340,6 @@ export const CanisterOverview = () => {
                   } T cycles`}
                 />
               </div>
-            ) : (
-              <Spinner animation="border" variant="primary" />
             )}
           </span>
         </div>
