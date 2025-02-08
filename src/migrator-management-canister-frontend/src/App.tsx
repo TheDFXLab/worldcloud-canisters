@@ -29,6 +29,8 @@ import { SideBarProvider } from "./context/SideBarContext/SideBarContext";
 import { AdminPanel } from "./components/AdminPanel/AdminPanel";
 import { ThemeProvider } from "./context/ThemeContext/ThemeContext";
 import { ProgressBarProvider } from "./context/ProgressBarContext/ProgressBarContext";
+import { CyclesProvider } from "./context/CyclesContext/CyclesContext";
+import { LedgerProvider } from "./context/LedgerContext/LedgerContext";
 
 export interface State {
   canister_id: string;
@@ -75,35 +77,42 @@ function App() {
                             <AuthWrapper>
                               <AuthorityProvider state={state}>
                                 <DeploymentsProvider>
-                                  <AppLayout setState={setState} state={state}>
-                                    <Routes>
-                                      <Route index element={<HomePage />} />
-                                      <Route
-                                        path="settings"
-                                        element={<Settings />}
-                                      />
-                                      <Route
-                                        path="new"
-                                        element={<CanisterDeployer />}
-                                      />
-                                      <Route
-                                        path="deploy/:canisterId?"
-                                        element={<ProjectDeployment />}
-                                      />
-                                      <Route
-                                        path="websites"
-                                        element={<WebsitesComponent />}
-                                      />
-                                      <Route
-                                        path="admin"
-                                        element={<AdminPanel />}
-                                      />
-                                      <Route
-                                        path="canister/:canisterId"
-                                        element={<CanisterOverview />}
-                                      />
-                                    </Routes>
-                                  </AppLayout>
+                                  <CyclesProvider>
+                                    <LedgerProvider>
+                                      <AppLayout
+                                        setState={setState}
+                                        state={state}
+                                      >
+                                        <Routes>
+                                          <Route index element={<HomePage />} />
+                                          <Route
+                                            path="settings"
+                                            element={<Settings />}
+                                          />
+                                          <Route
+                                            path="new"
+                                            element={<CanisterDeployer />}
+                                          />
+                                          <Route
+                                            path="deploy/:canisterId?"
+                                            element={<ProjectDeployment />}
+                                          />
+                                          <Route
+                                            path="websites"
+                                            element={<WebsitesComponent />}
+                                          />
+                                          <Route
+                                            path="admin"
+                                            element={<AdminPanel />}
+                                          />
+                                          <Route
+                                            path="canister/:canisterId"
+                                            element={<CanisterOverview />}
+                                          />
+                                        </Routes>
+                                      </AppLayout>
+                                    </LedgerProvider>
+                                  </CyclesProvider>
                                 </DeploymentsProvider>
                               </AuthorityProvider>
                             </AuthWrapper>
