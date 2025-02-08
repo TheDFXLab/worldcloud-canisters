@@ -50,6 +50,7 @@ export const CanisterOverview = () => {
     cyclesAvailable,
     getStatus,
     cyclesStatus,
+    maxCyclesExchangeable,
   } = useCycles();
 
   /** States */
@@ -295,9 +296,10 @@ export const CanisterOverview = () => {
           </div>
           <div className="stat-value">
             {cyclesAvailable !== undefined && cyclesAvailable !== null ? (
-              `${fromE8sStable(BigInt(cyclesAvailable), 12).toFixed(
-                2
-              )} T Cycles`
+              `${fromE8sStable(
+                BigInt(Math.floor(maxCyclesExchangeable)),
+                12
+              ).toFixed(2)} T Cycles`
             ) : (
               <Spinner size="sm" />
             )}
