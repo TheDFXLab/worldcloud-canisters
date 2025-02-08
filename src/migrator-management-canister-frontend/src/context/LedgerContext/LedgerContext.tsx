@@ -6,6 +6,7 @@ import { e8sToIcp } from "../../utility/e8s";
 
 interface LedgerContextType {
   balance: bigint;
+  getBalance: () => Promise<void>;
   transfer: (amount: number, to: string) => Promise<boolean>;
   isTransferring: boolean;
   pendingDeposits: number;
@@ -68,7 +69,14 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <LedgerContext.Provider
-      value={{ transfer, isTransferring, error, pendingDeposits, balance }}
+      value={{
+        getBalance,
+        transfer,
+        isTransferring,
+        error,
+        pendingDeposits,
+        balance,
+      }}
     >
       {children}
     </LedgerContext.Provider>
