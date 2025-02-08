@@ -61,7 +61,7 @@ export function AssetProvider({
 export function useAsset() {
   const context = useContext(AssetContext);
   if (context === undefined) {
-    throw new Error("useAuthority must be used within a AuthorityProvider");
+    throw new Error("useAsset must be used within a AssetProvider");
   }
   return context;
 }
