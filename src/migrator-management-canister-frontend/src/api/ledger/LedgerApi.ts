@@ -41,7 +41,6 @@ class LedgerApi {
             let isIdentified = false;
 
             if (identity && identity.getPrincipal().toText() !== internetIdentityConfig.loggedOutPrincipal) {
-                console.log(`Created actor with identity:`, identity.getPrincipal().toText());
                 isIdentified = true;
             }
 
@@ -53,6 +52,22 @@ class LedgerApi {
             return null;
         }
 
+    }
+
+    async getBalance() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized 1");
+        }
+
+        const accountIdentfier = await this.actor.account_identifier({ owner: this.identity.getPrincipal(), subaccount: [] });
+        const balance = await this.actor.account_balance({ account: accountIdentfier });
+        return balance.e8s;
     }
 
     async transfer(to: string, amountInIcp: number) {
@@ -74,12 +89,13 @@ class LedgerApi {
             throw new Error("Main API not found");
         }
 
+
         const depositAddress = await mainApi.getUserDepositAddress();
-        console.log(`Depsoit afdrees:`, depositAddress)
         if (!depositAddress) {
             throw new Error("Deposit address not found");
         }
 
+        const amt = BigInt(Number(icpToE8s(amountInIcp)) + this.transferFee);
         // Construct the transfer arguments
         let args: TransferArgs = {
             to: depositAddress,
@@ -94,10 +110,9 @@ class LedgerApi {
         const response: TransferResult = await this.actor.transfer(args);
 
         if ('Ok' in response) {
-            console.log(`Transfer successful`);
             return true;
         }
-        console.log(`Transfer failed`);
+        console.log(`Transfer failed`, response);
         return false;
     }
 }

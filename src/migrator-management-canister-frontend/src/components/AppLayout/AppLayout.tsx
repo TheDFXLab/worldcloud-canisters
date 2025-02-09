@@ -11,7 +11,6 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import IconTextRowView from "../IconTextRowView/IconTextRowView";
 import AddIcon from "@mui/icons-material/Add";
 import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount";
-import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
 import { State } from "../../App";
 import AssetApi from "../../api/assets/AssetApi";
 import MainApi from "../../api/main";
@@ -26,6 +25,7 @@ import { ProgressBar } from "../ProgressBarTop/ProgressBarTop";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 import { useTheme } from "../../context/ThemeContext/ThemeContext";
 import ThemeToggle from "../ThemeToggle/ThemeToggle";
+import { useLedger } from "../../context/LedgerContext/LedgerContext";
 
 export type MenuItem =
   | "publish"
@@ -44,7 +44,7 @@ interface AppLayoutProps {
 function AppLayout({ state, setState, children }: AppLayoutProps) {
   /** Hooks */
   const { disconnect, refreshIdentity, identity } = useIdentity();
-  const { isLoadingStatus } = useAuthority();
+  const { getBalance } = useLedger();
   const {
     deployments,
     refreshDeployments,
@@ -71,12 +71,22 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   /** Functions */
   useEffect(() => {
     const fetchWasmModule = async () => {
+      if (!identity) {
+        return;
+      }
       const mainApi = await MainApi.create(identity);
       const wasmModule = await mainApi?.actor?.getWasmModule();
       console.log(`Wasm Module:`, wasmModule);
     };
     fetchWasmModule();
-  }, []);
+  }, [identity]);
+
+  useEffect(() => {
+    if (!identity) {
+      return;
+    }
+    getBalance();
+  }, [identity]);
 
   useEffect(() => {
     console.log(`refreshIdentity`);

@@ -3,9 +3,7 @@ import "./CanisterOverview.css";
 import { Deployment } from "../AppLayout/interfaces";
 import { backend_canister_id, getCanisterUrl } from "../../config/config";
 import { useAuthority } from "../../context/AuthorityContext/AuthorityContext";
-import { cyclesToTerra } from "../../utility/e8s";
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import IconTextRowView from "../IconTextRowView/IconTextRowView";
+import { cyclesToTerra, fromE8sStable } from "../../utility/e8s";
 import CyclesApi from "../../api/cycles";
 import { Principal } from "@dfinity/principal";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
@@ -19,11 +17,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useLoadBar } from "../../context/LoadBarContext/LoadBarContext";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import {
-  DeploymentDetails,
-  useDeployments,
-} from "../../context/DeploymentContext/DeploymentContext";
-import ReplayIcon from "@mui/icons-material/Replay";
+import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
@@ -32,17 +26,39 @@ import PendingIcon from "@mui/icons-material/Pending";
 import Skeleton from "@mui/material/Skeleton";
 import NoDataIcon from "@mui/icons-material/Description";
 import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { useCycles } from "../../context/CyclesContext/CyclesContext";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import MemoryIcon from "@mui/icons-material/Memory";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import { Tooltip } from "@mui/material";
+import InfoIcon from "@mui/icons-material/Info";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import IconTextRowView from "../IconTextRowView/IconTextRowView";
 
 export const CanisterOverview = () => {
+  /** Hooks */
   const { canisterId } = useParams();
-  const { getDeployment, getWorkflowRunHistory } = useDeployments();
+  const { deployments, getDeployment, getWorkflowRunHistory } =
+    useDeployments();
   const navigate = useNavigate();
   const { status: authorityStatus, refreshStatus } = useAuthority();
-  const { transfer } = useLedger();
+  const { balance, isLoadingBalance, transfer, getBalance } = useLedger();
   const { identity } = useIdentity();
+  const {
+    isLoadingCycles,
+    isLoadingStatus,
+    canisterStatus,
+    cyclesAvailable,
+    getStatus,
+    cyclesStatus,
+    maxCyclesExchangeable,
+    isLoadingEstimateCycles,
+  } = useCycles();
+
+  /** States */
   const [icpToDeposit, setIcpToDeposit] = useState<string>("0");
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const { showLoadBar, setShowLoadBar, setCompleteLoadBar } = useLoadBar();
+  const { setShowLoadBar, setCompleteLoadBar } = useLoadBar();
   const { setToasterData, setShowToaster } = useToaster();
   const isTransferringRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +70,20 @@ export const CanisterOverview = () => {
   );
 
   useEffect(() => {
+    console.log(`Is loading cycles`, isLoadingCycles);
+  }, [isLoadingCycles]);
+
+  useEffect(() => {
+    const getCanisterStatus = async () => {
+      if (!canisterId) {
+        return;
+      }
+      await getStatus(canisterId);
+    };
+    getCanisterStatus();
+  }, []);
+
+  useEffect(() => {
     const getCanisterInfo = async () => {
       if (!canisterId) return;
       const info = getDeployment(canisterId);
@@ -62,7 +92,7 @@ export const CanisterOverview = () => {
       }
     };
     getCanisterInfo();
-  }, [canisterId]);
+  }, [canisterId, deployments]);
 
   useEffect(() => {
     const fetchDeploymentDetails = async () => {
@@ -112,7 +142,6 @@ export const CanisterOverview = () => {
 
     try {
       if (!canisterId) {
-        console.log("canisterId not found");
         setToasterData({
           headerContent: "Error",
           toastStatus: false,
@@ -124,7 +153,6 @@ export const CanisterOverview = () => {
       }
 
       if (!identity) {
-        console.log("identity not found");
         setToasterData({
           headerContent: "Error",
           toastStatus: false,
@@ -137,6 +165,7 @@ export const CanisterOverview = () => {
 
       /** Transfer icp from user to backend canister */
       const amountInIcp = Number(icpToDeposit);
+
       const destination = backend_canister_id;
       const isTransferred = await transfer(amountInIcp, destination);
 
@@ -174,12 +203,15 @@ export const CanisterOverview = () => {
       }
 
       /** Trigger add cycles for user's canister id*/
-      const cyclesApi = new CyclesApi(Principal.fromText(canisterId), identity);
-
-      await cyclesApi.addCycles(Principal.fromText(canisterId));
+      const cyclesApi = await CyclesApi.create(identity);
+      if (!cyclesApi) {
+        throw new Error("Cycles API not created");
+      }
+      await cyclesApi.addCycles(Principal.fromText(canisterId), amountInIcp);
       setCompleteLoadBar(true);
 
-      refreshStatus();
+      refreshStatus(); //Reload canister details
+      getBalance(); // Reload wallet icp balance
       setToasterData({
         headerContent: "Success",
         toastStatus: true,
@@ -200,7 +232,7 @@ export const CanisterOverview = () => {
     } finally {
       isTransferringRef.current = false;
     }
-  }, [identity, canisterId, setToasterData, setShowToaster]);
+  }, [identity, canisterId, icpToDeposit, setToasterData, setShowToaster]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -215,9 +247,104 @@ export const CanisterOverview = () => {
     }
   };
 
+  const onConfirmTopUp = async () => {
+    await handleAddCycles();
+    setShowConfirmation(false);
+  };
+
   const handleRetryDeployment = async (workflow_run_id: number) => {
-    // Implement retry logic here
+    // TODO: Implement retry logic here
     console.log("Retrying deployment...", workflow_run_id);
+  };
+
+  const renderCyclesList = () => {
+    if (isLoadingBalance) {
+      return (
+        <div className="cycles-loading">
+          {[1, 2, 3].map((i) => (
+            <Skeleton
+              key={i}
+              variant="rectangular"
+              height={24}
+              width={"100%"}
+            />
+          ))}
+        </div>
+      );
+    }
+    return (
+      <div className="cycles-stats-container">
+        <div className="stat-item">
+          <div className="stat-label">
+            Wallet Balance
+            <Tooltip title="Your current ICP balance" arrow placement="top">
+              <AccountBalanceWalletIcon className="info-icon" />
+            </Tooltip>
+          </div>
+          <div className="stat-value">
+            {balance && balance !== BigInt(0) ? (
+              `${fromE8sStable(balance).toFixed(2)} ICP`
+            ) : (
+              <Spinner size="sm" />
+            )}
+          </div>
+        </div>
+
+        <div className="stat-item">
+          <div className="stat-label">
+            Convertible to Cycles
+            <Tooltip
+              title="Total cycles exchangeable for your ICP balance"
+              arrow
+              placement="top"
+            >
+              <SwapHorizIcon className="info-icon" />
+            </Tooltip>
+          </div>
+          <div className="stat-value">
+            {!isLoadingEstimateCycles ? (
+              `${fromE8sStable(
+                BigInt(Math.floor(maxCyclesExchangeable)),
+                12
+              ).toFixed(2)} T Cycles`
+            ) : (
+              <Spinner size="sm" />
+            )}
+          </div>
+        </div>
+
+        <div className="stat-item">
+          <div className="stat-label">
+            Cycles in Canister
+            <Tooltip
+              title="Amount of cycles currently in the website canister"
+              arrow
+              placement="top"
+            >
+              <SwapHorizIcon className="info-icon" />
+            </Tooltip>
+          </div>
+          <span className="stat-value">
+            {isLoadingCycles ? (
+              <Spinner animation="border" variant="primary" />
+            ) : (
+              <div onClick={() => setShowConfirmation(true)}>
+                <IconTextRowView
+                  onClickIcon={() => setShowConfirmation(true)}
+                  IconComponent={AddCircleOutlineIcon}
+                  iconColor="green"
+                  text={`${
+                    cyclesStatus?.cycles
+                      ? fromE8sStable(cyclesStatus?.cycles, 12).toFixed(2)
+                      : 0
+                  } T cycles`}
+                />
+              </div>
+            )}
+          </span>
+        </div>
+      </div>
+    );
   };
 
   const renderDeploymentsList = () => {
@@ -225,19 +352,12 @@ export const CanisterOverview = () => {
       return (
         <div className="deployments-loading">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="deployment-item-skeleton">
-              <Skeleton variant="rectangular" height={24} width={120} />
-              <Skeleton
-                variant="rectangular"
-                height={48}
-                style={{ marginTop: "1rem" }}
-              />
-              <Skeleton
-                variant="rectangular"
-                height={32}
-                style={{ marginTop: "1rem" }}
-              />
-            </div>
+            <Skeleton
+              key={i}
+              variant="rectangular"
+              height={24}
+              width={"100%"}
+            />
           ))}
         </div>
       );
@@ -256,83 +376,60 @@ export const CanisterOverview = () => {
     }
 
     return (
-      <div className="deployments-list">
-        {workflowRunHistory.map((deployment, index) => (
-          <div key={deployment.workflow_run_id} className="deployment-item">
-            <div className="deployment-header">
-              <div className="deployment-status-header">
-                {getStatusIcon(deployment.status.toString())}
-                <span className={`deployment-status ${deployment.status}`}>
-                  {Object.keys(deployment.status)[0].toUpperCase()}
+      <div className="deployments-stats-container">
+        {workflowRunHistory.map((deployment) => (
+          <div key={deployment.workflow_run_id} className="stat-item">
+            <div className="stat-label">
+              <div className="deployment-meta">
+                <div className="deployment-status">
+                  {getStatusIcon(deployment.status.toString())}
+                  <span className={`status-badge ${deployment.status}`}>
+                    {Object.keys(deployment.status)[0].toUpperCase()}
+                  </span>
+                </div>
+                <span className="deployment-date">
+                  <ScheduleIcon className="time-icon" />
+                  {formatDate(
+                    new Date(Number(deployment.date_created) / 1000000)
+                  )}
                 </span>
               </div>
-              <span className="deployment-date">
-                <ScheduleIcon className="time-icon" />
-                {formatDate(
-                  new Date(Number(deployment.date_created) / 1000000)
-                )}
-              </span>
             </div>
-
-            <div className="deployment-content">
-              <div className="detail-row">
-                <span className="label">Repository:</span>
-                <div className="value-with-copy">
-                  <a
-                    href={`https://github.com/${deployment.repo_name}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="repo-link"
-                  >
-                    <GitHubIcon className="github-icon" />
-                    {deployment.repo_name}
-                  </a>
-                </div>
+            <div className="stat-value deployment-info">
+              <div className="deployment-primary">
+                <a
+                  href={`https://github.com/${deployment.repo_name}/actions/runs/${deployment.workflow_run_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="repo-link"
+                >
+                  <GitHubIcon className="github-icon" />
+                  {deployment.repo_name}
+                </a>
               </div>
-
-              <div className="detail-row">
-                <span className="label">Workflow Run:</span>
-                <div className="value-with-copy">
-                  <a
-                    href={`https://github.com/${deployment.repo_name}/actions/runs/${deployment.workflow_run_id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    #{Number(deployment.workflow_run_id)}
-                  </a>
+              <div className="deployment-secondary">
+                <div className="details-column">
+                  {deployment.branch && (
+                    <span className="detail-item">
+                      <span className="detail-label">Branch:</span>
+                      {deployment.branch}
+                    </span>
+                  )}
+                  {deployment.commit_hash && (
+                    <span className="detail-item">
+                      <span className="detail-label">Commit:</span>
+                      <code>{deployment.commit_hash[0]?.substring(0, 7)}</code>
+                    </span>
+                  )}
                 </div>
+                {deployment.status.toString() === "failed" &&
+                  deployment.error_message && (
+                    <span className="detail-item error">
+                      <span className="detail-label">Error:</span>
+                      {deployment.error_message}
+                    </span>
+                  )}
               </div>
-
-              {deployment.branch && (
-                <div className="detail-row">
-                  <span className="label">Branch:</span>
-                  <span className="value">{deployment.branch}</span>
-                </div>
-              )}
-
-              {deployment.commit_hash && (
-                <div className="detail-row">
-                  <span className="label">Commit:</span>
-                  <span className="value">{deployment.commit_hash}</span>
-                </div>
-              )}
-
-              {deployment.status.toString() === "failed" &&
-                deployment.error_message && (
-                  <div className="deployment-error">
-                    <p className="error-message">{deployment.error_message}</p>
-                    <button
-                      className="retry-button"
-                      onClick={() =>
-                        handleRetryDeployment(
-                          Number(deployment.workflow_run_id)
-                        )
-                      }
-                    >
-                      <ReplayIcon /> Retry Deployment
-                    </button>
-                  </div>
-                )}
             </div>
           </div>
         ))}
@@ -355,72 +452,99 @@ export const CanisterOverview = () => {
       <div className="details-grid">
         <div className="detail-card">
           <h3>Canister Information</h3>
-          <div className="detail-row">
-            <span className="label">Canister ID:</span>
-            <div className="value-with-copy">
-              <a
-                href={getCanisterUrl(canisterId || "")}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {canisterId}
-              </a>
-              <button
-                className="copy-button"
-                onClick={() => navigator.clipboard.writeText(canisterId || "")}
-                title="Copy to clipboard"
-              >
-                <ContentCopyIcon />
-              </button>
+          <div className="canister-stats-container">
+            <div className="stat-item">
+              <div className="stat-label">
+                Canister ID
+                <Tooltip
+                  title="Unique identifier for this canister"
+                  arrow
+                  placement="top"
+                >
+                  <InfoIcon className="info-icon" />
+                </Tooltip>
+              </div>
+              <div className="stat-value with-copy">
+                <a
+                  href={getCanisterUrl(canisterId || "")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {canisterId}
+                </a>
+                <button
+                  className="copy-button"
+                  onClick={() =>
+                    navigator.clipboard.writeText(canisterId || "")
+                  }
+                  title="Copy to clipboard"
+                >
+                  <ContentCopyIcon />
+                </button>
+              </div>
+            </div>
+
+            <div className="stat-item">
+              <div className="stat-label">
+                Status
+                <Tooltip
+                  title="Current operational status of the canister"
+                  arrow
+                  placement="top"
+                >
+                  <InfoIcon className="info-icon" />
+                </Tooltip>
+              </div>
+              {canisterInfo?.status && (
+                <span className={`status-badge ${canisterStatus?.status}`}>
+                  {canisterInfo?.status}
+                </span>
+              )}
+            </div>
+
+            <div className="stat-item">
+              <div className="stat-label">
+                Total Size
+                <Tooltip
+                  title="Total storage space used by the canister"
+                  arrow
+                  placement="top"
+                >
+                  <InfoIcon className="info-icon" />
+                </Tooltip>
+              </div>
+              <div className="stat-value">
+                {canisterInfo?.size
+                  ? formatBytes(Number(canisterInfo.size))
+                  : "N/A"}
+              </div>
+            </div>
+
+            <div className="stat-item">
+              <div className="stat-label">
+                Created On
+                <Tooltip
+                  title="Date when this canister was created"
+                  arrow
+                  placement="top"
+                >
+                  <InfoIcon className="info-icon" />
+                </Tooltip>
+              </div>
+              <div className="stat-value">
+                {canisterInfo?.date_created
+                  ? formatDate(
+                      new Date(Number(canisterInfo.date_created) / 1000000)
+                    )
+                  : "N/A"}
+              </div>
             </div>
           </div>
+        </div>
 
-          <div className="detail-row">
-            <span className="label">Status:</span>
-            <span className={`status-badge ${status?.toLowerCase()}`}>
-              {status}
-            </span>
-          </div>
-
-          <div className="detail-row">
-            <span className="label">Total Size:</span>
-            <span className="value">
-              {canisterInfo?.size
-                ? formatBytes(Number(canisterInfo.size))
-                : "N/A"}
-            </span>
-          </div>
-
-          <div className="detail-row">
-            <span className="label">Created On:</span>
-            <span className="value">
-              {canisterInfo?.date_created
-                ? formatDate(
-                    new Date(Number(canisterInfo.date_created) / 1000000)
-                  )
-                : "N/A"}
-            </span>
-          </div>
-
-          <div className="detail-row">
-            <span className="label">Available Cycles:</span>
-            <span className="value">
-              {authorityStatus?.cycles ? (
-                <div onClick={() => setShowConfirmation(true)}>
-                  <IconTextRowView
-                    onClickIcon={() => setShowConfirmation(true)}
-                    IconComponent={AddCircleOutlineIcon}
-                    iconColor="green"
-                    text={`${cyclesToTerra(
-                      authorityStatus?.cycles || 0
-                    ).toFixed(2)} T cycles`}
-                  />
-                </div>
-              ) : (
-                <Spinner animation="border" variant="primary" />
-              )}
-            </span>
-          </div>
+        <div className="detail-card deployments-section">
+          <h3 style={{ paddingBottom: "10px" }}>Cycles</h3>
+          {renderCyclesList()}
         </div>
 
         <div className="detail-card deployments-section">
@@ -433,12 +557,9 @@ export const CanisterOverview = () => {
         show={showConfirmation}
         amountState={[icpToDeposit, setIcpToDeposit]}
         onHide={() => setShowConfirmation(false)}
-        onConfirm={() => {
-          handleAddCycles();
-          setShowConfirmation(false);
-        }}
+        onConfirm={onConfirmTopUp}
         title="Add Cycles"
-        message="Are you sure you want to add cycles to this canister? This will transfer ICP to cycles."
+        message="Are you sure you want to add cycles to this canister?"
       />
 
       {status === "uninitialized" && (

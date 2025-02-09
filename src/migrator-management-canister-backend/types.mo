@@ -257,4 +257,13 @@ module {
         transfer : shared TransferArgs -> async (TransferResult);
         account_balance : AccountBalanceArgs -> async (Tokens);
     };
+
+    /** Return types */
+
+    public type GetCyclesAvailableResult = {
+        #ok : Float;
+        #err : Text;
+    };
+
+    /** End of types */
 };
