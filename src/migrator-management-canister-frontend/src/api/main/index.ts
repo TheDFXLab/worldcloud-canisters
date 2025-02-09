@@ -98,6 +98,15 @@ class MainApi {
         }
     }
 
+    async getCreditsAvailable() {
+        try {
+            const credits = await this.actor?.getMyCredits();
+            return credits;
+        } catch (error) {
+            return null;
+        }
+    }
+
     async getCanisterDeployments() {
         try {
             if (!this.actor) {
