@@ -77,38 +77,28 @@
 }
 
 .detail-card-homepage {
-  background: var(--background);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+  background: var(--background-secondary);
+  border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
-}
-
-.detail-card-homepage:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  border-color: var(--color-primary);
 }
 
 .detail-card-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.detail-card-header svg {
-  color: var(--color-primary);
-  font-size: 1.5rem;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .detail-card-header h3 {
-  color: var(--text-primary);
-  font-size: 1.25rem;
   margin: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.detail-card-header .MuiSvgIcon-root {
+  color: var(--text-secondary);
+  font-size: 1.25rem;
 }
 
 /* Activity Items */
@@ -210,6 +200,19 @@
   color: var(--text-secondary);
   text-align: center;
   padding: 1rem;
+}
+
+.account-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.account-section {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
 }
 
 @media (max-width: 768px) {
