@@ -97,7 +97,7 @@ class CyclesApi {
     async estimateCyclesToAdd(amountInIcp: number) {
         const amountInE8s = BigInt(icpToE8s(amountInIcp));
         const result = await this.actor?.estimateCyclesToAdd(amountInE8s);
-        if (!result) {
+        if (!result && result !== 0) {
             throw new Error("Error estimating cycles to add");
         }
         return result;
