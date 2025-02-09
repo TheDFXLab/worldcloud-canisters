@@ -71,16 +71,22 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   /** Functions */
   useEffect(() => {
     const fetchWasmModule = async () => {
+      if (!identity) {
+        return;
+      }
       const mainApi = await MainApi.create(identity);
       const wasmModule = await mainApi?.actor?.getWasmModule();
       console.log(`Wasm Module:`, wasmModule);
     };
     fetchWasmModule();
-  }, []);
+  }, [identity]);
 
   useEffect(() => {
+    if (!identity) {
+      return;
+    }
     getBalance();
-  }, []);
+  }, [identity]);
 
   useEffect(() => {
     console.log(`refreshIdentity`);

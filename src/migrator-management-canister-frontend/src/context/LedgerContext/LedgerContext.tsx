@@ -5,7 +5,7 @@ import MainApi from "../../api/main";
 import { e8sToIcp } from "../../utility/e8s";
 
 interface LedgerContextType {
-  balance: bigint;
+  balance: bigint | null;
   isLoadingBalance: boolean;
   getBalance: () => Promise<void>;
   transfer: (amount: number, to: string) => Promise<boolean>;
@@ -25,7 +25,7 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isTransferring, setIsTransferring] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingDeposits, setPendingDeposits] = useState<number>(0);
-  const [balance, setBalance] = useState<bigint>(BigInt(0));
+  const [balance, setBalance] = useState<bigint | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
 
   const getPendingDeposits = async () => {
@@ -38,6 +38,9 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const getBalance = async () => {
     try {
+      if (!identity) {
+        return;
+      }
       const ledgerApi = await LedgerApi.create(identity);
       if (!ledgerApi) {
         throw new Error("Ledger API not initialized");

@@ -68,7 +68,7 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
   const refreshDeployments = async () => {
     try {
       if (!identity) {
-        throw new Error("Identity not found");
+        return;
       }
       if (
         identity.getPrincipal().toText() ===
