@@ -13,10 +13,17 @@ import MainApi from "../../api/main";
 import { useLedger } from "../LedgerContext/LedgerContext";
 import { fromE8sStable } from "../../utility/e8s";
 
+export interface CreditsResponse {
+  total_credits: number;
+  equivalent_cycles: number;
+}
+
 interface CyclesContextType {
   isLoadingCycles: boolean;
   isLoadingStatus: boolean;
+  isLoadingCredits: boolean;
   cyclesAvailable: number;
+  totalCredits: CreditsResponse;
   maxCyclesExchangeable: number;
   isLoadingEstimateCycles: boolean;
   currentCanisterId: Principal | null;
@@ -37,6 +44,7 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
 
   /** States */
   const [isLoadingCycles, setIsLoadingCycles] = useState<boolean>(false);
+  const [isLoadingCredits, setIsLoadingCredits] = useState<boolean>(false);
   const [cyclesAvailable, setCyclesAvailable] = useState<number>(0);
   const [currentCanisterId, setCurrentCanisterId] = useState<Principal | null>(
     null
@@ -50,6 +58,14 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
   const [maxCyclesExchangeable, setMaxCyclesExchangeable] = useState<number>(0);
   const [isLoadingEstimateCycles, setIsLoadingEstimateCycles] =
     useState<boolean>(false);
+  const [totalCredits, setTotalCredits] = useState<CreditsResponse>({
+    total_credits: 0,
+    equivalent_cycles: 0,
+  });
+
+  useEffect(() => {
+    getCreditsAvailable();
+  }, [balance]);
 
   // Get maximum amount of cycles purchasable by user
   useEffect(() => {
@@ -59,6 +75,34 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
     }
     estimateCycles(fromE8sStable(balance));
   }, [balance]);
+
+  const getCreditsAvailable = async () => {
+    try {
+      setIsLoadingCredits(true);
+      const mainApi = await MainApi.create(identity);
+      if (!mainApi) {
+        throw new Error(`Error creating main API`);
+      }
+      const credits = await mainApi.getCreditsAvailable();
+
+      if (!credits && credits !== BigInt(0)) {
+        throw new Error(`Error getting credits available`);
+      }
+
+      const equivalentCycles = await estimateCycles(fromE8sStable(credits));
+      setTotalCredits({
+        total_credits: fromE8sStable(credits),
+        equivalent_cycles: fromE8sStable(
+          BigInt(Math.floor(equivalentCycles)),
+          12
+        ),
+      });
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoadingCredits(false);
+    }
+  };
 
   const getCyclesToAdd = async (amountInIcp?: number) => {
     try {
@@ -111,7 +155,6 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
       if (!mainApi) {
         throw new Error("Main API not created");
       }
-      console.log(`is loading true`);
       setIsLoadingCycles(true);
       setIsLoadingStatus(true);
       const result = await mainApi.getCanisterStatus(
@@ -123,7 +166,6 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoadingStatus(false);
       setIsLoadingCycles(false);
-      console.log(`is loading false`);
     }
   };
 
@@ -132,7 +174,9 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
       value={{
         isLoadingCycles,
         isLoadingStatus,
+        isLoadingCredits,
         cyclesAvailable,
+        totalCredits,
         maxCyclesExchangeable,
         isLoadingEstimateCycles,
         currentCanisterId,
