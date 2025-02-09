@@ -282,7 +282,7 @@ export const CanisterOverview = () => {
             </Tooltip>
           </div>
           <div className="stat-value">
-            {balance ? (
+            {balance && balance !== BigInt(0) ? (
               `${fromE8sStable(balance).toFixed(2)} ICP`
             ) : (
               <Spinner size="sm" />
