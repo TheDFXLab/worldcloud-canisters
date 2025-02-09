@@ -3,7 +3,7 @@ import InfoIcon from "@mui/icons-material/InfoOutlined";
 import Tooltip from "@mui/material/Tooltip";
 import "./ConfirmationModal.css";
 import { useCycles } from "../../context/CyclesContext/CyclesContext";
-import { cyclesToTerra, fromE8sStable } from "../../utility/e8s";
+import { cyclesToTerra, fromE8sStable, icpToE8s } from "../../utility/e8s";
 import { useLedger } from "../../context/LedgerContext/LedgerContext";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -17,6 +17,7 @@ interface ConfirmationModalProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
+  isTopUp?: boolean;
 }
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -28,6 +29,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   message,
   confirmText = "Confirm",
   cancelText = "Cancel",
+  isTopUp = false,
 }) => {
   /** Hooks */
   const {
@@ -53,10 +55,20 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     // Allow only positive numbers with decimal point and up to 4 decimal places
     if (/^\d*\.?\d{0,4}$/.test(value) && parseFloat(value || "0") >= 0) {
       const estimatedCycles = await estimateCycles(parseFloat(value));
-      setEstimatedOutput(estimatedCycles);
+      // setEstimatedOutput(estimatedCycles);
       setAmount(value);
     }
   };
+
+  useEffect(() => {
+    const estimateCyclesForInputIcp = async () => {
+      if (isTopUp && !amount) return;
+      const amt = BigInt(icpToE8s(parseFloat(amount)));
+      const cycles = await estimateCycles(fromE8sStable(amt));
+      setEstimatedOutput(cycles);
+    };
+    estimateCyclesForInputIcp();
+  }, [amount]);
 
   useEffect(() => {
     const estimateCyclesForIcp = async () => {
@@ -68,14 +80,16 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   }, [balance]);
 
   const handleClickSubmit = async () => {
-    if (!params.canisterId) {
+    if (!isTopUp && !params.canisterId) {
       console.log(`Canister ID is not set`);
       return;
     }
     setIsSubmitting(true);
     try {
       await onConfirm(parseFloat(amount));
-      getStatus(params.canisterId);
+      if (!isTopUp) {
+        getStatus(params.canisterId as string);
+      }
       getBalance();
       onHide();
     } catch (error) {
@@ -100,25 +114,31 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         <p className="modal-message">{message}</p>
 
         <div className="stats-container">
-          <div className="stat-item">
-            <div className="stat-label">
-              Cycles in Canister
-              <Tooltip
-                title="Total cycles currently in the canister"
-                arrow
-                placement="top"
-              >
-                <InfoIcon className="info-icon" />
-              </Tooltip>
+          {!isTopUp ? (
+            <div className="stat-item">
+              <div className="stat-label">
+                Cycles in Canister
+                <Tooltip
+                  title="Total cycles currently in the canister"
+                  arrow
+                  placement="top"
+                >
+                  <InfoIcon className="info-icon" />
+                </Tooltip>
+              </div>
+              <div className="stat-value">
+                {cyclesStatus?.cycles ? (
+                  `${fromE8sStable(cyclesStatus?.cycles, 12).toFixed(
+                    2
+                  )} T Cycles`
+                ) : (
+                  <Spinner />
+                )}
+              </div>
             </div>
-            <div className="stat-value">
-              {cyclesStatus?.cycles ? (
-                `${fromE8sStable(cyclesStatus?.cycles, 12).toFixed(2)} T Cycles`
-              ) : (
-                <Spinner />
-              )}
-            </div>
-          </div>
+          ) : (
+            <></>
+          )}
 
           <div className="stat-item">
             <div className="stat-label">
@@ -128,7 +148,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               </Tooltip>
             </div>
             <div className="stat-value">
-              {balance || fromE8sStable(balance) === 0 ? (
+              {balance && balance !== BigInt(0) ? (
                 <>
                   {`${fromE8sStable(balance).toFixed(2)} ICP`}
                   <span className="estimated-value">
@@ -148,7 +168,20 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         </div>
 
         <Form.Group className="amount-input-group">
-          <Form.Label>Amount (ICP)</Form.Label>
+          <Form.Label>
+            Amount (ICP){" "}
+            {isTopUp ? (
+              <span className="estimated-value">
+                ≈{" "}
+                {fromE8sStable(BigInt(Math.floor(estimatedOutput)), 12).toFixed(
+                  2
+                )}{" "}
+                T Cycles
+              </span>
+            ) : (
+              <></>
+            )}
+          </Form.Label>
           <Form.Control
             type="text"
             value={amount}
