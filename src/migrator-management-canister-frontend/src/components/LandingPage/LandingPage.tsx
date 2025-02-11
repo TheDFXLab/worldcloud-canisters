@@ -91,7 +91,6 @@ function LandingPage() {
           </p>
           <button onClick={handleLaunchApp}>Launch App</button>
         </div>
-        {/* <CanisterDeployer /> */}
       </section>
     </div>
   );

@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useIdentity } from "../IdentityContext/IdentityContext";
 import LedgerApi from "../../api/ledger/LedgerApi";
 import MainApi from "../../api/main";
-import { e8sToIcp } from "../../utility/e8s";
 
 interface LedgerContextType {
   balance: bigint | null;
