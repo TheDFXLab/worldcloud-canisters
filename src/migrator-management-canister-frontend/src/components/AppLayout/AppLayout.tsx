@@ -26,6 +26,9 @@ import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 import { useTheme } from "../../context/ThemeContext/ThemeContext";
 import ThemeToggle from "../ThemeToggle/ThemeToggle";
 import { useLedger } from "../../context/LedgerContext/LedgerContext";
+import { useSubscription } from "../../context/SubscriptionContext/SubscriptionContext";
+import { CreditCard } from "@mui/icons-material";
+import LoaderOverlay from "../LoaderOverlay/LoaderOverlay";
 
 export type MenuItem =
   | "publish"
@@ -33,6 +36,7 @@ export type MenuItem =
   | "admin"
   | "logout"
   | "settings"
+  | "billing"
   | "home";
 
 interface AppLayoutProps {
@@ -67,6 +71,8 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   const [showLoadbar, setShowLoadbar] = useState<boolean>(false);
   const [completeLoadbar, setCompleteLoadbar] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const { subscription, isLoadingSub } = useSubscription();
 
   /** Functions */
   useEffect(() => {
@@ -150,6 +156,9 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
 
   const handleMenuClick = (menuItem: MenuItem) => {
     switch (menuItem) {
+      case "billing":
+        navigate("/app/billing");
+        break;
       case "settings":
         navigate("/app/settings");
         break;
@@ -173,12 +182,13 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
     <div className="app-layout">
       <ThemeToggle />
       <ProgressBar />
+      <LoaderOverlay />
       {showToaster && toasterData && (
         <Toaster
           headerContent={toasterData.headerContent}
           toastStatus={toasterData.toastStatus}
           toastData={toasterData.toastData}
-          textColor={toasterData.textColor}
+          textColor={toasterData.textColor || "#000000"}
           show={showToaster}
           onHide={() => setShowToaster(false)}
           timeout={toasterData.timeout ? toasterData.timeout : 3000}
@@ -227,6 +237,12 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
               text="Admin"
               IconComponent={SupervisorAccountIcon}
               onClickIcon={() => handleMenuClick("admin")}
+            />
+            <IconTextRowView
+              className={`nav-item ${activeTab === "billing" ? "active" : ""}`}
+              text="Billing"
+              IconComponent={CreditCard}
+              onClickIcon={() => handleMenuClick("billing")}
             />
             <IconTextRowView
               className={`nav-item ${activeTab === "settings" ? "active" : ""}`}
