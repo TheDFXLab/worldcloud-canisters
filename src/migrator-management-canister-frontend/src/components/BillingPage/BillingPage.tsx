@@ -20,6 +20,9 @@ import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
 import { ConfirmationModal } from "../ConfirmationPopup/ConfirmationModal";
 import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
+import UpgradeIcon from "@mui/icons-material/Upgrade";
+import NonSubbed from "./NonSubbed/NonSubbed";
+import Subbed from "./Subbed/Subbed";
 
 const BillingPage: React.FC = () => {
   /** Hooks */
@@ -41,6 +44,7 @@ const BillingPage: React.FC = () => {
   /** State */
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [amount, setAmount] = useState<string>("");
+  const [showPricing, setShowPricing] = useState<boolean>(false);
 
   const tierIcons = [
     <RocketLaunchIcon />,
@@ -143,124 +147,28 @@ const BillingPage: React.FC = () => {
           description="Manage your subscription and billing preferences"
           className="deployment-header"
         />
+        {subscription && (
+          <button
+            className="view-plans-button"
+            onClick={() => setShowPricing(!showPricing)}
+          >
+            <UpgradeIcon />
+            <span>
+              {showPricing ? "View Current Plan" : "View Available Plans"}
+            </span>
+          </button>
+        )}
       </div>
 
       <div className="billing-content">
-        {subscription && tiers ? (
-          <div className="current-plan-section">
-            <div className="current-plan-header">
-              <div className="plan-icon">
-                {tierIcons[Number(subscription.tier_id)]}
-              </div>
-              <div className="plan-info">
-                <h3>{tiers[Number(subscription.tier_id)].name} Plan</h3>
-                <p className="plan-status">
-                  <CheckCircleIcon className="status-icon" />
-                  Active
-                </p>
-              </div>
-            </div>
-            <div className="plan-details">
-              <div className="detail-row">
-                <div className="detail-label">
-                  <span>Available Slots </span>
-                  <Tooltip title="Number of canisters you can deploy" arrow>
-                    <InfoIcon className="info-icon" />
-                  </Tooltip>
-                </div>
-                <span className="detail-value">
-                  {Number(tiers[Number(subscription.tier_id)].slots) -
-                    subscription.canisters.length}{" "}
-                  Canisters
-                </span>
-              </div>
-              <div className="detail-row">
-                <div className="detail-label">
-                  <span>Minimum Deposit</span>
-
-                  <Tooltip
-                    title="Required ICP balance to maintain this tier"
-                    arrow
-                  >
-                    <InfoIcon className="info-icon" />
-                  </Tooltip>
-                </div>
-                <span className="detail-value">
-                  {fromE8sStable(
-                    tiers[Number(subscription.tier_id)].min_deposit.e8s
-                  )}{" "}
-                  ICP
-                </span>
-              </div>
-              <div className="features-list">
-                <h4>Included Features</h4>
-                <ul>
-                  {tiers[Number(subscription.tier_id)].features.map(
-                    (feature, index) => (
-                      <li key={index}>
-                        <CheckCircleIcon className="feature-icon" />
-                        {feature}
-                      </li>
-                    )
-                  )}
-                </ul>
-              </div>
-            </div>
-          </div>
+        {subscription && tiers && !showPricing ? (
+          <NonSubbed subscription={subscription} tiers={tiers} />
         ) : (
-          <div className="pricing-grid">
-            {tiers &&
-              tiers.map((tier) => (
-                <div key={tier.id} className="pricing-card">
-                  <div className="pricing-header">
-                    <div className="tier-icon">
-                      {tierIcons[Number(tier.id)]}
-                    </div>
-                    <h3>{tier.name}</h3>
-                    <div className="price">
-                      <span className="amount">
-                        {fromE8sStable(tier.price.e8s) === 0
-                          ? "Free"
-                          : `${fromE8sStable(tier.price.e8s)} ICP`}
-                      </span>
-                      <span className="period">One-time payment</span>
-                    </div>
-                  </div>
-                  <div className="pricing-content">
-                    <div className="deposit-info">
-                      <div className="deposit-label">
-                        <span>Minimum Deposit</span>
-                        <Tooltip
-                          title="Minimum amount required for canister(s) creation. Amount will be reflected as cycles in the canister(s)"
-                          arrow
-                        >
-                          <InfoIcon className="info-icon" />
-                        </Tooltip>
-                      </div>
-                      <span className="deposit-value">
-                        {fromE8sStable(tier.min_deposit.e8s)} ICP
-                      </span>
-                    </div>
-                    <ul className="features">
-                      {tier.features.map((feature, index) => (
-                        <li key={index}>
-                          <CheckCircleIcon className="feature-icon" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                    <button
-                      className="select-plan-btn"
-                      onClick={() => handleSelectPlan(Number(tier.id))}
-                    >
-                      {fromE8sStable(tier.price.e8s) === 0
-                        ? "Get Started"
-                        : "Upgrade Now"}
-                    </button>
-                  </div>
-                </div>
-              ))}
-          </div>
+          <Subbed
+            subscription={subscription}
+            tiers={tiers}
+            handleSelectPlan={handleSelectPlan}
+          />
         )}
       </div>
     </div>
