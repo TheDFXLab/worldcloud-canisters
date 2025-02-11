@@ -82,7 +82,6 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
       }
       const mainApi = await MainApi.create(identity);
       const wasmModule = await mainApi?.actor?.getWasmModule();
-      console.log(`Wasm Module:`, wasmModule);
     };
     fetchWasmModule();
   }, [identity]);

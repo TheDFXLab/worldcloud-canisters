@@ -136,7 +136,6 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   const handleClickSubmit = async () => {
     if (type === "cycles" && !params.canisterId) {
-      console.log(`Canister ID is not set`);
       return;
     }
     setIsSubmitting(true);

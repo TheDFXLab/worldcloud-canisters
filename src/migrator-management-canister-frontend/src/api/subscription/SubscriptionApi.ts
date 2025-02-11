@@ -21,7 +21,6 @@ class SubscriptionApi {
         if (!tiers) {
             throw new Error("Failed to get tiers");
         }
-        console.log('tiers', tiers);
         return tiers;
     }
 
@@ -32,7 +31,6 @@ class SubscriptionApi {
                 throw new Error("Failed to create main api");
             }
             const subscriptions = await mainApi.actor?.get_all_subscriptions();
-            console.log(`All subs: `, subscriptions);
             if (!subscriptions) {
                 throw new Error("Failed to get all subscriptions");
             }
@@ -49,7 +47,6 @@ class SubscriptionApi {
             throw new Error("Failed to create main api");
         }
         const subscription = await mainApi.actor?.get_subscription();
-        console.log(`Got subscription response`, subscription);
         if (!subscription) {
             throw new Error("Failed to get subscription");
         }

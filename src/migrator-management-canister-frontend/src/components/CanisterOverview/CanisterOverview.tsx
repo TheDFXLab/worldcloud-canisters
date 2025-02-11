@@ -74,10 +74,6 @@ export const CanisterOverview = () => {
   );
 
   useEffect(() => {
-    console.log(`Is loading cycles`, isLoadingCycles);
-  }, [isLoadingCycles]);
-
-  useEffect(() => {
     const getCanisterStatus = async () => {
       if (!canisterId) {
         return;

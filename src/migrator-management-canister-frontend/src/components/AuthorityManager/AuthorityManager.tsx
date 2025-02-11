@@ -20,10 +20,6 @@ export const AuthorityManager: React.FC<{}> = () => {
     handleRemoveController,
   } = useAuthority();
 
-  useEffect(() => {
-    console.log(`isLoadingStatus changed: `, isLoadingStatus);
-  }, [isLoadingStatus]);
-
   const addController = async () => {
     try {
       if (!isValidPrincipal(newController)) {

@@ -22,7 +22,6 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
   const logout = async () => {
     const isLoggedOut = await disconnect();
     if (!isLoggedOut) {
-      console.log(`Failed to logout.`);
       return;
     }
     setIsAuthenticated(false);

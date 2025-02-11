@@ -34,7 +34,6 @@ export class ThumbnailCache {
     async get(key: string): Promise<Blob | null> {
         const db = await this.initDB();
         return new Promise((resolve, reject) => {
-            console.log("Getting thumbnail from cache", key);
             const transaction = db.transaction([this.storeName], 'readonly');
             const store = transaction.objectStore(this.storeName);
             const request = store.get(key);

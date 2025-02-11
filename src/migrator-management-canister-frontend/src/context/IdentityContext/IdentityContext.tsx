@@ -65,7 +65,6 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
   };
 
   const disconnect = async () => {
-    console.log(`Disconnecting wallet`);
     setIsLoadingIdentity(true);
     const authClient = await AuthClient.create();
     await authClient.logout();

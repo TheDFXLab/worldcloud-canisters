@@ -60,7 +60,6 @@ const HomePage: React.FC = () => {
 
   const onConfirmTopUp = async () => {
     try {
-      console.log(icpToDeposit);
       if (!icpToDeposit) return;
       const isTransferred = await transfer(
         parseFloat(icpToDeposit),
@@ -94,7 +93,6 @@ const HomePage: React.FC = () => {
         return;
       }
 
-      console.log("Deposit successful");
       setToasterData({
         headerContent: "Success",
         toastStatus: true,

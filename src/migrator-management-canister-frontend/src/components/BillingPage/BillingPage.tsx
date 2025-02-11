@@ -108,10 +108,6 @@ const BillingPage: React.FC = () => {
       destroy();
     }
   };
-  useEffect(() => {
-    console.log(`Tiers`, tiers);
-    console.log(`Subscription`, subscription);
-  }, [tiers, subscription]);
 
   if (isLoadingSub || isLoadingTiers) {
     return <LoadingView type="billing" />;

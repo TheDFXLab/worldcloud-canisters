@@ -59,15 +59,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!identity) return;
-    // if (!refreshSubscription) {
-    //   console.log(`Skipping refresh`);
-    //   return;
-    // }
     getTiersList();
     getSubscription();
     getAllSubscriptions();
     setRefreshSubscription(true);
-    console.log(`Refreshed subs`);
   }, [identity]);
 
   useEffect(() => {
@@ -151,7 +146,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       setIsLoadingSub(true);
       const subscriptionApi = new SubscriptionApi();
       const subscription = await subscriptionApi.getSubscription(identity);
-      console.log(`Got subscription`, subscription);
       if (!subscription) {
         setSubscription(null);
       } else {
@@ -173,10 +167,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
       // Deposit to canister if not enough credits
       if (totalCredits.total_credits < amountInIcp) {
-        console.log(
-          `Not enough credits.. need `,
-          amountInIcp - totalCredits.total_credits
-        );
         const ledgerApi = await LedgerApi.create(identity);
         if (!ledgerApi) {
           throw new Error("Failed to create ledger api");
@@ -196,7 +186,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           throw new Error("Failed to create main api");
         }
 
-        console.log(`calling deposit`);
         const response = await mainApi.deposit();
         if (!response) {
           throw new Error("Failed to deposit funds");

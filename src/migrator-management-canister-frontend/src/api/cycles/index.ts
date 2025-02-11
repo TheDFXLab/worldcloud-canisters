@@ -43,7 +43,6 @@ class CyclesApi {
 
             if (identity && identity.getPrincipal().toText() !== internetIdentityConfig.loggedOutPrincipal) {
                 isIdentified = true;
-                console.log(`Created new actor with identity:`, identity.getPrincipal().toText());
             }
             else {
                 isIdentified = false;
@@ -110,7 +109,6 @@ class CyclesApi {
      */
     async addCycles(canisterId: Principal, amountInIcp?: number) {
         try {
-            console.log(`Adding cycles to canister ${canisterId.toText()} with amount ${amountInIcp}`);
 
             if (!amountInIcp) {
                 throw new Error("Amount in ICP is required");
@@ -121,7 +119,6 @@ class CyclesApi {
             if (!this.idenitified) {
                 throw new Error("Actor not identified");
             }
-            console.log(`Adding cycles as identity:`, this.identity.getPrincipal().toText());
             const result = await this.actor?.addCycles(canisterId, amountInIcp);
             return result;
         } catch (error) {

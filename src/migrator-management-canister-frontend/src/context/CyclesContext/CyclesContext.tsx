@@ -147,7 +147,6 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
   const getStatus = async (canisterId: string) => {
     try {
       if (!canisterId) {
-        console.log(`Canister ID is not set`);
         throw new Error("Canister ID is not set");
       }
 

@@ -228,10 +228,8 @@ export class GithubApi {
                 const deployWorkflow = workflows.workflows?.find((w: any) => w.name === 'Build and Deploy to ICP');
 
                 if (deployWorkflow) {
-                    console.log('Workflow successfully registered');
                     return;
                 }
-                console.log(`Attempt ${i + 1}: Workflow not yet registered...`);
             } catch (e) {
                 console.log(`Attempt ${i + 1}: Error checking workflow status:`, e);
             }
@@ -242,7 +240,6 @@ export class GithubApi {
     }
 
     private async createWorkflowFile(repo: string, branch: string) {
-        console.log('Creating .github/workflows directory in target branch');
         await this.request(`/repos/${repo}/contents/.github/workflows/README.md`, {
             method: 'PUT',
             body: JSON.stringify({
@@ -254,7 +251,6 @@ export class GithubApi {
     }
 
     async createWorkflow(repo: string, workflowContent: string, branch: string) {
-        console.log(`Creating workflow for ${repo} on branch ${branch}`);
         const content = btoa(workflowContent);
         const workflowPath = `.github/workflows/icp-deploy.yml`;
 
@@ -262,23 +258,9 @@ export class GithubApi {
             // First, get the default branch
             const repoInfo = await this.request(`/repos/${repo}`);
             const defaultBranch = repoInfo.default_branch;
-            console.log(`Default branch is: ${defaultBranch}`);
 
             // Create workflow file in default branch if it doesn't exist
             await this.verifyAndCreateWorkflow(repo, workflowPath, branch, content, repoInfo);
-
-            // // If the target branch is not the default, create/update the workflow file there
-            // if (branch !== defaultBranch) {
-            //     // Check if .github/workflows directory exists in target branch
-            //     try {
-            //         await this.request(`/repos/${repo}/contents/.github/workflows?ref=${branch}`);
-            //     } catch (error) {
-            //         // Directory doesn't exist, create it with a README
-            //         await this.createWorkflowFile(repo, branch);
-            //     }
-
-            //     await this.updateWorkflowFile(repo, workflowPath, branch, content);
-            // }
 
             await this.verifyWorkflowExists(repo);
         } catch (error) {
@@ -347,8 +329,6 @@ export class GithubApi {
                 })
             });
 
-
-            console.log(`Workflow triggered for ${repo} on branch ${branch}`);
         } catch (error) {
             console.log(`Error triggering workflow for ${repo}:`, error);
             throw error;
@@ -364,14 +344,12 @@ export class GithubApi {
         const workflows = await this.request(
             `/repos/${repo_name}/actions/workflows`
         );
-        console.log(`Workflows:`, workflows);
 
         if (!workflows || workflows.total_count === 0) {
             return '0';
         }
 
         const deployWorkflow = workflows.workflows.find((workflow: any) => workflow.name === 'Build and Deploy to ICP');
-        console.log(`Deploy workflow:`, deployWorkflow);
 
         const workflowRuns = await this.request(`/repos/${repo_name}/actions/workflows/${deployWorkflow.id}/runs?per_page=5`);
         return workflowRuns && workflowRuns.workflow_runs.length > 0 ? workflowRuns.workflow_runs[0].id : '0';
@@ -477,9 +455,7 @@ export class GithubApi {
     async pollForArtifact(identity: Identity, canisterId: Principal, repo: string, branch: string, previousRunId: string, maxAttempts = 100): Promise<{ artifact: Artifact, workflowRunDetails: WorkflowRunDetails }> {
         for (let i = 0; i < maxAttempts; i++) {
             const workflowRunResult = await this.getWorkflows(repo, previousRunId);
-            console.log(`Workflow run mathcing...`, workflowRunResult);
 
-            console.log(`Artifact*:`, workflowRunResult);
             if (workflowRunResult && workflowRunResult.targetArtifact) {
                 const mainApi = await MainApi.create(identity);
                 if (!mainApi) {
@@ -497,22 +473,8 @@ export class GithubApi {
                     commit_hash: [workflowRunResult.targetArtifact.workflow_run.head_sha],
                 }
 
-                console.log(`Updateing workflow rund etails in contract....`)
                 return { artifact: workflowRunResult.targetArtifact, workflowRunDetails };
-                // const createWorkflowEntry = await mainApi.updateWorkflowRun(
-                //     workflowRunDetails,
-                //     canisterId,
-                // );
-
-                // if (createWorkflowEntry.status) {
-                //     return workflowRunResult.targetArtifact;
-                // }
-                // else {
-                //     throw new Error(`Error updating workflow run: ${createWorkflowEntry.message}`);
-                // }
-
             }
-            console.log(`Waiting for artifact... ${i + 1} of ${maxAttempts}`);
             await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
         }
 
@@ -536,7 +498,6 @@ export class GithubApi {
         if (!response.ok) {
             try {
                 const error = await response.json();
-                console.log(`encountered error:`, error);
                 throw new Error(error.message || 'GitHub API request failed');
             } catch (e) {
                 throw new Error(`GitHub API request failed with status ${response.status}`);
@@ -547,7 +508,6 @@ export class GithubApi {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
             const jsonRes = await response.json();
-            console.log(`JSON response:`, jsonRes);
             return jsonRes;
         }
 
@@ -558,7 +518,6 @@ export class GithubApi {
     private async getFileSha(repo: string, path: string, branch: string): Promise<string> {
         try {
             const response = await this.request(`/repos/${repo}/contents/${path}?ref=${branch}`);
-            console.log(`File SHA response: ${response}`);
             return response.sha;
         } catch (error) {
             console.log(`Error getting file sha for ${repo} on branch ${branch}:`, error);

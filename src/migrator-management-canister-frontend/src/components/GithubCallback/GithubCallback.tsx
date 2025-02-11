@@ -27,7 +27,6 @@ const GitHubCallback: React.FC = () => {
   useEffect(() => {
     const pollForToken = async (deviceCode: string, interval: number) => {
       try {
-        console.log("polling for access token");
         const response = await fetch(
           `${
             environment === "production" ? "" : reverse_proxy_url
@@ -49,7 +48,6 @@ const GitHubCallback: React.FC = () => {
 
         const data = await response.json();
 
-        console.log(`Poll token response status: `, response.status);
         if (data.error === "authorization_pending") {
           // Continue polling
           pollTimeoutRef.current = setTimeout(
@@ -57,7 +55,6 @@ const GitHubCallback: React.FC = () => {
             interval * 1000
           );
         } else if (data.access_token) {
-          console.log(`Poll token access token found: `, data.access_token);
           // Success! Store the token and redirect
           const github = GithubApi.getInstance();
           github.setAccessToken(data.access_token);
@@ -83,7 +80,6 @@ const GitHubCallback: React.FC = () => {
       isInitiatingRef.current = true;
 
       try {
-        console.log("initiateDeviceFlow", reverse_proxy_url, cors_sh_api_key);
         const response = await fetch(
           `${
             environment === "production" ? "" : reverse_proxy_url
