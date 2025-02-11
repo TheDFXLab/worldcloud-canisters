@@ -3,7 +3,7 @@ import InfoIcon from "@mui/icons-material/InfoOutlined";
 import Tooltip from "@mui/material/Tooltip";
 import "./ConfirmationModal.css";
 import { useCycles } from "../../context/CyclesContext/CyclesContext";
-import { cyclesToTerra, fromE8sStable, icpToE8s } from "../../utility/e8s";
+import { fromE8sStable, icpToE8s } from "../../utility/e8s";
 import { useLedger } from "../../context/LedgerContext/LedgerContext";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -191,10 +191,17 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   <InfoIcon className="info-icon" />
                 </Tooltip>
               </div>
-              <div className="stat-value">
-                {balance && balance !== BigInt(0) ? (
+              <div className={`stat-value`}>
+                {balance || balance === BigInt(0) ? (
                   <>
-                    {`${fromE8sStable(balance).toFixed(2)} ICP`}
+                    <span
+                      className={`${
+                        balance === BigInt(0) ? "zero-balance" : ""
+                      }`}
+                    >
+                      {" "}
+                      {`${fromE8sStable(balance).toFixed(2)} ICP`}
+                    </span>
                     {config.showEstimatedCycles && (
                       <span className="estimated-value">
                         ≈{" "}
@@ -221,7 +228,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 </Tooltip>
               </div>
               <div className="stat-value">
-                {balance && balance !== BigInt(0) ? (
+                {balance || balance === BigInt(0) ? (
                   <>{`${config.totalPrice} ICP`}</>
                 ) : (
                   <Spinner size="sm" />
@@ -290,7 +297,13 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             border: "1px solid var(--color-secondary)",
           }}
           onClick={handleClickSubmit}
-          disabled={!amount || parseFloat(amount) <= 0 || isSubmitting}
+          disabled={
+            !amount ||
+            parseFloat(amount) <= 0 ||
+            isSubmitting ||
+            balance === BigInt(0) ||
+            (balance ? balance < BigInt(amount) : false)
+          }
         >
           {isSubmitting ? (
             <>
