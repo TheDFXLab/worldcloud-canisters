@@ -10,6 +10,10 @@ import { useNavigate } from "react-router-dom";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 import { useProgress } from "../../context/ProgressBarContext/ProgressBarContext";
 import HeaderCard from "../HeaderCard/HeaderCard";
+import { useSubscription } from "../../context/SubscriptionContext/SubscriptionContext";
+import UnsubscribedView from "../UnsubscribedView/UnsubscribedView";
+import LoadingView from "../LoadingView/LoadingView";
+import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
 
 interface CanisterDeployerProps {}
 
@@ -22,6 +26,15 @@ function CanisterDeployer({}: CanisterDeployerProps) {
   const navigate = useNavigate();
   const { setActiveTab } = useSideBar();
   const { setIsLoadingProgress, setIsEnded } = useProgress();
+  const {
+    tiers,
+    subscription,
+    isLoadingSub,
+    isLoadingTiers,
+    getSubscription,
+    validateSubscription,
+  } = useSubscription();
+  const { summon, destroy } = useLoaderOverlay();
 
   /**State */
   const [state, setState] = useState({
@@ -40,6 +53,11 @@ function CanisterDeployer({}: CanisterDeployerProps) {
   }, []);
 
   useEffect(() => {
+    if (!subscription) {
+      setActionBar(null);
+      return;
+    }
+
     setActionBar({
       icon: "🔨",
       text: "Ready to deploy your canister",
@@ -48,10 +66,26 @@ function CanisterDeployer({}: CanisterDeployerProps) {
       isButtonDisabled: isLoading,
       isHidden: false,
     });
-  }, [isLoading]);
+  }, [isLoading, subscription]);
 
   const handleDeploy = async () => {
     try {
+      summon("Canister deployment in progress...");
+
+      const validation = await validateSubscription(true);
+      if (!validation.status) {
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: true,
+          toastData: validation.message,
+          textColor: "red",
+          timeout: 5000,
+        });
+
+        setShowToaster(true);
+        navigate("/app/billing");
+        return;
+      }
       setIsLoadingProgress(true);
       setIsEnded(false);
       setToasterData({
@@ -87,6 +121,8 @@ function CanisterDeployer({}: CanisterDeployerProps) {
         refreshDeployments();
         setCanisterId(result?.message as string);
 
+        getSubscription();
+
         // Navigate to publishing page
         navigate(`/app/deploy/${result?.message as string}`);
       } else {
@@ -105,8 +141,22 @@ function CanisterDeployer({}: CanisterDeployerProps) {
       setIsLoading(false);
       setIsLoadingProgress(false);
       setIsEnded(true);
+      destroy();
     }
   };
+
+  if (isLoadingSub || isLoadingTiers) {
+    return <LoadingView type="deployment" />;
+  }
+
+  if (!subscription) {
+    setActionBar(null);
+    return <UnsubscribedView />;
+  }
+
+  if (subscription.used_slots >= subscription.max_slots) {
+    return <UnsubscribedView />;
+  }
 
   return (
     <div className="publish-flow">
