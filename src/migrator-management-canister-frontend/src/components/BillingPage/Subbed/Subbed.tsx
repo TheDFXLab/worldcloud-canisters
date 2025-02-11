@@ -15,7 +15,6 @@ import "../BillingPage.css";
 interface SubbedProps {
   subscription: Subscription | null;
   tiers: Tier[] | null;
-  handleSelectPlan: (tierId: number) => void;
 }
 
 const tierIcons = [
@@ -24,82 +23,71 @@ const tierIcons = [
   <CorporateFareIcon />,
 ];
 
-export default function Subbed({
-  subscription,
-  tiers,
-  handleSelectPlan,
-}: SubbedProps) {
+export default function Subbed({ subscription, tiers }: SubbedProps) {
   return (
-    /** Unsubscribed users */
-    <div className="pricing-grid">
-      {tiers &&
-        tiers.map((tier) => (
-          <div
-            key={tier.id}
-            className={`pricing-card ${
-              subscription && Number(subscription.tier_id) === Number(tier.id)
-                ? "current-tier"
-                : ""
-            }`}
-          >
-            {subscription &&
-              Number(subscription.tier_id) === Number(tier.id) && (
-                <div className="current-plan-badge">Current Plan</div>
-              )}
-            <div className="pricing-header">
-              <div className="tier-icon">{tierIcons[Number(tier.id)]}</div>
-              <h3>{tier.name}</h3>
-              <div className="price">
-                <span className="amount">
-                  {fromE8sStable(tier.price.e8s) === 0
-                    ? "Free"
-                    : `${fromE8sStable(tier.price.e8s)} ICP`}
-                </span>
-                <span className="period">One-time payment</span>
-              </div>
-            </div>
-            <div className="pricing-content">
-              <div className="deposit-info">
-                <div className="deposit-label">
-                  <span>Minimum Deposit</span>
-                  <Tooltip
-                    title="Minimum amount required for canister(s) creation. Amount will be reflected as cycles in the canister(s)"
-                    arrow
-                  >
-                    <InfoIcon className="info-icon" />
-                  </Tooltip>
-                </div>
-                <span className="deposit-value">
-                  {fromE8sStable(tier.min_deposit.e8s)} ICP
-                </span>
-              </div>
-              <ul className="features">
-                {tier.features.map((feature, index) => (
+    /** subscribed users */
+    <div className="current-plan-section">
+      <div className="current-plan-header">
+        <div className="plan-icon">
+          {subscription && tierIcons[Number(subscription?.tier_id)]}
+        </div>
+        <div className="plan-info">
+          <h3>{tiers && tiers[Number(subscription?.tier_id)].name} Plan</h3>
+          <p className="plan-status">
+            <CheckCircleIcon className="status-icon" />
+            Active
+          </p>
+        </div>
+      </div>
+      <div className="plan-details">
+        <div className="detail-row">
+          <div className="detail-label">
+            <span>Available Slots </span>
+            <Tooltip title="Number of canisters you can deploy" arrow>
+              <InfoIcon className="info-icon" />
+            </Tooltip>
+          </div>
+          <span className="detail-value">
+            {tiers &&
+              subscription &&
+              Number(tiers[Number(subscription?.tier_id)].slots) -
+                subscription?.canisters.length}{" "}
+            Canisters
+          </span>
+        </div>
+        <div className="detail-row">
+          <div className="detail-label">
+            <span>Minimum Deposit</span>
+
+            <Tooltip title="Required ICP balance to maintain this tier" arrow>
+              <InfoIcon className="info-icon" />
+            </Tooltip>
+          </div>
+          <span className="detail-value">
+            {tiers &&
+              subscription &&
+              fromE8sStable(
+                tiers[Number(subscription.tier_id)].min_deposit.e8s
+              )}{" "}
+            ICP
+          </span>
+        </div>
+        <div className="features-list">
+          <h4>Included Features</h4>
+          <ul>
+            {tiers &&
+              subscription &&
+              tiers[Number(subscription.tier_id)].features.map(
+                (feature, index) => (
                   <li key={index}>
                     <CheckCircleIcon className="feature-icon" />
                     {feature}
                   </li>
-                ))}
-              </ul>
-              <button
-                className="select-plan-btn"
-                onClick={() => handleSelectPlan(Number(tier.id))}
-                disabled={
-                  subscription
-                    ? Number(subscription.tier_id) === Number(tier.id)
-                    : false
-                }
-              >
-                {subscription &&
-                Number(subscription.tier_id) === Number(tier.id)
-                  ? "Current Plan"
-                  : fromE8sStable(tier.price.e8s) === 0
-                  ? "Get Started"
-                  : "Upgrade Now"}
-              </button>
-            </div>
-          </div>
-        ))}
+                )
+              )}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }
