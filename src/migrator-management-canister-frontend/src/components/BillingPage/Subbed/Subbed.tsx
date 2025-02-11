@@ -3,14 +3,14 @@ import InfoIcon from "@mui/icons-material/Info";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import CorporateFareIcon from "@mui/icons-material/CorporateFare";
-
-import { Tooltip } from "@mui/material";
+import MemoryIcon from "@mui/icons-material/Memory";
+import { Tooltip, LinearProgress } from "@mui/material";
 import { fromE8sStable } from "../../../utility/e8s";
 import {
   Subscription,
   Tier,
 } from "../../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
-import "../BillingPage.css";
+import "./Subbed.css";
 
 interface SubbedProps {
   subscription: Subscription | null;
@@ -24,67 +24,98 @@ const tierIcons = [
 ];
 
 export default function Subbed({ subscription, tiers }: SubbedProps) {
+  if (!subscription || !tiers) return null;
+
+  const currentTier = tiers[Number(subscription.tier_id)];
+  const usedSlots = subscription.canisters.length;
+  const maxSlots = Number(currentTier.slots);
+  const usagePercentage = (usedSlots / maxSlots) * 100;
+
   return (
-    /** subscribed users */
     <div className="current-plan-section">
+      {/* Plan Header */}
       <div className="current-plan-header">
         <div className="plan-icon">
-          {subscription && tierIcons[Number(subscription?.tier_id)]}
+          {tierIcons[Number(subscription.tier_id)]}
         </div>
         <div className="plan-info">
-          <h3>{tiers && tiers[Number(subscription?.tier_id)].name} Plan</h3>
+          <h3>{currentTier.name} Plan</h3>
           <p className="plan-status">
             <CheckCircleIcon className="status-icon" />
             Active
           </p>
         </div>
       </div>
+
+      {/* Resource Usage */}
+      <div className="resource-usage">
+        <div className="usage-header">
+          <MemoryIcon className="usage-icon" />
+          <h4>Resource Usage</h4>
+        </div>
+        <div className="usage-stats">
+          <div className="usage-info">
+            <span>Canister Slots</span>
+            <span className="usage-count">
+              {usedSlots} / {maxSlots}
+            </span>
+          </div>
+          <LinearProgress
+            variant="determinate"
+            value={usagePercentage}
+            className={`usage-progress ${
+              usagePercentage > 80 ? "warning" : ""
+            }`}
+          />
+          {usagePercentage > 80 && (
+            <p className="usage-warning">
+              {usagePercentage >= 100
+                ? "You've reached your slot limit. Consider upgrading your plan."
+                : "You're approaching your slot limit. Consider upgrading your plan."}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Plan Details */}
       <div className="plan-details">
         <div className="detail-row">
           <div className="detail-label">
-            <span>Available Slots </span>
-            <Tooltip title="Number of canisters you can deploy" arrow>
-              <InfoIcon className="info-icon" />
-            </Tooltip>
-          </div>
-          <span className="detail-value">
-            {tiers &&
-              subscription &&
-              Number(tiers[Number(subscription?.tier_id)].slots) -
-                subscription?.canisters.length}{" "}
-            Canisters
-          </span>
-        </div>
-        <div className="detail-row">
-          <div className="detail-label">
             <span>Minimum Deposit</span>
-
             <Tooltip title="Required ICP balance to maintain this tier" arrow>
               <InfoIcon className="info-icon" />
             </Tooltip>
           </div>
-          <span className="detail-value">
-            {tiers &&
-              subscription &&
-              fromE8sStable(
-                tiers[Number(subscription.tier_id)].min_deposit.e8s
-              )}{" "}
-            ICP
+          <span className="detail-value highlight">
+            {fromE8sStable(currentTier.min_deposit.e8s)} ICP
           </span>
         </div>
+
+        {/* Active Canisters */}
+        {subscription.canisters.length > 0 && (
+          <div className="active-canisters">
+            <h4>Active Canisters</h4>
+            <div className="canister-list">
+              {subscription.canisters.map((canister, index) => (
+                <div key={index} className="canister-item">
+                  <MemoryIcon className="canister-icon" />
+                  <code className="canister-id">{canister.toText()}</code>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Plan Features */}
         <div className="features-list">
-          <h4>Included Features</h4>
+          <h4>Plan Features</h4>
           <ul>
-            {tiers &&
-              subscription &&
-              tiers[Number(subscription.tier_id)].features.map(
-                (feature, index) => (
-                  <li key={index}>
-                    <CheckCircleIcon className="feature-icon" />
-                    {feature}
-                  </li>
-                )
-              )}
+            {currentTier.features.map((feature, index) => (
+              <li key={index}>
+                <CheckCircleIcon className="feature-icon" />
+                {feature}
+              </li>
+            ))}
           </ul>
         </div>
       </div>
