@@ -26,6 +26,7 @@ import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import MainApi from "../../api/main";
 import InfoIcon from "@mui/icons-material/Info";
 import { Tooltip } from "@mui/material";
+import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
 
 const HomePage: React.FC = () => {
   const { deployments } = useDeployments();
@@ -37,9 +38,9 @@ const HomePage: React.FC = () => {
   const { totalCredits, isLoadingCredits } = useCycles();
   const { transfer } = useLedger();
   const { setToasterData, setShowToaster } = useToaster();
+  const { setShowModal } = useConfirmationModal();
 
   /**State */
-  const [showTopUpModal, setShowTopUpModal] = useState<boolean>(false);
   const [icpToDeposit, setIcpToDeposit] = useState<string>("0");
 
   // Calculate metrics
@@ -104,20 +105,21 @@ const HomePage: React.FC = () => {
     } catch (error) {
       console.error(`Error depositing ICP:`, error);
     } finally {
-      setShowTopUpModal(false);
+      setShowModal(false);
     }
   };
 
   return (
     <div className="home-container">
       <ConfirmationModal
-        isTopUp={true}
-        show={showTopUpModal}
+        type={"topup"}
         amountState={[icpToDeposit, setIcpToDeposit]}
-        onHide={() => setShowTopUpModal(false)}
+        onHide={() => setShowModal(false)}
         onConfirm={onConfirmTopUp}
-        title="Top Up Wallet"
-        message="Are you sure you want to top up your wallet?"
+        customConfig={{
+          totalPrice: parseFloat(icpToDeposit),
+          showTotalPrice: true,
+        }}
       />
 
       <div className="home-header">
@@ -268,9 +270,9 @@ const HomePage: React.FC = () => {
                     {isLoadingCredits ? (
                       <Spinner size="sm" />
                     ) : (
-                      <div onClick={() => setShowTopUpModal(true)}>
+                      <div onClick={() => setShowModal(true)}>
                         <IconTextRowView
-                          onClickIcon={() => setShowTopUpModal(true)}
+                          onClickIcon={() => setShowModal(true)}
                           IconComponent={AddCircleOutlineIcon}
                           iconColor="green"
                           text={
