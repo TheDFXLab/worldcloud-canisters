@@ -154,14 +154,14 @@ const BillingPage: React.FC = () => {
           >
             <UpgradeIcon />
             <span>
-              {showPricing ? "View Available Plans" : "View Current Plan"}
+              {showPricing ? "View Current Plan" : "View Available Plans"}
             </span>
           </button>
         )}
       </div>
 
       <div className="billing-content">
-        {showPricing ? (
+        {showPricing || !subscription ? (
           <NonSubbed
             subscription={subscription}
             tiers={tiers}
