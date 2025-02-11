@@ -27,7 +27,7 @@ export interface ModalConfig {
 const MODAL_CONFIGS: Record<ModalType, ModalConfig> = {
   topup: {
     title: "Top Up Wallet",
-    message: "Enter the amount of ICP you want to add to your wallet",
+    message: "Enter the amount of ICP you want to deposit",
     confirmText: "Top Up",
     cancelText: "Cancel",
     showWalletInfo: true,
@@ -44,7 +44,7 @@ const MODAL_CONFIGS: Record<ModalType, ModalConfig> = {
     showWalletInfo: true,
     showEstimatedCycles: true,
     showInputField: true,
-    showTotalPrice: true,
+    showTotalPrice: false,
   },
   subscription: {
     title: "Confirm Subscription",
@@ -257,13 +257,20 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           </Form.Group>
         )}
 
-        {true && (
-          <Form.Group>
-            <Form.Label>
-              {config.totalPrice} ICP will be transferred from your wallet.
+        <div style={{ marginTop: "10px", height: "40px" }}>
+          <Form.Group style={{ height: "100%" }}>
+            <Form.Label
+              style={{
+                margin: 0,
+                visibility: config.totalPrice ? "visible" : "hidden",
+              }}
+            >
+              {config.totalPrice
+                ? `${config.totalPrice} ICP will be transferred from your wallet.`
+                : "placeholder"}
             </Form.Label>
           </Form.Group>
-        )}
+        </div>
       </Modal.Body>
       <Modal.Footer>
         <Button
