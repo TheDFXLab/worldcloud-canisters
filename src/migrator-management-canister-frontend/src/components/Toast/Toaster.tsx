@@ -11,7 +11,7 @@ export interface ToasterData {
   headerContent: string;
   toastStatus: boolean;
   toastData: string;
-  textColor: string;
+  textColor?: string;
   timeout?: number;
 }
 
