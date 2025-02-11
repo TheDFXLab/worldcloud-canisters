@@ -89,7 +89,7 @@ module {
                     // check if user already has existing balance for this token
                     switch (token_balance.get(token)) {
                         case (?balance) {
-                            token_balance.put(token, balance +amount);
+                            token_balance.put(token, balance + amount);
                         };
                         case (null) {
                             token_balance.put(token, amount);
@@ -116,9 +116,9 @@ module {
                                 if (balance == amount) {
                                     token_balance.delete(token);
                                 } else {
-                                    token_balance.put(token, balance -amount);
+                                    token_balance.put(token, balance - amount);
                                 };
-                                ?(balance -amount);
+                                ?(balance - amount);
                             } else {
                                 null;
                             };
@@ -133,6 +133,20 @@ module {
                     // user didn't exist
                     // Debug.print("User " # Principal.toText(user) # " doesn't exist in book, cannot remove tokens.");
                     null;
+                };
+            };
+        };
+
+        // Increase deposited amount for `to` principal
+        public func process_payment(from : Principal, to : Principal, token : T.Token, amount : Nat) : Bool {
+            let _removed_credits = removeTokens(from, token, amount);
+            switch (_removed_credits) {
+                case (null) {
+                    return false;
+                };
+                case (_) {
+                    addTokens(to, token, amount);
+                    return true;
                 };
             };
         };
