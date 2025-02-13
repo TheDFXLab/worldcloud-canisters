@@ -141,7 +141,6 @@ const BillingPage: React.FC = () => {
         <HeaderCard
           title="Subscription & Billing"
           description="Manage your subscription and billing preferences"
-          className="deployment-header"
         />
         {subscription && (
           <button
