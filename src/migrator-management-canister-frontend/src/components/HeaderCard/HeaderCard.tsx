@@ -15,7 +15,11 @@ const HeaderCard: React.FC<HeaderCardProps> = ({
   className = "",
 }) => {
   return (
-    <div className={`header-card ${className}`}>
+    <div
+      className={`header-card ${
+        className ? className : "header-card-layout-default"
+      }`}
+    >
       <h2>{title}</h2>
       {description && <p>{description}</p>}
       {children}
