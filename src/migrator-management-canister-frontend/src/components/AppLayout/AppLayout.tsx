@@ -118,7 +118,6 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
 
   return (
     <div className="app-layout">
-      <ThemeToggle />
       <ProgressBar />
       <LoaderOverlay />
       {showToaster && toasterData && (

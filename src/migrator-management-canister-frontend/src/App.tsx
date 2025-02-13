@@ -35,6 +35,7 @@ import { SubscriptionProvider } from "./context/SubscriptionContext/Subscription
 import BillingPage from "./components/BillingPage/BillingPage";
 import { LoaderOverayProvider } from "./context/LoaderOverlayContext/LoaderOverlayContext";
 import { ConfirmationModalProvider } from "./context/ConfirmationModalContext/ConfirmationModalContext";
+import ThemeToggle from "./components/ThemeToggle/ThemeToggle";
 
 export interface State {
   canister_id: string;
@@ -58,6 +59,8 @@ function App() {
   return (
     <Router>
       <ThemeProvider>
+        <ThemeToggle />
+
         <ProgressBarProvider>
           <LoaderOverayProvider>
             <IdentityProvider>
