@@ -7,7 +7,11 @@ import {
   useCallback,
 } from "react";
 import { GithubApi } from "../../api/github/GithubApi";
-import { environment, reverse_proxy_url } from "../../config/config";
+import {
+  cors_sh_api_key,
+  environment,
+  reverse_proxy_url,
+} from "../../config/config";
 
 interface GithubUser {
   login: string;
@@ -83,6 +87,7 @@ export function GithubProvider({ children }: GithubProviderProps) {
             headers: {
               Accept: "application/json",
               "Content-Type": "application/json",
+              "x-cors-api-key": cors_sh_api_key,
             },
           }
         );
