@@ -109,11 +109,11 @@ export default function Subbed({ subscription, tiers }: SubbedProps) {
         {/* Plan Features */}
         <div className="features-list">
           <h4>Plan Features</h4>
-          <ul>
+          <ul className="features-grid">
             {currentTier.features.map((feature, index) => (
-              <li key={index}>
+              <li key={index} className="feature-item">
                 <CheckCircleIcon className="feature-icon" />
-                {feature}
+                <span className="feature-text">{feature}</span>
               </li>
             ))}
           </ul>

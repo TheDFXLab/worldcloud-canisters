@@ -21,12 +21,13 @@
 }
 
 .plan-icon svg {
-  font-size: 2rem;
+  font-size: var(--font-size-2xl);
 }
 
 .plan-info h3 {
   margin: 0;
   color: var(--text-primary);
+  font-size: var(--font-size-lg);
 }
 
 .plan-status {
@@ -38,7 +39,7 @@
 }
 
 .status-icon {
-  font-size: 1.25rem !important;
+  font-size: var(--font-size-xl);
 }
 
 /* Resource Usage Section */
@@ -63,6 +64,7 @@
 .usage-header h4 {
   margin: 0;
   color: var(--text-primary);
+  font-size: var(--font-size-2lg);
 }
 
 .usage-stats {
@@ -74,11 +76,13 @@
   justify-content: space-between;
   margin-bottom: 0.5rem;
   color: var(--text-secondary);
+  font-size: var(--font-size-lg);
 }
 
 .usage-count {
   color: var(--text-primary);
   font-weight: 500;
+  font-size: var(--font-size-base);
 }
 
 .usage-progress {
@@ -125,6 +129,7 @@
   align-items: center;
   gap: 0.5rem;
   color: var(--text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .info-icon {
@@ -136,6 +141,7 @@
 .detail-value {
   color: var(--text-primary);
   font-weight: 500;
+  font-size: var(--font-size-sm);
 }
 
 .detail-value.highlight {
@@ -187,9 +193,10 @@
 .features-list h4 {
   margin: 0 0 1rem 0;
   color: var(--text-primary);
+  font-size: var(--font-size-lg);
 }
 
-.features-list ul {
+.features-grid {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -198,11 +205,15 @@
   gap: 1rem;
 }
 
-.features-list li {
+.feature-item {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   color: var(--text-primary);
+}
+
+.feature-text {
+  font-size: var(--font-size-base) !important;
 }
 
 .feature-icon {
@@ -225,7 +236,7 @@
     grid-template-columns: 1fr;
   }
 
-  .features-list ul {
+  .features-grid {
     grid-template-columns: 1fr;
   }
 }

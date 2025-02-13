@@ -41,6 +41,20 @@ button[type="submit"] {
 }
 
 :root {
+  /* Font size*/
+  --base-width: 1440;
+
+  --px-ratio: calc(100vw / var(--base-width));
+
+  /* Font size definitions*/
+  --font-size-xs: clamp(0.75rem, calc(8 * var(--px-ratio)), 0.875rem);  /* 12px - 14px */
+  --font-size-sm: clamp(0.875rem, calc(12 * var(--px-ratio)), 1rem);     /* 14px - 16px */
+  --font-size-base: clamp(1rem, calc(14 * var(--px-ratio)), 1.125rem);   /* 16px - 18px */
+  --font-size-lg: clamp(1.125rem, calc(18 * var(--px-ratio)), 1.25rem);  /* 18px - 20px */
+  --font-size-2lg: clamp(1.25rem, calc(24 * var(--px-ratio)), 1.5rem);  /* 18px - 20px */
+  --font-size-xl: clamp(1.5rem, calc(32 * var(--px-ratio)), 1.75rem);    /* 20px - 24px */
+  --font-size-2xl: clamp(1.75rem, calc(42 * var(--px-ratio)), 2.25rem);  
+
   /* Light theme variables */
   --color-primary: #4F46E5;
   --color-primary-dark: #4338CA;
@@ -139,4 +153,23 @@ input, textarea, select {
 input:focus, textarea:focus, select:focus {
   border-color: var(--color-primary);
   outline: none;
+}
+
+/* More realistic breakpoints */
+@media (max-width: 1200px) {
+  :root {
+    --base-width: 1200;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --base-width: 768;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --base-width: 480;
+  }
 }
