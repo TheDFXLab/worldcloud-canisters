@@ -35,8 +35,6 @@ class FileUploadApi {
                 0
             );
 
-            console.log(`Total size of unzipped files: ${totalSize} bytes`);
-
             let totalUploadedSize = 0;
             // 2MB limit
             if (totalSize < 2000000) {
@@ -144,12 +142,6 @@ class FileUploadApi {
                 file.path = file.path.startsWith("/") ? file.path : `/${file.path}`;
             });
 
-            console.log(
-                `Storing files in asset canister ${canisterId} for user: ${identity
-                    ?.getPrincipal()
-                    .toText()}`
-            );
-
             const mainApi = await MainApi.create(identity);
             const result = await mainApi?.storeInAssetCanister(
                 Principal.fromText(canisterId),
@@ -183,7 +175,6 @@ class FileUploadApi {
 
 
         const sanitizedFiles = sanitizeUnzippedFiles(files);
-        console.log(`Sanitized files: `, sanitizedFiles);
         return sanitizedFiles;
     }
 

@@ -27,7 +27,6 @@ export const AssetManager: React.FC<{ canisterId: string }> = ({
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentAssets = assets.slice(indexOfFirstItem, indexOfLastItem);
-  console.log(`currentAssets: `, currentAssets);
   const totalPages = Math.ceil(assets.length / itemsPerPage);
 
   // Generate page numbers

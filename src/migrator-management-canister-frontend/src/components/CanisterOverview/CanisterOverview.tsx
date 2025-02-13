@@ -34,6 +34,8 @@ import { Tooltip } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import IconTextRowView from "../IconTextRowView/IconTextRowView";
+import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
+import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
 
 export const CanisterOverview = () => {
   /** Hooks */
@@ -54,6 +56,8 @@ export const CanisterOverview = () => {
     maxCyclesExchangeable,
     isLoadingEstimateCycles,
   } = useCycles();
+  const { setShowModal } = useConfirmationModal();
+  const { summon, destroy } = useLoaderOverlay();
 
   /** States */
   const [icpToDeposit, setIcpToDeposit] = useState<string>("0");
@@ -68,10 +72,6 @@ export const CanisterOverview = () => {
   const [canisterInfo, setCanisterInfo] = useState<Deployment | undefined>(
     undefined
   );
-
-  useEffect(() => {
-    console.log(`Is loading cycles`, isLoadingCycles);
-  }, [isLoadingCycles]);
 
   useEffect(() => {
     const getCanisterStatus = async () => {
@@ -248,8 +248,15 @@ export const CanisterOverview = () => {
   };
 
   const onConfirmTopUp = async () => {
-    await handleAddCycles();
-    setShowConfirmation(false);
+    try {
+      summon("Adding Cycles...");
+      await handleAddCycles();
+      setShowModal(false);
+    } catch (error) {
+      console.log(`Error adding cycles`, error);
+    } finally {
+      destroy();
+    }
   };
 
   const handleRetryDeployment = async (workflow_run_id: number) => {
@@ -328,9 +335,9 @@ export const CanisterOverview = () => {
             {isLoadingCycles ? (
               <Spinner animation="border" variant="primary" />
             ) : (
-              <div onClick={() => setShowConfirmation(true)}>
+              <div onClick={() => setShowModal(true)}>
                 <IconTextRowView
-                  onClickIcon={() => setShowConfirmation(true)}
+                  onClickIcon={() => setShowModal(true)}
                   IconComponent={AddCircleOutlineIcon}
                   iconColor="green"
                   text={`${
@@ -554,12 +561,16 @@ export const CanisterOverview = () => {
       </div>
 
       <ConfirmationModal
-        show={showConfirmation}
         amountState={[icpToDeposit, setIcpToDeposit]}
-        onHide={() => setShowConfirmation(false)}
+        onHide={() => setShowModal(false)}
         onConfirm={onConfirmTopUp}
-        title="Add Cycles"
-        message="Are you sure you want to add cycles to this canister?"
+        type={"cycles"}
+        customConfig={{
+          totalPrice: parseFloat(icpToDeposit),
+          showTotalPrice: false,
+        }}
+        // title="Add Cycles"
+        // message="Are you sure you want to add cycles to this canister?"
       />
 
       {status === "uninitialized" && (

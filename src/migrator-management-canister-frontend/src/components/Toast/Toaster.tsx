@@ -11,7 +11,7 @@ export interface ToasterData {
   headerContent: string;
   toastStatus: boolean;
   toastData: string;
-  textColor: string;
+  textColor?: string;
   timeout?: number;
 }
 
@@ -93,18 +93,14 @@ export default function Toaster({
             text={headerContent}
             IconComponent={CheckCircleOutlineIcon}
             iconColor={"#50FF97"}
-            onClickIcon={() => {
-              console.log("clicked");
-            }}
+            onClickIcon={() => {}}
           />
         ) : (
           <IconTextRowView
             text={headerContent}
             IconComponent={WarningAmberIcon}
             iconColor={"#FF3131"}
-            onClickIcon={() => {
-              console.log("clicked");
-            }}
+            onClickIcon={() => {}}
           />
         )}
         <small style={{ color: "white" }}>{"now"}</small>

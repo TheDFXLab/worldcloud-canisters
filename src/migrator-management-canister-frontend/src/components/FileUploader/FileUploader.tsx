@@ -132,7 +132,6 @@ function FileUploader() {
       );
 
       setTotalSize(totalSize);
-      console.log(`Total size of unzipped files: ${totalSize} bytes`);
 
       let totalUploadedSize = 0;
       // 2MB limit

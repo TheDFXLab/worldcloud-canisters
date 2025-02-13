@@ -24,7 +24,7 @@
 }
 
 .icon-text-row.active svg {
-  color: var(--color-primary);
+  color: var(--text-primary);
 }
 
 /* For the logout icon specifically */

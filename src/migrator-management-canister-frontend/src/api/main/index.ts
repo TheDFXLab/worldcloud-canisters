@@ -40,7 +40,6 @@ class MainApi {
 
             if (identity && identity.getPrincipal().toText() !== internetIdentityConfig.loggedOutPrincipal) {
                 isIdentified = true;
-                console.log(`Created new actor with identity:`, identity.getPrincipal().toText());
             }
             else {
                 isIdentified = false;
@@ -118,7 +117,6 @@ class MainApi {
             if (!this.identity) {
                 throw new Error("Identity not initialized.");
             }
-            console.log(`Cansite backend:`, this.actor);
             const deployments = await this.actor.getCanisterDeployments();
             return deployments;
         } catch (error) {

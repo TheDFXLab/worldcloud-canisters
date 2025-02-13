@@ -51,6 +51,10 @@
   font-size: 0.9rem;
 }
 
+.zero-balance {
+  color: var(--color-warning);
+}
+
 .info-icon {
   font-size: 1rem !important;
   color: var(--text-tertiary);

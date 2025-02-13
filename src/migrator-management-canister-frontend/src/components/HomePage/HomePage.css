@@ -1,8 +1,10 @@
 .home-container {
   padding: 2rem;
+  padding-top: 0.5rem;
   min-height: calc(100vh - 64px);
   background-color: var(--background);
   height: 100%;
+  overflow-y: auto;
 }
 
 .home-header {
@@ -24,7 +26,8 @@
 /* Quick Stats Grid */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  /* Start with 4 cards per row */
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -39,6 +42,8 @@
   gap: 1rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
+  min-width: 0;
+  position: relative;
 }
 
 .stat-card:hover {
@@ -52,10 +57,37 @@
   font-size: 2rem;
 }
 
+.stat-content {
+  min-width: 0;
+  flex: 1;
+  position: relative;
+}
+
 .stat-content h3 {
   color: var(--text-secondary);
   font-size: 0.9rem;
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+}
+
+.stat-content h3:hover::after,
+.stat-value:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: 0;
+  top: 100%;
+  background: var(--background);
+  padding: 0.5rem;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  border: 1px solid var(--border-color);
+  white-space: normal;
+  min-width: max-content;
+  max-width: 300px;
 }
 
 .stat-value {
@@ -63,6 +95,10 @@
   font-size: 1.5rem;
   font-weight: 600;
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
 }
 
 .stat-value.small {
@@ -215,9 +251,16 @@
   padding: 1.5rem;
 }
 
+/* Break to 2 cards per row at tablet */
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .details-grid-homepage {
@@ -227,4 +270,48 @@
   .home-header h2 {
     font-size: 1.75rem;
   }
+}
+
+/* Single column on mobile */
+@media (max-width: 640px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .home-container {
+    padding: 1.5rem 0.25rem;
+    min-height: calc(100vh - 64px);
+  }
+
+  .info-label {
+  }
+
+  .info-value {
+    text-align: right;
+  }
+}
+
+/* Optional: Add a smooth transition */
+.stat-content h3::after,
+.stat-value::after {
+  transition: all 0.2s ease;
+}
+
+.copy-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.copy-icon {
+  font-size: 1rem !important;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.copy-icon:hover {
+  color: var(--text-primary);
 }

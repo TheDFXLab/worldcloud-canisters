@@ -43,6 +43,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
 
   const refreshIdentity = async () => {
     try {
+      setIsLoadingIdentity(true);
       console.log(`Refreshing identity`);
       const authClient = await AuthClient.create();
       const identity = authClient.getIdentity();
@@ -61,11 +62,12 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
     } catch (error) {
       console.error(`Error refreshing identity`, error);
       return null;
+    } finally {
+      setIsLoadingIdentity(false);
     }
   };
 
   const disconnect = async () => {
-    console.log(`Disconnecting wallet`);
     setIsLoadingIdentity(true);
     const authClient = await AuthClient.create();
     await authClient.logout();

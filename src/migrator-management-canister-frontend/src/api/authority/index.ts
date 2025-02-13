@@ -58,7 +58,6 @@ class AuthorityApi {
             controllers: response.settings.controllers[0]?.map((controller) => controller.toString()) || [],
             cycles: Number(response.cycles)
         }
-        console.log(`Canister statusss:`, status);
         return status;
     }
 

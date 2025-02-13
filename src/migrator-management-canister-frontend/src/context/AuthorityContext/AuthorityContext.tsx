@@ -39,7 +39,6 @@ export function AuthorityProvider({
   const refreshStatus = async () => {
     try {
       if (!canisterId) {
-        console.log(`Canister ID is not set`);
         throw new Error("Canister ID is not set");
       }
       const authApi = new AuthorityApi(Principal.fromText(canisterId));

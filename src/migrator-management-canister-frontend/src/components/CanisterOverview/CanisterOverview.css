@@ -1106,3 +1106,76 @@
 .github-icon {
   font-size: 1.1rem !important;
 }
+
+@media (max-width: 420px) {
+  .deployments-stats-container {
+    padding: 0.5rem;
+  }
+
+  .detail-card {
+    padding: 1rem 0.5rem;
+  }
+
+  .canister-overview {
+    padding: 0.2rem 0.5rem;
+  }
+
+  .stat-item {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .deployment-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .deployment-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .deployment-date {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+
+  .deployment-primary {
+    margin: 0.75rem 0;
+  }
+
+  .deployment-secondary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .details-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .detail-item {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.9rem;
+  }
+
+  .detail-label {
+    color: var(--text-secondary);
+  }
+
+  .repo-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+}

@@ -58,8 +58,6 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
   const [isDispatched, setIsDispatched] = useState(false);
 
   const getDeployment = (canisterId: string) => {
-    console.log(`all deps:`, deployments);
-    console.log(`can:`, canisterId);
     return deployments.find(
       (deployment) => deployment.canister_id.toText() === canisterId
     );
