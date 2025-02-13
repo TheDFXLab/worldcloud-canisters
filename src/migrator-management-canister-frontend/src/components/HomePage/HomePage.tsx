@@ -27,6 +27,10 @@ import MainApi from "../../api/main";
 import InfoIcon from "@mui/icons-material/Info";
 import { Tooltip } from "@mui/material";
 import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
+import HeaderCard from "../HeaderCard/HeaderCard";
+import TruncatedTooltip from "../TruncatedTooltip/TruncatedTooltip";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import { shortenPrincipal } from "../../utility/formatter";
 
 const HomePage: React.FC = () => {
   const { deployments } = useDeployments();
@@ -42,6 +46,7 @@ const HomePage: React.FC = () => {
 
   /**State */
   const [icpToDeposit, setIcpToDeposit] = useState<string>("0");
+  const [copied, setCopied] = useState(false);
 
   // Calculate metrics
   const totalCanisters = deployments.length;
@@ -120,12 +125,11 @@ const HomePage: React.FC = () => {
         }}
       />
 
-      <div className="home-header">
-        <h2>Dashboard</h2>
-        <p className="subtitle">
-          Welcome back{githubUser ? `, ${githubUser.login}` : ""}
-        </p>
-      </div>
+      <HeaderCard
+        title={"Dashboard"}
+        description={`${githubUser ? `Welcome back, ${githubUser.login}` : ""}`}
+        // className="header-card-layout-column"
+      />
 
       {/* Quick Stats */}
       <div className="stats-grid">
@@ -157,7 +161,8 @@ const HomePage: React.FC = () => {
           <UpdateIcon />
           <div className="stat-content">
             <h3>Last Deployment</h3>
-            <p className="stat-value small">{lastDeployment}</p>
+            <TruncatedTooltip text={lastDeployment} className="stat-value" />
+            {/* <p className="stat-value small">{lastDeployment}</p> */}
           </div>
         </div>
       </div>
@@ -209,8 +214,20 @@ const HomePage: React.FC = () => {
               <div className="detail-card-content">
                 <div className="info-row">
                   <span className="info-label">Principal ID</span>
-                  <span className="info-value">
-                    {identity?.getPrincipal().toText()}
+                  <span className="info-value copy-wrapper">
+                    {shortenPrincipal(identity?.getPrincipal().toText() || "")}
+                    <Tooltip title={copied ? "Copied!" : "Copy to clipboard"}>
+                      <ContentCopyIcon
+                        className="copy-icon"
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            identity?.getPrincipal().toText() || ""
+                          );
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                      />
+                    </Tooltip>
                   </span>
                 </div>
                 <div className="info-row">

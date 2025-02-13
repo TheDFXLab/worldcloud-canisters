@@ -5,16 +5,19 @@ import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import CorporateFareIcon from "@mui/icons-material/CorporateFare";
 import MemoryIcon from "@mui/icons-material/Memory";
 import { Tooltip, LinearProgress } from "@mui/material";
+import UpgradeIcon from "@mui/icons-material/Upgrade";
+
 import { fromE8sStable } from "../../../utility/e8s";
 import {
   Subscription,
   Tier,
 } from "../../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import "./Subbed.css";
-
+import "../BillingPage.css";
 interface SubbedProps {
   subscription: Subscription | null;
   tiers: Tier[] | null;
+  pricingState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
 }
 
 const tierIcons = [
@@ -23,7 +26,12 @@ const tierIcons = [
   <CorporateFareIcon />,
 ];
 
-export default function Subbed({ subscription, tiers }: SubbedProps) {
+export default function Subbed({
+  subscription,
+  tiers,
+  pricingState,
+}: SubbedProps) {
+  const [showPricing, setShowPricing] = pricingState;
   if (!subscription || !tiers) return null;
 
   const currentTier = tiers[Number(subscription.tier_id)];
@@ -45,6 +53,17 @@ export default function Subbed({ subscription, tiers }: SubbedProps) {
             Active
           </p>
         </div>
+        {subscription && (
+          <button
+            className="view-plans-button"
+            onClick={() => setShowPricing(!showPricing)}
+          >
+            <UpgradeIcon />
+            <span>
+              {showPricing ? "View Current Plan" : "View Available Plans"}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Resource Usage */}

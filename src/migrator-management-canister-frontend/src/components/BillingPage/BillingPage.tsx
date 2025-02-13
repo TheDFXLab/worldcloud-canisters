@@ -142,7 +142,7 @@ const BillingPage: React.FC = () => {
           title="Subscription & Billing"
           description="Manage your subscription and billing preferences"
         />
-        {subscription && (
+        {/* {subscription && (
           <button
             className="view-plans-button"
             onClick={() => setShowPricing(!showPricing)}
@@ -152,7 +152,7 @@ const BillingPage: React.FC = () => {
               {showPricing ? "View Current Plan" : "View Available Plans"}
             </span>
           </button>
-        )}
+        )} */}
       </div>
 
       <div className="billing-content">
@@ -161,9 +161,14 @@ const BillingPage: React.FC = () => {
             subscription={subscription}
             tiers={tiers}
             handleSelectPlan={handleSelectPlan}
+            pricingState={[showPricing, setShowPricing]}
           />
         ) : (
-          <Subbed subscription={subscription} tiers={tiers} />
+          <Subbed
+            subscription={subscription}
+            tiers={tiers}
+            pricingState={[showPricing, setShowPricing]}
+          />
         )}
       </div>
     </div>
