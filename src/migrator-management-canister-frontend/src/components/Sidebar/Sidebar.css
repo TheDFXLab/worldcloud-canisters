@@ -109,5 +109,6 @@
 @media screen and (max-width: 640px) {
   .sidebar-overlay.show {
     display: block;
+    z-index: 1;
   }
 }
