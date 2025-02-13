@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import "./CanisterDeployer.css";
 import { Principal } from "@dfinity/principal";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import MainApi from "../../api/main";
@@ -10,6 +9,17 @@ import { useNavigate } from "react-router-dom";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 import { useProgress } from "../../context/ProgressBarContext/ProgressBarContext";
 import HeaderCard from "../HeaderCard/HeaderCard";
+import { useSubscription } from "../../context/SubscriptionContext/SubscriptionContext";
+import UnsubscribedView from "../UnsubscribedView/UnsubscribedView";
+import LoadingView from "../LoadingView/LoadingView";
+import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
+import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
+import SecurityIcon from "@mui/icons-material/Security";
+import SpeedIcon from "@mui/icons-material/Speed";
+import LanguageIcon from "@mui/icons-material/Language";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+
+import "./CanisterDeployer.css";
 
 interface CanisterDeployerProps {}
 
@@ -22,6 +32,15 @@ function CanisterDeployer({}: CanisterDeployerProps) {
   const navigate = useNavigate();
   const { setActiveTab } = useSideBar();
   const { setIsLoadingProgress, setIsEnded } = useProgress();
+  const {
+    tiers,
+    subscription,
+    isLoadingSub,
+    isLoadingTiers,
+    getSubscription,
+    validateSubscription,
+  } = useSubscription();
+  const { summon, destroy } = useLoaderOverlay();
 
   /**State */
   const [state, setState] = useState({
@@ -40,6 +59,11 @@ function CanisterDeployer({}: CanisterDeployerProps) {
   }, []);
 
   useEffect(() => {
+    if (!subscription) {
+      setActionBar(null);
+      return;
+    }
+
     setActionBar({
       icon: "🔨",
       text: "Ready to deploy your canister",
@@ -48,10 +72,26 @@ function CanisterDeployer({}: CanisterDeployerProps) {
       isButtonDisabled: isLoading,
       isHidden: false,
     });
-  }, [isLoading]);
+  }, [isLoading, subscription]);
 
   const handleDeploy = async () => {
     try {
+      summon("Canister deployment in progress...");
+
+      const validation = await validateSubscription(true);
+      if (!validation.status) {
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: true,
+          toastData: validation.message,
+          textColor: "red",
+          timeout: 5000,
+        });
+
+        setShowToaster(true);
+        navigate("/app/billing");
+        return;
+      }
       setIsLoadingProgress(true);
       setIsEnded(false);
       setToasterData({
@@ -87,6 +127,8 @@ function CanisterDeployer({}: CanisterDeployerProps) {
         refreshDeployments();
         setCanisterId(result?.message as string);
 
+        getSubscription();
+
         // Navigate to publishing page
         navigate(`/app/deploy/${result?.message as string}`);
       } else {
@@ -105,8 +147,22 @@ function CanisterDeployer({}: CanisterDeployerProps) {
       setIsLoading(false);
       setIsLoadingProgress(false);
       setIsEnded(true);
+      destroy();
     }
   };
+
+  if (isLoadingSub || isLoadingTiers) {
+    return <LoadingView type="deployment" />;
+  }
+
+  if (!subscription) {
+    setActionBar(null);
+    return <UnsubscribedView />;
+  }
+
+  if (subscription.used_slots >= subscription.max_slots) {
+    return <UnsubscribedView />;
+  }
 
   return (
     <div className="publish-flow">
@@ -116,12 +172,14 @@ function CanisterDeployer({}: CanisterDeployerProps) {
             <HeaderCard
               title="Deploy Your Canister"
               description="Get started with Internet Computer hosting"
-              className="deployment-header"
+              // className="deployment-header"
             />
 
             <div className="info-grid">
               <div className="info-card">
-                <span className="icon">🚀</span>
+                <span className="icon">
+                  <RocketLaunchIcon />
+                </span>
                 <h3>Fast Deployment</h3>
                 <p>
                   Deploy your website to IC in minutes with automated build
@@ -129,19 +187,25 @@ function CanisterDeployer({}: CanisterDeployerProps) {
                 </p>
               </div>
               <div className="info-card">
-                <span className="icon">🔒</span>
+                <span className="icon">
+                  <SecurityIcon />
+                </span>
                 <h3>Secure Hosting</h3>
                 <p>Your content is distributed across the secure IC network</p>
               </div>
               <div className="info-card">
-                <span className="icon">⚡</span>
+                <span className="icon">
+                  <SpeedIcon />
+                </span>
                 <h3>High Performance</h3>
                 <p>
                   Benefit from IC's distributed infrastructure for optimal speed
                 </p>
               </div>
               <div className="info-card">
-                <span className="icon">🌐</span>
+                <span className="icon">
+                  <LanguageIcon />
+                </span>
                 <h3>Global Access</h3>
                 <p>Your site is accessible worldwide through IC's network</p>
               </div>

@@ -137,11 +137,6 @@ module {
         data : Blob;
     };
 
-    public type Result = {
-        #ok : Text;
-        #err : Text;
-    };
-
     public type CanisterSettings = {
         freezing_threshold : ?Nat;
         controllers : ?[Principal];
@@ -257,4 +252,46 @@ module {
         transfer : shared TransferArgs -> async (TransferResult);
         account_balance : AccountBalanceArgs -> async (Tokens);
     };
+
+    public type Tier = {
+        id : Nat;
+        name : Text;
+        slots : Nat;
+        min_deposit : Tokens;
+        price : Tokens;
+        features : [Text];
+    };
+
+    public type Subscription = {
+        user_id : Principal;
+        tier_id : Nat;
+        canisters : [Principal];
+        used_slots : Nat;
+        max_slots : Nat;
+        date_created : TimeLib.Time;
+        date_updated : TimeLib.Time;
+    };
+
+    public type SubscriptionsMap = HashMap.HashMap<Principal, Subscription>;
+    public type TiersMap = HashMap.HashMap<Nat, Tier>;
+    public type TiersList = [Tier];
+
+    /** Return types */
+
+    public type Result = {
+        #ok : Text;
+        #err : Text;
+    };
+
+    public type Response<T> = {
+        #ok : T;
+        #err : Text;
+    };
+
+    public type GetCyclesAvailableResult = {
+        #ok : Float;
+        #err : Text;
+    };
+
+    /** End of types */
 };

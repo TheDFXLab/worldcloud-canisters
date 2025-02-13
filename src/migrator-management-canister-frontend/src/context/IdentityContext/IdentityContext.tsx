@@ -25,7 +25,7 @@ interface IdentityContextType {
   isConnected: boolean;
   identity: Identity | null;
   isLoadingIdentity: boolean;
-  refreshIdentity: () => Promise<Identity>;
+  refreshIdentity: () => Promise<Identity | null>;
   connectWallet: (canisterId: Principal) => Promise<Identity | null>;
   disconnect: () => Promise<boolean>;
 }
@@ -42,19 +42,29 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
     useState<any>(null);
 
   const refreshIdentity = async () => {
-    const authClient = await AuthClient.create();
-    const identity = authClient.getIdentity();
-    if (
-      identity.getPrincipal().toText() ===
-      internetIdentityConfig.loggedOutPrincipal
-    ) {
-      setIsConnected(false);
-      setIdentity(null);
+    try {
+      setIsLoadingIdentity(true);
+      console.log(`Refreshing identity`);
+      const authClient = await AuthClient.create();
+      const identity = authClient.getIdentity();
+      console.log(`Identity:`, identity.getPrincipal().toText());
+      if (
+        identity.getPrincipal().toText() ===
+        internetIdentityConfig.loggedOutPrincipal
+      ) {
+        setIsConnected(false);
+        setIdentity(null);
+        return identity;
+      }
+      setIdentity(identity);
+      setIsConnected(true);
       return identity;
+    } catch (error) {
+      console.error(`Error refreshing identity`, error);
+      return null;
+    } finally {
+      setIsLoadingIdentity(false);
     }
-    setIdentity(identity);
-    setIsConnected(true);
-    return identity;
   };
 
   const disconnect = async () => {
@@ -70,6 +80,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
 
   const connectWallet = async (canisterId: Principal) => {
     try {
+      console.log(`Connecting wallet`);
       // Create an auth client
       let authClient = await AuthClient.create();
 

@@ -17,10 +17,7 @@ export const sanitizeUnzippedFiles = (unzippedFiles: StaticFile[]) => {
 
     const indexHtmlPath = rootDirPath[0];
 
-    console.log(`indexHtmlPath: `, indexHtmlPath);
     const rootDir = indexHtmlPath.split("index.html")[0];
-
-    console.log(`Root directory path: `, rootDir);
 
     if (rootDir.length == 0) {
         return unzippedFiles;
@@ -28,7 +25,6 @@ export const sanitizeUnzippedFiles = (unzippedFiles: StaticFile[]) => {
 
     const sanitizedFiles = unzippedFiles.map((file) => {
         const split = file.path.split(`${rootDir}`);
-        console.log(`split: `, split);
         return { ...file, path: split.length > 1 ? split[1] : split[0] }
     })
 

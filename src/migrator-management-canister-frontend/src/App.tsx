@@ -29,6 +29,12 @@ import { SideBarProvider } from "./context/SideBarContext/SideBarContext";
 import { AdminPanel } from "./components/AdminPanel/AdminPanel";
 import { ThemeProvider } from "./context/ThemeContext/ThemeContext";
 import { ProgressBarProvider } from "./context/ProgressBarContext/ProgressBarContext";
+import { CyclesProvider } from "./context/CyclesContext/CyclesContext";
+import { LedgerProvider } from "./context/LedgerContext/LedgerContext";
+import { SubscriptionProvider } from "./context/SubscriptionContext/SubscriptionContext";
+import BillingPage from "./components/BillingPage/BillingPage";
+import { LoaderOverayProvider } from "./context/LoaderOverlayContext/LoaderOverlayContext";
+import { ConfirmationModalProvider } from "./context/ConfirmationModalContext/ConfirmationModalContext";
 
 export interface State {
   canister_id: string;
@@ -53,69 +59,93 @@ function App() {
     <Router>
       <ThemeProvider>
         <ProgressBarProvider>
-          <IdentityProvider>
-            <GithubProvider>
-              <ToasterProvider>
-                <SideBarProvider>
-                  <LoadBarProvider>
-                    <ActionBarProvider>
-                      <Routes>
-                        <Route path="/" element={<LandingPage />} />
-                        <Route
-                          path="/github/callback"
-                          element={<GitHubCallback />}
-                        />
-                        <Route
-                          path="/gh-select-repo"
-                          element={<RepoSelector />}
-                        />
-                        <Route
-                          path="/app/*"
-                          element={
-                            <AuthWrapper>
-                              <AuthorityProvider state={state}>
-                                <DeploymentsProvider>
-                                  <AppLayout setState={setState} state={state}>
-                                    <Routes>
-                                      <Route index element={<HomePage />} />
-                                      <Route
-                                        path="settings"
-                                        element={<Settings />}
-                                      />
-                                      <Route
-                                        path="new"
-                                        element={<CanisterDeployer />}
-                                      />
-                                      <Route
-                                        path="deploy/:canisterId?"
-                                        element={<ProjectDeployment />}
-                                      />
-                                      <Route
-                                        path="websites"
-                                        element={<WebsitesComponent />}
-                                      />
-                                      <Route
-                                        path="admin"
-                                        element={<AdminPanel />}
-                                      />
-                                      <Route
-                                        path="canister/:canisterId"
-                                        element={<CanisterOverview />}
-                                      />
-                                    </Routes>
-                                  </AppLayout>
-                                </DeploymentsProvider>
-                              </AuthorityProvider>
-                            </AuthWrapper>
-                          }
-                        />
-                      </Routes>
-                    </ActionBarProvider>
-                  </LoadBarProvider>
-                </SideBarProvider>
-              </ToasterProvider>
-            </GithubProvider>
-          </IdentityProvider>
+          <LoaderOverayProvider>
+            <IdentityProvider>
+              <GithubProvider>
+                <ToasterProvider>
+                  <SideBarProvider>
+                    <LoadBarProvider>
+                      <ActionBarProvider>
+                        <Routes>
+                          <Route path="/" element={<LandingPage />} />
+                          <Route
+                            path="/github/callback"
+                            element={<GitHubCallback />}
+                          />
+                          <Route
+                            path="/gh-select-repo"
+                            element={<RepoSelector />}
+                          />
+                          <Route
+                            path="/app/*"
+                            element={
+                              <AuthWrapper>
+                                <AuthorityProvider state={state}>
+                                  <DeploymentsProvider>
+                                    <CyclesProvider>
+                                      <SubscriptionProvider>
+                                        <ConfirmationModalProvider>
+                                          <LedgerProvider>
+                                            <AppLayout
+                                              setState={setState}
+                                              state={state}
+                                            >
+                                              <Routes>
+                                                <Route
+                                                  index
+                                                  element={<HomePage />}
+                                                />
+                                                <Route
+                                                  path="billing"
+                                                  element={<BillingPage />}
+                                                />
+                                                <Route
+                                                  path="settings"
+                                                  element={<Settings />}
+                                                />
+                                                <Route
+                                                  path="new"
+                                                  element={<CanisterDeployer />}
+                                                />
+                                                <Route
+                                                  path="deploy/:canisterId?"
+                                                  element={
+                                                    <ProjectDeployment />
+                                                  }
+                                                />
+                                                <Route
+                                                  path="websites"
+                                                  element={
+                                                    <WebsitesComponent />
+                                                  }
+                                                />
+                                                <Route
+                                                  path="admin"
+                                                  element={<AdminPanel />}
+                                                />
+                                                <Route
+                                                  path="canister/:canisterId"
+                                                  element={<CanisterOverview />}
+                                                />
+                                              </Routes>
+                                            </AppLayout>
+                                          </LedgerProvider>
+                                        </ConfirmationModalProvider>
+                                      </SubscriptionProvider>
+                                    </CyclesProvider>
+                                  </DeploymentsProvider>
+                                </AuthorityProvider>
+                              </AuthWrapper>
+                            }
+                          />
+                        </Routes>
+                      </ActionBarProvider>
+                    </LoadBarProvider>
+                  </SideBarProvider>
+                </ToasterProvider>
+              </GithubProvider>
+            </IdentityProvider>
+          </LoaderOverayProvider>
         </ProgressBarProvider>
       </ThemeProvider>
     </Router>

@@ -1,1 +1,132 @@
+.modal-content {
+  background: var(--background-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: 0 0 12px var(--glass-border);
+  backdrop-filter: blur(8px);
+}
 
+.modal-header {
+  border-bottom: 1px solid var(--border-color);
+  padding: 1.5rem;
+}
+
+.modal-title {
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  color: var(--text-secondary);
+}
+
+.modal-message {
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.stats-container {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--background);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.zero-balance {
+  color: var(--color-warning);
+}
+
+.info-icon {
+  font-size: 1rem !important;
+  color: var(--text-tertiary);
+  cursor: help;
+  transition: color 0.2s;
+}
+
+.info-icon:hover {
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.estimated-value {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  margin-left: 0.5rem;
+}
+
+.amount-input-group {
+  margin-top: 1rem;
+}
+
+.form-control {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-family: var(--font-mono);
+}
+
+.form-control:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-transparent);
+}
+
+.form-label {
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--border-color);
+  padding: 1.5rem;
+  gap: 1rem;
+}
+
+.modal-footer .btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.modal-footer .spinner-border {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.15em;
+}
+
+.me-2 {
+  margin-right: 0.5rem;
+}
+
+div.modal-backdrop.show {
+  --bs-backdrop-opacity: 0.15 !important;
+  --bs-backdrop-bg: var(--background) !important;
+  background-color: var(--bs-backdrop-bg) !important;
+  opacity: var(--bs-backdrop-opacity) !important;
+}

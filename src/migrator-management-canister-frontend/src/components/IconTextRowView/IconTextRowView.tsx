@@ -2,7 +2,7 @@ import React from "react";
 import "./IconTextRowView.css";
 
 interface IconTextRowViewProps {
-  text: string;
+  text: string | React.ReactNode;
   IconComponent: React.ElementType;
   onClickIcon?: () => void;
   className?: string;

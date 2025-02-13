@@ -1,0 +1,373 @@
+.billing-container {
+  height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding: 1rem;
+  min-height: calc(100vh - 64px);
+  background-color: var(--background);
+  height: 100%;
+}
+
+.billing-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.4rem;
+}
+
+.billing-header .subtitle {
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+.billing-content {
+  flex: 1;
+  padding: 0.5rem 2rem;
+}
+
+/* Current Plan Section */
+.current-plan-section {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.current-plan-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.plan-icon {
+  color: var(--color-primary);
+  font-size: 2rem;
+}
+
+.plan-icon svg {
+  font-size: 2rem;
+}
+
+.plan-info h3 {
+  color: var(--text-primary);
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.plan-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-success);
+  margin: 0.25rem 0 0 0;
+  font-size: 0.9rem;
+}
+
+.status-icon {
+  font-size: 1rem !important;
+}
+
+/* Plan Details */
+.plan-details {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1.5rem;
+}
+
+.info-icon {
+  font-size: 16px !important; /* Force size */
+  color: var(--text-tertiary) !important; /* Force color */
+  margin-left: 4px !important; /* Add some spacing */
+  vertical-align: middle !important; /* Align with text */
+  cursor: help;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+}
+
+.detail-label {
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.info-icon {
+  font-size: 1rem !important;
+  color: var(--text-tertiary);
+  cursor: help;
+}
+
+.detail-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Features List */
+.features-list {
+  margin-top: 1.5rem;
+}
+
+.features-list h4 {
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.features-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.features-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  color: var(--text-secondary);
+}
+
+.feature-icon {
+  color: var(--color-success);
+  font-size: 1.25rem !important;
+}
+
+/* Pricing Grid */
+.pricing-grid {
+  display: grid;
+  /* grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); */
+  gap: 1.5rem;
+}
+
+.pricing-card {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.pricing-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--color-primary);
+}
+
+.pricing-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.pricing-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.tier-icon {
+  color: var(--color-primary);
+  margin-bottom: 1rem;
+}
+
+.tier-icon svg {
+  font-size: 2.5rem;
+}
+
+.pricing-header h3 {
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+  font-size: 1.2rem;
+}
+
+.price {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.amount {
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.period {
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+}
+
+.deposit-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1rem;
+}
+
+.deposit-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.deposit-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem 0;
+}
+
+.features li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.select-plan-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: auto;
+}
+
+.select-plan-btn:hover {
+  background: var(--color-primary-dark);
+}
+
+.view-plans-button {
+  align-self: flex-end; /* Align to right */
+  justify-self: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: rgba(0, 0, 0, 0);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  /* box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); */
+}
+
+.view-plans-button:hover {
+  background: var(--glass-bg);
+  transform: translateY(-2px);
+  /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); */
+}
+
+.view-plans-button svg {
+  font-size: 1.25rem;
+}
+
+.pricing-card.current-tier {
+  border: 2px solid var(--color-primary);
+  position: relative;
+}
+
+.current-plan-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-primary);
+  color: white;
+  padding: 0.25rem 1rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.select-plan-btn:disabled {
+  background: var(--background-secondary);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  border: 1px solid var(--border-color);
+}
+
+@media (max-width: 768px) {
+  .billing-container {
+    padding: 1rem;
+  }
+  .view-plans-button {
+    position: relative;
+    top: 0;
+    right: 0;
+    margin: 1rem auto;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (min-width: 769px) {
+  .pricing-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pricing-container {
+  position: relative;
+  width: 100%;
+}
+
+.back-button {
+  position: absolute;
+  left: 0;
+  top: -2.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.1rem;
+  background: transparent;
+  color: var(--text-primary);
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background: var(--glass-bg);
+}
+
+.back-button svg {
+  font-size: 1.25rem;
+}

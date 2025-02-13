@@ -162,7 +162,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
           artifacts: [],
         },
       }));
-      console.log(`loaded branches for ${repo}`);
     } catch (error) {
       console.error("Failed to load branches:", error);
     }
@@ -184,11 +183,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
           };
         });
 
-      console.log(
-        `locations length:`,
-        locations.length === 1 ? locations[0].path : ""
-      );
-      console.log(`locations:`, locations, repoStates);
       setRepoStates((prev) => {
         const newState = {
           ...prev,
@@ -239,7 +233,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         timeout: 5000,
       });
 
-      console.log(`Hiding action bar`);
       setHideActionBar(true);
 
       setRepoStates((prev) => ({
@@ -363,12 +356,10 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         ),
       },
     }));
-    console.log(`Updated step status:`, repoStates);
   };
 
   const handleSelectRepo = async (repo: Repository) => {
     setState((prev) => ({ ...prev, selectedRepo: repo }));
-    console.log(`Selected repo:`, repo);
 
     setActionBar({
       icon: "📦",
@@ -383,12 +374,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       isButtonDisabled: !state.selectedRepo,
       isHidden: hideActionBar,
     });
-
-    // const githubApi = GithubApi.getInstance();
-    // const runs = await githubApi.getWorkflowRuns(repo.full_name);
-    // const workflows = await githubApi.getWorkflows(repo.full_name,);
-    // console.log(`Workflow runs:`, runs);
-    // console.log(`Workflows:`, workflows);
   };
 
   const renderRepoGrid = () => (
@@ -424,7 +409,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   const renderConfigureStep = () => {
     if (!state.selectedRepo) {
-      console.log(`no repo selected`);
       return null;
     }
 
@@ -527,7 +511,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   useEffect(() => {
     if (state.step === "select") {
-      console.log(`Setting action bar`, state);
       setActionBar({
         icon: "📦",
         text: state.selectedRepo
@@ -544,12 +527,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
     } else if (state.step === "configure") {
       setShowPagination(false);
 
-      console.log(`Setting action bar`, {
-        canisterId,
-        state: state,
-        repoStates: repoStates[state.selectedRepo!.full_name],
-        selectedPath: repoStates[state.selectedRepo!.full_name]?.selectedPath,
-      });
       setActionBar({
         icon: "🚀",
         text: `Ready to deploy ${state.selectedRepo?.name}`,
@@ -569,10 +546,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
     repoStates,
     state,
   ]);
-
-  useEffect(() => {
-    console.log(`state changes`, state);
-  }, [state]);
 
   if (!repos.length) {
     return <div>Loading...</div>;

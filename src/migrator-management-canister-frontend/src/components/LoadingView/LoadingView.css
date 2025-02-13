@@ -1,0 +1,89 @@
+.beta-test-section {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 64px);
+  /* max-width: 1200px; */
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 2rem 0 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1rem;
+}
+
+.canister-deployer {
+  margin: 2rem auto;
+  padding: 2rem;
+  background: var(--background-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px var(--glass-border);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+/* Add these styles for better skeleton appearance */
+.MuiSkeleton-root {
+  background-color: var(--background-secondary) !important;
+}
+
+.MuiSkeleton-wave::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--color-primary-rgb), 0.1),
+    transparent
+  ) !important;
+}
+
+/* Add these styles for better desktop layout */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* Force 4 columns on desktop */
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+.info-card {
+  padding: 1.5rem;
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.subscribe-cta {
+  text-align: center;
+  margin-top: 3rem;
+  padding: 2rem;
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+@media (max-width: 768px) {
+  .beta-test-section {
+    padding: 1rem;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr; /* Single column on mobile */
+  }
+
+  /* Adjust skeleton widths for mobile */
+  .header .MuiSkeleton-root {
+    width: 80% !important;
+  }
+
+  .subscribe-cta .MuiSkeleton-root {
+    width: 70% !important;
+  }
+}

@@ -40,7 +40,6 @@ class MainApi {
 
             if (identity && identity.getPrincipal().toText() !== internetIdentityConfig.loggedOutPrincipal) {
                 isIdentified = true;
-                console.log(`Created new actor with identity:`, identity.getPrincipal().toText());
             }
             else {
                 isIdentified = false;
@@ -98,6 +97,15 @@ class MainApi {
         }
     }
 
+    async getCreditsAvailable() {
+        try {
+            const credits = await this.actor?.getMyCredits();
+            return credits;
+        } catch (error) {
+            return null;
+        }
+    }
+
     async getCanisterDeployments() {
         try {
             if (!this.actor) {
@@ -109,7 +117,6 @@ class MainApi {
             if (!this.identity) {
                 throw new Error("Identity not initialized.");
             }
-            console.log(`Cansite backend:`, this.actor);
             const deployments = await this.actor.getCanisterDeployments();
             return deployments;
         } catch (error) {
@@ -123,6 +130,16 @@ class MainApi {
             canisterId
         );
         return runsHistory;
+    }
+
+    async getCanisterStatus(canisterId: Principal) {
+        const result = await this.actor?.getCanisterStatus(canisterId);
+
+        if (!result) {
+            throw new Error("Failed to get canister status");
+        }
+
+        return result;
     }
 
     async deployAssetCanister() {

@@ -21,12 +21,12 @@ import Float "mo:base/Float";
 import Account "Account";
 import Book "./book";
 import IcpLedger "canister:icp_ledger_canister";
+import SubscriptionManager "./modules/subscription";
 
 // TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
 // TODO: Handle stable variables (if needed)
 // TODO: Remove unneeded if else in `storeInAssetCanister` for handling files larger than ±2MB (since its handled by frontend)
 shared (deployMsg) actor class CanisterManager() = this {
-  Debug.print("CanisterManager deployed by " # Principal.toText(deployMsg.caller));
 
   // var IC_MANAGEMENT_CANISTER : Text = "rwlgt-iiaaa-aaaaa-aaaaa-cai"; // Local replica
   let IC_MANAGEMENT_CANISTER = "aaaaa-aa"; // Production
@@ -34,6 +34,8 @@ shared (deployMsg) actor class CanisterManager() = this {
   // TODO: Get these from price oracle canister
   let ICP_PRICE : Float = 10;
   let XDR_PRICE : Float = 1.33;
+  let E8S_PER_ICP : Float = 100_000_000;
+  let CYCLES_PER_XDR : Float = 1_000_000_000_000;
 
   let icp_fee : Nat = 10_000;
   let ledger : Principal = Principal.fromActor(IcpLedger);
@@ -74,6 +76,24 @@ shared (deployMsg) actor class CanisterManager() = this {
   private var workflow_run_history : Types.WorkflowRunHistory = HashMap.HashMap<Principal, [Types.WorkflowRunDetails]>(0, Principal.equal, Principal.hash);
   private stable var stable_workflow_run_history : [(Principal, [Types.WorkflowRunDetails])] = [];
 
+  // Subscription manager class
+  private let subscription_manager = SubscriptionManager.SubscriptionManager(book, ledger);
+  private stable var stable_subscriptions : [(Principal, Types.Subscription)] = [];
+
+  // Create a subscription for the caller
+  public shared (msg) func create_subscription(tier_id : Nat) : async Types.Response<Types.Subscription> {
+    return await subscription_manager.create_subscription(msg.caller, tier_id);
+  };
+
+  public shared (msg) func get_tiers() : async [Types.Tier] {
+    return subscription_manager.tiers_list;
+  };
+
+  // Get the caller's subscription
+  public shared (msg) func get_subscription() : async Types.Response<Types.Subscription> {
+    return await subscription_manager.get_subscription(msg.caller);
+  };
+
   // Function to upload the asset canister WASM
   public shared (msg) func uploadAssetCanisterWasm(wasm : [Nat8]) : async Types.Result {
     // Add authorization check here
@@ -97,6 +117,10 @@ shared (deployMsg) actor class CanisterManager() = this {
   public func get_deposit_account_id(canisterPrincipal : Principal, caller : Principal) : async Blob {
     let accountIdentifier = Account.accountIdentifier(canisterPrincipal, Account.principalToSubaccount(caller));
     return accountIdentifier;
+  };
+
+  public func get_all_subscriptions() : async [(Principal, Types.Subscription)] {
+    return await subscription_manager.get_all_subscriptions();
   };
 
   // Get pending deposits for the caller
@@ -184,7 +208,8 @@ shared (deployMsg) actor class CanisterManager() = this {
 
   public shared (msg) func getCanisterAsset(canister_id : Principal, asset_key : Text) : async Types.AssetCanisterAsset {
     // Check if the caller is a controller
-    assert (await _isController(canister_id, msg.caller));
+    let isController = await _isController(canister_id, msg.caller);
+    assert (isController);
 
     let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
     let asset = await asset_canister.get({
@@ -203,6 +228,7 @@ shared (deployMsg) actor class CanisterManager() = this {
     let current_settings = await IC.canister_status({
       canister_id = canister_id;
     });
+
     return current_settings;
   };
 
@@ -214,7 +240,6 @@ shared (deployMsg) actor class CanisterManager() = this {
     let current_settings = await IC.canister_status({
       canister_id = canister_id;
     });
-    Debug.print("Current settings..");
     let current_controllers = switch (current_settings.settings.controllers) {
       case null [];
       case (?controllers) controllers;
@@ -228,7 +253,9 @@ shared (deployMsg) actor class CanisterManager() = this {
       canister_id = canister_id;
     });
     let current_controllers = switch (current_settings.settings.controllers) {
-      case null false;
+      case null {
+        return false;
+      };
       case (?controllers) {
         let matches = Array.filter(controllers, func(p : Principal) : Bool { p == caller });
         return matches.size() > 0;
@@ -425,25 +452,67 @@ shared (deployMsg) actor class CanisterManager() = this {
     return #ok("Removed permission for controller");
   };
 
-  public shared (msg) func addCycles(canister_id : Principal) : async Types.Result {
-    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
-    let claimable = book.fetchUserIcpBalance(msg.caller, ledger);
-    if (claimable <= 0) {
-      return #err("No credits available");
+  // TODO: get icp and xdr price from api
+  public shared (msg) func getCyclesToAdd(amount_in_e8s : ?Int, caller_principal : ?Principal) : async Types.GetCyclesAvailableResult {
+    let _caller = switch (caller_principal) {
+      case null {
+        msg.caller;
+      };
+      case (?caller) {
+        caller;
+      };
     };
 
-    let cyclesToAdd = Float.fromInt(claimable) * ICP_PRICE / XDR_PRICE;
+    let user_credits = book.fetchUserIcpBalance(_caller, ledger);
 
-    Debug.print("Claimable: " # Nat.toText(claimable) # " ICP");
-    Debug.print("Depositing..." # Float.toText(cyclesToAdd) # " cycles to canister " # Principal.toText(canister_id));
-    ExperimentalCycles.add(Int.abs(Float.toInt(Float.floor(cyclesToAdd))));
-    // Debug.print("Depositing..." # Nat.toText(amountInCycles) # " cycles to canister " # Principal.toText(canister_id));
-    await IC.deposit_cycles({ canister_id });
-    Debug.print("Added cycles to canister " # Principal.toText(canister_id));
+    if (user_credits <= 0) {
+      return #ok(0);
+    };
 
-    let _remaining = _removeCredit(msg.caller, ledger, claimable);
-    Debug.print("Remaining credits: " # Nat.toText(_remaining));
-    return #ok("Cycles added successfully");
+    let cyclesToAdd = switch (amount_in_e8s) {
+      case (?amount) {
+        if (amount > user_credits) {
+          return #err("Insufficient credits");
+        };
+        calculateCyclesToAdd(amount);
+      };
+      case (null) calculateCyclesToAdd(user_credits);
+    };
+    return #ok(cyclesToAdd);
+  };
+
+  public shared (msg) func estimateCyclesToAdd(amount_in_e8s : Int) : async Float {
+    return calculateCyclesToAdd(amount_in_e8s);
+  };
+
+  private func calculateCyclesToAdd(amountInE8s : Int) : Float {
+    let icp_amount = Float.fromInt(amountInE8s) / E8S_PER_ICP;
+    let usd_value = icp_amount * ICP_PRICE;
+    let xdr_value = usd_value / XDR_PRICE;
+
+    let cyclesToAdd = xdr_value * CYCLES_PER_XDR;
+    return cyclesToAdd;
+  };
+
+  public shared (msg) func addCycles(canister_id : Principal, amountInIcp : Float) : async Types.Result {
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    let claimable = book.fetchUserIcpBalance(msg.caller, ledger);
+    let amount_in_e8s = Float.floor(amountInIcp * E8S_PER_ICP);
+
+    let cyclesToAdd = await getCyclesToAdd(?Float.toInt(amount_in_e8s), ?msg.caller);
+
+    switch (cyclesToAdd) {
+      case (#err(error)) {
+        return #err(error);
+      };
+      case (#ok(cyclesToAdd)) {
+        ExperimentalCycles.add(Int.abs(Float.toInt(Float.floor(cyclesToAdd))));
+        await IC.deposit_cycles({ canister_id });
+
+        let _remaining = _removeCredit(msg.caller, ledger, claimable);
+        return #ok("Cycles added successfully");
+      };
+    };
   };
 
   // Function to deploy new asset canister
@@ -455,13 +524,27 @@ shared (deployMsg) actor class CanisterManager() = this {
       case (?wasm) { wasm };
     };
 
+    // Validate user subscription limits
+    let user_subscription = await subscription_manager.get_subscription(msg.caller);
+    switch (user_subscription) {
+      case (#err(error)) {
+        return #err(error);
+      };
+      case (#ok(subscription)) {
+        Debug.print("User subscription: " # Nat.toText(subscription.tier_id));
+        let is_valid_subscription = await subscription_manager.validate_subscription(msg.caller);
+        if (is_valid_subscription != true) {
+          return #err("You have reached the maximum number of canisters for your subscription tier.");
+        };
+      };
+    };
+
     try {
       Debug.print("[Identity " # Principal.toText(msg.caller) # "] Adding cycles....");
       // Create new canister
-      let cyclesForCanister = 1_000_000_000_000; // 1T cycles
+      let cyclesForCanister = 15_000_000_000; // 1T cycles
       ExperimentalCycles.add(cyclesForCanister);
 
-      Debug.print("Creating canister...");
       let settings : Types.CanisterSettings = {
         freezing_threshold = null;
         controllers = ?[Principal.fromActor(this), msg.caller];
@@ -490,7 +573,7 @@ shared (deployMsg) actor class CanisterManager() = this {
       // After successful deployment, add to tracking
       deployed_canisters.put(new_canister_id, true);
 
-      _addCanisterDeployment(msg.caller, new_canister_id);
+      await _addCanisterDeployment(msg.caller, new_canister_id);
 
       return #ok(Principal.toText(new_canister_id));
     } catch (error) {
@@ -678,7 +761,7 @@ shared (deployMsg) actor class CanisterManager() = this {
 
   };
 
-  private func _addCanisterDeployment(caller : Principal, canister_id : Principal) {
+  private func _addCanisterDeployment(caller : Principal, canister_id : Principal) : async () {
     let deployment = {
       canister_id = canister_id;
       status = #uninitialized;
@@ -696,6 +779,8 @@ shared (deployMsg) actor class CanisterManager() = this {
 
     user_canisters.put(caller, new_canisters);
     canister_table.put(canister_id, deployment); // Add to canister table
+
+    let _pushCanisterId = await subscription_manager.push_canister_id(caller, canister_id); // Update subscription
     Debug.print("Added canister deployment by " # Principal.toText(caller) # " for " # Principal.toText(canister_id) # ". Total deployments: " # Nat.toText(new_canisters.size()));
   };
 
@@ -806,6 +891,11 @@ shared (deployMsg) actor class CanisterManager() = this {
     workflow_run_history_to_stable_array();
     workflow_run_history_from_stable_array();
 
+    // Restore subscriptions
+    stable_subscriptions := subscription_manager.getStableData();
+    Debug.print("Stable subscriptions: " # Nat.toText(stable_subscriptions.size()));
+    Debug.print("All Subs" # debug_show (stable_subscriptions));
+
     // Save book to stable array
     stable_book := book.toStable();
 
@@ -829,6 +919,12 @@ shared (deployMsg) actor class CanisterManager() = this {
     canister_deployments_from_stable_array();
     canister_table_from_stable_array();
 
+    // Restore subscriptions
+    subscription_manager.loadFromStable(stable_subscriptions);
+    Debug.print("PostUpgrade: Restored subscriptions");
+    Debug.print("PostUpgrade: Restored subscriptions size: " # Nat.toText(stable_subscriptions.size()));
+    Debug.print("PostUpgrade: Restored subscriptions: " # debug_show (stable_subscriptions));
+
     // Restore book
     book.fromStable(stable_book);
     stable_book := [];
@@ -838,6 +934,9 @@ shared (deployMsg) actor class CanisterManager() = this {
     Debug.print("Postupgrade: Syncing deployed canisters.");
     deployed_canisters := HashMap.fromIter(stable_deployed_canisters.vals(), 0, Principal.equal, Principal.hash);
     Debug.print("Postupgrade: Finished postupgrade procedure. Synced stable variables. ");
+
+    let is_set = subscription_manager.set_treasury(Principal.fromActor(this));
+    Debug.print("Postupgrade: Treasury set: " # Bool.toText(is_set));
   };
 
   private func canister_table_to_stable_array() {
@@ -866,7 +965,7 @@ shared (deployMsg) actor class CanisterManager() = this {
   };
 
   private func workflow_run_history_from_stable_array() {
-    workflow_run_history := HashMap.fromIter(stable_workflow_run_history.vals(), 0, Principal.equal, Principal.hash);
+    workflow_run_history := HashMap.fromIter(stable_workflow_run_history.vals(), stable_workflow_run_history.size(), Principal.equal, Principal.hash);
     Debug.print("Postupgrade: Restored workflow run history: " # Nat.toText(workflow_run_history.size()));
   };
 

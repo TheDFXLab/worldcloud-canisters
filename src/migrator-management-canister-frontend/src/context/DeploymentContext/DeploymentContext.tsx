@@ -11,6 +11,7 @@ import { useIdentity } from "../IdentityContext/IdentityContext";
 import { Principal } from "@dfinity/principal";
 import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { useProgress } from "../ProgressBarContext/ProgressBarContext";
+import { internetIdentityConfig } from "../../config/config";
 
 export interface DeploymentDetails {
   workflow_run_id: number;
@@ -57,8 +58,6 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
   const [isDispatched, setIsDispatched] = useState(false);
 
   const getDeployment = (canisterId: string) => {
-    console.log(`all deps:`, deployments);
-    console.log(`can:`, canisterId);
     return deployments.find(
       (deployment) => deployment.canister_id.toText() === canisterId
     );
@@ -67,7 +66,14 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
   const refreshDeployments = async () => {
     try {
       if (!identity) {
-        throw new Error("Identity not found");
+        return;
+      }
+      if (
+        identity.getPrincipal().toText() ===
+        internetIdentityConfig.loggedOutPrincipal
+      ) {
+        console.log("Logged out, skipping deployment refresh");
+        return;
       }
 
       setIsLoadingProgress(true);
