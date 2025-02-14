@@ -159,7 +159,7 @@ body {
   justify-content: space-between;
   align-items: center;
   border-radius: 10px;
-  padding: 0 2rem;
+  padding: 0 1rem;
 }
 
 /* Logo styling */
@@ -192,6 +192,7 @@ body {
   display: flex;
   gap: 2rem;
   align-items: center;
+  overflow-x: hidden;
 }
 
 .nav-links a {
@@ -325,8 +326,9 @@ body {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: 80vw;
+  margin: auto auto;
+
   padding: 4rem 2rem;
   background: rgba(255, 255, 255, 0.03);
   border-radius: 12px;
