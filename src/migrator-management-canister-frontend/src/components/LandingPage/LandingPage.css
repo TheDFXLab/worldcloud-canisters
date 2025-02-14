@@ -136,18 +136,20 @@ body {
 
 .landing-page {
   min-height: 100vh;
+  position: relative;
 }
 
-/* Modern Navbar Styles */
-.navbar {
+.landing-page .nav-container {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 1000;
-  padding: 2rem 1rem;
-  /* background: rgba(17, 24, 39, 0.7); */
-  background: var(--navbar-bg);
+}
+
+/* Modern Navbar Styles */
+.navbar {
+  z-index: 1000;
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
 }
@@ -225,7 +227,6 @@ body {
 
 .nav-links a:hover {
   color: var(--color-text-primary);
-  /* background: rgba(255, 255, 255, 0.05); */
 }
 
 .nav-links a:hover::after {

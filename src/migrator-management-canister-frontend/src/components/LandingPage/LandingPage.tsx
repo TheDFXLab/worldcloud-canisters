@@ -126,22 +126,24 @@ function LandingPage() {
 
   return (
     <div id="main" className="landing-page">
-      <nav className="navbar">
-        <div className="container">
-          <div className="logo">
-            <a href="#main">WORLDCLOUD</a>
+      <div className="nav-container">
+        <nav className="navbar">
+          <div className="container">
+            <div className="logo">
+              <a href="#main">WORLDCLOUD</a>
+            </div>
+            <div className="nav-links">
+              <a href="#features">Features</a>
+              <a href="#how-it-works">How It Works</a>
+              <a href="#pricing">Pricing</a>
+              <a href="#docs">Documentation</a>
+              <a href="#beta" className="action-button">
+                Launch App
+              </a>
+            </div>
           </div>
-          <div className="nav-links">
-            <a href="#features">Features</a>
-            <a href="#how-it-works">How It Works</a>
-            <a href="#pricing">Pricing</a>
-            <a href="#docs">Documentation</a>
-            <a href="#beta" className="action-button">
-              Launch App
-            </a>
-          </div>
-        </div>
-      </nav>
+        </nav>
+      </div>
 
       <section className="hero">
         <div className="hero-shapes">
