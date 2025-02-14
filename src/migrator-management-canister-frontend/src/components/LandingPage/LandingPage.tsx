@@ -164,6 +164,11 @@ function LandingPage() {
 
       <section id="features" className="features">
         <div className="container">
+          <div className="features-shapes">
+            <div className="feature-shape"></div>
+            <div className="feature-shape"></div>
+            <div className="feature-shape"></div>
+          </div>
           <h2>Why use WORLDCLOUD?</h2>
           <div className="features-grid">
             <div className="feature-card">
@@ -194,11 +199,13 @@ function LandingPage() {
               <h3>Connect</h3>
               <p>Connect to your Internet Computer network</p>
             </div>
+
             <div className="step">
               <div className="step-number">2</div>
               <h3>Configure</h3>
               <p>Upload your static website files</p>
             </div>
+
             <div className="step">
               <div className="step-number">3</div>
               <h3>Deploy</h3>
