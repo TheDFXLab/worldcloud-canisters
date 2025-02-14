@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import "./LandingPage.css";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import ThemeToggle from "../ThemeToggle/ThemeToggle";
 
 function LandingPage() {
   const navigate = useNavigate();
   const mouseTrailRef = useRef<HTMLDivElement>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLaunchApp = () => {
     navigate("/app");
@@ -124,19 +126,47 @@ function LandingPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const navLinks = document.querySelector(".nav-links");
+      const hamburger = document.querySelector(".hamburger");
+
+      if (
+        isMenuOpen &&
+        navLinks &&
+        hamburger &&
+        !navLinks.contains(event.target as Node) &&
+        !hamburger.contains(event.target as Node)
+      ) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isMenuOpen]);
+
   return (
     <div id="main" className="landing-page">
       <div className="nav-container">
         <nav className="navbar">
+          <button
+            className="hamburger"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            <span>☰</span>
+          </button>
           <div className="container">
             <div className="logo">
               <a href="#main">WORLDCLOUD</a>
             </div>
-            <div className="nav-links">
+
+            <div className={`nav-links ${isMenuOpen ? "active" : ""}`}>
               <a href="#features">Features</a>
               <a href="#how-it-works">How It Works</a>
               <a href="#pricing">Pricing</a>
-              <a href="#docs">Documentation</a>
+              {/* <a href="#docs">Documentation</a> */}
               <a href="#beta" className="action-button">
                 Launch App
               </a>
