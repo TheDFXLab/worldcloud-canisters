@@ -99,6 +99,20 @@ function LandingPage() {
       container.addEventListener("mousemove", handleMouseMoveContainer);
     }
 
+    const navLinks = document.querySelectorAll(".nav-links a");
+
+    navLinks.forEach((link) => {
+      link.addEventListener("mousemove", (e: Event) => {
+        const mouseEvent = e as MouseEvent;
+        const rect = (link as HTMLElement).getBoundingClientRect();
+        const x = mouseEvent.clientX - rect.left;
+        const y = mouseEvent.clientY - rect.top;
+
+        (link as HTMLElement).style.setProperty("--mouse-x", `${x}px`);
+        (link as HTMLElement).style.setProperty("--mouse-y", `${y}px`);
+      });
+    });
+
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       cancelAnimationFrame(animationFrame);
@@ -120,7 +134,11 @@ function LandingPage() {
           <div className="nav-links">
             <a href="#features">Features</a>
             <a href="#how-it-works">How It Works</a>
-            <a href="#beta">App</a>
+            <a href="#pricing">Pricing</a>
+            <a href="#docs">Documentation</a>
+            <a href="#beta" className="action-button">
+              Launch App
+            </a>
           </div>
         </div>
       </nav>
