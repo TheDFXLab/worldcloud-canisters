@@ -30,6 +30,7 @@
     calc(24 * var(--px-ratio)),
     1.5rem
   ); /* 18px - 20px */
+  --font-size-3lg: clamp(1.5rem, calc(28 * var(--px-ratio)), 1.75rem);
   --font-size-xl: clamp(
     1.5rem,
     calc(32 * var(--px-ratio)),
@@ -470,7 +471,8 @@ body {
 /* Smooth transition for the hero-cta button */
 .hero-cta {
   display: inline-block;
-  padding: 1rem 2rem;
+  padding: 0.44rem 2rem;
+  font-size: var(--font-size-lg);
   background: linear-gradient(
     135deg,
     var(--color-primary),
@@ -482,6 +484,13 @@ body {
   font-weight: 500;
   transition: all 0.3s ease;
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 455px) {
+  .hero-cta {
+    padding: 0.5rem 1rem;
+    font-size: var(--font-size-lg);
+  }
 }
 
 .hero .container:hover .hero-cta {
@@ -567,7 +576,7 @@ body {
 
 /* Title styling */
 .features h2 {
-  font-size: 3rem;
+  font-size: var(--font-size-2xl);
   text-align: center;
   margin-bottom: 4rem;
   background: linear-gradient(
@@ -579,6 +588,15 @@ body {
   background-clip: text;
   color: transparent;
   position: relative;
+}
+
+@media (max-width: 455px) {
+  .features h2 {
+    font-size: var(--font-size-xl);
+  }
+  .features .container {
+    padding: 1rem 1rem;
+  }
 }
 
 /* Grid layout */
@@ -604,17 +622,28 @@ body {
 
 /* Card content */
 .feature-card h3 {
-  font-size: 1.5rem;
+  font-size: var(--font-size-3lg);
   margin-bottom: 1rem;
   position: relative;
   z-index: 2;
 }
 
 .feature-card p {
+  font-size: var(--font-size-lg);
   color: var(--color-text-secondary);
   line-height: 1.6;
   position: relative;
   z-index: 2;
+}
+
+@media (max-width: 455px) {
+  .feature-card h3 {
+    font-size: var(--font-size-lg);
+  }
+
+  .feature-card p {
+    font-size: var(--font-size-base);
+  }
 }
 
 /* Animated background shapes */
@@ -822,6 +851,16 @@ body {
   align-items: center;
   justify-content: center;
   padding: 2rem 2rem;
+  row-gap: 2rem;
+}
+
+#beta .container h2 {
+  font-size: var(--font-size-2xl);
+}
+
+#beta .container p {
+  font-size: var(--font-size-2lg);
+  text-align: center;
 }
 
 #beta button {
@@ -932,6 +971,22 @@ h2 {
   opacity: 1;
 }
 
+.hero .container h1 {
+  font-size: var(--font-size-2xl);
+}
+
+.hero .container p {
+  margin-top: 1rem;
+  font-size: var(--font-size-3lg);
+}
+
+@media (max-width: 455px) {
+  .hero .container p {
+    margin-top: 1rem;
+    font-size: var(--font-size-2lg);
+  }
+}
+
 /* Optional: Add a subtle glow to text when spotlight passes over */
 .hero .container h1,
 .hero .container p {
@@ -950,7 +1005,25 @@ h2 {
 }
 
 .how-it-works {
-  margin: 4rem 4rem;
+  /* margin: 4rem 4rem; */
+  margin: auto auto;
+  max-width: 75vw;
+}
+
+.how-it-works .container h2 {
+  font-size: var(--font-size-2xl);
+}
+
+@media (max-width: 455px) {
+  .how-it-works {
+    /* margin: 4rem 4rem; */
+    margin: auto auto;
+    max-width: 95vw;
+  }
+
+  .how-it-works .container h2 {
+    font-size: var(--font-size-xl);
+  }
 }
 
 .how-it-works .container {
@@ -986,6 +1059,13 @@ h2 {
   background: rgba(0, 0, 0, 0) !important;
   color: var(--text-primary) !important;
   border: 1px solid rgba(0, 0, 0, 0) !important;
+}
+
+.steps .step h3 {
+  font-size: var(--font-size-2lg);
+}
+.steps .step p {
+  font-size: var(--font-size-base);
 }
 
 @media (max-width: 455px) {
