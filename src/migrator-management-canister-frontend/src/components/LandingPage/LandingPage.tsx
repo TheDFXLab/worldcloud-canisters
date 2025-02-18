@@ -249,6 +249,11 @@ function LandingPage() {
 
       <section id="beta">
         <div className="container">
+          <div className="hero-shapes">
+            <div className="hero-shape"></div>
+            <div className="hero-shape"></div>
+            <div className="hero-shape"></div>
+          </div>
           <h2>Try Our Beta</h2>
           <p className="section-description">
             Experience the future of canister deployment. Join our beta testing
