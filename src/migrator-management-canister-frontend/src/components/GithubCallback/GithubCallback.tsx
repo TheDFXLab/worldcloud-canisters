@@ -10,6 +10,8 @@ import {
 import GitHubIcon from "@mui/icons-material/GitHub";
 import { useGithub } from "../../context/GithubContext/GithubContext";
 
+import "./GithubCallback.css";
+
 const GitHubCallback: React.FC = () => {
   /** Hooks */
   const navigate = useNavigate();
@@ -27,26 +29,9 @@ const GitHubCallback: React.FC = () => {
   useEffect(() => {
     const pollForToken = async (deviceCode: string, interval: number) => {
       try {
-        const response = await fetch(
-          `${
-            environment === "production" ? "" : reverse_proxy_url
-          }/https://github.com/login/oauth/access_token`,
-          {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-              "x-cors-api-key": cors_sh_api_key,
-            },
-            body: JSON.stringify({
-              client_id: githubClientId,
-              device_code: deviceCode,
-              grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-            }),
-          }
+        const data = await GithubApi.getInstance().requestAccessToken(
+          deviceCode
         );
-
-        const data = await response.json();
 
         if (data.error === "authorization_pending") {
           // Continue polling
@@ -60,8 +45,6 @@ const GitHubCallback: React.FC = () => {
           github.setAccessToken(data.access_token);
 
           await refreshGithubUser();
-          // navigate("/gh-select-repo");
-          // navigate("/");
           navigate("/app/settings", { replace: true });
         } else {
           setError("Authentication failed");
@@ -80,25 +63,7 @@ const GitHubCallback: React.FC = () => {
       isInitiatingRef.current = true;
 
       try {
-        const response = await fetch(
-          `${
-            environment === "production" ? "" : reverse_proxy_url
-          }/https://github.com/login/device/code`,
-          {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-              "x-cors-api-key": cors_sh_api_key,
-            },
-            body: JSON.stringify({
-              client_id: githubClientId,
-              scope: "repo workflow",
-            }),
-          }
-        );
-
-        const data = await response.json();
+        const data = await GithubApi.getInstance().requestCode();
         initialized.current = true;
         setDeviceCode(data.device_code);
         setUserCode(data.user_code);
