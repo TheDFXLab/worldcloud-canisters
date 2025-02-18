@@ -127,8 +127,11 @@ const HomePage: React.FC = () => {
 
       <HeaderCard
         title={"Dashboard"}
-        description={`${githubUser ? `Welcome back, ${githubUser.login}` : ""}`}
-        // className="header-card-layout-column"
+        description={`${
+          githubUser
+            ? `Welcome back${githubUser.login ? `, ${githubUser.login}.` : `.`}`
+            : ""
+        }`}
       />
 
       {/* Quick Stats */}
