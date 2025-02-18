@@ -167,7 +167,7 @@ function LandingPage() {
               <a href="#how-it-works">How It Works</a>
               <a href="#pricing">Pricing</a>
               {/* <a href="#docs">Documentation</a> */}
-              <a href="#beta" className="action-button">
+              <a href="/app" className="action-button">
                 Launch App
               </a>
             </div>
