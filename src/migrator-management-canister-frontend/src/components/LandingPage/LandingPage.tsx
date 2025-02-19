@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import "./LandingPage.css";
 import { useEffect, useRef, useState } from "react";
 import ThemeToggle from "../ThemeToggle/ThemeToggle";
+import Footer from "../Footer/Footer";
 
 function LandingPage() {
   const navigate = useNavigate();
@@ -262,6 +263,8 @@ function LandingPage() {
           <button onClick={handleLaunchApp}>Launch App</button>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }
