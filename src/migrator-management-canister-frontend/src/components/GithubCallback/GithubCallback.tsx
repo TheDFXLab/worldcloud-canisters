@@ -1,12 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { GithubApi } from "../../api/github/GithubApi";
-import {
-  cors_sh_api_key,
-  environment,
-  githubClientId,
-  reverse_proxy_url,
-} from "../../config/config";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import { useGithub } from "../../context/GithubContext/GithubContext";
 
