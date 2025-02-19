@@ -1,0 +1,8 @@
+{
+  "migrator-management-canister-backend": {
+    "ic": "7nopf-3qaaa-aaaam-aeeoq-cai"
+  },
+  "migrator-management-canister-frontend": {
+    "ic": "7enez-nyaaa-aaaam-aeepa-cai"
+  }
+}
