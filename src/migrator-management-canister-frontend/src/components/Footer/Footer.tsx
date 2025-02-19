@@ -1,0 +1,31 @@
+import { Link } from "react-router-dom";
+import "./Footer.css";
+import { getCanisterUrl } from "../../config/config";
+
+const Footer = () => {
+  const currentDate = new Date().getFullYear();
+
+  return (
+    <footer className="footer">
+      <div className="footer-content">
+        <div className="footer-logo">
+          <Link to="/">WORLDCLOUD</Link>
+        </div>
+        <div className="footer-info">
+          <p>
+            © {currentDate} | Built by{" "}
+            <a
+              href={getCanisterUrl("7kpjr-wiaaa-aaaam-aeeoa-cai", "ic")}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              TheDFXLab
+            </a>
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+export default Footer;

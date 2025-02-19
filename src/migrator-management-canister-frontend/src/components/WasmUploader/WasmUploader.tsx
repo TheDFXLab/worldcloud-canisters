@@ -5,8 +5,11 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import DeleteIcon from "@mui/icons-material/Delete";
+import MainApi from "../../api/main";
+import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 
 function WasmUploader() {
+  const { identity } = useIdentity();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -64,11 +67,18 @@ function WasmUploader() {
         });
       }, 500);
 
-      const result =
-        await migrator_management_canister_backend.uploadAssetCanisterWasm(
-          wasmBytes
-        );
+      // const result =
+      // await migrator_management_canister_backend.uploadAssetCanisterWasm(
+      // wasmBytes
+      // );
 
+      const mainApi = await MainApi.create(identity);
+      const result = await mainApi?.uploadWasm(wasmBytes);
+
+      if (!result) {
+        setStatus("error");
+        return;
+      }
       clearInterval(progressInterval);
       setUploadProgress(100);
 

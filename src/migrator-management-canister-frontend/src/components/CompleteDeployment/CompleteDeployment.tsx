@@ -69,14 +69,14 @@ function CompleteDeployment({
           <span className="value">
             <a
               href={
-                process.env.REACT_APP_ENVIRONMENT === "production"
+                process.env.REACT_APP_ENVIRONMENT === "ic"
                   ? `https://${canisterId}.icp0.io`
                   : `http://${canisterId}.localhost:4943`
               }
               target="_blank"
               rel="noopener noreferrer"
             >
-              {process.env.REACT_APP_ENVIRONMENT === "production"
+              {process.env.REACT_APP_ENVIRONMENT === "ic"
                 ? `https://${canisterId}.icp0.io`
                 : `http://${canisterId}.localhost:4943`}
 

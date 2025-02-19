@@ -7,11 +7,7 @@ import {
   useCallback,
 } from "react";
 import { GithubApi } from "../../api/github/GithubApi";
-import {
-  cors_sh_api_key,
-  environment,
-  reverse_proxy_url,
-} from "../../config/config";
+import { environment } from "../../config/config";
 
 interface GithubUser {
   login: string;
@@ -79,18 +75,12 @@ export function GithubProvider({ children }: GithubProviderProps) {
   useEffect(() => {
     const checkRateLimit = async () => {
       try {
-        const response = await fetch(
-          `${
-            environment === "production" ? "" : reverse_proxy_url
-          }/https://api.github.com/rate_limit`,
-          {
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-              "x-cors-api-key": cors_sh_api_key,
-            },
-          }
-        );
+        const response = await fetch(`https://api.github.com/rate_limit`, {
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        });
         const data = await response.json();
         console.log("GitHub Rate Limit Status:", {
           core: data.resources.core,
@@ -104,7 +94,7 @@ export function GithubProvider({ children }: GithubProviderProps) {
       }
     };
 
-    checkRateLimit();
+    if (environment === "local") checkRateLimit();
   }, []);
 
   const getGithubToken = () => {

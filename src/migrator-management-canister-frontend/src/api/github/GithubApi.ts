@@ -1,6 +1,6 @@
 import { Identity } from "@dfinity/agent";
 import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
-import { environment, githubClientId, ngrok_tunnel, reverse_proxy_url } from "../../config/config";
+import { environment, frontend_url, githubClientId, reverse_proxy_url } from "../../config/config";
 import { generateWorkflowTemplate } from "../../utility/workflowTemplate";
 import MainApi from "../main";
 import { Principal } from "@dfinity/principal";
@@ -91,7 +91,7 @@ export class GithubApi {
         // TODO: remove this once we have a proper domain
         // Force browser to use ngrok URL
         if (window.location.hostname === 'localhost') {
-            window.location.href = `${ngrok_tunnel}/github/callback?redirectToGithub=true&state=${state}`;
+            window.location.href = `${frontend_url}/github/callback?redirectToGithub=true&state=${state}`;
             return;
         }
 
@@ -105,51 +105,65 @@ export class GithubApi {
         window.location.href = `https://github.com/login/oauth/authorize?${params}`;
     }
 
-    async handleAuthCallback(code: string, state: string): Promise<void> {
-        const savedState = localStorage.getItem('github_oauth_state');
+    async requestAccessToken(deviceCode: string) {
+        try {
+            const response = await fetch(
+                `${environment === "ic" ? "" : reverse_proxy_url
+                }/login/oauth/access_token`,
+                {
+                    method: "POST",
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        client_id: githubClientId,
+                        device_code: deviceCode,
+                        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+                    }),
+                }
+            );
 
-        if (!savedState || savedState !== state) {
-            throw new Error('Invalid state parameter');
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error requesting access token:', error);
+            throw error;
+        }
+    }
+
+    async requestCode() {
+        try {
+            const response = await fetch(
+                `${environment === "ic" ? "" : reverse_proxy_url
+                }/login/device/code`,
+                {
+                    method: "POST",
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        client_id: githubClientId,
+                        scope: "repo workflow",
+                    }),
+                }
+            );
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error requesting code:', error);
+            throw error;
         }
 
-        // Use GitHub's API endpoint
-        const response = await fetch(`${environment === 'production' ? '' : reverse_proxy_url}/https://github.com/login/oauth/access_token`, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                "Accept-Encoding": "application/json",
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                client_id: githubClientId,
-                code: code,
-                redirect_uri: `${ngrok_tunnel}/github/callback`
-            }),
-        });
-
-        if (response.status === 403) {
-            await this.logout();
-            throw new Error("You are not authorized to use this app");
-        }
-
-        const data = await response.json();
-        if (data.error) {
-            throw new Error(data.error_description || 'Failed to get access token');
-        }
-
-        this.token = data.access_token;
-
-        if (this.token) {
-            localStorage.setItem('github_token', this.token);
-        }
-        localStorage.removeItem('github_oauth_state');
     }
 
     async logout(): Promise<void> {
         if (this.token) {
             try {
                 // Revoke the token
-                await fetch(`${environment === 'production' ? '' : reverse_proxy_url}/https://api.github.com/applications/${githubClientId}/token`, {
+                await fetch(`https://api.github.com/applications/${githubClientId}/token`, {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',
@@ -179,8 +193,6 @@ export class GithubApi {
         // Check if .github/workflows directory exists in default branch
         try {
             await this.request(`/repos/${repo}/contents/.github/workflows?ref=${repoInfo.default_branch}`);
-            // await this.updateWorkflowFile(repo, workflowPath, defaultBranch, content);
-
             // If the target branch is not the default, create/update the workflow file there
             if (branch !== repoInfo.default_branch) {
                 // Check if .github/workflows directory exists in target branch
@@ -190,26 +202,12 @@ export class GithubApi {
                     // Directory doesn't exist, create it with a README
                     await this.createWorkflowFile(repo, branch);
                 }
-
-                // await this.updateWorkflowFile(repo, workflowPath, branch, content);
             }
             await this.updateWorkflowFile(repo, workflowPath, branch, content);
 
         } catch (error) {
             // Directory doesn't exist, create it with a README
             await this.createWorkflowFile(repo, repoInfo.default_branch);
-
-            // Create/update workflow in the default branch first
-            // const defaultBranchSha = await this.getFileSha(repo, workflowPath, repoInfo.default_branch);
-            // await this.request(`/repos/${repo}/contents/${workflowPath}`, {
-            //     method: 'PUT',
-            //     body: JSON.stringify({
-            //         message: `${defaultBranchSha ? 'Update' : 'Add'} ICP deployment workflow`,
-            //         content,
-            //         branch: repoInfo.default_branch,
-            //         sha: defaultBranchSha || undefined,
-            //     }),
-            // });
 
             // Create/update workflow in the default branch first
             await this.updateWorkflowFile(repo, workflowPath, repoInfo.default_branch, content);
@@ -316,7 +314,7 @@ export class GithubApi {
             }
 
             // Trigger the workflow
-            const res = await this.request(`/repos/${repo}/actions/workflows/icp-deploy.yml/dispatches`, {
+            await this.request(`/repos/${repo}/actions/workflows/icp-deploy.yml/dispatches`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -1,27 +1,28 @@
 .theme-toggle {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    z-index: 1000;
-    background: var(--background-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    color: var(--text-primary);
-    box-shadow: var(--shadow-sm);
-  }
-  
-  .theme-toggle:hover {
-    background: var(--background-hover);
-    transform: scale(1.05);
-  }
-  
-  .theme-toggle svg {
-    font-size: 1.2rem;
-  }
+  position: fixed;
+  top: 0.5rem;
+  right: 0.3rem;
+  z-index: 1000;
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 100px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+  z-index: 1000000;
+}
+
+.theme-toggle:hover {
+  background: var(--background-hover);
+  transform: scale(1.05);
+}
+
+.theme-toggle svg {
+  font-size: 1.2rem;
+}
