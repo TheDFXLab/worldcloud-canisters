@@ -108,7 +108,7 @@ export class GithubApi {
     async requestAccessToken(deviceCode: string) {
         try {
             const response = await fetch(
-                `${environment === "production" ? "" : reverse_proxy_url
+                `${environment === "ic" ? "" : reverse_proxy_url
                 }/login/oauth/access_token`,
                 {
                     method: "POST",
@@ -135,7 +135,7 @@ export class GithubApi {
     async requestCode() {
         try {
             const response = await fetch(
-                `${environment === "production" ? "" : reverse_proxy_url
+                `${environment === "ic" ? "" : reverse_proxy_url
                 }/login/device/code`,
                 {
                     method: "POST",

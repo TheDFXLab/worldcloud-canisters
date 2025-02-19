@@ -94,7 +94,7 @@ export function GithubProvider({ children }: GithubProviderProps) {
       }
     };
 
-    if (environment === "development") checkRateLimit();
+    if (environment === "local") checkRateLimit();
   }, []);
 
   const getGithubToken = () => {
