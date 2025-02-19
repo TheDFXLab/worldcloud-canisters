@@ -1,6 +1,6 @@
 
 echo "===========Deploying ICP Ledger========="
-dfx deploy icp_ledger_canister --argument "(variant {
+dfx deploy --specified-id ryjl3-tyaaa-aaaaa-aaaba-cai icp_ledger_canister --argument "(variant {
     Init = record {
       minting_account = \"$(dfx ledger --identity anonymous account-id)\";
       initial_values = vec {

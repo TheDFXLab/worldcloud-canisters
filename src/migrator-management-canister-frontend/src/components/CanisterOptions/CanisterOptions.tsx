@@ -83,14 +83,14 @@ function CanisterOptions({ deployment, show, onHide }: CanisterOptionsProps) {
               <span className="value">
                 <a
                   href={
-                    process.env.REACT_APP_ENVIRONMENT === "production"
+                    process.env.REACT_APP_ENVIRONMENT === "ic"
                       ? `https://${deployment.canister_id.toText()}.${http_host}`
                       : `http://${deployment.canister_id.toText()}.${http_host}`
                   }
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {process.env.REACT_APP_ENVIRONMENT === "production"
+                  {process.env.REACT_APP_ENVIRONMENT === "ic"
                     ? `https://${deployment.canister_id.toText()}.${http_host}`
                     : `http://${deployment.canister_id.toText()}.${http_host}`}
                   <span className="external-link">↗</span>

@@ -20,7 +20,6 @@ import Time "mo:base/Time";
 import Float "mo:base/Float";
 import Account "Account";
 import Book "./book";
-import IcpLedger "canister:icp_ledger_canister";
 import SubscriptionManager "./modules/subscription";
 
 // TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
@@ -30,6 +29,7 @@ shared (deployMsg) actor class CanisterManager() = this {
 
   // var IC_MANAGEMENT_CANISTER : Text = "rwlgt-iiaaa-aaaaa-aaaaa-cai"; // Local replica
   let IC_MANAGEMENT_CANISTER = "aaaaa-aa"; // Production
+  let ledger : Principal = Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai");
 
   // TODO: Get these from price oracle canister
   let ICP_PRICE : Float = 10;
@@ -38,7 +38,7 @@ shared (deployMsg) actor class CanisterManager() = this {
   let CYCLES_PER_XDR : Float = 1_000_000_000_000;
 
   let icp_fee : Nat = 10_000;
-  let ledger : Principal = Principal.fromActor(IcpLedger);
+  // let ledger : Principal = Principal.fromActor(IcpLedger);
   let Ledger : Types.Ledger = actor (Principal.toText(ledger));
 
   // Store the WASM bytes in stable memory

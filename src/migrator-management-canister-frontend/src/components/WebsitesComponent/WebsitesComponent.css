@@ -7,6 +7,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
 }
 
 .websites-header {
@@ -34,8 +35,8 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 1.5rem;
-  max-width: 1200px;
-  /* Add smooth scrollbar styling */
+  width: 100%;
+  justify-content: center;
   scrollbar-width: thin;
   scrollbar-color: var(--border-color) transparent;
   margin: auto auto;
@@ -56,8 +57,10 @@
 
 .website-card {
   margin-top: 0.5rem;
+  max-width: 400px;
   max-height: 400px; /* Increased for better content fit */
-  height: fit-content;
+  height: 400px;
+  /* height: fit-content; */
   background: var(--background);
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -233,7 +236,8 @@
 
 @media (max-width: 768px) {
   .websites-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(auto, 400px);
+    justify-content: center;
   }
 
   .websites-header h2 {
