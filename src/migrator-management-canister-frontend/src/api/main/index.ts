@@ -48,6 +48,7 @@ class MainApi {
             // Create new instance
             const mainApi = new MainApi(identity, actor, isIdentified);
             this.instance = mainApi;
+
             return mainApi;
         } catch (error) {
             console.error(`Error creating actor:`, error);
@@ -140,6 +141,21 @@ class MainApi {
         }
 
         return result;
+    }
+
+    async uploadWasm(wasmBytes: number[]) {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            const result = await this.actor.uploadAssetCanisterWasm(
+                wasmBytes
+            );;
+            return result;
+        } catch (error) {
+            console.log(`Error uploading WASM:`, error)
+            return null;
+        }
     }
 
     async deployAssetCanister() {
