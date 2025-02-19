@@ -108,7 +108,7 @@ export class GithubApi {
     async requestAccessToken(deviceCode: string) {
         try {
             const response = await fetch(
-                `${environment === "ic" ? "" : reverse_proxy_url
+                `${environment === "ic" ? reverse_proxy_url : reverse_proxy_url
                 }/login/oauth/access_token`,
                 {
                     method: "POST",
@@ -134,8 +134,10 @@ export class GithubApi {
 
     async requestCode() {
         try {
+            console.log(`Requesting device code`);
+            console.log(`reverse_proxy_url...`, reverse_proxy_url);
             const response = await fetch(
-                `${environment === "ic" ? "" : reverse_proxy_url
+                `${environment === "ic" ? reverse_proxy_url : reverse_proxy_url
                 }/login/device/code`,
                 {
                     method: "POST",
@@ -149,6 +151,9 @@ export class GithubApi {
                     }),
                 }
             );
+
+            console.log(`code response...`, response);
+
 
             const data = await response.json();
             return data;

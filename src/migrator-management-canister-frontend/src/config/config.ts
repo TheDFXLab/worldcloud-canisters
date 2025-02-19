@@ -41,7 +41,8 @@ export const githubClientSecret = process.env.REACT_APP_GITHUB_CLIENT_SECRET || 
 export const ngrok_tunnel = "https://1abfa900377c.ngrok.app";
 // export const reverse_proxy_url = "https://cors-anywhere.herokuapp.com";
 // export const reverse_proxy_url = "https://proxy.cors.sh";
-export const reverse_proxy_url = environment === "ic" ? process.env.REACT_APP_REVERSE_PROXY_REMOTE_URL : "http://localhost:8080";
+// export const reverse_proxy_url = environment === "ic" ? process.env.REACT_APP_REVERSE_PROXY_REMOTE_URL : "http://localhost:8080";
+export const reverse_proxy_url = process.env.REACT_APP_REVERSE_PROXY_REMOTE_URL || "http://localhost:8080";
 export const frontend_url = environment === "ic" ? `https://${frontend_canister_id}.icp0.io` : ngrok_tunnel;
 
 export const cors_sh_api_key = process.env.REACT_APP_CORS_SH_API_KEY || "";
