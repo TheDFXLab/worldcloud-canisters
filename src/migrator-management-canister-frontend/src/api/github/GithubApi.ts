@@ -1,6 +1,6 @@
 import { Identity } from "@dfinity/agent";
 import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
-import { environment, frontend_url, githubClientId, ngrok_tunnel, reverse_proxy_url } from "../../config/config";
+import { environment, frontend_url, githubClientId, reverse_proxy_url } from "../../config/config";
 import { generateWorkflowTemplate } from "../../utility/workflowTemplate";
 import MainApi from "../main";
 import { Principal } from "@dfinity/principal";
