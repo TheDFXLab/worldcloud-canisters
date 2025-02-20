@@ -1,4 +1,4 @@
-import { Identity } from "@dfinity/agent";
+import { HttpAgent, Identity } from "@dfinity/agent";
 import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { environment, frontend_url, githubClientId, reverse_proxy_url } from "../../config/config";
 import { generateWorkflowTemplate } from "../../utility/workflowTemplate";
@@ -455,12 +455,12 @@ export class GithubApi {
         return response.blob();
     }
 
-    async pollForArtifact(identity: Identity, canisterId: Principal, repo: string, branch: string, previousRunId: string, maxAttempts = 100): Promise<{ artifact: Artifact, workflowRunDetails: WorkflowRunDetails }> {
+    async pollForArtifact(identity: Identity | null, agent: HttpAgent, canisterId: Principal, repo: string, branch: string, previousRunId: string, maxAttempts = 100): Promise<{ artifact: Artifact, workflowRunDetails: WorkflowRunDetails }> {
         for (let i = 0; i < maxAttempts; i++) {
             const workflowRunResult = await this.getWorkflows(repo, previousRunId);
 
             if (workflowRunResult && workflowRunResult.targetArtifact) {
-                const mainApi = await MainApi.create(identity);
+                const mainApi = await MainApi.create(identity, agent);
                 if (!mainApi) {
                     throw new Error("Failed to create main api instance.");
                 }

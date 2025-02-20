@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useIdentity } from "../IdentityContext/IdentityContext";
 import LedgerApi from "../../api/ledger/LedgerApi";
 import MainApi from "../../api/main";
+import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 
 interface LedgerContextType {
   balance: bigint | null;
@@ -26,9 +27,13 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
   const [pendingDeposits, setPendingDeposits] = useState<number>(0);
   const [balance, setBalance] = useState<bigint | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const { agent } = useHttpAgent();
 
   const getPendingDeposits = async () => {
-    const mainApi = await MainApi.create(identity);
+    if (!agent) {
+      throw new Error("Agent not found");
+    }
+    const mainApi = await MainApi.create(identity, agent);
     const pendingDeposits = await mainApi?.getPendingDeposits();
     if (pendingDeposits && pendingDeposits.e8s > 0) {
       setPendingDeposits(Number(pendingDeposits.e8s));
@@ -40,7 +45,10 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!identity) {
         return;
       }
-      const ledgerApi = await LedgerApi.create(identity);
+      if (!agent) {
+        return;
+      }
+      const ledgerApi = await LedgerApi.create(identity, agent);
       if (!ledgerApi) {
         throw new Error("Ledger API not initialized");
       }
@@ -58,7 +66,10 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsTransferring(true);
     setError(null);
     try {
-      const ledgerApi = await LedgerApi.create(identity);
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
+      const ledgerApi = await LedgerApi.create(identity, agent);
       if (!ledgerApi) {
         throw new Error("Ledger API not initialized");
       }

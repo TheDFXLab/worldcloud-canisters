@@ -6,6 +6,7 @@ import { ICPLedger } from "../../class/ICPLedger/ICPLedger";
 import { Identity } from "@dfinity/agent";
 import { e8sToIcp, icpToE8s } from "../../utility/e8s";
 import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
+import { HttpAgentManager } from "../../agent/http_agent";
 
 class CyclesApi {
     private static instance: CyclesApi | null = null;
@@ -15,15 +16,17 @@ class CyclesApi {
     actor: ActorSubclass<_SERVICE> | null;
     idenitified: boolean;
     identity: Identity | null;
+    agent: HttpAgent | null;
 
-    private constructor(identity: Identity | null, actor: ActorSubclass<_SERVICE> | null, isIdentified: boolean) {
+    private constructor(identity: Identity | null, actor: ActorSubclass<_SERVICE> | null, isIdentified: boolean, agent: HttpAgent) {
         this.canisterId = backend_canister_id;
         this.actor = actor;
         this.identity = identity;
         this.idenitified = isIdentified;
+        this.agent = agent;
     }
 
-    static async create(identity: Identity | null) {
+    static async create(identity: Identity | null, agent: HttpAgent) {
         try {
             // Clear instance if identity has changed
             if (this.currentIdentity !== identity) {
@@ -35,7 +38,13 @@ class CyclesApi {
             if (this.instance) return this.instance;
 
             // Create instance if not already created
-            const agent = await HttpAgent.create({ identity: identity ? identity : undefined, host: http_host });
+            // const agent = await HttpAgent.create({ identity: identity ? identity : undefined, host: http_host });
+            // const httpAgentManager = await HttpAgentManager.getInstance(identity);
+            // if (!httpAgentManager) {
+            //     return null;
+            // }
+            // const agent = httpAgentManager.agent;
+
             const actor = createActor(backend_canister_id, {
                 agent: agent
             });
@@ -49,7 +58,7 @@ class CyclesApi {
             }
 
             // Create new instance
-            const mainApi = new CyclesApi(identity, actor, isIdentified);
+            const mainApi = new CyclesApi(identity, actor, isIdentified, agent);
             this.instance = mainApi;
             return mainApi;
         } catch (error) {

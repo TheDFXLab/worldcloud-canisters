@@ -20,6 +20,7 @@ import LanguageIcon from "@mui/icons-material/Language";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 
 import "./CanisterDeployer.css";
+import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 
 interface CanisterDeployerProps {}
 
@@ -32,6 +33,7 @@ function CanisterDeployer({}: CanisterDeployerProps) {
   const navigate = useNavigate();
   const { setActiveTab } = useSideBar();
   const { setIsLoadingProgress, setIsEnded } = useProgress();
+  const { agent } = useHttpAgent();
   const {
     tiers,
     subscription,
@@ -103,8 +105,11 @@ function CanisterDeployer({}: CanisterDeployerProps) {
       setShowToaster(true);
 
       setIsLoading(true);
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
 
-      const mainApi = await MainApi.create(identity);
+      const mainApi = await MainApi.create(identity, agent);
       const result = await mainApi?.deployAssetCanister();
 
       if (result && result.status) {

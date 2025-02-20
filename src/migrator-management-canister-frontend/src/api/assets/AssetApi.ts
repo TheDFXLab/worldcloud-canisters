@@ -1,4 +1,4 @@
-import { Identity } from "@dfinity/agent";
+import { HttpAgent, Identity } from "@dfinity/agent";
 import { Principal } from "@dfinity/principal";
 import MainApi from "../main";
 
@@ -6,16 +6,16 @@ class AssetApi {
     constructor() {
     }
 
-    async isIdentified(identity: Identity | null) {
-        const mainApi = await MainApi.create(identity);
+    async isIdentified(identity: Identity | null, agent: HttpAgent) {
+        const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) {
             throw new Error("Failed to create main api");
         }
         return mainApi.idenitified;
     }
 
-    async getCanisterFiles(canisterId: string, identity: Identity | null) {
-        const mainApi = await MainApi.create(identity);
+    async getCanisterFiles(canisterId: string, identity: Identity | null, agent: HttpAgent) {
+        const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) {
             throw new Error("Failed to create main api");
         }
@@ -27,8 +27,8 @@ class AssetApi {
         return files;
     }
 
-    async getAsset(canisterId: string, key: string, identity: Identity | null) {
-        const mainApi = await MainApi.create(identity);
+    async getAsset(canisterId: string, key: string, identity: Identity | null, agent: HttpAgent) {
+        const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) {
             throw new Error("Failed to create main api");
         }

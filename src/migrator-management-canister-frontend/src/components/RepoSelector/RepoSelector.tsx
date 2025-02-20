@@ -16,6 +16,7 @@ import { Principal } from "@dfinity/principal";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
+import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 
 interface PackageLocation {
   path: string;
@@ -57,6 +58,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
   const { canisterId } = useParams();
   const { toasterData, setToasterData, setShowToaster } = useToaster();
   const navigate = useNavigate();
+  const { agent } = useHttpAgent();
   const { isDispatched, setIsDispatched } = useDeployments();
 
   /** State */
@@ -270,9 +272,13 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       updateStepStatus(repo, "trigger", "completed");
       updateStepStatus(repo, "build", "in-progress");
 
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
       // Wait for artifact
       const pollResponse = await github.pollForArtifact(
         identity,
+        agent,
         Principal.fromText(canisterId),
         repo,
         repoStates[repo].selectedBranch,
@@ -302,7 +308,8 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         zipFile,
         canisterId,
         identity,
-        workflowRunDetails
+        workflowRunDetails,
+        agent
       );
 
       if (!result.status) {

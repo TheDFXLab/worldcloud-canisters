@@ -18,6 +18,8 @@ import {
 } from "../../config/config";
 import { ICPLedger } from "../../class/ICPLedger/ICPLedger";
 import { useNavigate } from "react-router-dom";
+import { HttpAgentManager } from "../../agent/http_agent";
+import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 
 interface IdentityProviderProps {
   children: ReactNode;
@@ -53,11 +55,13 @@ const getGlobalAuthClient = async () => {
 
 export function IdentityProvider({ children }: IdentityProviderProps) {
   const navigate = useNavigate();
+  const { fetchHttpAgent } = useHttpAgent();
+
   const [isConnected, setIsConnected] = useState(false);
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [isLoadingIdentity, setIsLoadingIdentity] = useState(true);
-  const [identifiedIcpLedgerActor, setIdentifiedIcpLedgerActor] =
-    useState<any>(null);
+  // const [identifiedIcpLedgerActor, setIdentifiedIcpLedgerActor] =
+  // useState<any>(null);
   const [authClient, setAuthClient] = useState<AuthClient | null>(null);
 
   const refreshIdentity = async () => {
@@ -91,6 +95,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         setIdentity(null);
         return identity;
       }
+      await fetchHttpAgent(identity);
       setIdentity(identity);
       setIsConnected(true);
       return identity;
@@ -176,20 +181,32 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       );
 
       // Using the identity obtained from the auth client, create an agent to interact with the IC.
-      const agent = await HttpAgent.create({
-        identity,
-        host: http_host,
-      });
+      // const agent = await HttpAgent.create({
+      //   identity,
+      //   host: http_host,
+      // });
+
+      // const httpAgentManager = await HttpAgentManager.getInstance(identity);
+      // if (!httpAgentManager) {
+      //   return null;
+      // }
+      // const agent = httpAgentManager.agent;
+
+      const agent = await fetchHttpAgent(identity);
+      if (!agent) {
+        console.log("IdentityContext: No agent found");
+        return null;
+      }
 
       if (environment === "local") {
         console.log("IdentityContext: Fetching root key in dev mode");
         await agent.fetchRootKey();
       }
 
-      const icpLedgerFactory = new ICPLedger(agent, canisterId);
+      // const icpLedgerFactory = new ICPLedger(agent, canisterId);
 
       setIdentity(identity);
-      setIdentifiedIcpLedgerActor(icpLedgerFactory.actor);
+      // setIdentifiedIcpLedgerActor(icpLedgerFactory.actor);
 
       setIsConnected(true);
       return identity;

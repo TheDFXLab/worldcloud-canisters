@@ -18,6 +18,7 @@ import ThemeToggle from "../ThemeToggle/ThemeToggle";
 import { useLedger } from "../../context/LedgerContext/LedgerContext";
 import LoaderOverlay from "../LoaderOverlay/LoaderOverlay";
 import Sidebar from "../Sidebar/Sidebar";
+import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 
 interface AppLayoutProps {
   state: State;
@@ -39,21 +40,21 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   const { actionBar } = useActionBar();
   const { toasterData, showToaster, setShowToaster } = useToaster();
   const { activeTab, setIsMobileMenuOpen } = useSideBar();
-
+  const { agent } = useHttpAgent();
   /** State */
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
 
   /** Functions */
   useEffect(() => {
     const fetchWasmModule = async () => {
-      if (!identity) {
+      if (!identity || !agent) {
         return;
       }
-      const mainApi = await MainApi.create(identity);
+      const mainApi = await MainApi.create(identity, agent);
       const wasmModule = await mainApi?.actor?.getWasmModule();
     };
     fetchWasmModule();
-  }, [identity]);
+  }, [identity, agent]);
 
   useEffect(() => {
     if (!identity) {

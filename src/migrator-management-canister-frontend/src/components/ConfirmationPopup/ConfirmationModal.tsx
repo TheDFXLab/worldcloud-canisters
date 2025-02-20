@@ -301,7 +301,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             parseFloat(amount) <= 0 ||
             isSubmitting ||
             balance === BigInt(0) ||
-            (balance ? balance < BigInt(amount) : false)
+            (balance ? balance < icpToE8s(parseFloat(amount)) : false)
           }
         >
           {isSubmitting ? (

@@ -1,4 +1,4 @@
-import { Identity } from "@dfinity/agent";
+import { HttpAgent, Identity } from "@dfinity/agent";
 import { Principal } from "@dfinity/principal";
 import MainApi from "../main";
 import { extractZip, StaticFile } from "../../utility/compression";
@@ -9,26 +9,26 @@ class FileUploadApi {
     constructor() {
     }
 
-    async isIdentified(identity: Identity | null) {
-        const mainApi = await MainApi.create(identity);
+    async isIdentified(identity: Identity | null, agent: HttpAgent) {
+        const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) {
             throw new Error("Failed to create main api");
         }
         return mainApi.idenitified;
     }
 
-    async uploadFromZip(zipFile: File, canisterId: string, identity: Identity | null, workflowRunDetails: WorkflowRunDetails) {
-        const mainApi = await MainApi.create(identity);
+    async uploadFromZip(zipFile: File, canisterId: string, identity: Identity | null, workflowRunDetails: WorkflowRunDetails, agent: HttpAgent) {
+        const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) {
             throw new Error("Failed to create main api");
         }
         const sanitizedFiles = await this.processZipFile(zipFile);
 
-        return await this.handleUploadToCanister(sanitizedFiles, canisterId, identity, workflowRunDetails);
+        return await this.handleUploadToCanister(sanitizedFiles, canisterId, identity, workflowRunDetails, agent);
 
     }
 
-    private async handleUploadToCanister(unzippedFiles: StaticFile[], canisterId: string, identity: Identity | null, workflowRunDetails: WorkflowRunDetails) {
+    private async handleUploadToCanister(unzippedFiles: StaticFile[], canisterId: string, identity: Identity | null, workflowRunDetails: WorkflowRunDetails, agent: HttpAgent) {
         try {
             const totalSize = unzippedFiles.reduce(
                 (acc, file) => acc + file.content.length,
@@ -38,7 +38,7 @@ class FileUploadApi {
             let totalUploadedSize = 0;
             // 2MB limit
             if (totalSize < 2000000) {
-                const result = await this.storeAssetsInCanister(unzippedFiles, canisterId, identity, workflowRunDetails);
+                const result = await this.storeAssetsInCanister(unzippedFiles, canisterId, identity, workflowRunDetails, agent);
                 totalUploadedSize += result.uploadedSize ?? 0;
                 // setUploadedSize(totalUploadedSize);
             } else {
@@ -107,7 +107,7 @@ class FileUploadApi {
 
                     const totalSize = this.calculateTotalSize(files);
 
-                    const result = await this.storeAssetsInCanister(files, canisterId, identity, workflowRunDetails);
+                    const result = await this.storeAssetsInCanister(files, canisterId, identity, workflowRunDetails, agent);
                     if (!result) {
                         console.log(`Error: Failed to store batch ${i + 1}`);
                     }
@@ -129,7 +129,7 @@ class FileUploadApi {
         }
     };
 
-    private async storeAssetsInCanister(files: StaticFile[], canisterId: string, identity: Identity | null, workflowRunDetails: WorkflowRunDetails) {
+    private async storeAssetsInCanister(files: StaticFile[], canisterId: string, identity: Identity | null, workflowRunDetails: WorkflowRunDetails, agent: HttpAgent) {
         try {
             const sanitizedFiles = files.filter(
                 (file) => !file.path.includes("MACOS")
@@ -142,7 +142,7 @@ class FileUploadApi {
                 file.path = file.path.startsWith("/") ? file.path : `/${file.path}`;
             });
 
-            const mainApi = await MainApi.create(identity);
+            const mainApi = await MainApi.create(identity, agent);
             const result = await mainApi?.storeInAssetCanister(
                 Principal.fromText(canisterId),
                 sanitizedFiles,

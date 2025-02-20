@@ -1,4 +1,4 @@
-import { Identity } from "@dfinity/agent";
+import { HttpAgent, Identity } from "@dfinity/agent";
 import MainApi from "../main";
 import { Subscription } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 
@@ -12,8 +12,8 @@ class SubscriptionApi {
     constructor() {
     }
 
-    async getTiersList(identity: Identity | null) {
-        const mainApi = await MainApi.create(identity);
+    async getTiersList(identity: Identity | null, agent: HttpAgent) {
+        const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) {
             throw new Error("Failed to create main api");
         }
@@ -24,9 +24,9 @@ class SubscriptionApi {
         return tiers;
     }
 
-    async getAllSubscriptions(identity: Identity | null) {
+    async getAllSubscriptions(identity: Identity | null, agent: HttpAgent) {
         try {
-            const mainApi = await MainApi.create(identity);
+            const mainApi = await MainApi.create(identity, agent);
             if (!mainApi) {
                 throw new Error("Failed to create main api");
             }
@@ -41,8 +41,8 @@ class SubscriptionApi {
 
     }
 
-    async getSubscription(identity: Identity | null) {
-        const mainApi = await MainApi.create(identity);
+    async getSubscription(identity: Identity | null, agent: HttpAgent) {
+        const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) {
             throw new Error("Failed to create main api");
         }
@@ -61,8 +61,8 @@ class SubscriptionApi {
         return null;
     }
 
-    async createSubscription(identity: Identity | null, tierId: number) {
-        const mainApi = await MainApi.create(identity);
+    async createSubscription(identity: Identity | null, agent: HttpAgent, tierId: number) {
+        const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) {
             throw new Error("Failed to create main api");
         }

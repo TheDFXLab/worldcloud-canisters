@@ -9,6 +9,7 @@ import { Principal } from "@dfinity/principal";
 import AuthorityApi from "../../api/authority";
 import { CanisterAsset } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { useIdentity } from "../IdentityContext/IdentityContext";
+import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 
 interface AssetContextType {
   assets: CanisterAsset[];
@@ -26,14 +27,18 @@ export function AssetProvider({
   canisterId: Principal;
 }) {
   const { identity } = useIdentity();
+  const { agent } = useHttpAgent();
   const [isLoadingAssets, setIsLoadingAssets] = useState(true);
   const [assets, setAssets] = useState<CanisterAsset[]>([]);
   const authApi = new AuthorityApi(canisterId);
 
   const refreshAssets = async () => {
     try {
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
       setIsLoadingAssets(true);
-      const result = await authApi.getAssetList(canisterId, identity);
+      const result = await authApi.getAssetList(canisterId, identity, agent);
       setAssets(result.assets);
     } catch (error) {
       setIsLoadingAssets(false);

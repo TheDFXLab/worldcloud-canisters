@@ -7,6 +7,7 @@ import ErrorIcon from "@mui/icons-material/Error";
 import DeleteIcon from "@mui/icons-material/Delete";
 import MainApi from "../../api/main";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
+import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 
 function WasmUploader() {
   const { identity } = useIdentity();
@@ -15,7 +16,7 @@ function WasmUploader() {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+  const { agent } = useHttpAgent();
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -72,7 +73,10 @@ function WasmUploader() {
       // wasmBytes
       // );
 
-      const mainApi = await MainApi.create(identity);
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
+      const mainApi = await MainApi.create(identity, agent);
       const result = await mainApi?.uploadWasm(wasmBytes);
 
       if (!result) {

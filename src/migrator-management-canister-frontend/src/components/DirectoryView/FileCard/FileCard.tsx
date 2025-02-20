@@ -5,6 +5,7 @@ import { ThumbnailCache } from "../../../class/Cacheing/ThumbnailCache";
 import { Identity } from "@dfinity/agent";
 import { FileTypeIcon } from "../FileTypeIcon/FileTypeIcon";
 import "./FileCard.css";
+import { useHttpAgent } from "../../../context/HttpAgentContext/HttpAgentContext";
 const FileCard: React.FC<{
   asset: CanisterAsset;
   canisterId: string;
@@ -12,6 +13,7 @@ const FileCard: React.FC<{
 }> = ({ asset, canisterId, identity }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const thumbnailCache = useMemo(() => new ThumbnailCache(), []);
+  const { agent } = useHttpAgent();
 
   useEffect(() => {
     const loadThumbnail = async () => {
@@ -24,11 +26,16 @@ const FileCard: React.FC<{
         if (!thumbnail) {
           const assetApi = new AssetApi();
 
+          if (!agent) {
+            throw new Error("Agent not found");
+          }
+
           // If not in cache, fetch from canister
           const response = await assetApi.getAsset(
             canisterId,
             asset.key,
-            identity
+            identity,
+            agent
           );
 
           if (!response) {
