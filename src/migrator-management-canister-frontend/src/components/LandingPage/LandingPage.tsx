@@ -236,7 +236,7 @@ function LandingPage() {
             <div className="step">
               <div className="step-number">2</div>
               <h3>Configure</h3>
-              <p>Upload your static website files</p>
+              <p>Build with GitHub or upload your static website files</p>
             </div>
 
             <div className="step">
