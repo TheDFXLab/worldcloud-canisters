@@ -17,8 +17,7 @@
       "workspace": "migrator-management-canister-frontend"
     },
     "icp_ledger_canister": {
-      "type": "pull",
-      "id": "ryjl3-tyaaa-aaaaa-aaaba-cai",
+      "type": "custom",
       "candid": "https://raw.githubusercontent.com/dfinity/ic/76a634c31dfb840da25fbe286855eb0be1818ca8/rs/ledger_suite/icp/ledger.did",
       "wasm": "https://download.dfinity.systems/ic/76a634c31dfb840da25fbe286855eb0be1818ca8/canisters/ledger-canister.wasm.gz",
       "remote": {
@@ -28,8 +27,7 @@
       }
     },
     "internet_identity": {
-      "type": "pull",
-      "id": "rdmx6-jaaaa-aaaaa-aaadq-cai",
+      "type": "custom",
       "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",
       "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz",
       "remote": {
