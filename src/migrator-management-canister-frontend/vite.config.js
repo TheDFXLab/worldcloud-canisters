@@ -4,6 +4,7 @@ import environment from 'vite-plugin-environment';
 import react from '@vitejs/plugin-react';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import dotenv from 'dotenv';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 dotenv.config({ path: '../../.env' });
 
