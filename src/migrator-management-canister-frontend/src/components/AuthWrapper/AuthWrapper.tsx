@@ -4,29 +4,26 @@ import plugLogo from "../../../assets//images/plug-connect.png";
 import ii from "../../../assets/images/ii.png";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { Principal } from "@dfinity/principal";
-import {
-  internet_identity_canister_id,
-  internetIdentityConfig,
-} from "../../config/config";
-import { AuthClient } from "@dfinity/auth-client";
+import { internet_identity_canister_id } from "../../config/config";
+import LoaderOverlay from "../LoaderOverlay/LoaderOverlay";
+import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
 
 interface AuthWrapperProps {
   children: React.ReactNode;
 }
 
 export function AuthWrapper({ children }: AuthWrapperProps) {
+  const { summon, destroy } = useLoaderOverlay();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const { connectWallet, disconnect, identity, isConnected } = useIdentity();
-
-  const logout = async () => {
-    const isLoggedOut = await disconnect();
-    if (!isLoggedOut) {
-      return;
-    }
-    setIsAuthenticated(false);
-    setIsLoading(false);
-  };
+  const {
+    connectWallet,
+    disconnect,
+    refreshIdentity,
+    identity,
+    isLoadingIdentity,
+    isConnected,
+  } = useIdentity();
 
   const login = async () => {
     const identity = await connectWallet(
@@ -48,28 +45,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
 
   useEffect(() => {
     try {
-      const checkAuth = async () => {
-        setIsLoading(true);
-        let authClient = await AuthClient.create();
-        const identity = authClient.getIdentity();
-        if (!identity) {
-          setIsAuthenticated(false);
-          setIsLoading(false);
-          return;
-        }
-        if (
-          identity.getPrincipal().toText() ===
-          internetIdentityConfig.loggedOutPrincipal
-        ) {
-          setIsAuthenticated(false);
-          setIsLoading(false);
-          return;
-        }
-
-        setIsAuthenticated(true);
-        setIsLoading(false);
-      };
-      checkAuth();
+      refreshIdentity();
     } catch (error) {
       console.log(`error.....`, error);
       setIsLoading(false);
@@ -81,11 +57,19 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     setIsAuthenticated(isConnected);
   }, [isConnected]);
 
-  if (isLoading) {
-    return <div>Loading...</div>;
+  useEffect(() => {
+    if (isLoadingIdentity) {
+      summon("Loading...");
+    } else {
+      destroy();
+    }
+  }, [isLoadingIdentity]);
+
+  if (isLoadingIdentity) {
+    return <LoaderOverlay />;
   }
 
-  if (!isAuthenticated) {
+  if (!isConnected) {
     return (
       <div className="auth-container">
         <div className="auth-card">
