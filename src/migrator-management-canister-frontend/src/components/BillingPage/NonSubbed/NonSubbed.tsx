@@ -35,10 +35,12 @@ export default function NonSubbed({
   const [showPricing, setShowPricing] = pricingState;
   return (
     <div className="pricing-container">
-      <button className="back-button" onClick={() => setShowPricing(false)}>
-        <ArrowBackIcon />
-        <span>Back to Current Plan</span>
-      </button>
+      {subscription && (
+        <button className="back-button" onClick={() => setShowPricing(false)}>
+          <ArrowBackIcon />
+          <span>Back to Current Plan</span>
+        </button>
+      )}
       <div className="pricing-grid">
         {tiers &&
           tiers.map((tier) => (
