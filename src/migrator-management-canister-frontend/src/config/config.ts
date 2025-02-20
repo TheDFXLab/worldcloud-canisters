@@ -6,13 +6,11 @@ export const getCanisterUrl = (canisterId: string, envOverride?: string) => {
             ? `https://${canisterId}.icp0.io`
             : `http://${canisterId}.localhost:8000`;
 
-        console.log(`calling...`, res);
     }
 
     res = environment === "ic"
         ? `https://${canisterId}.icp0.io`
         : `http://${canisterId}.localhost:8000`;
-    console.log(`calling...`, res);
     return res;
 };
 
@@ -28,6 +26,10 @@ export const frontend_canister_id_url = environment === "local" ? `http://${fron
 export const ledger_canister_id_url = environment === "local" ? `http://${icp_ledger_canister_id}.${replica_host}:${replica_port}` : `https://${icp_ledger_canister_id}.icp0.io/`;
 export const internet_identity_canister_id_url = environment === "local" ? `http://${internet_identity_canister_id}.${replica_host}:${replica_port}` : `https://identity.ic0.app`;
 
+const _dev_env = {
+    github_client_id: "Ov23li8TWtkI36y5Mzr5"
+}
+
 export const internetIdentityConfig = {
     identityProvider: internet_identity_canister_id_url,
     loggedOutPrincipal: "2vxsx-fae",
@@ -35,13 +37,12 @@ export const internetIdentityConfig = {
 }
 
 
-export const githubClientId = process.env.REACT_APP_GITHUB_CLIENT_ID || "";
+export const githubClientId = environment == "ic" ? process.env.REACT_APP_GITHUB_CLIENT_ID || "" : _dev_env.github_client_id;
 export const githubClientSecret = process.env.REACT_APP_GITHUB_CLIENT_SECRET || ""; // TODO: Remove this
 
 export const ngrok_tunnel = "https://1abfa900377c.ngrok.app";
-// export const reverse_proxy_url = "https://cors-anywhere.herokuapp.com";
-// export const reverse_proxy_url = "https://proxy.cors.sh";
-export const reverse_proxy_url = environment === "ic" ? process.env.REACT_APP_REVERSE_PROXY_REMOTE_URL : "http://localhost:8080";
+// export const reverse_proxy_url = environment === "ic" ? process.env.REACT_APP_REVERSE_PROXY_REMOTE_URL : "http://localhost:8080";
+export const reverse_proxy_url = process.env.REACT_APP_REVERSE_PROXY_REMOTE_URL || "";
 export const frontend_url = environment === "ic" ? `https://${frontend_canister_id}.icp0.io` : ngrok_tunnel;
 
 export const cors_sh_api_key = process.env.REACT_APP_CORS_SH_API_KEY || "";
