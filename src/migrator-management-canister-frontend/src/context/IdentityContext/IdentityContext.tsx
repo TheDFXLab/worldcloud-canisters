@@ -60,8 +60,6 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [isLoadingIdentity, setIsLoadingIdentity] = useState(true);
-  // const [identifiedIcpLedgerActor, setIdentifiedIcpLedgerActor] =
-  // useState<any>(null);
   const [authClient, setAuthClient] = useState<AuthClient | null>(null);
 
   const refreshIdentity = async () => {
@@ -69,7 +67,6 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       setIsLoadingIdentity(true);
       let _authClient = await getGlobalAuthClient();
       if (!_authClient) {
-        console.log("IdentityContext: No auth client found");
         return null;
       }
 
@@ -180,18 +177,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         identity.getPrincipal().toText()
       );
 
-      // Using the identity obtained from the auth client, create an agent to interact with the IC.
-      // const agent = await HttpAgent.create({
-      //   identity,
-      //   host: http_host,
-      // });
-
-      // const httpAgentManager = await HttpAgentManager.getInstance(identity);
-      // if (!httpAgentManager) {
-      //   return null;
-      // }
-      // const agent = httpAgentManager.agent;
-
+      // Initialize the agent
       const agent = await fetchHttpAgent(identity);
       if (!agent) {
         console.log("IdentityContext: No agent found");
@@ -202,8 +188,6 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         console.log("IdentityContext: Fetching root key in dev mode");
         await agent.fetchRootKey();
       }
-
-      // const icpLedgerFactory = new ICPLedger(agent, canisterId);
 
       setIdentity(identity);
       // setIdentifiedIcpLedgerActor(icpLedgerFactory.actor);

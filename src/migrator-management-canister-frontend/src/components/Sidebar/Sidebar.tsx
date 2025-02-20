@@ -54,10 +54,6 @@ function Sidebar() {
     setActiveTab(menuItem);
   };
 
-  useEffect(() => {
-    console.log(`activeTab: ${activeTab}`);
-  }, [activeTab]);
-
   return (
     <div>
       <button

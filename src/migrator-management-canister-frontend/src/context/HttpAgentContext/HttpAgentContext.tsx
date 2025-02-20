@@ -29,25 +29,10 @@ export function HttpAgentProvider({ children }: { children: ReactNode }) {
     if (!httpAgentManager) {
       return null;
     }
-    console.log("HttpAgentProvider: Setting agent", httpAgentManager.agent);
     setAgent(httpAgentManager.agent);
     return httpAgentManager.agent;
   };
 
-  // useEffect(() => {
-  //   if (!identity) {
-  //     return;
-  //   }
-  //   const fetchHttpAgent = async () => {
-  //     const httpAgentManager = await HttpAgentManager.getInstance(identity);
-  //     if (!httpAgentManager) {
-  //       return;
-  //     }
-  //     console.log("HttpAgentProvider: Setting agent", httpAgentManager.agent);
-  //     setAgent(httpAgentManager.agent);
-  //   };
-  //   fetchHttpAgent();
-  // }, [identity]);
   return (
     <HttpAgentContext.Provider value={{ agent, fetchHttpAgent }}>
       {children}

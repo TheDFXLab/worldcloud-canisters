@@ -34,15 +34,6 @@ class MainApi {
             // Return existing instance if already created
             if (this.instance) return this.instance;
 
-            console.log("Creating main api instance", http_host);
-
-            // Create instance if not already created
-            // const agent = await HttpAgent.create({ identity: identity ? identity : undefined, host: http_host });
-            // const httpAgentManager = await HttpAgentManager.getInstance(identity);
-            // if (!httpAgentManager) {
-            //     return null;
-            // }
-            // const agent = httpAgentManager.agent;
             const actor = createActor(backend_canister_id, {
                 agent: agent
             });

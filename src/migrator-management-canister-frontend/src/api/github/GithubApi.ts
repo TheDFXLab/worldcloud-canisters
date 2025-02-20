@@ -75,7 +75,6 @@ export class GithubApi {
     }
 
     async authenticate() {
-        console.log("Authenticating...");
         const clientId = githubClientId;
         if (!clientId) {
             throw new Error('GitHub client ID not configured');
@@ -83,7 +82,6 @@ export class GithubApi {
 
         // Generate random state for security
         const state = Math.random().toString(36).substring(7);
-        console.log("state:", state);
 
         // Store state in localStorage
         localStorage.setItem('github_oauth_state', state);
@@ -134,8 +132,6 @@ export class GithubApi {
 
     async requestCode() {
         try {
-            console.log(`Requesting device code`);
-            console.log(`reverse_proxy_url...`, reverse_proxy_url);
             const response = await fetch(
                 `${environment === "ic" ? reverse_proxy_url : reverse_proxy_url
                 }/login/device/code`,
@@ -151,9 +147,6 @@ export class GithubApi {
                     }),
                 }
             );
-
-            console.log(`code response...`, response);
-
 
             const data = await response.json();
             return data;
