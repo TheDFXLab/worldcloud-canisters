@@ -11,11 +11,13 @@ import { HttpAgent } from "@dfinity/agent";
 
 import { Identity } from "@dfinity/agent";
 import {
+  environment,
   frontend_canister_id_url,
   http_host,
   internetIdentityConfig,
 } from "../../config/config";
 import { ICPLedger } from "../../class/ICPLedger/ICPLedger";
+import { useNavigate } from "react-router-dom";
 
 interface IdentityProviderProps {
   children: ReactNode;
@@ -30,28 +32,61 @@ interface IdentityContextType {
   disconnect: () => Promise<boolean>;
 }
 
+let globalAuthClient: AuthClient | null = null;
+
 const IdentityContext = createContext<IdentityContextType | undefined>(
   undefined
 );
 
+const getGlobalAuthClient = async () => {
+  if (!globalAuthClient) {
+    globalAuthClient = await AuthClient.create({
+      idleOptions: {
+        disableIdle: true,
+        disableDefaultIdleCallback: true,
+      },
+    });
+  }
+
+  return globalAuthClient;
+};
+
 export function IdentityProvider({ children }: IdentityProviderProps) {
+  const navigate = useNavigate();
   const [isConnected, setIsConnected] = useState(false);
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [isLoadingIdentity, setIsLoadingIdentity] = useState(true);
   const [identifiedIcpLedgerActor, setIdentifiedIcpLedgerActor] =
     useState<any>(null);
+  const [authClient, setAuthClient] = useState<AuthClient | null>(null);
 
   const refreshIdentity = async () => {
     try {
       setIsLoadingIdentity(true);
-      console.log(`Refreshing identity`);
-      const authClient = await AuthClient.create();
-      const identity = authClient.getIdentity();
-      console.log(`Identity:`, identity.getPrincipal().toText());
+      let _authClient = await getGlobalAuthClient();
+      if (!_authClient) {
+        console.log("IdentityContext: No auth client found");
+        return null;
+      }
+
+      const isAuthenticated = await _authClient.isAuthenticated();
+      if (!isAuthenticated) {
+        console.log("IdentityContext: Not authenticated");
+        setIsConnected(false);
+        setIdentity(null);
+        return null;
+      }
+
+      const identity = _authClient.getIdentity();
+      console.log(
+        `IdentityContext: Identity:`,
+        identity.getPrincipal().toText()
+      );
       if (
         identity.getPrincipal().toText() ===
         internetIdentityConfig.loggedOutPrincipal
       ) {
+        console.log("IdentityContext: Logged out principal..");
         setIsConnected(false);
         setIdentity(null);
         return identity;
@@ -68,12 +103,17 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
   };
 
   const disconnect = async () => {
-    setIsLoadingIdentity(true);
-    const authClient = await AuthClient.create();
+    console.log(`Disconnecting`);
+    if (!globalAuthClient) {
+      console.log(`No auth client found`);
+      return false;
+    }
+
+    let authClient = await getGlobalAuthClient();
     await authClient.logout();
+    console.log(`Logged out`);
 
     setIdentity(null);
-    setIsLoadingIdentity(false);
     setIsConnected(false);
     return true;
   };
@@ -81,8 +121,25 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
   const connectWallet = async (canisterId: Principal) => {
     try {
       console.log(`Connecting wallet`);
-      // Create an auth client
-      let authClient = await AuthClient.create();
+      setIsLoadingIdentity(true);
+      let _authClient = await getGlobalAuthClient();
+      if (!_authClient) {
+        console.log(`No auth client found while connecting wallet`);
+        return null;
+      }
+
+      const isAuthenticated = await _authClient.isAuthenticated();
+      if (isAuthenticated) {
+        const id = _authClient.getIdentity();
+        console.log(
+          `Authenticated already with id`,
+          id.getPrincipal().toText()
+        );
+
+        setIdentity(id);
+        setIsConnected(true);
+        return id;
+      }
 
       const popUpHeight = 0.42 * window.innerWidth;
       const popUpWidth = 0.35 * window.innerWidth;
@@ -94,10 +151,11 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         //safari: http://bw4dl-smaaa-aaaaa-qaacq-cai.localhost:4943/
         //http://bw4dl-smaaa-aaaaa-qaacq-cai.127.0.0.1:4943/
         //
-        authClient.login({
+        _authClient.login({
           derivationOrigin: frontend_canister_id_url,
           identityProvider: internetIdentityConfig.identityProvider,
           windowOpenerFeatures: `toolbar=0,location=0,menubar=0,width=${popUpWidth},height=${popUpHeight},left=${left},top=${top}`,
+
           maxTimeToLive: BigInt(
             internetIdentityConfig.loginExpiryInHours *
               60 *
@@ -111,7 +169,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         });
       });
 
-      const identity = authClient.getIdentity();
+      const identity = _authClient.getIdentity();
       console.log(
         `Logged in with principal:`,
         identity.getPrincipal().toText()
@@ -120,11 +178,13 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       // Using the identity obtained from the auth client, create an agent to interact with the IC.
       const agent = await HttpAgent.create({
         identity,
-        // host: `http://localhost:4943`,
         host: http_host,
       });
 
-      await agent.fetchRootKey();
+      if (environment === "local") {
+        console.log("IdentityContext: Fetching root key in dev mode");
+        await agent.fetchRootKey();
+      }
 
       const icpLedgerFactory = new ICPLedger(agent, canisterId);
 
@@ -136,6 +196,8 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
     } catch (error) {
       console.error("Error during wallet connection:", error);
       return null;
+    } finally {
+      setIsLoadingIdentity(false);
     }
   };
 
@@ -143,8 +205,12 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
     const refresh = async () => {
       await refreshIdentity();
     };
+
+    if (!authClient) {
+      return;
+    }
     refresh();
-  }, []);
+  }, [authClient]);
 
   return (
     <IdentityContext.Provider
