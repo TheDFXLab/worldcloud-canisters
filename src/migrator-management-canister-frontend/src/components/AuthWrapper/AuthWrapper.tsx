@@ -65,7 +65,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     }
   }, [isLoadingIdentity]);
 
-  if (isLoadingIdentity) {
+  if (isLoadingIdentity && !isConnected) {
     return <LoaderOverlay />;
   }
 
