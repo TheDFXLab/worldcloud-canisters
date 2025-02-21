@@ -142,17 +142,6 @@ const BillingPage: React.FC = () => {
           title="Subscription & Billing"
           description="Manage your subscription and billing preferences"
         />
-        {/* {subscription && (
-          <button
-            className="view-plans-button"
-            onClick={() => setShowPricing(!showPricing)}
-          >
-            <UpgradeIcon />
-            <span>
-              {showPricing ? "View Current Plan" : "View Available Plans"}
-            </span>
-          </button>
-        )} */}
       </div>
 
       <div className="billing-content">

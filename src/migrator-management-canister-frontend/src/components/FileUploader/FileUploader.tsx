@@ -22,6 +22,7 @@ import ErrorIcon from "@mui/icons-material/Error";
 import DeleteIcon from "@mui/icons-material/Delete";
 import HeaderCard from "../HeaderCard/HeaderCard";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
+import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 
 interface FileUploaderProps {}
 
@@ -37,6 +38,7 @@ function FileUploader() {
   const { setIsLoadingProgress, setIsEnded } = useProgress();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setActionBar } = useActionBar();
+  const { agent } = useHttpAgent();
 
   /** State */
   const [currentBytes, setCurrentBytes] = useState(0);
@@ -260,7 +262,11 @@ function FileUploader() {
           .toText()}`
       );
 
-      const mainApi = await MainApi.create(identity);
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
+
+      const mainApi = await MainApi.create(identity, agent);
       const result = await mainApi?.storeInAssetCanister(
         Principal.fromText(canisterId),
         sanitizedFiles,
@@ -287,8 +293,11 @@ function FileUploader() {
 
   const handleUpload = async () => {
     const assetApi = new AssetApi();
+    if (!agent) {
+      throw new Error("Agent not found");
+    }
 
-    if (!(await assetApi.isIdentified(identity))) {
+    if (!(await assetApi.isIdentified(identity, agent))) {
       setIsError(true);
       setStatus("Please connect your wallet first");
       setToasterData({

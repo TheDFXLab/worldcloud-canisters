@@ -11,6 +11,7 @@ import { decodeError } from "../../utility/errors";
 import { State } from "../../App";
 import { useIdentity } from "../IdentityContext/IdentityContext";
 import { useParams } from "react-router-dom";
+import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 
 interface AuthorityContextType {
   status: CanisterStatus | null;
@@ -35,7 +36,7 @@ export function AuthorityProvider({
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const { identity } = useIdentity();
   const { canisterId } = useParams();
-
+  const { agent } = useHttpAgent();
   const refreshStatus = async () => {
     try {
       if (!canisterId) {
@@ -44,9 +45,13 @@ export function AuthorityProvider({
       const authApi = new AuthorityApi(Principal.fromText(canisterId));
 
       setIsLoadingStatus(true);
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
       const result = await authApi.getCanisterStatus(
         authApi.canisterId,
-        identity
+        identity,
+        agent
       );
       setStatus(result);
     } catch (error) {
@@ -65,10 +70,14 @@ export function AuthorityProvider({
       const authApi = new AuthorityApi(Principal.fromText(canisterId));
 
       setIsLoadingStatus(true);
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
       // Implement add controller logic
       const result = await authApi.addController(
         Principal.fromText(newController),
-        identity
+        identity,
+        agent
       );
       if (Object.keys(result)[0] === "ok") {
         setIsLoadingStatus(false);
@@ -92,10 +101,14 @@ export function AuthorityProvider({
       const authApi = new AuthorityApi(Principal.fromText(canisterId));
 
       setIsLoadingStatus(true);
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
 
       const result = await authApi.removeController(
         Principal.fromText(controller),
-        identity
+        identity,
+        agent
       );
 
       if (Object.keys(result)[0] === "ok") {

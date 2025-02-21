@@ -1,6 +1,6 @@
 import { Principal } from "@dfinity/principal";
 import { ListResponse } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
-import { Identity } from "@dfinity/agent";
+import { HttpAgent, Identity } from "@dfinity/agent";
 import MainApi from "../main";
 import { internetIdentityConfig } from "../../config/config";
 
@@ -19,11 +19,11 @@ class AuthorityApi {
      * @param identity 
      * @returns list of controller principal ids
      */
-    async getControllers(identity: Identity | null) {
+    async getControllers(identity: Identity | null, agent: HttpAgent) {
         if (!identity || identity.getPrincipal().toText() === internetIdentityConfig.loggedOutPrincipal) {
             throw new Error("User is not logged in");
         }
-        const mainApi = await MainApi.create(identity);
+        const mainApi = await MainApi.create(identity, agent);
 
         if (!mainApi) {
             throw new Error("Failed to create main api");
@@ -43,8 +43,8 @@ class AuthorityApi {
      * @param identity 
      * @returns status, controllers list and cycles balance
      */
-    async getCanisterStatus(canister_id: Principal, identity: Identity | null): Promise<CanisterStatus> {
-        const mainApi = await MainApi.create(identity);
+    async getCanisterStatus(canister_id: Principal, identity: Identity | null, agent: HttpAgent): Promise<CanisterStatus> {
+        const mainApi = await MainApi.create(identity, agent);
 
         if (!mainApi) {
             throw new Error("Failed to create main api");
@@ -67,8 +67,8 @@ class AuthorityApi {
      * @param identity 
      * @returns 
      */
-    async addController(controller: Principal, identity: Identity | null) {
-        const mainApi = await MainApi.create(identity);
+    async addController(controller: Principal, identity: Identity | null, agent: HttpAgent) {
+        const mainApi = await MainApi.create(identity, agent);
 
         if (!mainApi) {
             throw new Error("Failed to create main api");
@@ -92,8 +92,8 @@ class AuthorityApi {
      * @param identity 
      * @returns 
      */
-    async removeController(controller: Principal, identity: Identity | null) {
-        const mainApi = await MainApi.create(identity);
+    async removeController(controller: Principal, identity: Identity | null, agent: HttpAgent) {
+        const mainApi = await MainApi.create(identity, agent);
 
         if (!mainApi) {
             throw new Error("Failed to create main api");
@@ -117,8 +117,11 @@ class AuthorityApi {
      * @param identity 
      * @returns list of assets
      */
-    async getAssetList(canister_id: Principal, identity: Identity | null): Promise<ListResponse> {
-        const mainApi = await MainApi.create(identity);
+    async getAssetList(canister_id: Principal, identity: Identity | null, agent: HttpAgent | null): Promise<ListResponse> {
+        if (!agent) {
+            throw new Error("Agent not found");
+        }
+        const mainApi = await MainApi.create(identity, agent);
 
         if (!mainApi) {
             throw new Error("Failed to create main api");

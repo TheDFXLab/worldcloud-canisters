@@ -12,6 +12,7 @@ import { CanisterStatusResponse } from "../../../../declarations/migrator-manage
 import MainApi from "../../api/main";
 import { useLedger } from "../LedgerContext/LedgerContext";
 import { fromE8sStable } from "../../utility/e8s";
+import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 
 export interface CreditsResponse {
   total_credits: number;
@@ -31,6 +32,7 @@ interface CyclesContextType {
   canisterStatus: CanisterStatusResponse | null;
   estimateCycles: (amountInIcp: number) => Promise<number>;
   getStatus: (canisterId: string) => Promise<void>;
+  getCreditsAvailable: () => Promise<void>;
   cyclesStatus: CanisterStatusResponse | null;
   cyclesRate: number;
 }
@@ -41,6 +43,7 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
   /*Hooks*/
   const { identity } = useIdentity();
   const { balance } = useLedger();
+  const { agent } = useHttpAgent();
 
   /** States */
   const [isLoadingCycles, setIsLoadingCycles] = useState<boolean>(false);
@@ -64,22 +67,28 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
+    if (!agent) {
+      return;
+    }
     getCreditsAvailable();
-  }, [balance]);
+  }, [balance, agent]);
 
   // Get maximum amount of cycles purchasable by user
   useEffect(() => {
     getCyclesToAdd();
-    if (!balance) {
+    if (!balance || !agent) {
       return;
     }
     estimateCycles(fromE8sStable(balance));
-  }, [balance]);
+  }, [balance, agent]);
 
   const getCreditsAvailable = async () => {
     try {
       setIsLoadingCredits(true);
-      const mainApi = await MainApi.create(identity);
+      if (!agent) {
+        return;
+      }
+      const mainApi = await MainApi.create(identity, agent);
       if (!mainApi) {
         throw new Error(`Error creating main API`);
       }
@@ -107,7 +116,10 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
   const getCyclesToAdd = async (amountInIcp?: number) => {
     try {
       setIsLoadingCycles(true);
-      const cyclesApi = await CyclesApi.create(identity);
+      if (!agent) {
+        return;
+      }
+      const cyclesApi = await CyclesApi.create(identity, agent);
       if (!cyclesApi) {
         throw new Error("Cycles API not created");
       }
@@ -128,7 +140,10 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
       }
 
       setIsLoadingEstimateCycles(true);
-      const cyclesApi = await CyclesApi.create(identity);
+      if (!agent) {
+        return 0;
+      }
+      const cyclesApi = await CyclesApi.create(identity, agent);
       if (!cyclesApi) {
         throw new Error("Cycles API not created");
       }
@@ -150,7 +165,10 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
         throw new Error("Canister ID is not set");
       }
 
-      const mainApi = await MainApi.create(identity);
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
+      const mainApi = await MainApi.create(identity, agent);
       if (!mainApi) {
         throw new Error("Main API not created");
       }
@@ -183,6 +201,7 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
         canisterStatus,
         estimateCycles,
         getStatus,
+        getCreditsAvailable,
         cyclesStatus,
         cyclesRate,
       }}

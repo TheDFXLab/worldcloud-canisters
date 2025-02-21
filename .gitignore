@@ -25,3 +25,8 @@ dist/
 .env
 
 /src/migrator-management-canister-frontend/.env
+
+
+# dfx
+dfx.json
+src/assets

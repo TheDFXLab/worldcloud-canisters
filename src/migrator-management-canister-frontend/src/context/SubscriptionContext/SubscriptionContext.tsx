@@ -18,6 +18,7 @@ import LedgerApi from "../../api/ledger/LedgerApi";
 import { backend_canister_id } from "../../config/config";
 import { useCycles } from "../CyclesContext/CyclesContext";
 import MainApi from "../../api/main";
+import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 
 interface SubscriptionValidation {
   status: boolean;
@@ -49,6 +50,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   /** Hooks */
   const { identity } = useIdentity();
   const { totalCredits } = useCycles();
+  const { agent } = useHttpAgent();
 
   /** States */
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -58,20 +60,20 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [refreshSubscription, setRefreshSubscription] = useState<boolean>(true);
 
   useEffect(() => {
-    if (!identity) return;
+    if (!identity || !agent) return;
     getTiersList();
     getSubscription();
     getAllSubscriptions();
     setRefreshSubscription(true);
-  }, [identity]);
+  }, [identity, agent]);
 
   useEffect(() => {
     if (refreshSubscription) {
-      if (!identity) return;
+      if (!identity || !agent) return;
       getSubscription();
       setRefreshSubscription(false);
     }
-  }, [refreshSubscription]);
+  }, [refreshSubscription, agent]);
 
   const validateSubscription = async (refreshSubscription: boolean) => {
     // Refresh subscription
@@ -119,9 +121,12 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const getTiersList = async () => {
     try {
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
       setIsLoadingTiers(true);
       const subscriptionApi = new SubscriptionApi();
-      const tiers = await subscriptionApi.getTiersList(identity);
+      const tiers = await subscriptionApi.getTiersList(identity, agent);
       if (!tiers) {
         throw new Error("Failed to get tiers");
       }
@@ -134,8 +139,14 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const getAllSubscriptions = async () => {
     try {
+      if (!agent) {
+        return;
+      }
       const subscriptionApi = new SubscriptionApi();
-      const subscriptions = await subscriptionApi.getAllSubscriptions(identity);
+      const subscriptions = await subscriptionApi.getAllSubscriptions(
+        identity,
+        agent
+      );
     } catch (error) {
       console.error(error);
     }
@@ -143,9 +154,15 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const getSubscription = async () => {
     try {
+      if (!agent) {
+        return;
+      }
       setIsLoadingSub(true);
       const subscriptionApi = new SubscriptionApi();
-      const subscription = await subscriptionApi.getSubscription(identity);
+      const subscription = await subscriptionApi.getSubscription(
+        identity,
+        agent
+      );
       if (!subscription) {
         setSubscription(null);
       } else {
@@ -163,11 +180,14 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     amountInIcp: number
   ): Promise<SubscribeResponse> => {
     try {
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
       const subscriptionApi = new SubscriptionApi();
 
       // Deposit to canister if not enough credits
       if (totalCredits.total_credits < amountInIcp) {
-        const ledgerApi = await LedgerApi.create(identity);
+        const ledgerApi = await LedgerApi.create(identity, agent);
         if (!ledgerApi) {
           throw new Error("Failed to create ledger api");
         }
@@ -181,7 +201,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           throw new Error("Failed to transfer funds");
         }
 
-        const mainApi = await MainApi.create(identity);
+        const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) {
           throw new Error("Failed to create main api");
         }
@@ -194,6 +214,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
       const response = await subscriptionApi.createSubscription(
         identity,
+        agent,
         tierId
       );
 

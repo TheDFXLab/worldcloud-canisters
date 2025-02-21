@@ -4,6 +4,7 @@ import { _SERVICE, TransferArgs, TransferResult } from "../../../../declarations
 import { createActor } from "../../../../declarations/icp_ledger_canister";
 import MainApi from "../main";
 import { icpToE8s } from "../../utility/e8s";
+import { HttpAgentManager } from "../../agent/http_agent";
 
 
 class LedgerApi {
@@ -15,16 +16,18 @@ class LedgerApi {
     idenitified: boolean;
     identity: Identity | null;
     transferFee: number;
+    agent: HttpAgent | null;
 
-    private constructor(identity: Identity | null, actor: ActorSubclass<_SERVICE> | null, isIdentified: boolean) {
+    private constructor(identity: Identity | null, actor: ActorSubclass<_SERVICE> | null, isIdentified: boolean, agent: HttpAgent) {
         this.canisterId = icp_ledger_canister_id;
         this.actor = actor;
         this.transferFee = 10000;
         this.identity = identity;
         this.idenitified = isIdentified;
+        this.agent = agent;
     }
 
-    static async create(identity: Identity | null) {
+    static async create(identity: Identity | null, agent: HttpAgent) {
         try {
             // Clear instance if identity has changed
             if (this.currentIdentity !== identity) {
@@ -34,7 +37,12 @@ class LedgerApi {
 
             if (this.instance) return this.instance;
 
-            const agent = await HttpAgent.create({ identity: identity ? identity : undefined, host: http_host })
+            // const agent = await HttpAgent.create({ identity: identity ? identity : undefined, host: http_host })
+            // const httpAgentManager = await HttpAgentManager.getInstance(identity);
+            // if (!httpAgentManager) {
+            //     return null;
+            // }
+            // const agent = httpAgentManager.agent;
             const actor = createActor(icp_ledger_canister_id, {
                 agent: agent
             });
@@ -44,7 +52,7 @@ class LedgerApi {
                 isIdentified = true;
             }
 
-            this.instance = new LedgerApi(identity, actor, isIdentified);
+            this.instance = new LedgerApi(identity, actor, isIdentified, agent);
 
             return this.instance;
         } catch (error) {
@@ -83,8 +91,11 @@ class LedgerApi {
         if (amountInIcp <= 0) {
             throw new Error("Amount must be greater than 0");
         }
+        if (!this.agent) {
+            throw new Error("Agent not found");
+        }
 
-        const mainApi = await MainApi.create(this.identity);
+        const mainApi = await MainApi.create(this.identity, this.agent);
         if (!mainApi) {
             throw new Error("Main API not found");
         }

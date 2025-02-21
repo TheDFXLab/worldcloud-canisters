@@ -36,6 +36,7 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import IconTextRowView from "../IconTextRowView/IconTextRowView";
 import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
 import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
+import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 
 export const CanisterOverview = () => {
   /** Hooks */
@@ -58,6 +59,7 @@ export const CanisterOverview = () => {
   } = useCycles();
   const { setShowModal } = useConfirmationModal();
   const { summon, destroy } = useLoaderOverlay();
+  const { agent } = useHttpAgent();
 
   /** States */
   const [icpToDeposit, setIcpToDeposit] = useState<string>("0");
@@ -188,7 +190,10 @@ export const CanisterOverview = () => {
       });
       setShowToaster(true);
 
-      const mainApi = await MainApi.create(identity);
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
+      const mainApi = await MainApi.create(identity, agent);
       const isDeposited = await mainApi?.deposit();
 
       if (!isDeposited) {
@@ -201,9 +206,12 @@ export const CanisterOverview = () => {
         setShowToaster(true);
         return;
       }
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
 
       /** Trigger add cycles for user's canister id*/
-      const cyclesApi = await CyclesApi.create(identity);
+      const cyclesApi = await CyclesApi.create(identity, agent);
       if (!cyclesApi) {
         throw new Error("Cycles API not created");
       }

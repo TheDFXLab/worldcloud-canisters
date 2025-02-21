@@ -31,6 +31,7 @@ import HeaderCard from "../HeaderCard/HeaderCard";
 import TruncatedTooltip from "../TruncatedTooltip/TruncatedTooltip";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { shortenPrincipal } from "../../utility/formatter";
+import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 
 const HomePage: React.FC = () => {
   const { deployments } = useDeployments();
@@ -39,9 +40,10 @@ const HomePage: React.FC = () => {
   const { setActiveTab } = useSideBar();
   const { setActionBar } = useActionBar();
   const { balance } = useLedger();
-  const { totalCredits, isLoadingCredits } = useCycles();
+  const { totalCredits, isLoadingCredits, getCreditsAvailable } = useCycles();
   const { transfer } = useLedger();
   const { setToasterData, setShowToaster } = useToaster();
+  const { agent } = useHttpAgent();
   const { setShowModal } = useConfirmationModal();
 
   /**State */
@@ -81,7 +83,10 @@ const HomePage: React.FC = () => {
         return;
       }
 
-      const mainApi = await MainApi.create(identity);
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
+      const mainApi = await MainApi.create(identity, agent);
       if (!mainApi) {
         throw new Error("Failed to create main api.");
       }
@@ -105,6 +110,7 @@ const HomePage: React.FC = () => {
         textColor: "white",
       });
       setShowToaster(true);
+      getCreditsAvailable();
     } catch (error) {
       console.error(`Error depositing ICP:`, error);
     } finally {

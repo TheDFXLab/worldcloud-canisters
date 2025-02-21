@@ -4,6 +4,7 @@ import { ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
 import { _SERVICE, DepositReceipt, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
+import { HttpAgentManager } from "../../agent/http_agent";
 
 class MainApi {
     private static instance: MainApi | null = null;
@@ -13,14 +14,16 @@ class MainApi {
     actor: ActorSubclass<_SERVICE> | null;
     idenitified: boolean;
     identity: Identity | null;
-    private constructor(identity: Identity | null, actor: ActorSubclass<_SERVICE> | null, isIdentified: boolean) {
+    agent: HttpAgent | null;
+    private constructor(identity: Identity | null, actor: ActorSubclass<_SERVICE> | null, isIdentified: boolean, agent: HttpAgent) {
         this.canisterId = backend_canister_id;
         this.actor = actor;
         this.identity = identity;
         this.idenitified = isIdentified;
+        this.agent = agent;
     }
 
-    static async create(identity: Identity | null) {
+    static async create(identity: Identity | null, agent: HttpAgent) {
         try {
             // Clear instance if identity has changed
             if (this.currentIdentity !== identity) {
@@ -31,8 +34,6 @@ class MainApi {
             // Return existing instance if already created
             if (this.instance) return this.instance;
 
-            // Create instance if not already created
-            const agent = await HttpAgent.create({ identity: identity ? identity : undefined, host: http_host });
             const actor = createActor(backend_canister_id, {
                 agent: agent
             });
@@ -46,7 +47,7 @@ class MainApi {
             }
 
             // Create new instance
-            const mainApi = new MainApi(identity, actor, isIdentified);
+            const mainApi = new MainApi(identity, actor, isIdentified, agent);
             this.instance = mainApi;
 
             return mainApi;
@@ -109,6 +110,8 @@ class MainApi {
 
     async getCanisterDeployments() {
         try {
+            console.log("Getting canister deployments", this.agent);
+
             if (!this.actor) {
                 throw new Error("Actor not initialized.");
             }
@@ -118,6 +121,7 @@ class MainApi {
             if (!this.identity) {
                 throw new Error("Identity not initialized.");
             }
+            console.log("Getting canister deployments", this.agent);
             const deployments = await this.actor.getCanisterDeployments();
             return deployments;
         } catch (error) {

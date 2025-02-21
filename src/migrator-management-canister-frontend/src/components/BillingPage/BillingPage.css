@@ -178,42 +178,45 @@
 
 .tier-icon {
   color: var(--color-primary);
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .tier-icon svg {
-  font-size: 2.5rem;
+  font-size: 2rem;
 }
 
 .pricing-header h3 {
   color: var(--text-primary);
   margin: 0 0 1rem 0;
-  font-size: 1.2rem;
+  /* font-size: 1.2rem; */
+  font-size: var(--font-size-base) !important;
 }
 
 .price {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.05rem;
 }
 
 .amount {
   color: var(--text-primary);
-  font-size: 1.5rem;
+  /* font-size: 1.5rem; */
+  font-size: var(--font-size-lg) !important;
   font-weight: 600;
 }
 
 .period {
   color: var(--text-tertiary);
-  font-size: 0.85rem;
+  /* font-size: 0.85rem; */
+  font-size: var(--font-size-xs) !important;
 }
 
 .deposit-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 0;
+  padding: 0.1rem 0;
   border-top: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
   margin-bottom: 1rem;
@@ -221,18 +224,23 @@
 
 .deposit-label {
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  /* font-size: 0.9rem; */
+  font-size: var(--font-size-sm) !important;
 }
 
 .deposit-value {
   color: var(--text-primary);
   font-weight: 500;
+  font-size: var(--font-size-lg) !important;
 }
 
 .features {
   list-style: none;
   padding: 0;
-  margin: 0 0 1.5rem 0;
+  /* margin: 0 0 1.5rem 0; */
+  justify-content: flex-start;
+  margin: 0 0 !important;
+  margin-bottom: 0.685rem !important;
 }
 
 .features li {
@@ -241,7 +249,8 @@
   gap: 0.75rem;
   padding: 0.5rem 0;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  /* font-size: 0.9rem; */
+  font-size: var(--font-size-sm) !important;
 }
 
 .select-plan-btn {

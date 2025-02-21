@@ -16,10 +16,20 @@
 # - FlipCoin_backend canister must be deployed
 # - icp_ledger_canister must be deployed
 
+# $1: receiver principal
+# $2: deposit amount in ICP
+
 echo "===========FUND WALLET==========="
-RECEIVER_PRINCIPAL="tt7iq-o6l3c-ukjrt-tjspi-wshyl-2fp62-4gpx4-qq226-fhngl-w2rod-mqe"
+RECEIVER_PRINCIPAL="5zazm-hywq5-5fjrf-gtokd-ngojq-b2i7h-kuebj-vot56-qoqhh-gdswu-nae"
 DEPOSIT_AMOUNT_ICP=11
 
+# Check args for receiver and amount
+if [ $1 != "" ]; then
+    RECEIVER_PRINCIPAL=$1
+fi
+if [ $2 != "" ]; then
+    DEPOSIT_AMOUNT_ICP=$2
+fi
 
 # Get funder principal and balance
 echo ""

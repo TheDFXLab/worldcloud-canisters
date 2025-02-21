@@ -12,6 +12,7 @@ import { Principal } from "@dfinity/principal";
 import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { useProgress } from "../ProgressBarContext/ProgressBarContext";
 import { internetIdentityConfig } from "../../config/config";
+import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 
 export interface DeploymentDetails {
   workflow_run_id: number;
@@ -47,6 +48,7 @@ const DeploymentsContext = createContext<DeploymentsContextType | undefined>(
 export function DeploymentsProvider({ children }: { children: ReactNode }) {
   /** Hooks */
   const { identity } = useIdentity();
+  const { agent } = useHttpAgent();
   const { setIsLoadingProgress, setIsEnded } = useProgress();
 
   /** State */
@@ -65,7 +67,7 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
 
   const refreshDeployments = async () => {
     try {
-      if (!identity) {
+      if (!identity || !agent) {
         return;
       }
       if (
@@ -78,7 +80,8 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
 
       setIsLoadingProgress(true);
       setIsEnded(false);
-      const mainApi = await MainApi.create(identity);
+
+      const mainApi = await MainApi.create(identity, agent);
       const result = await mainApi?.getCanisterDeployments();
 
       if (!result) {
@@ -107,7 +110,10 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
   };
 
   const getWorkflowRunHistory = async (canisterId: string) => {
-    const mainApi = await MainApi.create(identity);
+    if (!agent) {
+      throw new Error("Agent not found");
+    }
+    const mainApi = await MainApi.create(identity, agent);
     if (!mainApi) {
       throw new Error(`Failed to create main api instance.`);
     }
@@ -131,7 +137,7 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshDeployments();
-  }, [identity]);
+  }, [identity, agent]);
 
   return (
     <DeploymentsContext.Provider

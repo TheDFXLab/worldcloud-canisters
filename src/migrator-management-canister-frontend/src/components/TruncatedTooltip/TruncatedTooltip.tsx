@@ -11,7 +11,6 @@ const TruncatedTooltip: React.FC<{ text: string; className?: string }> = ({
   useEffect(() => {
     const element = textRef.current;
     if (element) {
-      console.log(`iS overflowing`, element.scrollWidth > element.clientWidth);
       setIsOverflowing(element.scrollWidth > element.clientWidth);
     }
   }, [text]);
