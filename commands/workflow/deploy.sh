@@ -29,6 +29,19 @@ if [ "$ENVIRONMENT" = "production" ]; then
     echo "Pulling dependencies..."
     dfx deps pull
 
+    # build frontend
+    echo "Building frontend..."
+
+    # Push to frontend directory
+    pushd src/migrator-management-canister-frontend
+    
+    # Build frontend
+    npm run build
+
+    # Return to the root directory
+    popd
+
+    # Deploy selected canisters
     if [ "$CANISTER" = "all" ]; then
         dfx deploy --network ic
     elif [ "$CANISTER" = "frontend" ]; then
@@ -37,21 +50,29 @@ if [ "$ENVIRONMENT" = "production" ]; then
         dfx deploy migrator-management-canister-backend --network ic
     fi
 elif [ "$ENVIRONMENT" = "develop" ]; then
-    # use default cycles wallet
+    # Use default cycles wallet
     echo "Using default cycles wallet."
     dfx identity use default
 
-    ls
-
-    # copy .well-known and ic-assets.json5
+    # Copy .well-known and ic-assets.json5
     echo "Using develop assets source."
     cp -r environment/develop/. src/assets/
 
-    # copy development dfx config file
+    # Copy development dfx config file
     echo "Using develop dfx.json"
     cp dfx.develop.json dfx.json
 
+    # Build frontend
+    echo "Building frontend..."
+
+    # Push to frontend directory
+    pushd src/migrator-management-canister-frontend
+    npm run build
+
+    # Return to the root directory
+    popd
    
+    # Deploy selected canisters
     if [ "$CANISTER" = "all" ]; then
         dfx deploy
     elif [ "$CANISTER" = "frontend" ]; then
