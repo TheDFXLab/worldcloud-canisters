@@ -5,9 +5,12 @@ import {
   ReactNode,
   useEffect,
 } from "react";
+import logoDark from "../../../assets/logo-dark.png";
+import logoLight from "../../../assets/logo-dark.png";
 
 interface ThemeContextType {
   isDarkMode: boolean;
+  logo: string;
   toggleTheme: () => void;
 }
 
@@ -15,10 +18,11 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
-
+  const [logo, setLogo] = useState(logoLight);
   const getSavedTheme = () => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) {
+      setLogo(savedTheme === "dark" ? logoDark : logoLight);
       return savedTheme === "dark";
     }
     // If no saved preference, check system preference
@@ -39,6 +43,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setIsDarkMode((prev) => {
       const newValue = !prev;
       setTheme(newValue);
+      setLogo(newValue ? logoDark : logoLight);
       return newValue;
     });
   };
@@ -52,6 +57,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     <ThemeContext.Provider
       value={{
         isDarkMode,
+        logo,
         toggleTheme,
       }}
     >

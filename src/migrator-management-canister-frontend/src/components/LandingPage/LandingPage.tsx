@@ -1,14 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import "./LandingPage.css";
 import { useEffect, useRef, useState } from "react";
-import ThemeToggle from "../ThemeToggle/ThemeToggle";
 import Footer from "../Footer/Footer";
+import { useTheme } from "../../context/ThemeContext/ThemeContext";
 
 function LandingPage() {
   const navigate = useNavigate();
   const mouseTrailRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
+  const { logo } = useTheme();
   const handleLaunchApp = () => {
     navigate("/app");
   };
@@ -159,8 +159,20 @@ function LandingPage() {
             <span>☰</span>
           </button>
           <div className="container">
-            <div className="logo">
-              <a href="#main">WORLDCLOUD</a>
+            <div className="logo-container">
+              <div className="logo">
+                <img src={logo}></img>
+
+                <a href="#main">
+                  <span className="logo-text-parent">
+                    <span className="logo-text-child">World</span>
+                    <span className="logo-text-child">{"("}</span>
+                    <span className="logo-text-child">cloud</span>
+                    <span className="logo-text-child">{" )"}</span>
+                    <span className="logo-text-child">{";"}</span>
+                  </span>
+                </a>
+              </div>
             </div>
 
             <div className={`nav-links ${isMenuOpen ? "active" : ""}`}>
