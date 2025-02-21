@@ -3,7 +3,7 @@
 # $1 "environemnt": "production", "develop"
 # $2 "canister": "all", "frontend", "backend"
 
-ENVIRONMENT=$1  # e.g., "mainnet" or "develop"
+ENVIRONMENT=$1  # e.g., "production" or "develop"
 CANISTER=$2
 if [ $# -eq 0 ]; then
     echo "Deploying to default environment: develop"
@@ -12,9 +12,23 @@ if [ $# -eq 0 ]; then
 fi
 
 if [ "$ENVIRONMENT" = "production" ]; then
-    # cp src/assets/.well-known/ii-alternative-origins.mainnet src/assets/.well-known/ii-alternative-origins
+    # use production cycles wallet
     echo "Using production cycles wallet."
     dfx identity use visual-motion
+    
+    # copy .well-known and ic-assets.json5
+    echo "Using production assets source."
+    cp -r environment/production/* src/assets/
+
+    # copy production dfx config file
+    echo "Using production dfx.json"
+    cp dfx.production.json dfx.json
+
+
+    # use deps pull for production to pull latest versions of dependencies
+    echo "Pulling dependencies..."
+    dfx deps pull
+
     if [ "$CANISTER" = "all" ]; then
         dfx deploy --network ic
     elif [ "$CANISTER" = "frontend" ]; then
@@ -23,9 +37,21 @@ if [ "$ENVIRONMENT" = "production" ]; then
         dfx deploy migrator-management-canister-backend --network ic
     fi
 elif [ "$ENVIRONMENT" = "develop" ]; then
-    # cp src/assets/.well-known/ii-alternative-origins.develop src/assets/.well-known/ii-alternative-origins
+    # use default cycles wallet
     echo "Using default cycles wallet."
     dfx identity use default
+
+    ls
+
+    # copy .well-known and ic-assets.json5
+    echo "Using develop assets source."
+    cp -r environment/develop/. src/assets/
+
+    # copy development dfx config file
+    echo "Using develop dfx.json"
+    cp dfx.develop.json dfx.json
+
+   
     if [ "$CANISTER" = "all" ]; then
         dfx deploy
     elif [ "$CANISTER" = "frontend" ]; then
