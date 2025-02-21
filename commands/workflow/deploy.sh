@@ -11,6 +11,10 @@ if [ $# -eq 0 ]; then
     CANISTER="all"
 fi
 
+if [ -z "$CANISTER" ]; then
+    CANISTER="all"
+fi
+
 if [ "$ENVIRONMENT" = "production" ]; then
     # use production cycles wallet
     echo "Using production cycles wallet."
@@ -18,7 +22,7 @@ if [ "$ENVIRONMENT" = "production" ]; then
     
     # copy .well-known and ic-assets.json5
     echo "Using production assets source."
-    cp -r environment/production/* src/assets/
+    cp -r environment/production/. src/assets/
 
     # copy production dfx config file
     echo "Using production dfx.json"
