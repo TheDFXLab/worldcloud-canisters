@@ -5,20 +5,17 @@ import {
   useEffect,
   ReactNode,
 } from "react";
+
 import { Principal } from "@dfinity/principal";
 import { AuthClient } from "@dfinity/auth-client";
-import { HttpAgent } from "@dfinity/agent";
 
 import { Identity } from "@dfinity/agent";
 import {
   environment,
   frontend_canister_id_url,
-  http_host,
   internetIdentityConfig,
 } from "../../config/config";
-import { ICPLedger } from "../../class/ICPLedger/ICPLedger";
 import { useNavigate } from "react-router-dom";
-import { HttpAgentManager } from "../../agent/http_agent";
 import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 
 interface IdentityProviderProps {
@@ -55,7 +52,7 @@ const getGlobalAuthClient = async () => {
 
 export function IdentityProvider({ children }: IdentityProviderProps) {
   const navigate = useNavigate();
-  const { fetchHttpAgent } = useHttpAgent();
+  const { fetchHttpAgent, agent } = useHttpAgent();
 
   const [isConnected, setIsConnected] = useState(false);
   const [identity, setIdentity] = useState<Identity | null>(null);

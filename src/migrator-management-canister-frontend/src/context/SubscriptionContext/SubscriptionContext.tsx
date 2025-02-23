@@ -5,10 +5,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import {
-  Subscription,
-  Tier,
-} from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { Tier } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import SubscriptionApi, {
   SubscribeResponse,
 } from "../../api/subscription/SubscriptionApi";
@@ -19,6 +16,8 @@ import { backend_canister_id } from "../../config/config";
 import { useCycles } from "../CyclesContext/CyclesContext";
 import MainApi from "../../api/main";
 import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
+import { useQuery } from "@tanstack/react-query";
+import { sanitizeObject } from "../../utility/sanitize";
 
 interface SubscriptionValidation {
   status: boolean;
@@ -27,16 +26,38 @@ interface SubscriptionValidation {
   current: number;
 }
 
+export interface TierListData {
+  id: number;
+  name: string;
+  price: number;
+  min_deposit: number;
+  features: string[];
+  slots: number;
+}
+
+export interface SubscriptionData {
+  tier_id: number;
+  canisters: string[];
+  date_created: number;
+  date_updated: number;
+  max_slots: number;
+  used_slots: number;
+  user_id: string;
+}
+
 interface SubscriptionContextType {
-  subscription: Subscription | null;
+  subscription: SubscriptionData | null;
   tiers: Tier[] | null;
   isLoadingSub: boolean;
   isLoadingTiers: boolean;
+  shouldRefetchSubscription: boolean;
+  setShouldRefetchSubscription: (value: boolean) => void;
+  refreshSubscription: () => void;
   subscribe: (
     tierId: number,
     amountInIcp: number
   ) => Promise<SubscribeResponse>;
-  getSubscription: () => Promise<void>;
+  getSubscription: () => Promise<SubscriptionData | null>;
   validateSubscription: (
     refreshSubscription: boolean
   ) => Promise<SubscriptionValidation>;
@@ -53,27 +74,134 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { agent } = useHttpAgent();
 
   /** States */
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [isLoadingSub, setIsLoadingSub] = useState<boolean>(false);
-  const [tiers, setTiers] = useState<Tier[] | null>(null);
-  const [isLoadingTiers, setIsLoadingTiers] = useState<boolean>(false);
-  const [refreshSubscription, setRefreshSubscription] = useState<boolean>(true);
+  const [shouldRefetchSubscription, setShouldRefetchSubscription] =
+    useState<boolean>(true);
+  const VERIFICATION_INTERVAL = 10 * 60 * 1000; // 10mins
+  let queryNameSubscription = "subscription";
+
+  const { data: subscription = false, isLoading: isLoadingSub } = useQuery({
+    queryKey: [queryNameSubscription, identity?.getPrincipal().toText()],
+    queryFn: async () => {
+      try {
+        const res = await getSubscription();
+
+        if (!res) {
+          console.log("No subscription found");
+          return null;
+        }
+
+        if (!identity) {
+          console.log("No identity found");
+          return null;
+        }
+
+        // save to local storage
+        const storageData = {
+          status: res,
+          timestamp: Date.now(),
+          principal: identity.getPrincipal().toText(),
+        };
+
+        localStorage.setItem(
+          queryNameSubscription,
+          JSON.stringify(storageData)
+        );
+
+        return res;
+      } catch (error) {
+        console.error("Error in queryFn getSubscription:", error);
+        throw error;
+      }
+    },
+    initialData: () => {
+      const stored = localStorage.getItem(queryNameSubscription);
+      if (!stored) {
+        return null;
+      }
+
+      const { status, timestamp, principal } = JSON.parse(stored);
+      const isExpired = Date.now() - timestamp > VERIFICATION_INTERVAL;
+      if (isExpired) {
+        localStorage.removeItem(queryNameSubscription);
+        return false;
+      }
+
+      if (identity && principal !== identity.getPrincipal().toText()) {
+        localStorage.removeItem(queryNameSubscription);
+        return false;
+      }
+      return status;
+    },
+    staleTime: 0,
+    refetchInterval: VERIFICATION_INTERVAL,
+    refetchOnMount: true,
+    enabled: !!identity && !!agent && shouldRefetchSubscription,
+  });
+
+  let queryNameTiersList = "tiersList";
+  const { data: tiers = false, isLoading: isLoadingTiers } = useQuery({
+    queryKey: [queryNameTiersList, identity?.getPrincipal().toText()],
+    queryFn: async () => {
+      try {
+        const res = await getTiersList();
+        if (!res) {
+          return null;
+        }
+
+        if (!identity) {
+          console.log("No identity found");
+          return null;
+        }
+
+        // save to local storage
+        const storageData = {
+          status: res,
+          timestamp: Date.now(),
+          principal: identity.getPrincipal().toText(),
+        };
+
+        localStorage.setItem(queryNameTiersList, JSON.stringify(storageData));
+
+        return res;
+      } catch (error) {
+        console.error("Error in queryFn getTiersList:", error);
+        throw error;
+      }
+    },
+    initialData: () => {
+      const stored = localStorage.getItem(queryNameTiersList);
+      if (!stored) {
+        return null;
+      }
+
+      const { status, timestamp, principal } = JSON.parse(stored);
+      const isExpired = Date.now() - timestamp > VERIFICATION_INTERVAL;
+      if (isExpired) {
+        localStorage.removeItem(queryNameTiersList);
+        return false;
+      }
+
+      if (identity && principal !== identity.getPrincipal().toText()) {
+        localStorage.removeItem(queryNameTiersList);
+        return false;
+      }
+      return status;
+    },
+    staleTime: 0,
+    refetchInterval: VERIFICATION_INTERVAL,
+    refetchOnMount: true,
+    enabled: !!identity && !!agent,
+  });
 
   useEffect(() => {
     if (!identity || !agent) return;
     getTiersList();
-    getSubscription();
-    getAllSubscriptions();
-    setRefreshSubscription(true);
   }, [identity, agent]);
 
-  useEffect(() => {
-    if (refreshSubscription) {
-      if (!identity || !agent) return;
-      getSubscription();
-      setRefreshSubscription(false);
-    }
-  }, [refreshSubscription, agent]);
+  // Function to trigger manual refetch
+  const refreshSubscription = () => {
+    setShouldRefetchSubscription(true);
+  };
 
   const validateSubscription = async (refreshSubscription: boolean) => {
     // Refresh subscription
@@ -124,16 +252,15 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       if (!agent) {
         throw new Error("Agent not found");
       }
-      setIsLoadingTiers(true);
       const subscriptionApi = new SubscriptionApi();
       const tiers = await subscriptionApi.getTiersList(identity, agent);
       if (!tiers) {
         throw new Error("Failed to get tiers");
       }
-      setTiers(tiers);
+      return sanitizeObject(tiers);
     } catch (error) {
-    } finally {
-      setIsLoadingTiers(false);
+      console.error(error);
+      return null;
     }
   };
 
@@ -155,23 +282,22 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const getSubscription = async () => {
     try {
       if (!agent) {
-        return;
+        return null;
       }
-      setIsLoadingSub(true);
+
       const subscriptionApi = new SubscriptionApi();
       const subscription = await subscriptionApi.getSubscription(
         identity,
         agent
       );
       if (!subscription) {
-        setSubscription(null);
+        return null;
       } else {
-        setSubscription(subscription);
+        return sanitizeObject(subscription) as SubscriptionData;
       }
     } catch (error) {
       console.error(error);
-    } finally {
-      setIsLoadingSub(false);
+      return null;
     }
   };
 
@@ -218,6 +344,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         tierId
       );
 
+      refreshSubscription();
       return response;
     } catch (error: any) {
       console.error("Error while subscribing..", error);
@@ -237,6 +364,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         isLoadingTiers,
         subscribe,
         getSubscription,
+        refreshSubscription,
+        shouldRefetchSubscription,
+        setShouldRefetchSubscription,
         validateSubscription,
       }}
     >
