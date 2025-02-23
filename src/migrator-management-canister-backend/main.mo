@@ -21,6 +21,7 @@ import Float "mo:base/Float";
 import Account "Account";
 import Book "./book";
 import SubscriptionManager "./modules/subscription";
+import AccessControl "./modules/access";
 
 // TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
 // TODO: Handle stable variables (if needed)
@@ -80,6 +81,23 @@ shared (deployMsg) actor class CanisterManager() = this {
   private let subscription_manager = SubscriptionManager.SubscriptionManager(book, ledger);
   private stable var stable_subscriptions : [(Principal, Types.Subscription)] = [];
 
+  private let access_control = AccessControl.AccessControl(deployMsg.caller);
+  private stable var stable_role_map : [(Principal, Types.Role)] = [];
+
+  /** Access Control */
+  public shared (msg) func grant_role(principal : Principal, role : Types.Role) : async Types.Response<Text> {
+    return access_control.add_role(principal, role, msg.caller);
+  };
+
+  public shared (msg) func revoke_role(principal : Principal) : async Types.Response<Text> {
+    return access_control.remove_role(principal, msg.caller);
+  };
+
+  public shared (msg) func check_role(principal : Principal) : async Types.Response<Types.Role> {
+    return access_control.check_role(principal);
+  };
+
+  /** Subscription */
   // Create a subscription for the caller
   public shared (msg) func create_subscription(tier_id : Nat) : async Types.Response<Types.Subscription> {
     return await subscription_manager.create_subscription(msg.caller, tier_id);
@@ -94,15 +112,21 @@ shared (deployMsg) actor class CanisterManager() = this {
     return await subscription_manager.get_subscription(msg.caller);
   };
 
+  /** Asset Canister */
   // Function to upload the asset canister WASM
   public shared (msg) func uploadAssetCanisterWasm(wasm : [Nat8]) : async Types.Result {
-    // Add authorization check here
+    // Only admins
+    assert (access_control.is_authorized(msg.caller));
+
     asset_canister_wasm := ?wasm;
     return #ok("Asset canister WASM uploaded successfully");
   };
 
+  // TODO: Implement paging for data retrieval
   // Helper function to get all deployed asset canisters
-  public query func getDeployedCanisters() : async [Principal] {
+  public shared (msg) func getDeployedCanisters() : async [Principal] {
+    // Only admins
+    assert (access_control.is_authorized(msg.caller));
     Iter.toArray(deployed_canisters.keys());
   };
 
@@ -119,7 +143,10 @@ shared (deployMsg) actor class CanisterManager() = this {
     return accountIdentifier;
   };
 
-  public func get_all_subscriptions() : async [(Principal, Types.Subscription)] {
+  public shared (msg) func get_all_subscriptions() : async [(Principal, Types.Subscription)] {
+    // Only admins
+    assert (access_control.is_authorized(msg.caller));
+
     return await subscription_manager.get_all_subscriptions();
   };
 
@@ -147,6 +174,10 @@ shared (deployMsg) actor class CanisterManager() = this {
   };
 
   public shared (msg) func getAssetList(canister_id : Principal) : async Types.ListResponse {
+
+    // Only owner or admins
+    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
+
     try {
       let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
       Debug.print("Getting asset list for canister " # Principal.toText(canister_id));
@@ -167,7 +198,8 @@ shared (deployMsg) actor class CanisterManager() = this {
   };
 
   public shared (msg) func getWorkflowRunHistory(canister_id : Principal) : async [Types.WorkflowRunDetails] {
-    assert (await _isController(canister_id, msg.caller));
+    // Only owner or admins
+    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
 
     var workflow_run_history_array : [Types.WorkflowRunDetails] = switch (workflow_run_history.get(canister_id)) {
       case null { [] };
@@ -199,7 +231,10 @@ shared (deployMsg) actor class CanisterManager() = this {
     };
   };
 
-  public query func getCanisterFiles(canister_id : Principal) : async [Types.StaticFile] {
+  public shared (msg) func getCanisterFiles(canister_id : Principal) : async [Types.StaticFile] {
+    // Only owner or admins
+    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
+
     switch (canister_files.get(canister_id)) {
       case null return [];
       case (?files) return files;
@@ -207,9 +242,8 @@ shared (deployMsg) actor class CanisterManager() = this {
   };
 
   public shared (msg) func getCanisterAsset(canister_id : Principal, asset_key : Text) : async Types.AssetCanisterAsset {
-    // Check if the caller is a controller
-    let isController = await _isController(canister_id, msg.caller);
-    assert (isController);
+    // Only owner or admins
+    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
 
     let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
     let asset = await asset_canister.get({
@@ -221,8 +255,8 @@ shared (deployMsg) actor class CanisterManager() = this {
   };
 
   public shared (msg) func getCanisterStatus(canister_id : Principal) : async Types.CanisterStatusResponse {
-    // Check if the caller is a controller
-    assert (await _isController(canister_id, msg.caller));
+    // Only owner or admins
+    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
 
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     let current_settings = await IC.canister_status({
@@ -233,8 +267,8 @@ shared (deployMsg) actor class CanisterManager() = this {
   };
 
   public shared (msg) func getControllers(canister_id : Principal) : async [Principal] {
-    // Check if the caller is a controller
-    assert (await _isController(canister_id, msg.caller));
+    // Only owner or admins
+    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
 
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     let current_settings = await IC.canister_status({
@@ -390,11 +424,7 @@ shared (deployMsg) actor class CanisterManager() = this {
   };
 
   public shared (msg) func addController(canister_id : Principal, new_controller : Principal) : async Types.Result {
-    // Check if the caller is a controller
-    if (not (await _isController(canister_id, msg.caller))) {
-      return #err("You are not a controller");
-    };
-
+    assert (await _isController(canister_id, msg.caller));
     return await _addController(canister_id, new_controller);
   };
 
@@ -426,9 +456,7 @@ shared (deployMsg) actor class CanisterManager() = this {
 
   public shared (msg) func removeController(canister_id : Principal, controller_to_remove : Principal) : async (Types.Result) {
     // Check if the caller is a controller
-    if (not (await _isController(canister_id, msg.caller))) {
-      return #err("You are not a controller");
-    };
+    assert (await _isController(canister_id, msg.caller));
 
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     let current_settings = await IC.canister_status({
@@ -592,6 +620,8 @@ shared (deployMsg) actor class CanisterManager() = this {
     files : [Types.StaticFile],
     workflow_run_details : ?Types.WorkflowRunDetails,
   ) : async Types.Result {
+    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
+
     Debug.print("Storing files in asset canister for user: " # Principal.toText(msg.caller));
     _updateCanisterDeployment(canister_id, #installing); // Update canister deployment status to installing
 
@@ -899,6 +929,8 @@ shared (deployMsg) actor class CanisterManager() = this {
     // Save book to stable array
     stable_book := book.toStable();
 
+    stable_role_map := access_control.getStableData();
+
     Debug.print("Preupgrade: Variables initialized, beginning conversion");
     Debug.print("Preupgrade: Preparing to sync assets and chunks.");
     Debug.print("Preupgrade: Assets: " # Nat.toText(assets.size()));
@@ -929,6 +961,9 @@ shared (deployMsg) actor class CanisterManager() = this {
     book.fromStable(stable_book);
     stable_book := [];
 
+    access_control.loadFromStable(stable_role_map);
+    stable_role_map := [];
+
     sync_assets();
     sync_chunks();
     Debug.print("Postupgrade: Syncing deployed canisters.");
@@ -937,6 +972,9 @@ shared (deployMsg) actor class CanisterManager() = this {
 
     let is_set = subscription_manager.set_treasury(Principal.fromActor(this));
     Debug.print("Postupgrade: Treasury set: " # Bool.toText(is_set));
+
+    // Initialize access control
+    access_control.init();
   };
 
   private func canister_table_to_stable_array() {
