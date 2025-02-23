@@ -1,4 +1,5 @@
 import { StaticFile } from "./compression";
+import { Principal } from "@dfinity/principal";
 
 export const sanitizeUnzippedFiles = (unzippedFiles: StaticFile[]) => {
 
@@ -29,4 +30,56 @@ export const sanitizeUnzippedFiles = (unzippedFiles: StaticFile[]) => {
     })
 
     return sanitizedFiles;
+}
+
+
+export const sanitizeObject = (obj: any): any => {
+    obj = sanitizeBigInt(obj);
+    obj = sanitizePrincipal(obj);
+    return obj;
+}
+
+export const sanitizePrincipal = (obj: any): any => {
+    if (obj === null || obj === undefined) {
+        return obj;
+    }
+    if (typeof obj === 'string') {
+        return obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map((item) => sanitizePrincipal(item));
+    }
+    if (typeof obj === 'object') {
+        const newObj: any = {};
+        for (const key in obj) {
+            newObj[key] = sanitizePrincipal(obj[key]);
+        }
+        return newObj;
+    }
+    return obj;
+}
+
+export const sanitizeBigInt = (obj: any): any => {
+    if (obj === null || obj === undefined) {
+        return obj;
+    }
+
+    if (typeof obj === 'bigint') {
+        return Number(obj);
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => sanitizeBigInt(item));
+    }
+
+    if (typeof obj === 'object') {
+        const newObj: any = {};
+        for (const key in obj) {
+            newObj[key] = sanitizeBigInt(obj[key]);
+        }
+        return newObj;
+    }
+
+    return obj;
 }
