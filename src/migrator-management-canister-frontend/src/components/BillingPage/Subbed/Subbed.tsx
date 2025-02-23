@@ -14,8 +14,10 @@ import {
 } from "../../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import "./Subbed.css";
 import "../BillingPage.css";
+import { SubscriptionData } from "../../../context/SubscriptionContext/SubscriptionContext";
+
 interface SubbedProps {
-  subscription: Subscription | null;
+  subscription: SubscriptionData | null;
   tiers: Tier[] | null;
   pricingState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
 }
@@ -118,7 +120,7 @@ export default function Subbed({
               {subscription.canisters.map((canister, index) => (
                 <div key={index} className="canister-item">
                   <MemoryIcon className="canister-icon" />
-                  <code className="canister-id">{canister.toText()}</code>
+                  <code className="canister-id">{canister}</code>
                 </div>
               ))}
             </div>

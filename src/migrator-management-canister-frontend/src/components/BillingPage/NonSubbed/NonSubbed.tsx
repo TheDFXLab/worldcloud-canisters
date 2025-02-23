@@ -12,9 +12,10 @@ import {
   Tier,
 } from "../../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import "../BillingPage.css";
+import { SubscriptionData } from "../../../context/SubscriptionContext/SubscriptionContext";
 
 interface NonSubbedProps {
-  subscription: Subscription | null;
+  subscription: SubscriptionData | null;
   tiers: Tier[] | null;
   handleSelectPlan: (tierId: number) => void;
   pricingState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
