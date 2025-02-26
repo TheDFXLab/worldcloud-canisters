@@ -308,6 +308,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       }
       const subscriptionApi = new SubscriptionApi();
 
+      if (!totalCredits) {
+        throw new Error("Total credits not found");
+      }
+
       // Deposit to canister if not enough credits
       if (totalCredits.total_credits < amountInIcp) {
         const ledgerApi = await LedgerApi.create(identity, agent);
