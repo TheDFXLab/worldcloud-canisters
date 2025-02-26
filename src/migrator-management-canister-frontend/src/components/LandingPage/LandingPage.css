@@ -196,6 +196,7 @@ body {
   gap: 0rem;
   flex-wrap: nowrap;
   font-size: var(--font-size-lg);
+  font-weight: 600 !important;
 }
 
 .logo-text-child:nth-child(1) {
