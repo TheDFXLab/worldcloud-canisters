@@ -57,13 +57,6 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   }, [identity, agent]);
 
   useEffect(() => {
-    if (!identity) {
-      return;
-    }
-    getBalance();
-  }, [identity]);
-
-  useEffect(() => {
     console.log(`refreshIdentity`);
 
     refreshIdentity();

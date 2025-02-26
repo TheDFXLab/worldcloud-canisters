@@ -51,7 +51,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   // query user role
   const VERIFICATION_INTERVAL = 10 * 60 * 1000; // 10mins
-  // const VERIFICATION_INTERVAL = 20000; // 10mins
   const { data: isAdmin = false, isLoading: isLoadingAdminStatus } = useQuery({
     queryKey: ["adminStatus", identity?.getPrincipal().toText()],
     queryFn: async () => {
@@ -60,23 +59,18 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     },
     initialData: () => {
       const stored = localStorage.getItem("adminStatus");
-      // console.log("Initial data", stored);
       if (!stored) {
         return false;
       }
 
-      // console.log("Initial data", stored);
       const { status, timestamp, principal } = JSON.parse(stored);
       const isExpired = Date.now() - timestamp > VERIFICATION_INTERVAL;
-      // const isPrincipalMatch = principal == identity?.getPrincipal().toText();
       if (isExpired) {
-        // console.log("Expired");
         localStorage.removeItem("adminStatus");
         return false;
       }
 
       if (identity && principal !== identity.getPrincipal().toText()) {
-        // console.log("Principal mismatch");
         localStorage.removeItem("adminStatus");
         return false;
       }
@@ -101,7 +95,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     );
 
     return isAdmin;
-    // setIsAdmin(isAdmin);
   };
 
   useEffect(() => {

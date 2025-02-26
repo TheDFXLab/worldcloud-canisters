@@ -193,11 +193,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     enabled: !!identity && !!agent,
   });
 
-  useEffect(() => {
-    if (!identity || !agent) return;
-    getTiersList();
-  }, [identity, agent]);
-
   // Function to trigger manual refetch
   const refreshSubscription = () => {
     setShouldRefetchSubscription(true);
@@ -252,6 +247,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       if (!agent) {
         throw new Error("Agent not found");
       }
+      console.log(`fetching tiers by`, identity?.getPrincipal().toText());
+      console.log(`fetching tiers`, agent.config);
       const subscriptionApi = new SubscriptionApi();
       const tiers = await subscriptionApi.getTiersList(identity, agent);
       if (!tiers) {
