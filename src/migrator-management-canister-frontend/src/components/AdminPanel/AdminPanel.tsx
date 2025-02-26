@@ -7,11 +7,13 @@ import SecurityIcon from "@mui/icons-material/Security";
 import { useNavigate } from "react-router-dom";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
+import { useAdmin } from "../../context/AdminContext/AdminContext";
 
 export const AdminPanel = () => {
   const navigate = useNavigate();
   const { identity } = useIdentity();
   const { setActionBar } = useActionBar();
+  const { isAdmin, isLoadingAdminStatus } = useAdmin();
 
   // List of admin functions/cards
   const adminFunctions = [
@@ -25,7 +27,7 @@ export const AdminPanel = () => {
 
   // TODO: Implement actual admin check
   // Check if user is admin
-  const isAdmin = true;
+  // const isAdmin = true;
 
   useEffect(() => {
     setActionBar(null);

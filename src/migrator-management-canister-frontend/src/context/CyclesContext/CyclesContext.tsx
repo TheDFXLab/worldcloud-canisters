@@ -13,6 +13,7 @@ import MainApi from "../../api/main";
 import { useLedger } from "../LedgerContext/LedgerContext";
 import { fromE8sStable } from "../../utility/e8s";
 import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
+import { useQuery } from "@tanstack/react-query";
 
 export interface CreditsResponse {
   total_credits: number;
@@ -24,7 +25,7 @@ interface CyclesContextType {
   isLoadingStatus: boolean;
   isLoadingCredits: boolean;
   cyclesAvailable: number;
-  totalCredits: CreditsResponse;
+  totalCredits: CreditsResponse | null;
   maxCyclesExchangeable: number;
   isLoadingEstimateCycles: boolean;
   currentCanisterId: Principal | null;
@@ -32,7 +33,8 @@ interface CyclesContextType {
   canisterStatus: CanisterStatusResponse | null;
   estimateCycles: (amountInIcp: number) => Promise<number>;
   getStatus: (canisterId: string) => Promise<void>;
-  getCreditsAvailable: () => Promise<void>;
+  getCreditsAvailable: () => Promise<CreditsResponse | undefined>;
+  setShouldRefetchCredits: (shouldRefetch: boolean) => void;
   cyclesStatus: CanisterStatusResponse | null;
   cyclesRate: number;
 }
@@ -47,7 +49,7 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
 
   /** States */
   const [isLoadingCycles, setIsLoadingCycles] = useState<boolean>(false);
-  const [isLoadingCredits, setIsLoadingCredits] = useState<boolean>(false);
+  // const [isLoadingCredits, setIsLoadingCredits] = useState<boolean>(false);
   const [cyclesAvailable, setCyclesAvailable] = useState<number>(0);
   const [currentCanisterId, setCurrentCanisterId] = useState<Principal | null>(
     null
@@ -61,10 +63,12 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
   const [maxCyclesExchangeable, setMaxCyclesExchangeable] = useState<number>(0);
   const [isLoadingEstimateCycles, setIsLoadingEstimateCycles] =
     useState<boolean>(false);
-  const [totalCredits, setTotalCredits] = useState<CreditsResponse>({
-    total_credits: 0,
-    equivalent_cycles: 0,
-  });
+  // const [totalCredits, setTotalCredits] = useState<CreditsResponse>({
+  //   total_credits: 0,
+  //   equivalent_cycles: 0,
+  // });
+
+  const [shouldRefetchCredits, setShouldRefetchCredits] = useState(true);
 
   useEffect(() => {
     if (!agent) {
@@ -82,9 +86,67 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
     estimateCycles(fromE8sStable(balance));
   }, [balance, agent]);
 
+  /** React Queries */
+  const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+
+  const { data: totalCredits, isLoading: isLoadingCredits } = useQuery({
+    queryKey: ["totalCredits", identity?.getPrincipal().toText()],
+    queryFn: async () => {
+      if (!identity || !agent) return null;
+      const credits = await getCreditsAvailable();
+
+      if (!credits) return null;
+
+      localStorage.setItem(
+        "totalCredits",
+        JSON.stringify({
+          totalCredits: credits,
+          timestamp: Date.now(),
+          principal: identity.getPrincipal().toText(),
+        })
+      );
+
+      setShouldRefetchCredits(false);
+      return credits;
+    },
+    initialData: () => {
+      const stored = localStorage.getItem("totalCredits");
+
+      if (!stored) {
+        setShouldRefetchCredits(true);
+        return null;
+      }
+
+      const { totalCredits, timestamp, principal } = JSON.parse(stored);
+
+      // Skip principal check if identity is not yet initialized
+      if (identity && principal !== identity.getPrincipal().toText()) {
+        localStorage.removeItem("totalCredits");
+        setShouldRefetchCredits(true);
+        return null;
+      }
+
+      // Check expiration separately
+      if (Date.now() - timestamp > CACHE_TIME) {
+        localStorage.removeItem("totalCredits");
+        setShouldRefetchCredits(true);
+        return null;
+      }
+
+      setShouldRefetchCredits(false);
+      return totalCredits as CreditsResponse;
+    },
+    enabled: !!identity && !!agent && shouldRefetchCredits,
+    staleTime: 0, // Consider data immediately stale
+    refetchOnMount: true, // Fetch when component mounts
+    refetchOnWindowFocus: true, // Fetch when window regains focus
+    refetchInterval: CACHE_TIME, // Regular polling interval
+    retry: 3, // Retry failed requests 3 times
+  });
+
   const getCreditsAvailable = async () => {
     try {
-      setIsLoadingCredits(true);
+      // setIsLoadingCredits(true);
       if (!agent) {
         return;
       }
@@ -99,17 +161,24 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
       }
 
       const equivalentCycles = await estimateCycles(fromE8sStable(credits));
-      setTotalCredits({
+      return {
         total_credits: fromE8sStable(credits),
         equivalent_cycles: fromE8sStable(
           BigInt(Math.floor(equivalentCycles)),
           12
         ),
-      });
+      } as CreditsResponse;
+      // setTotalCredits({
+      //   total_credits: fromE8sStable(credits),
+      //   equivalent_cycles: fromE8sStable(
+      //     BigInt(Math.floor(equivalentCycles)),
+      //     12
+      //   ),
+      // });
     } catch (error) {
       console.log(error);
     } finally {
-      setIsLoadingCredits(false);
+      // setIsLoadingCredits(false);
     }
   };
 
@@ -202,6 +271,7 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
         estimateCycles,
         getStatus,
         getCreditsAvailable,
+        setShouldRefetchCredits,
         cyclesStatus,
         cyclesRate,
       }}

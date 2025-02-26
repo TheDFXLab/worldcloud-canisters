@@ -57,6 +57,7 @@ button[type="submit"] {
 
   /* Light theme variables */
   --color-primary: #4F46E5;
+  --color-primary: #4F46E5;
   --color-primary-dark: #4338CA;
   --color-success: #059669;
   --color-success-bg: rgba(5, 150, 105, 0.1);
@@ -75,6 +76,11 @@ button[type="submit"] {
   --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(255, 255, 255, 0.3);
 
+  --logo-text-primary: #4F46E5; // world
+  --logo-text-secondary: #4ec8b1; // cloud
+  --logo-text-tertiary: #dbb904; // (
+  --logo-text-quaternary: #c6c7c7; // )
+  --logo-text-quinary: #c6c7c7; // ;
   /* For Firefox */
   scrollbar-width: thin;
   scrollbar-color: var(--text-secondary) var(--background-secondary);

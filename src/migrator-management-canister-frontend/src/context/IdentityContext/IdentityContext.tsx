@@ -5,21 +5,19 @@ import {
   useEffect,
   ReactNode,
 } from "react";
+
 import { Principal } from "@dfinity/principal";
 import { AuthClient } from "@dfinity/auth-client";
-import { HttpAgent } from "@dfinity/agent";
 
 import { Identity } from "@dfinity/agent";
 import {
   environment,
   frontend_canister_id_url,
-  http_host,
   internetIdentityConfig,
 } from "../../config/config";
-import { ICPLedger } from "../../class/ICPLedger/ICPLedger";
 import { useNavigate } from "react-router-dom";
-import { HttpAgentManager } from "../../agent/http_agent";
 import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
+import { clearUserData } from "../../utility/cleanup";
 
 interface IdentityProviderProps {
   children: ReactNode;
@@ -35,29 +33,54 @@ interface IdentityContextType {
 }
 
 let globalAuthClient: AuthClient | null = null;
+let isInitializing: boolean = false;
 
 const IdentityContext = createContext<IdentityContextType | undefined>(
   undefined
 );
 
 const getGlobalAuthClient = async () => {
-  if (!globalAuthClient) {
-    globalAuthClient = await AuthClient.create({
-      idleOptions: {
-        disableIdle: true,
-        disableDefaultIdleCallback: true,
-      },
-    });
-  }
+  try {
+    if (!globalAuthClient) {
+      if (isInitializing) {
+        return null;
+      }
+      isInitializing = true;
+      globalAuthClient = await AuthClient.create({
+        idleOptions: {
+          disableIdle: true,
+          disableDefaultIdleCallback: true,
+        },
+      });
+    }
 
-  return globalAuthClient;
+    return globalAuthClient;
+  } catch (error) {
+    console.error("Error creating AuthClient", error);
+    return null;
+  } finally {
+    isInitializing = false;
+  }
 };
 
 export function IdentityProvider({ children }: IdentityProviderProps) {
   const navigate = useNavigate();
-  const { fetchHttpAgent } = useHttpAgent();
+  const { fetchHttpAgent, clearHttpAgent, agent } = useHttpAgent();
 
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(() => {
+    // Check if user was previously connected
+    const stored = localStorage.getItem("connectionStatus");
+    if (!stored) return false;
+
+    const { status, timestamp } = JSON.parse(stored);
+    // Invalidate after 24 hours
+    if (Date.now() - timestamp > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem("connectionStatus");
+      return false;
+    }
+    return status;
+  });
+
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [isLoadingIdentity, setIsLoadingIdentity] = useState(true);
   const [authClient, setAuthClient] = useState<AuthClient | null>(null);
@@ -66,35 +89,31 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
     try {
       setIsLoadingIdentity(true);
       let _authClient = await getGlobalAuthClient();
-      if (!_authClient) {
-        return null;
-      }
+      if (!_authClient) return null;
 
       const isAuthenticated = await _authClient.isAuthenticated();
       if (!isAuthenticated) {
-        console.log("IdentityContext: Not authenticated");
         setIsConnected(false);
-        setIdentity(null);
+        localStorage.removeItem("connectionStatus");
+        clearUserData();
         return null;
       }
 
       const identity = _authClient.getIdentity();
-      console.log(
-        `IdentityContext: Identity:`,
-        identity.getPrincipal().toText()
-      );
-      if (
-        identity.getPrincipal().toText() ===
-        internetIdentityConfig.loggedOutPrincipal
-      ) {
-        console.log("IdentityContext: Logged out principal..");
-        setIsConnected(false);
-        setIdentity(null);
-        return identity;
-      }
       await fetchHttpAgent(identity);
       setIdentity(identity);
       setIsConnected(true);
+
+      // Store connection status
+      localStorage.setItem(
+        "connectionStatus",
+        JSON.stringify({
+          status: true,
+          timestamp: Date.now(),
+          principal: identity.getPrincipal().toText(),
+        })
+      );
+
       return identity;
     } catch (error) {
       console.error(`Error refreshing identity`, error);
@@ -105,19 +124,22 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
   };
 
   const disconnect = async () => {
-    console.log(`Disconnecting`);
-    if (!globalAuthClient) {
-      console.log(`No auth client found`);
+    try {
+      if (!globalAuthClient) return false;
+
+      await globalAuthClient.logout();
+      setIdentity(null);
+      setIsConnected(false);
+
+      // Clear all stored data
+      clearUserData();
+      clearHttpAgent();
+
+      return true;
+    } catch (error) {
+      console.error("Error during disconnect:", error);
       return false;
     }
-
-    let authClient = await getGlobalAuthClient();
-    await authClient.logout();
-    console.log(`Logged out`);
-
-    setIdentity(null);
-    setIsConnected(false);
-    return true;
   };
 
   const connectWallet = async (canisterId: Principal) => {
@@ -184,14 +206,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         return null;
       }
 
-      if (environment === "local") {
-        console.log("IdentityContext: Fetching root key in dev mode");
-        await agent.fetchRootKey();
-      }
-
       setIdentity(identity);
-      // setIdentifiedIcpLedgerActor(icpLedgerFactory.actor);
-
       setIsConnected(true);
       return identity;
     } catch (error) {

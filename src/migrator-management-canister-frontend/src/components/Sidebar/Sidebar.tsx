@@ -14,6 +14,7 @@ import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 
 import "./Sidebar.css";
 import { useEffect } from "react";
+import { useAdmin } from "../../context/AdminContext/AdminContext";
 
 export type MenuItem =
   | "publish"
@@ -25,6 +26,7 @@ export type MenuItem =
   | "home";
 
 function Sidebar() {
+  const { isAdmin } = useAdmin();
   const { disconnect } = useIdentity();
   const { activeTab, isMobileMenuOpen, setIsMobileMenuOpen, setActiveTab } =
     useSideBar();
@@ -48,7 +50,9 @@ function Sidebar() {
         navigate("/app/websites");
         break;
       case "admin":
-        navigate("/app/admin");
+        if (isAdmin) {
+          navigate("/app/admin");
+        }
         break;
     }
     setActiveTab(menuItem);
@@ -89,12 +93,15 @@ function Sidebar() {
             onClickIcon={() => handleMenuClick("publish")}
           />
           <div className="bottom-nav-group">
-            <IconTextRowView
-              className={`nav-item ${activeTab === "admin" ? "active" : ""}`}
-              text="Admin"
-              IconComponent={SupervisorAccountIcon}
-              onClickIcon={() => handleMenuClick("admin")}
-            />
+            {isAdmin && (
+              <IconTextRowView
+                className={`nav-item ${activeTab === "admin" ? "active" : ""}`}
+                text="Admin"
+                IconComponent={SupervisorAccountIcon}
+                onClickIcon={() => handleMenuClick("admin")}
+              />
+            )}
+
             <IconTextRowView
               className={`nav-item ${activeTab === "billing" ? "active" : ""}`}
               text="Billing"

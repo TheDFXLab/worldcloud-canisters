@@ -1,8 +1,6 @@
-# migrator-management-canister
+# Get Started
 
-Welcome to your new migrator-management-canister project and to the Internet Computer development community. By default, creating a new project adds this README and some template files to your project directory. You can edit these template files to customize your project and to include your own code to speed up the development cycle.
-
-To get started, you might want to explore the project directory structure and the default configuration file. Working with this project in your development environment will not affect any production deployment or identity tokens.
+To get started, you might want to explore the project directory structure and the default configuration file. Working with this project in your **development** **environment** will not affect any production deployment or identity tokens.
 
 To learn more before you start working with migrator-management-canister, see the following documentation available online:
 
@@ -14,40 +12,54 @@ To learn more before you start working with migrator-management-canister, see th
 If you want to start working on your project right away, you might want to try the following commands:
 
 ```bash
+# Navigate to the project directory
 cd migrator-management-canister/
-dfx help
-dfx canister --help
+
+# Start the local replica
+dfx start --clean --background
+
+# Deploy the ledger canister
+sh ./commands/deploy_ledger.sh
+
+# Deploy all canisters for development environment
+sh ./commands/workflow/deploy.sh all develop
+
+# Fabricate cycles for the backend canister
+sh ./commands/fabricate_cycles.sh
 ```
 
-## Running the project locally
+## Deploying to a specific environment
 
-If you want to test your project locally, you can use the following commands:
+If you want to run the project on a local replica, you can use the script in `commands/workflow/deploy.sh` as such:
 
-```bash
-# Starts the replica, running in the background
-dfx start --background
-
-# Deploys your canisters to the replica and generates your candid interface
-dfx deploy
+```
+sh ./commands/workflow/deploy.sh arg0 arg1
 ```
 
-Once the job completes, your application will be available at `http://localhost:4943?canisterId={asset_canister_id}`.
+Where:
 
-If you have made changes to your backend canister, you can generate a new candid interface with
+- `arg0` is the canister to deploy, can be ``, `all`, `frontend`, `backend`
+- `arg1` is the network to deploy to, can be ``, `develop`, `production`
 
-```bash
-npm run generate
+#### e.g: To deploy **all** canisters for **develop** environment:
+
+```
+sh ./commands/workflow/deploy.sh
 ```
 
-at any time. This is recommended before starting the frontend development server, and will be run automatically any time you run `dfx deploy`.
+or
 
-If you are making frontend changes, you can start a development server with
-
-```bash
-npm start
+```
+sh ./commands/workflow/deploy.sh all local
 ```
 
-Which will start a server at `http://localhost:8080`, proxying API requests to the replica at port 4943.
+#### e.g: To deploy **all** canisters for **production** environment:
+
+```
+sh ./commands/workflow/deploy.sh all production
+```
+
+This will start a local replica binded to `http://0.0.0.0:8000`, proxying API requests to the replica at port 8000.
 
 ### Note on frontend environment variables
 

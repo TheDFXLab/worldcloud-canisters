@@ -170,29 +170,58 @@ body {
   max-width: 1440px;
 }
 
-/* Logo styling */
-.logo a {
-  font-size: var(--font-size-xl);
-  font-weight: 700;
-  color: var(--color-text-primary);
-  text-decoration: none;
+.logo-container {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0rem;
 }
 
-.logo a::before {
-  content: "";
-  display: inline-block;
-  width: 24px;
-  height: 24px;
-  background: linear-gradient(
-    135deg,
-    var(--color-primary),
-    var(--color-primary-dark)
-  );
-  border-radius: 6px;
-  transform: rotate(45deg);
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.logo a {
+  display: flex;
+  align-items: center;
+  gap: 0rem;
+  text-decoration: none;
+}
+
+.logo-text-parent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0rem;
+  flex-wrap: nowrap;
+  font-size: var(--font-size-lg);
+  font-weight: 600 !important;
+}
+
+.logo-text-child:nth-child(1) {
+  color: var(--logo-text-primary);
+}
+
+.logo-text-child:nth-child(2) {
+  color: var(--logo-text-tertiary);
+}
+
+.logo-text-child:nth-child(3) {
+  color: var(--logo-text-secondary);
+}
+
+.logo-text-child:nth-child(4) {
+  color: var(--logo-text-tertiary);
+}
+
+.logo-text-child:nth-child(5) {
+  color: var(--logo-text-quinary);
+}
+
+.logo img {
+  height: 50px;
+  width: auto;
 }
 
 /* Navigation links */
@@ -324,7 +353,8 @@ body {
     display: flex;
     flex-direction: row;
     align-items: center;
-    column-gap: 1rem;
+    column-gap: 0rem;
+    max-width: 200px;
   }
 
   .logo {
