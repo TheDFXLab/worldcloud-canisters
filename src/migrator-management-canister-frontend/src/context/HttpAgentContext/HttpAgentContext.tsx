@@ -7,10 +7,12 @@ import {
   useEffect,
 } from "react";
 import { HttpAgentManager } from "../../agent/http_agent";
+import { environment } from "../../config/config";
 
 interface HttpAgentContextType {
   agent: HttpAgent | null;
   fetchHttpAgent: (identity: Identity | null) => Promise<HttpAgent | null>;
+  clearHttpAgent: () => void;
 }
 
 const HttpAgentContext = createContext<HttpAgentContextType | undefined>(
@@ -19,7 +21,6 @@ const HttpAgentContext = createContext<HttpAgentContextType | undefined>(
 
 export function HttpAgentProvider({ children }: { children: ReactNode }) {
   const [agent, setAgent] = useState<HttpAgent | null>(null);
-  // const { identity } = useIdentity();
 
   const fetchHttpAgent = async (identity: Identity | null) => {
     if (!identity) {
@@ -29,12 +30,24 @@ export function HttpAgentProvider({ children }: { children: ReactNode }) {
     if (!httpAgentManager) {
       return null;
     }
+
+    if (environment === "local") {
+      await httpAgentManager.agent.fetchRootKey();
+    }
     setAgent(httpAgentManager.agent);
     return httpAgentManager.agent;
   };
 
+  const clearHttpAgent = () => {
+    if (agent) {
+    }
+    setAgent(null);
+  };
+
   return (
-    <HttpAgentContext.Provider value={{ agent, fetchHttpAgent }}>
+    <HttpAgentContext.Provider
+      value={{ agent, fetchHttpAgent, clearHttpAgent }}
+    >
       {children}
     </HttpAgentContext.Provider>
   );
