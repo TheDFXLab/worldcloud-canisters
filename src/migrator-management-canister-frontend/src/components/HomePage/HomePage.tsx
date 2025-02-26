@@ -39,9 +39,13 @@ const HomePage: React.FC = () => {
   const { identity } = useIdentity();
   const { setActiveTab } = useSideBar();
   const { setActionBar } = useActionBar();
-  const { balance } = useLedger();
-  const { totalCredits, isLoadingCredits, getCreditsAvailable } = useCycles();
-  const { transfer } = useLedger();
+  const {
+    totalCredits,
+    isLoadingCredits,
+    getCreditsAvailable,
+    setShouldRefetchCredits,
+  } = useCycles();
+  const { balance, transfer, setShouldRefetchBalance } = useLedger();
   const { setToasterData, setShowToaster } = useToaster();
   const { agent } = useHttpAgent();
   const { setShowModal } = useConfirmationModal();
@@ -110,7 +114,9 @@ const HomePage: React.FC = () => {
         textColor: "white",
       });
       setShowToaster(true);
-      getCreditsAvailable();
+      // getCreditsAvailable();
+      setShouldRefetchCredits(true); // refresh credits
+      setShouldRefetchBalance(true);
     } catch (error) {
       console.error(`Error depositing ICP:`, error);
     } finally {
@@ -274,9 +280,11 @@ const HomePage: React.FC = () => {
                   </span>
 
                   <span className="info-value">
-                    {balance && balance !== BigInt(0)
-                      ? fromE8sStable(balance).toFixed(2)
-                      : 0}
+                    {balance !== null && balance !== undefined ? (
+                      fromE8sStable(balance).toFixed(2)
+                    ) : (
+                      <Spinner size="sm" />
+                    )}
                   </span>
                 </div>
                 <div className="info-row">
@@ -300,13 +308,17 @@ const HomePage: React.FC = () => {
                           IconComponent={AddCircleOutlineIcon}
                           iconColor="green"
                           text={
-                            <>
-                              {`${totalCredits.total_credits} ICP`}
-                              <span className="estimated-value">
-                                ≈ {totalCredits.equivalent_cycles.toFixed(2)} T
-                                Cycles
-                              </span>
-                            </>
+                            totalCredits ? (
+                              <>
+                                {`${totalCredits.total_credits} ICP`}
+                                <span className="estimated-value">
+                                  ≈ {totalCredits.equivalent_cycles.toFixed(2)}{" "}
+                                  T Cycles
+                                </span>
+                              </>
+                            ) : (
+                              <Spinner size="sm" />
+                            )
                           }
                         />
                       </div>
