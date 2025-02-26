@@ -45,7 +45,13 @@ export const CanisterOverview = () => {
     useDeployments();
   const navigate = useNavigate();
   const { status: authorityStatus, refreshStatus } = useAuthority();
-  const { balance, isLoadingBalance, transfer, getBalance } = useLedger();
+  const {
+    balance,
+    isLoadingBalance,
+    transfer,
+    getBalance,
+    setShouldRefetchBalance,
+  } = useLedger();
   const { identity } = useIdentity();
   const {
     isLoadingCycles,
@@ -218,8 +224,8 @@ export const CanisterOverview = () => {
       await cyclesApi.addCycles(Principal.fromText(canisterId), amountInIcp);
       setCompleteLoadBar(true);
 
-      refreshStatus(); //Reload canister details
-      getBalance(); // Reload wallet icp balance
+      refreshStatus(); // Reload canister details
+      setShouldRefetchBalance(true); // Reload wallet icp balance
       setToasterData({
         headerContent: "Success",
         toastStatus: true,

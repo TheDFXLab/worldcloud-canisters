@@ -276,6 +276,14 @@ module {
     public type TiersMap = HashMap.HashMap<Nat, Tier>;
     public type TiersList = [Tier];
 
+    /** Access Control */
+    public type Role = {
+        #super_admin;
+        #admin;
+    };
+
+    public type RoleMap = HashMap.HashMap<Principal, Role>;
+
     /** Return types */
 
     public type Result = {

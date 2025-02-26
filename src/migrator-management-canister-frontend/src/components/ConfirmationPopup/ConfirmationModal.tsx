@@ -91,7 +91,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     estimateCycles,
     getStatus,
   } = useCycles();
-  const { balance, getBalance } = useLedger();
+  const { balance, getBalance, setShouldRefetchBalance } = useLedger();
   const params = useParams();
 
   /** State */
@@ -144,7 +144,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       if (type === "cycles") {
         getStatus(params.canisterId as string);
       }
-      getBalance();
+      // getBalance();
+      setShouldRefetchBalance(true);
       onHide();
     } catch (error) {
       console.error("Error during submission:", error);

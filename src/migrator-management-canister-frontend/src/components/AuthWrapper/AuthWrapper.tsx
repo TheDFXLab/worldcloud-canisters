@@ -14,7 +14,6 @@ interface AuthWrapperProps {
 
 export function AuthWrapper({ children }: AuthWrapperProps) {
   const { summon, destroy } = useLoaderOverlay();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const {
     connectWallet,
@@ -32,10 +31,8 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
 
     if (!identity) {
       setIsLoading(false);
-      setIsAuthenticated(false);
       return;
     }
-    setIsAuthenticated(true);
     setIsLoading(false);
   };
 
@@ -49,13 +46,8 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     } catch (error) {
       console.log(`error.....`, error);
       setIsLoading(false);
-      setIsAuthenticated(false);
     }
   }, []);
-
-  useEffect(() => {
-    setIsAuthenticated(isConnected);
-  }, [isConnected]);
 
   useEffect(() => {
     if (isLoadingIdentity) {
