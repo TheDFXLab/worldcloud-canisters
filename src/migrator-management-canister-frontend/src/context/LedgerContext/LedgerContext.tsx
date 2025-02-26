@@ -3,12 +3,14 @@ import { useIdentity } from "../IdentityContext/IdentityContext";
 import LedgerApi from "../../api/ledger/LedgerApi";
 import MainApi from "../../api/main";
 import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
+import { useQuery } from "@tanstack/react-query";
 
 interface LedgerContextType {
-  balance: bigint | null;
+  balance: bigint | null | undefined;
   isLoadingBalance: boolean;
-  getBalance: () => Promise<void>;
+  getBalance: () => Promise<bigint | null>;
   transfer: (amount: number, to: string) => Promise<boolean>;
+  setShouldRefetchBalance: (value: boolean) => void;
   isTransferring: boolean;
   pendingDeposits: number;
   error: string | null;
@@ -25,9 +27,70 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isTransferring, setIsTransferring] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingDeposits, setPendingDeposits] = useState<number>(0);
-  const [balance, setBalance] = useState<bigint | null>(null);
-  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [shouldRefetchBalance, setShouldRefetchBalance] =
+    useState<boolean>(true);
   const { agent } = useHttpAgent();
+
+  /** React Queries */
+  const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+
+  const { data: balance = BigInt(0), isLoading: isLoadingBalance } = useQuery({
+    queryKey: ["balance", identity?.getPrincipal().toText()],
+    queryFn: async () => {
+      if (!identity || !agent) return null;
+      const ledgerApi = await LedgerApi.create(identity, agent);
+      if (!ledgerApi) {
+        throw new Error("Ledger API not initialized");
+      }
+      const balance = await ledgerApi.getBalance();
+      console.log(`Balance()`, balance);
+
+      localStorage.setItem(
+        "userBalance",
+        JSON.stringify({
+          balance: balance.toString(),
+          timestamp: Date.now(),
+          principal: identity.getPrincipal().toText(),
+        })
+      );
+
+      setShouldRefetchBalance(false);
+      return balance;
+    },
+    initialData: () => {
+      const stored = localStorage.getItem("userBalance");
+
+      if (!stored) {
+        setShouldRefetchBalance(true);
+        return null;
+      }
+
+      const { balance, timestamp, principal } = JSON.parse(stored);
+
+      // Skip principal check if identity is not yet initialized
+      if (identity && principal !== identity.getPrincipal().toText()) {
+        localStorage.removeItem("userBalance");
+        setShouldRefetchBalance(true);
+        return null;
+      }
+
+      // Check expiration separately
+      if (Date.now() - timestamp > CACHE_TIME) {
+        localStorage.removeItem("userBalance");
+        setShouldRefetchBalance(true);
+        return null;
+      }
+
+      setShouldRefetchBalance(false);
+      return BigInt(balance);
+    },
+    enabled: !!identity && !!agent && shouldRefetchBalance,
+    staleTime: 0, // Consider data immediately stale
+    refetchOnMount: true, // Fetch when component mounts
+    refetchOnWindowFocus: true, // Fetch when window regains focus
+    refetchInterval: CACHE_TIME, // Regular polling interval
+    retry: 3, // Retry failed requests 3 times
+  });
 
   const getPendingDeposits = async () => {
     if (!agent) {
@@ -43,22 +106,22 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
   const getBalance = async () => {
     try {
       if (!identity) {
-        return;
+        return null;
       }
       if (!agent) {
-        return;
+        return null;
       }
       const ledgerApi = await LedgerApi.create(identity, agent);
       if (!ledgerApi) {
         throw new Error("Ledger API not initialized");
       }
-      setIsLoadingBalance(true);
+      console.log(`Getting balance`);
       const balance = await ledgerApi.getBalance();
-      setBalance(balance);
+      console.log(`Balance`, balance);
+      return balance;
     } catch (error) {
       console.error(`Error getting balance`, error);
-    } finally {
-      setIsLoadingBalance(false);
+      return null;
     }
   };
 
@@ -95,6 +158,7 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         getBalance,
         transfer,
+        setShouldRefetchBalance,
         isTransferring,
         isLoadingBalance,
         error,
