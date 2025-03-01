@@ -129,8 +129,17 @@ html {
   scroll-behavior: smooth;
 }
 
-section {
-  scroll-margin-top: 80px;
+.landing-page section {
+  scroll-margin-top: 100px !important;
+}
+
+.landing-page section .features {
+  scroll-margin-top: 1000px !important;
+}
+
+.landing-page section .container,
+.landing-page section .features-shapes {
+  margin-top: 5rem;
 }
 
 body {
@@ -471,6 +480,7 @@ body {
   align-items: center;
   position: relative;
   overflow: hidden;
+  padding-bottom: 5rem;
 }
 
 .hero::before {
@@ -1115,6 +1125,7 @@ h2 {
 .how-it-works {
   /* margin: 4rem 4rem; */
   margin: auto auto;
+  margin-top: 10rem !important;
   max-width: 75vw;
 }
 
