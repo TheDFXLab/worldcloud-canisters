@@ -160,6 +160,16 @@ body {
   z-index: 1000;
   width: 80vw;
   margin: auto auto;
+  transition: transform 0.3s ease;
+}
+
+/* Add these new classes */
+.nav-container.nav-hidden {
+  transform: translateY(-100%);
+}
+
+.nav-container.nav-visible {
+  transform: translateY(0);
 }
 
 /* Modern Navbar Styles */
