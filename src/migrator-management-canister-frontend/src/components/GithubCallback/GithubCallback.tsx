@@ -39,7 +39,7 @@ const GitHubCallback: React.FC = () => {
           github.setAccessToken(data.access_token);
 
           await refreshGithubUser();
-          navigate("/app/settings", { replace: true });
+          navigate("/dashboard/settings", { replace: true });
         } else {
           setError("Authentication failed");
         }

@@ -417,7 +417,7 @@ function FileUploader() {
 
   const handleCloseSummary = () => {
     setIsComplete(true);
-    navigate("/app/websites");
+    navigate("/dashboard/websites");
   };
 
   useEffect(() => {

@@ -463,7 +463,7 @@ export const CanisterOverview = () => {
       <div className="overview-header">
         <button
           className="back-button"
-          onClick={() => navigate("/app/websites")}
+          onClick={() => navigate("/dashboard/websites")}
         >
           <ArrowBackIcon /> Back to Websites
         </button>

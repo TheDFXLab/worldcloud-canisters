@@ -129,7 +129,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   useEffect(() => {
     if (!canisterId) {
-      navigate("/app/new");
+      navigate("/dashboard/new");
       return;
     }
   }, [canisterId]);
@@ -329,7 +329,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
       // Navigate to canister after a short delay
       setTimeout(() => {
-        navigate(`/app/canister/${canisterId}`); // navigate to canister page
+        navigate(`/dashboard/canister/${canisterId}`); // navigate to canister page
       }, 2000);
     } catch (error) {
       console.error("Deploy failed:", error);

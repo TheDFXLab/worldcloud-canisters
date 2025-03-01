@@ -35,23 +35,23 @@ function Sidebar() {
   const handleMenuClick = (menuItem: MenuItem) => {
     switch (menuItem) {
       case "billing":
-        navigate("/app/billing");
+        navigate("/dashboard/billing");
         break;
       case "settings":
-        navigate("/app/settings");
+        navigate("/dashboard/settings");
         break;
       case "home":
-        navigate("/app");
+        navigate("/dashboard");
         break;
       case "publish":
-        navigate("/app/new");
+        navigate("/dashboard/new");
         break;
       case "websites":
-        navigate("/app/websites");
+        navigate("/dashboard/websites");
         break;
       case "admin":
         if (isAdmin) {
-          navigate("/app/admin");
+          navigate("/dashboard/admin");
         }
         break;
     }

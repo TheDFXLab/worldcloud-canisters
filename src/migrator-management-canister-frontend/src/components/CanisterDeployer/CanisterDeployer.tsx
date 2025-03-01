@@ -91,7 +91,7 @@ function CanisterDeployer({}: CanisterDeployerProps) {
         });
 
         setShowToaster(true);
-        navigate("/app/billing");
+        navigate("/dashboard/billing");
         return;
       }
       setIsLoadingProgress(true);
@@ -135,7 +135,7 @@ function CanisterDeployer({}: CanisterDeployerProps) {
         getSubscription();
 
         // Navigate to publishing page
-        navigate(`/app/deploy/${result?.message as string}`);
+        navigate(`/dashboard/deploy/${result?.message as string}`);
       } else {
         setStatus(`Error: ${result?.message}`);
       }
