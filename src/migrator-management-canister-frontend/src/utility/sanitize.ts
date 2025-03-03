@@ -40,25 +40,47 @@ export const sanitizeObject = (obj: any): any => {
 }
 
 export const sanitizePrincipal = (obj: any): any => {
-    if (obj === null || obj === undefined) {
-        return obj;
-    }
-    if (typeof obj === 'string') {
+    // Handle null/undefined
+    if (obj == null) {
         return obj;
     }
 
-    if (Array.isArray(obj)) {
-        return obj.map((item) => sanitizePrincipal(item));
+    // Handle primitives
+    if (typeof obj !== 'object') {
+        return obj;
     }
-    if (typeof obj === 'object') {
-        const newObj: any = {};
-        for (const key in obj) {
+
+    // Handle Principal objects directly
+    if (obj instanceof Principal) {
+        return obj.toText();
+    }
+
+    // Handle arrays
+    if (Array.isArray(obj)) {
+        return obj.map(sanitizePrincipal);
+    }
+
+    // Handle raw Principal-like objects
+    if (obj._isPrincipal === true && '_arr' in obj) {
+        try {
+            return Principal.fromUint8Array(
+                new Uint8Array(Object.values(obj._arr))
+            ).toText();
+        } catch (error) {
+            console.error('Failed to convert Principal-like object:', error);
+            return null;
+        }
+    }
+
+    // Handle objects recursively
+    const newObj: Record<string, any> = {};
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
             newObj[key] = sanitizePrincipal(obj[key]);
         }
-        return newObj;
     }
-    return obj;
-}
+    return newObj;
+};
 
 export const sanitizeBigInt = (obj: any): any => {
     if (obj === null || obj === undefined) {
