@@ -547,14 +547,14 @@ shared (deployMsg) actor class CanisterManager() = this {
   public shared (msg) func deployAssetCanister() : async Types.Result {
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     // Get the stored WASM
-    let wasm_module = switch (asset_canister_wasm) {
+    let _wasm_module = switch (asset_canister_wasm) {
       case null { return #err("Asset canister WASM not uploaded yet") };
       case (?wasm) { wasm };
     };
 
     // Validate user subscription limits
-    let user_subscription = await subscription_manager.get_subscription(msg.caller);
-    switch (user_subscription) {
+    let user_subscription_res = await subscription_manager.get_subscription(msg.caller);
+    switch (user_subscription_res) {
       case (#err(error)) {
         return #err(error);
       };
@@ -564,51 +564,64 @@ shared (deployMsg) actor class CanisterManager() = this {
         if (is_valid_subscription != true) {
           return #err("You have reached the maximum number of canisters for your subscription tier.");
         };
+
+        try {
+
+          Debug.print("[Identity " # Principal.toText(msg.caller) # "] Adding cycles....");
+
+          return await _create_canister(subscription, msg.caller, _wasm_module);
+        } catch (error) {
+          return #err("Failed to deploy asset canister: " # Error.message(error));
+        };
       };
     };
 
-    try {
-      Debug.print("[Identity " # Principal.toText(msg.caller) # "] Adding cycles....");
-      // Create new canister
-      let cyclesForCanister = 15_000_000_000; // 1T cycles
-      ExperimentalCycles.add(cyclesForCanister);
-
-      let settings : Types.CanisterSettings = {
-        freezing_threshold = null;
-        controllers = ?[Principal.fromActor(this), msg.caller];
-        memory_allocation = null;
-        compute_allocation = null;
-      };
-
-      let create_result = await IC.create_canister({
-        settings = ?settings;
-      });
-
-      let new_canister_id = create_result.canister_id;
-
-      Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Installing code");
-
-      // Install the asset canister code
-      await IC.install_code({
-        arg = Blob.toArray(to_candid (()));
-        wasm_module = wasm_module;
-        mode = #install;
-        canister_id = new_canister_id;
-      });
-
-      Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Code installed");
-
-      // After successful deployment, add to tracking
-      deployed_canisters.put(new_canister_id, true);
-
-      await _addCanisterDeployment(msg.caller, new_canister_id);
-
-      return #ok(Principal.toText(new_canister_id));
-    } catch (error) {
-      return #err("Failed to deploy asset canister: " # Error.message(error));
-    };
   };
 
+  private func _create_canister(user_subscription : Types.Subscription, controller : Principal, wasm_module : [Nat8]) : async Types.Result {
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    // Create new canister
+
+    let min_deposit = subscription_manager.tiers_list[user_subscription.tier_id].min_deposit;
+    let deposit_per_canister = Nat64.toNat(min_deposit.e8s) / user_subscription.max_slots;
+
+    let cyclesForCanister = calculateCyclesToAdd(deposit_per_canister);
+
+    Debug.print("Adding cycles for canister: " # Int.toText(Float.toInt(cyclesForCanister)));
+    ExperimentalCycles.add(Int.abs(Float.toInt(cyclesForCanister)));
+
+    let settings : Types.CanisterSettings = {
+      freezing_threshold = null;
+      controllers = ?[Principal.fromActor(this), controller];
+      memory_allocation = null;
+      compute_allocation = null;
+    };
+
+    let create_result = await IC.create_canister({
+      settings = ?settings;
+    });
+
+    let new_canister_id = create_result.canister_id;
+
+    Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Installing code");
+
+    // Install the asset canister code
+    await IC.install_code({
+      arg = Blob.toArray(to_candid (()));
+      wasm_module = wasm_module;
+      mode = #install;
+      canister_id = new_canister_id;
+    });
+
+    Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Code installed");
+
+    // After successful deployment, add to tracking
+    deployed_canisters.put(new_canister_id, true);
+
+    await _addCanisterDeployment(controller, new_canister_id);
+
+    return #ok(Principal.toText(new_canister_id));
+  };
   /**
   * Store files in asset canister
   * @param canister_id - The ID of the asset canister to store the files in
