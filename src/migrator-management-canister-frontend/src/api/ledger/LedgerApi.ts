@@ -36,13 +36,6 @@ class LedgerApi {
             }
 
             if (this.instance) return this.instance;
-
-            // const agent = await HttpAgent.create({ identity: identity ? identity : undefined, host: http_host })
-            // const httpAgentManager = await HttpAgentManager.getInstance(identity);
-            // if (!httpAgentManager) {
-            //     return null;
-            // }
-            // const agent = httpAgentManager.agent;
             const actor = createActor(icp_ledger_canister_id, {
                 agent: agent
             });
