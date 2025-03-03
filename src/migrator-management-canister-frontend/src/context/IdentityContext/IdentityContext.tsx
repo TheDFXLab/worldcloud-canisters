@@ -7,17 +7,17 @@ import {
 } from "react";
 
 import { Principal } from "@dfinity/principal";
-import { AuthClient } from "@dfinity/auth-client";
+import { AuthClient, IdbStorage } from "@dfinity/auth-client";
 
 import { Identity } from "@dfinity/agent";
 import {
-  environment,
   frontend_canister_id_url,
   internetIdentityConfig,
 } from "../../config/config";
-import { useNavigate } from "react-router-dom";
 import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 import { clearUserData } from "../../utility/cleanup";
+import { useQueryClient } from "@tanstack/react-query";
+import { isLoggedOutPrincipal } from "../../utility/identity";
 
 interface IdentityProviderProps {
   children: ReactNode;
@@ -39,12 +39,17 @@ const IdentityContext = createContext<IdentityContextType | undefined>(
   undefined
 );
 
+const setGlobalAuthClient = (authClient: AuthClient) => {
+  globalAuthClient = authClient;
+};
+
 const getGlobalAuthClient = async () => {
   try {
     if (!globalAuthClient) {
       if (isInitializing) {
         return null;
       }
+      console.log("Creating AuthClient");
       isInitializing = true;
       globalAuthClient = await AuthClient.create({
         idleOptions: {
@@ -64,8 +69,8 @@ const getGlobalAuthClient = async () => {
 };
 
 export function IdentityProvider({ children }: IdentityProviderProps) {
-  const navigate = useNavigate();
   const { fetchHttpAgent, clearHttpAgent, agent } = useHttpAgent();
+  const queryClient = useQueryClient();
 
   const [isConnected, setIsConnected] = useState(() => {
     // Check if user was previously connected
@@ -85,23 +90,50 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
   const [isLoadingIdentity, setIsLoadingIdentity] = useState(true);
   const [authClient, setAuthClient] = useState<AuthClient | null>(null);
 
-  const refreshIdentity = async () => {
+  async function getIdentity() {
     try {
-      setIsLoadingIdentity(true);
-      let _authClient = await getGlobalAuthClient();
-      if (!_authClient) return null;
+      // Create a new auth client
+      const authClient = await getGlobalAuthClient();
 
-      const isAuthenticated = await _authClient.isAuthenticated();
-      if (!isAuthenticated) {
-        setIsConnected(false);
-        localStorage.removeItem("connectionStatus");
-        clearUserData();
+      if (!authClient) {
+        console.log("No auth client found");
         return null;
       }
 
-      const identity = _authClient.getIdentity();
-      await fetchHttpAgent(identity);
-      setIdentity(identity);
+      // Get the identity from the auth client
+      const identity = authClient.getIdentity();
+
+      if (!identity) {
+        console.log("No identity found");
+        return null;
+      }
+
+      return identity;
+    } catch (error) {
+      console.error("Error getting identity:", error);
+      return null;
+    }
+  }
+
+  const refreshIdentity = async () => {
+    try {
+      // if (!identity) return null;
+
+      console.log("refreshIdentity");
+      setIsLoadingIdentity(true);
+
+      let _identity = await getIdentity();
+      if (!_identity) {
+        return null;
+      }
+
+      if (isLoggedOutPrincipal(_identity.getPrincipal())) {
+        await disconnect();
+        return null;
+      }
+
+      await fetchHttpAgent(_identity);
+      setIdentity(_identity);
       setIsConnected(true);
 
       // Store connection status
@@ -110,11 +142,11 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         JSON.stringify({
           status: true,
           timestamp: Date.now(),
-          principal: identity.getPrincipal().toText(),
+          principal: _identity.getPrincipal().toText(),
         })
       );
 
-      return identity;
+      return _identity;
     } catch (error) {
       console.error(`Error refreshing identity`, error);
       return null;
@@ -125,9 +157,17 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
 
   const disconnect = async () => {
     try {
-      if (!globalAuthClient) return false;
+      // Clear IDB storage
+      const storage = new IdbStorage();
+      await Promise.all([
+        console.log("Removing identity"),
+        storage.remove("identity"),
+        storage.remove("delegation"),
+        console.log("Removed"),
+      ]);
 
-      await globalAuthClient.logout();
+      queryClient.clear();
+
       setIdentity(null);
       setIsConnected(false);
 
@@ -142,28 +182,19 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
     }
   };
 
-  const connectWallet = async (canisterId: Principal) => {
+  const connectWallet = async () => {
     try {
       console.log(`Connecting wallet`);
       setIsLoadingIdentity(true);
-      let _authClient = await getGlobalAuthClient();
-      if (!_authClient) {
-        console.log(`No auth client found while connecting wallet`);
-        return null;
-      }
+      const _authClient = await AuthClient.create({
+        idleOptions: {
+          disableIdle: true,
+          disableDefaultIdleCallback: true,
+        },
+      });
 
-      const isAuthenticated = await _authClient.isAuthenticated();
-      if (isAuthenticated) {
-        const id = _authClient.getIdentity();
-        console.log(
-          `Authenticated already with id`,
-          id.getPrincipal().toText()
-        );
-
-        setIdentity(id);
-        setIsConnected(true);
-        return id;
-      }
+      console.log("Auth client created");
+      setGlobalAuthClient(_authClient);
 
       const popUpHeight = 0.42 * window.innerWidth;
       const popUpWidth = 0.35 * window.innerWidth;
@@ -206,6 +237,16 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         return null;
       }
 
+      // Store connection status
+      localStorage.setItem(
+        "connectionStatus",
+        JSON.stringify({
+          status: true,
+          timestamp: Date.now(),
+          principal: identity.getPrincipal().toText(),
+        })
+      );
+
       setIdentity(identity);
       setIsConnected(true);
       return identity;
@@ -222,11 +263,11 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       await refreshIdentity();
     };
 
-    if (!authClient) {
+    if (!authClient || !identity || !agent) {
       return;
     }
     refresh();
-  }, [authClient]);
+  }, [authClient, identity]);
 
   return (
     <IdentityContext.Provider
