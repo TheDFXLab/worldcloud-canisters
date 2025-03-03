@@ -18,6 +18,7 @@ import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 import { clearUserData } from "../../utility/cleanup";
 import { useQueryClient } from "@tanstack/react-query";
 import { isLoggedOutPrincipal } from "../../utility/identity";
+import AuthApi from "../../api/auth/AuthApi";
 
 interface IdentityProviderProps {
   children: ReactNode;
@@ -157,13 +158,15 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
 
   const disconnect = async () => {
     try {
+      // Delete jwt token
+      const authApi = new AuthApi();
+      await authApi.signOut();
+
       // Clear IDB storage
       const storage = new IdbStorage();
       await Promise.all([
-        console.log("Removing identity"),
         storage.remove("identity"),
         storage.remove("delegation"),
-        console.log("Removed"),
       ]);
 
       queryClient.clear();
@@ -247,6 +250,8 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         })
       );
 
+      const authApi = new AuthApi();
+      await authApi.signIn(identity, agent);
       setIdentity(identity);
       setIsConnected(true);
       return identity;
