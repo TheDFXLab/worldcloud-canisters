@@ -28,7 +28,6 @@ import NoDataIcon from "@mui/icons-material/Description";
 import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { useCycles } from "../../context/CyclesContext/CyclesContext";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
-import MemoryIcon from "@mui/icons-material/Memory";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import { Tooltip } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
@@ -37,6 +36,15 @@ import IconTextRowView from "../IconTextRowView/IconTextRowView";
 import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
 import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+
+import BatteryAlertIcon from "@mui/icons-material/BatteryAlert";
+import Battery20Icon from "@mui/icons-material/Battery20";
+import Battery30Icon from "@mui/icons-material/Battery30";
+import Battery50Icon from "@mui/icons-material/Battery50";
+import Battery60Icon from "@mui/icons-material/Battery60";
+import Battery80Icon from "@mui/icons-material/Battery80";
+import Battery90Icon from "@mui/icons-material/Battery90";
+import BatteryFullIcon from "@mui/icons-material/BatteryFull";
 
 export const CanisterOverview = () => {
   /** Hooks */
@@ -278,6 +286,64 @@ export const CanisterOverview = () => {
     console.log("Retrying deployment...", workflow_run_id);
   };
 
+  const renderCyclesIcon = () => {
+    const recommendedMaxTCycles = 1; // 1T
+
+    const icons = {
+      0: <BatteryAlertIcon className="info-icon" />,
+      20: <Battery20Icon className="info-icon" />,
+      30: <Battery30Icon className="info-icon" />,
+      50: <Battery50Icon className="info-icon" />,
+      60: <Battery60Icon className="info-icon" />,
+      80: <Battery80Icon className="info-icon" />,
+      90: <Battery90Icon className="info-icon" />,
+      100: <BatteryFullIcon className="info-icon" />,
+    };
+    if (cyclesStatus?.cycles) {
+      const tCyclesInCanister = fromE8sStable(cyclesStatus?.cycles, 12);
+      if (tCyclesInCanister >= recommendedMaxTCycles) {
+        return {
+          Component: <BatteryFullIcon className="info-icon" />,
+          tooltipMessage: "Cycles above recommended values.",
+        };
+      } else if (tCyclesInCanister >= 0.9 * recommendedMaxTCycles) {
+        return {
+          Component: <Battery90Icon className="info-icon" />,
+          tooltipMessage: `Cycles above 90% recommended values.`,
+        };
+      } else if (tCyclesInCanister >= 0.8 * recommendedMaxTCycles) {
+        return {
+          Component: <Battery80Icon className="info-icon" />,
+          tooltipMessage: `Cycles above 80% recommended values.`,
+        };
+      } else if (tCyclesInCanister >= 0.6 * recommendedMaxTCycles) {
+        return {
+          Component: <Battery60Icon className="info-icon" />,
+          tooltipMessage: `Cycles above 60% recommended values.`,
+        };
+      } else if (tCyclesInCanister >= 0.5 * recommendedMaxTCycles) {
+        return {
+          Component: <Battery50Icon className="info-icon" />,
+          tooltipMessage: `Cycles above 50% recommended values.`,
+        };
+      } else if (tCyclesInCanister >= 0.3 * recommendedMaxTCycles) {
+        return {
+          Component: <Battery30Icon className="info-icon" />,
+          tooltipMessage: `Cycles above 30% recommended values.`,
+        };
+      } else if (tCyclesInCanister >= 0.2 * recommendedMaxTCycles) {
+        return {
+          Component: <Battery20Icon className="info-icon" />,
+          tooltipMessage: `Cycles above 20% recommended values.`,
+        };
+      }
+    }
+    return {
+      Component: <BatteryAlertIcon className="info-icon" />,
+      tooltipMessage: `Cycles level is below recommended values. Top up cycles to avoid downtime on your website.`,
+    };
+  };
+
   const renderCyclesList = () => {
     if (isLoadingBalance) {
       return (
@@ -293,6 +359,7 @@ export const CanisterOverview = () => {
         </div>
       );
     }
+
     return (
       <div className="cycles-stats-container">
         <div className="stat-item">
@@ -338,11 +405,11 @@ export const CanisterOverview = () => {
           <div className="stat-label">
             Cycles in Canister
             <Tooltip
-              title="Amount of cycles currently in the website canister"
+              title={renderCyclesIcon().tooltipMessage}
               arrow
               placement="top"
             >
-              <SwapHorizIcon className="info-icon" />
+              {renderCyclesIcon().Component}
             </Tooltip>
           </div>
           <span className="stat-value">
