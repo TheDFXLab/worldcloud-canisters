@@ -22,7 +22,7 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ["44d40e10936d.ngrok.app"],
+    allowedHosts: ["1cb76d5ea489.ngrok.app"],
     proxy: {
       "/api": {
         target: "http://0.0.0.0:8000",
