@@ -611,10 +611,6 @@ export class GithubApi {
                 console.log(`Workflow run result:`, workflowRunResult);
 
                 if (workflowRunResult && workflowRunResult.targetArtifact) {
-                    const mainApi = await MainApi.create(identity, agent);
-                    if (!mainApi) {
-                        throw new Error("Failed to create main api instance.");
-                    }
 
                     const workflowRunDetails: WorkflowRunDetails = {
                         workflow_run_id: BigInt(workflowRunResult.targetArtifact.id),
