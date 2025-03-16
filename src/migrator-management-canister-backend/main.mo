@@ -22,6 +22,8 @@ import Account "Account";
 import Book "./book";
 import SubscriptionManager "./modules/subscription";
 import AccessControl "./modules/access";
+import Hex "./utils/Hex";
+import SHA256 "./utils/SHA256";
 
 // TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
 // TODO: Handle stable variables (if needed)
@@ -83,6 +85,56 @@ shared (deployMsg) actor class CanisterManager() = this {
 
   private let access_control = AccessControl.AccessControl(deployMsg.caller);
   private stable var stable_role_map : [(Principal, Types.Role)] = [];
+
+  private let signatures = HashMap.HashMap<Principal, Blob>(0, Principal.equal, Principal.hash);
+
+  public shared (msg) func public_key() : async {
+    #Ok : { public_key_hex : Text };
+    #Err : Text;
+  } {
+    let caller = Principal.toBlob(msg.caller);
+    try {
+      let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+
+      Debug.print("Getting public key for caller: " # Principal.toText(msg.caller));
+      let { public_key } = await IC.ecdsa_public_key({
+        canister_id = null;
+        derivation_path = [caller];
+        key_id = { curve = #secp256k1; name = "dfx_test_key" };
+      });
+      Debug.print("Public key: " # Hex.encode(Blob.toArray(public_key)));
+      #Ok({ public_key_hex = Hex.encode(Blob.toArray(public_key)) });
+    } catch (err) {
+      #Err(Error.message(err));
+    };
+  };
+
+  public shared (msg) func sign(message : Text) : async {
+    #Ok : { signature_hex : Text };
+    #Err : Text;
+  } {
+    let caller = Principal.toBlob(msg.caller);
+    try {
+      // Include caller in the message
+      // let full_message = message # "|caller=" # Principal.toText(msg.caller);
+
+      Debug.print("Signing message: " # message);
+      let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+
+      let message_hash : Blob = Blob.fromArray(SHA256.sha256(Blob.toArray(Text.encodeUtf8(message))));
+      ExperimentalCycles.add(25_000_000_000);
+      let { signature } = await IC.sign_with_ecdsa({
+        message_hash;
+        derivation_path = [caller];
+        key_id = { curve = #secp256k1; name = "dfx_test_key" };
+      });
+
+      Debug.print("Signature: " # Hex.encode(Blob.toArray(signature)));
+      #Ok({ signature_hex = Hex.encode(Blob.toArray(signature)) });
+    } catch (err) {
+      #Err(Error.message(err));
+    };
+  };
 
   /** Access Control */
   public shared (msg) func grant_role(principal : Principal, role : Types.Role) : async Types.Response<Text> {
@@ -547,14 +599,14 @@ shared (deployMsg) actor class CanisterManager() = this {
   public shared (msg) func deployAssetCanister() : async Types.Result {
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     // Get the stored WASM
-    let wasm_module = switch (asset_canister_wasm) {
+    let _wasm_module = switch (asset_canister_wasm) {
       case null { return #err("Asset canister WASM not uploaded yet") };
       case (?wasm) { wasm };
     };
 
     // Validate user subscription limits
-    let user_subscription = await subscription_manager.get_subscription(msg.caller);
-    switch (user_subscription) {
+    let user_subscription_res = await subscription_manager.get_subscription(msg.caller);
+    switch (user_subscription_res) {
       case (#err(error)) {
         return #err(error);
       };
@@ -564,51 +616,64 @@ shared (deployMsg) actor class CanisterManager() = this {
         if (is_valid_subscription != true) {
           return #err("You have reached the maximum number of canisters for your subscription tier.");
         };
+
+        try {
+
+          Debug.print("[Identity " # Principal.toText(msg.caller) # "] Adding cycles....");
+
+          return await _create_canister(subscription, msg.caller, _wasm_module);
+        } catch (error) {
+          return #err("Failed to deploy asset canister: " # Error.message(error));
+        };
       };
     };
 
-    try {
-      Debug.print("[Identity " # Principal.toText(msg.caller) # "] Adding cycles....");
-      // Create new canister
-      let cyclesForCanister = 15_000_000_000; // 1T cycles
-      ExperimentalCycles.add(cyclesForCanister);
-
-      let settings : Types.CanisterSettings = {
-        freezing_threshold = null;
-        controllers = ?[Principal.fromActor(this), msg.caller];
-        memory_allocation = null;
-        compute_allocation = null;
-      };
-
-      let create_result = await IC.create_canister({
-        settings = ?settings;
-      });
-
-      let new_canister_id = create_result.canister_id;
-
-      Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Installing code");
-
-      // Install the asset canister code
-      await IC.install_code({
-        arg = Blob.toArray(to_candid (()));
-        wasm_module = wasm_module;
-        mode = #install;
-        canister_id = new_canister_id;
-      });
-
-      Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Code installed");
-
-      // After successful deployment, add to tracking
-      deployed_canisters.put(new_canister_id, true);
-
-      await _addCanisterDeployment(msg.caller, new_canister_id);
-
-      return #ok(Principal.toText(new_canister_id));
-    } catch (error) {
-      return #err("Failed to deploy asset canister: " # Error.message(error));
-    };
   };
 
+  private func _create_canister(user_subscription : Types.Subscription, controller : Principal, wasm_module : [Nat8]) : async Types.Result {
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    // Create new canister
+
+    let min_deposit = subscription_manager.tiers_list[user_subscription.tier_id].min_deposit;
+    let deposit_per_canister = Nat64.toNat(min_deposit.e8s) / user_subscription.max_slots;
+
+    let cyclesForCanister = calculateCyclesToAdd(deposit_per_canister);
+
+    Debug.print("Adding cycles for canister: " # Int.toText(Float.toInt(cyclesForCanister)));
+    ExperimentalCycles.add(Int.abs(Float.toInt(cyclesForCanister)));
+
+    let settings : Types.CanisterSettings = {
+      freezing_threshold = null;
+      controllers = ?[Principal.fromActor(this), controller];
+      memory_allocation = null;
+      compute_allocation = null;
+    };
+
+    let create_result = await IC.create_canister({
+      settings = ?settings;
+    });
+
+    let new_canister_id = create_result.canister_id;
+
+    Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Installing code");
+
+    // Install the asset canister code
+    await IC.install_code({
+      arg = Blob.toArray(to_candid (()));
+      wasm_module = wasm_module;
+      mode = #install;
+      canister_id = new_canister_id;
+    });
+
+    Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Code installed");
+
+    // After successful deployment, add to tracking
+    deployed_canisters.put(new_canister_id, true);
+
+    await _addCanisterDeployment(controller, new_canister_id);
+
+    return #ok(Principal.toText(new_canister_id));
+  };
   /**
   * Store files in asset canister
   * @param canister_id - The ID of the asset canister to store the files in

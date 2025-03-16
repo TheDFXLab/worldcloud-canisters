@@ -4,6 +4,7 @@ import { environment, frontend_url, githubClientId, reverse_proxy_url } from "..
 import { generateWorkflowTemplate } from "../../utility/workflowTemplate";
 import MainApi from "../main";
 import { Principal } from "@dfinity/principal";
+import AuthState from "../../state/AuthState";
 
 interface GithubWorkflowRunsResponse {
     workflow_runs: GithubWorkflowRunPartial[];
@@ -74,6 +75,29 @@ export class GithubApi {
         return !!this.token;
     }
 
+    async getUser() {
+        const jwt = AuthState.getInstance().getAccessToken();
+        if (!jwt) {
+            throw new Error("No access token found. Please login again.");
+        }
+
+        const response = await fetch(`${reverse_proxy_url}/github/user`, {
+            headers: {
+                Authorization: `Bearer ${jwt}`,
+            },
+        });
+        const data = await response.json();
+
+        if (data && data.error && data.error.includes("token not found")) {
+            return null;
+        }
+
+        if (response.ok) {
+            return data;
+        }
+        return null;
+    }
+
     async authenticate() {
         const clientId = githubClientId;
         if (!clientId) {
@@ -87,7 +111,6 @@ export class GithubApi {
         localStorage.setItem('github_oauth_state', state);
 
         // TODO: remove this once we have a proper domain
-        // Force browser to use ngrok URL
         if (window.location.hostname === 'localhost') {
             window.location.href = `${frontend_url}/github/callback?redirectToGithub=true&state=${state}`;
             return;
@@ -103,26 +126,42 @@ export class GithubApi {
         window.location.href = `https://github.com/login/oauth/authorize?${params}`;
     }
 
+    // Replace with be
     async requestAccessToken(deviceCode: string) {
         try {
-            const response = await fetch(
-                `${environment === "ic" ? reverse_proxy_url : reverse_proxy_url
-                }/login/oauth/access_token`,
-                {
-                    method: "POST",
-                    headers: {
-                        Accept: "application/json",
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        client_id: githubClientId,
-                        device_code: deviceCode,
-                        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-                    }),
-                }
-            );
+            // const response = await fetch(
+            //     `${environment === "ic" ? reverse_proxy_url : reverse_proxy_url
+            //     }/login/oauth/access_token`,
+            //     {
+            //         method: "POST",
+            //         headers: {
+            //             Accept: "application/json",
+            //             "Content-Type": "application/json",
+            //         },
+            //         body: JSON.stringify({
+            //             client_id: githubClientId,
+            //             device_code: deviceCode,
+            //             grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+            //         }),
+            //     }
+            // );
+            const jwt = AuthState.getInstance().getAccessToken();
+            if (!jwt) {
+                throw new Error("No access token found. Please login again.");
+            }
+
+            console.log(`Sending code:`, deviceCode)
+            const response = await fetch(`${reverse_proxy_url}/github/connect`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${jwt}`,
+                },
+                body: JSON.stringify({ deviceCode }),
+            });
 
             const data = await response.json();
+            console.log(`Access token response:`, data)
             return data;
         } catch (error) {
             console.error('Error requesting access token:', error);
@@ -149,6 +188,7 @@ export class GithubApi {
             );
 
             const data = await response.json();
+            console.log(`Code response:`, data)
             return data;
         } catch (error) {
             console.error('Error requesting code:', error);
@@ -158,24 +198,31 @@ export class GithubApi {
     }
 
     async logout(): Promise<void> {
-        if (this.token) {
-            try {
-                // Revoke the token
-                await fetch(`https://api.github.com/applications/${githubClientId}/token`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `token ${this.token}`,
-                    }
-                });
-            } catch (error) {
-                console.error('Error revoking token:', error);
+        try {
+            const jwt = AuthState.getInstance().getAccessToken();
+            if (!jwt) {
+                throw new Error("No access token found. Please login again.");
             }
+
+            const response = await fetch(`${reverse_proxy_url}/github/disconnect`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${jwt}`,
+                },
+            })
+
+            if (!response.ok) {
+                throw new Error("Failed to disconnect from GitHub");
+            }
+
+            this.token = null;
+            localStorage.removeItem('github_token');
+
+        } catch (error) {
+            console.error('Error revoking token:', error);
+            return;
         }
 
-        // Clear the token
-        this.token = null;
-        localStorage.removeItem('github_token');
     }
 
     public setAccessToken(token: string) {
@@ -184,7 +231,19 @@ export class GithubApi {
     }
 
     async listRepositories(): Promise<Repository[]> {
-        return this.request('/user/repos?sort=updated&visibility=all');
+        const jwt = AuthState.getInstance().getAccessToken();
+        if (!jwt) {
+            throw new Error("No access token found. Please login again.");
+        }
+        // return this.request('/user/repos?sort=updated&visibility=all');
+        const response = await fetch(`${reverse_proxy_url}/github/list_repositories`, {
+            headers: {
+                "Authorization": `Bearer ${jwt}`,
+            },
+        });
+        const data = await response.json();
+        console.log(`Repositories loaded:`, data);
+        return data;
     }
 
     private async verifyAndCreateWorkflow(repo: string, workflowPath: string, branch: string, content: any, repoInfo: Repository) {
@@ -246,19 +305,37 @@ export class GithubApi {
         });
     }
 
-    async createWorkflow(repo: string, workflowContent: string, branch: string) {
-        const content = btoa(workflowContent);
-        const workflowPath = `.github/workflows/icp-deploy.yml`;
+    async createWorkflow(repo: string, branch: string, path: string) {
+        // const content = btoa(workflowContent);
+        // const workflowPath = `.github/workflows/icp-deploy.yml`;
 
         try {
-            // First, get the default branch
-            const repoInfo = await this.request(`/repos/${repo}`);
-            const defaultBranch = repoInfo.default_branch;
+            // // First, get the default branch
+            // const repoInfo = await this.request(`/repos/${repo}`);
+            // const defaultBranch = repoInfo.default_branch;
 
-            // Create workflow file in default branch if it doesn't exist
-            await this.verifyAndCreateWorkflow(repo, workflowPath, branch, content, repoInfo);
+            // // Create workflow file in default branch if it doesn't exist
+            // await this.verifyAndCreateWorkflow(repo, workflowPath, branch, content, repoInfo);
 
-            await this.verifyWorkflowExists(repo);
+            // await this.verifyWorkflowExists(repo);
+
+            const jwt = AuthState.getInstance().getAccessToken();
+            if (!jwt) {
+                throw new Error("No access token found. Please login again.");
+            }
+            console.log(`Creating workflow for ${repo} with branch ${branch} and path ${path}`);
+
+            const response = await fetch(`${reverse_proxy_url}/github/create_workflow`, {
+                method: 'POST',
+                headers: {
+                    "Authorization": `Bearer ${jwt}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ repo, selectedBranch: branch, selectedPath: path }),
+            });
+            const data = await response.json();
+            console.log(`Workflow created:`, data);
+
         } catch (error) {
             console.error(`Error creating/updating workflow for ${repo}:`, error);
             throw error;
@@ -278,53 +355,79 @@ export class GithubApi {
         });
     }
 
+    // async triggerWorkflow(repo: string, branch: string) {
+    //     try {
+    //         // First verify the workflow file exists in the correct branch
+    //         const workflowPath = `.github/workflows/icp-deploy.yml`;
+    //         try {
+    //             const workflowFile = await this.request(`/repos/${repo}/contents/${workflowPath}?ref=${branch}`);
+
+    //             // Decode and verify the content
+    //             const content = atob(workflowFile.content);
+    //             if (!content.includes('workflow_dispatch')) {
+
+    //                 // Generate new workflow content
+    //                 const newWorkflowContent = generateWorkflowTemplate('src', branch);
+
+    //                 // Update the workflow file
+    //                 await this.request(`/repos/${repo}/contents/${workflowPath}`, {
+    //                     method: 'PUT',
+    //                     body: JSON.stringify({
+    //                         message: 'Update workflow to use workflow_dispatch trigger',
+    //                         content: btoa(newWorkflowContent),
+    //                         branch,
+    //                         sha: workflowFile.sha
+    //                     }),
+    //                 });
+
+    //                 // Wait for GitHub to process the update
+    //                 await new Promise(resolve => setTimeout(resolve, 2000));
+    //             }
+    //         } catch (error) {
+    //             console.error(`Error verifying workflow file on branch ${branch}:`, error);
+    //             throw new Error(`Workflow file not found or invalid on branch ${branch}`);
+    //         }
+
+    //         // Trigger the workflow
+    //         await this.request(`/repos/${repo}/actions/workflows/icp-deploy.yml/dispatches`, {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //             },
+    //             body: JSON.stringify({
+    //                 ref: branch,
+    //                 inputs: {
+    //                     branch: branch
+    //                 }
+    //             })
+    //         });
+
+    //     } catch (error) {
+    //         console.log(`Error triggering workflow for ${repo}:`, error);
+    //         throw error;
+    //     }
+    // }
     async triggerWorkflow(repo: string, branch: string) {
         try {
-            // First verify the workflow file exists in the correct branch
-            const workflowPath = `.github/workflows/icp-deploy.yml`;
-            try {
-                const workflowFile = await this.request(`/repos/${repo}/contents/${workflowPath}?ref=${branch}`);
-
-                // Decode and verify the content
-                const content = atob(workflowFile.content);
-                if (!content.includes('workflow_dispatch')) {
-
-                    // Generate new workflow content
-                    const newWorkflowContent = generateWorkflowTemplate('src', branch);
-
-                    // Update the workflow file
-                    await this.request(`/repos/${repo}/contents/${workflowPath}`, {
-                        method: 'PUT',
-                        body: JSON.stringify({
-                            message: 'Update workflow to use workflow_dispatch trigger',
-                            content: btoa(newWorkflowContent),
-                            branch,
-                            sha: workflowFile.sha
-                        }),
-                    });
-
-                    // Wait for GitHub to process the update
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-            } catch (error) {
-                console.error(`Error verifying workflow file on branch ${branch}:`, error);
-                throw new Error(`Workflow file not found or invalid on branch ${branch}`);
+            const jwt = AuthState.getInstance().getAccessToken();
+            if (!jwt) {
+                throw new Error("No access token found. Please login again.");
             }
 
-            // Trigger the workflow
-            await this.request(`/repos/${repo}/actions/workflows/icp-deploy.yml/dispatches`, {
+            const response = await fetch(`${reverse_proxy_url}/github/trigger_workflow`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    "Authorization": `Bearer ${jwt}`,
+                    "Content-Type": "application/json",
                 },
-                body: JSON.stringify({
-                    ref: branch,
-                    inputs: {
-                        branch: branch
-                    }
-                })
+                body: JSON.stringify({ repo, branch }),
             });
-
+            const data = await response.json();
+            console.log(`Workflow triggered:`, data);
+            if (data.status) {
+                return true;
+            }
+            return false;
         } catch (error) {
             console.log(`Error triggering workflow for ${repo}:`, error);
             throw error;
@@ -337,18 +440,35 @@ export class GithubApi {
 
     async getLatestWorkflowRunId(repo_name: string) {
         // First get the workflow ID for our specific workflow file
-        const workflows = await this.request(
-            `/repos/${repo_name}/actions/workflows`
-        );
+        // const workflows = await this.request(
+        //     `/repos/${repo_name}/actions/workflows`
+        // );
 
-        if (!workflows || workflows.total_count === 0) {
-            return '0';
+        // if (!workflows || workflows.total_count === 0) {
+        //     return '0';
+        // }
+
+        // const deployWorkflow = workflows.workflows.find((workflow: any) => workflow.name === 'Build and Deploy to ICP');
+
+        // const workflowRuns = await this.request(`/repos/${repo_name}/actions/workflows/${deployWorkflow.id}/runs?per_page=5`);
+        // return workflowRuns && workflowRuns.workflow_runs.length > 0 ? workflowRuns.workflow_runs[0].id : '0';
+        const jwt = AuthState.getInstance().getAccessToken();
+        if (!jwt) {
+            throw new Error("No access token found. Please login again.");
         }
 
-        const deployWorkflow = workflows.workflows.find((workflow: any) => workflow.name === 'Build and Deploy to ICP');
-
-        const workflowRuns = await this.request(`/repos/${repo_name}/actions/workflows/${deployWorkflow.id}/runs?per_page=5`);
-        return workflowRuns && workflowRuns.workflow_runs.length > 0 ? workflowRuns.workflow_runs[0].id : '0';
+        console.log(`Getting latest workflow run for ${repo_name}`);
+        const response = await fetch(`${reverse_proxy_url}/github/latest_workflow_run`, {
+            method: 'POST',
+            headers: {
+                "Authorization": `Bearer ${jwt}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ repo: repo_name }),
+        });
+        const data = await response.json();
+        console.log(`Latest workflow run:`, data);
+        return data;
     }
 
     // Find the latest workflow run and the latest artifact file
@@ -435,43 +555,102 @@ export class GithubApi {
     }
 
     async downloadArtifact(downloadUrl: string): Promise<Blob> {
-        const response = await fetch(downloadUrl, {
-            headers: {
-                'Authorization': `Bearer ${this.token}`,
-            },
-        });
+        // const response = await fetch(downloadUrl, {
+        //     headers: {
+        //         'Authorization': `Bearer ${this.token}`,
+        //     },
+        // });
 
-        if (!response.ok) {
-            throw new Error('Failed to download artifact');
+        // if (!response.ok) {
+        //     throw new Error('Failed to download artifact');
+        // }
+
+        // return response.blob();
+        const jwt = AuthState.getInstance().getAccessToken();
+        if (!jwt) {
+            throw new Error("No access token found. Please login again.");
         }
 
+        const response = await fetch(`${reverse_proxy_url}/github/download_artifact`, {
+            method: 'POST',
+            headers: {
+                "Authorization": `Bearer ${jwt}`,
+                "downloadurl": downloadUrl,
+            },
+        });
         return response.blob();
     }
 
     async pollForArtifact(identity: Identity | null, agent: HttpAgent, canisterId: Principal, repo: string, branch: string, previousRunId: string, maxAttempts = 100): Promise<{ artifact: Artifact, workflowRunDetails: WorkflowRunDetails }> {
+        const jwt = AuthState.getInstance().getAccessToken();
+        if (!jwt) {
+            throw new Error("No access token found. Please login again.");
+        }
+
         for (let i = 0; i < maxAttempts; i++) {
-            const workflowRunResult = await this.getWorkflows(repo, previousRunId);
+            // const workflowRunResult = await this.getWorkflows(repo, previousRunId);
+            const response = await fetch(`${reverse_proxy_url}/github/get_workflows`, {
+                method: 'POST',
+                headers: {
+                    "Authorization": `Bearer ${jwt}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ repo, previousRunId }),
+            });
 
-            if (workflowRunResult && workflowRunResult.targetArtifact) {
-                const mainApi = await MainApi.create(identity, agent);
-                if (!mainApi) {
-                    throw new Error("Failed to create main api instance.");
+            console.log(`Reponse polling for artifact:`, response);
+
+            if (response.status === 200) {
+                const workflowRunResult = await response.json();
+                if (workflowRunResult.message && workflowRunResult.message.includes("No new runs")) {
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+                    continue;
                 }
 
-                const workflowRunDetails: WorkflowRunDetails = {
-                    workflow_run_id: BigInt(workflowRunResult.targetArtifact.id),
-                    repo_name: repo,
-                    branch: [branch],
-                    status: { completed: null },
-                    date_created: BigInt(Date.parse(workflowRunResult.run.created_at)),
-                    error_message: [],
-                    size: [BigInt(workflowRunResult.targetArtifact.size_in_bytes)],
-                    commit_hash: [workflowRunResult.targetArtifact.workflow_run.head_sha],
-                }
+                // const data = await workflowRunResult.json();
+                console.log(`Workflow run result:`, workflowRunResult);
 
-                return { artifact: workflowRunResult.targetArtifact, workflowRunDetails };
+                if (workflowRunResult && workflowRunResult.targetArtifact) {
+
+                    const workflowRunDetails: WorkflowRunDetails = {
+                        workflow_run_id: BigInt(workflowRunResult.targetArtifact.id),
+                        repo_name: repo,
+                        branch: [branch],
+                        status: { completed: null },
+                        date_created: BigInt(Date.parse(workflowRunResult.run.created_at)),
+                        error_message: [],
+                        size: [BigInt(workflowRunResult.targetArtifact.size_in_bytes)],
+                        commit_hash: [workflowRunResult.targetArtifact.workflow_run.head_sha],
+                    }
+
+                    return { artifact: workflowRunResult.targetArtifact, workflowRunDetails };
+                }
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
             }
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+            // const workflowRunResult = await response.json();
+            // const data = await workflowRunResult.json();
+            // console.log(`Workflow run result:`, data);
+
+            // if (workflowRunResult && workflowRunResult.targetArtifact) {
+            //     const mainApi = await MainApi.create(identity, agent);
+            //     if (!mainApi) {
+            //         throw new Error("Failed to create main api instance.");
+            //     }
+
+            //     const workflowRunDetails: WorkflowRunDetails = {
+            //         workflow_run_id: BigInt(workflowRunResult.targetArtifact.id),
+            //         repo_name: repo,
+            //         branch: [branch],
+            //         status: { completed: null },
+            //         date_created: BigInt(Date.parse(workflowRunResult.run.created_at)),
+            //         error_message: [],
+            //         size: [BigInt(workflowRunResult.targetArtifact.size_in_bytes)],
+            //         commit_hash: [workflowRunResult.targetArtifact.workflow_run.head_sha],
+            //     }
+
+            //     return { artifact: workflowRunResult.targetArtifact, workflowRunDetails };
+            // }
+            // await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
         }
 
         throw new Error('Timeout waiting for build artifact');

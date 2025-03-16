@@ -37,7 +37,7 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
     // Redirect to new page if no canister ID provided
     if (!canisterId) {
       // return <div>No canister ID</div>;
-      navigate("/app/websites");
+      navigate("/dashboard/websites");
     }
   }, [canisterId, navigate]);
 

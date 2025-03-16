@@ -87,7 +87,7 @@ function App() {
                                   element={<RepoSelector />}
                                 />
                                 <Route
-                                  path="/app/*"
+                                  path="/dashboard/*"
                                   element={
                                     <AuthWrapper>
                                       <AuthorityProvider state={state}>

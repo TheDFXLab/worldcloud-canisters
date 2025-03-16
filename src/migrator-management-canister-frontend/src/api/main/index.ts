@@ -57,6 +57,32 @@ class MainApi {
         }
     }
 
+    // Get identity's derived public key
+    async getPublicKey() {
+        const publicKeyResult = await this.actor?.public_key();
+        if (!publicKeyResult) {
+            throw new Error(`Failed to get public key: ${publicKeyResult}`);
+        }
+        if ('Err' in publicKeyResult) {
+            throw new Error(`Failed to get public key: ${publicKeyResult.Err}`);
+        }
+        const publicKey = publicKeyResult.Ok.public_key_hex;
+        return publicKey;
+    }
+
+    // Sign message with identity's derived public key
+    async signMessage(message: string) {
+        const signResult = await this.actor?.sign(message);
+        if (!signResult) {
+            throw new Error(`Failed to sign message: ${signResult}`);
+        }
+        if ('Err' in signResult) {
+            throw new Error(`Failed to sign message: ${signResult.Err}`);
+        }
+        const signature = signResult.Ok.signature_hex;
+        return signature;
+    }
+
     /**
      * Get the deposit address for a user from the ICP ledger canister.
      * @param identifiedActor - The identified ICP ledger actor.

@@ -17,6 +17,8 @@ import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import { reverse_proxy_url } from "../../config/config";
+import AuthState from "../../state/AuthState";
 
 interface PackageLocation {
   path: string;
@@ -129,19 +131,17 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   useEffect(() => {
     if (!canisterId) {
-      navigate("/app/new");
+      navigate("/dashboard/new");
       return;
     }
   }, [canisterId]);
 
   useEffect(() => {
     const loadRepos = async () => {
-      const token = getGithubToken();
-      if (!token) {
-        console.log(`Not authenticated.`);
-        await github.authenticate();
-      }
+      console.log(`Loading repositories...`);
+
       const repos = await github.listRepositories();
+      console.log(`Repositories loaded:`, repos);
       setRepos(repos);
     };
     loadRepos();
@@ -149,13 +149,26 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   const loadBranches = async (repo: string) => {
     try {
-      const response = await github.request(`/repos/${repo}/branches`);
+      const jwt = AuthState.getInstance().getAccessToken();
+      if (!jwt) {
+        throw new Error("No access token found. Please login again.");
+      }
+      const response = await fetch(
+        `${reverse_proxy_url}/github/list_branches`,
+        {
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+            repo: repo,
+          },
+        }
+      );
 
+      const data = await response.json();
       setRepoStates((prev) => ({
         ...prev,
         [repo]: {
           ...(prev[repo] || {}), // Preserve existing state if any
-          branches: response,
+          branches: data,
           selectedBranch: "",
           selectedPath: "",
           packageLocations: [],
@@ -171,19 +184,22 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   const findPackageJsonLocations = async (repo: string, branch: string) => {
     try {
-      const response = await github.request(
-        `/repos/${repo}/git/trees/${branch}?recursive=1`
-      );
-      const locations = response.tree
-        .filter((item: any) => item.path.endsWith("package.json"))
-        .map((item: any) => {
-          const path = item.path.replace("/package.json", "");
-          // If package.json is in root, use "." as the path
-          return {
-            path: path === "package.json" ? "." : path,
-            hasPackageJson: true,
-          };
-        });
+      const jwt = AuthState.getInstance().getAccessToken();
+      if (!jwt) {
+        throw new Error("No access token found. Please login again.");
+      }
+      const response = await fetch(`${reverse_proxy_url}/github/tree`, {
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+          repo: repo,
+          branch: branch,
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch tree");
+      }
+
+      const locations = await response.json();
 
       setRepoStates((prev) => {
         const newState = {
@@ -248,16 +264,16 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
       setIsDispatched(true);
 
-      // Update workflow step
-      const workflowContent = generateWorkflowTemplate(
-        repoStates[repo].selectedPath,
-        repoStates[repo].selectedBranch
-      );
+      // // Update workflow step
+      // const workflowContent = generateWorkflowTemplate(
+      //   repoStates[repo].selectedPath,
+      //   repoStates[repo].selectedBranch
+      // );
 
       await github.createWorkflow(
         repo,
-        workflowContent,
-        repoStates[repo].selectedBranch
+        repoStates[repo].selectedBranch,
+        repoStates[repo].selectedPath
       );
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -295,6 +311,9 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       const zipBlob = await github.downloadArtifact(
         artifact.archive_download_url
       );
+
+      console.log(`Zip blob:`, zipBlob);
+      console.log(`Zip blob:`, zipBlob.size);
       const zipFile = new File([zipBlob], "build.zip", {
         type: "application/zip",
       });
@@ -302,6 +321,11 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       updateStepStatus(repo, "artifact", "completed");
       updateStepStatus(repo, "deploy", "in-progress");
 
+      console.log(`Workflow run details:`, {
+        zipFile,
+        canisterId,
+        workflowRunDetails,
+      });
       // Deploy to canister
       const fileUploadApi = new FileUploadApi();
       const result = await fileUploadApi.uploadFromZip(
@@ -329,7 +353,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
       // Navigate to canister after a short delay
       setTimeout(() => {
-        navigate(`/app/canister/${canisterId}`); // navigate to canister page
+        navigate(`/dashboard/canister/${canisterId}`); // navigate to canister page
       }, 2000);
     } catch (error) {
       console.error("Deploy failed:", error);

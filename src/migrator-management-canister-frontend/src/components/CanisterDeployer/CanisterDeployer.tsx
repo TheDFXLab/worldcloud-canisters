@@ -17,10 +17,10 @@ import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import SecurityIcon from "@mui/icons-material/Security";
 import SpeedIcon from "@mui/icons-material/Speed";
 import LanguageIcon from "@mui/icons-material/Language";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 
 import "./CanisterDeployer.css";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import { decodeError } from "../../utility/errors";
 
 interface CanisterDeployerProps {}
 
@@ -91,7 +91,7 @@ function CanisterDeployer({}: CanisterDeployerProps) {
         });
 
         setShowToaster(true);
-        navigate("/app/billing");
+        navigate("/dashboard/billing");
         return;
       }
       setIsLoadingProgress(true);
@@ -135,7 +135,7 @@ function CanisterDeployer({}: CanisterDeployerProps) {
         getSubscription();
 
         // Navigate to publishing page
-        navigate(`/app/deploy/${result?.message as string}`);
+        navigate(`/dashboard/deploy/${result?.message as string}`);
       } else {
         setStatus(`Error: ${result?.message}`);
       }
@@ -222,7 +222,7 @@ function CanisterDeployer({}: CanisterDeployerProps) {
                   status.includes("Error") ? "error" : "success"
                 }`}
               >
-                {status}
+                {decodeError(status)?.message}
               </div>
             )}
           </div>

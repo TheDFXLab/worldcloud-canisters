@@ -8,10 +8,7 @@ import { Tooltip, LinearProgress } from "@mui/material";
 import UpgradeIcon from "@mui/icons-material/Upgrade";
 
 import { fromE8sStable } from "../../../utility/e8s";
-import {
-  Subscription,
-  Tier,
-} from "../../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { Tier } from "../../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import "./Subbed.css";
 import "../BillingPage.css";
 import { SubscriptionData } from "../../../context/SubscriptionContext/SubscriptionContext";
@@ -120,7 +117,7 @@ export default function Subbed({
               {subscription.canisters.map((canister, index) => (
                 <div key={index} className="canister-item">
                   <MemoryIcon className="canister-icon" />
-                  <code className="canister-id">{canister}</code>
+                  <code className="canister-id">{canister.toString()}</code>
                 </div>
               ))}
             </div>

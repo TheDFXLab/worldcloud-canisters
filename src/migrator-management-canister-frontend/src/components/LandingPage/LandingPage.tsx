@@ -11,7 +11,7 @@ function LandingPage() {
   const [lastScrollY, setLastScrollY] = useState(0); // handle navbar visibility on scroll
   const { logo } = useTheme();
   const handleLaunchApp = () => {
-    navigate("/app");
+    navigate("/dashboard");
   };
 
   useEffect(() => {
@@ -217,7 +217,7 @@ function LandingPage() {
               <a href="#how-it-works">How It Works</a>
               <a href="#pricing">Pricing</a>
               {/* <a href="#docs">Documentation</a> */}
-              <a href="/app" className="action-button">
+              <a href="/dashboard" className="action-button">
                 Launch App
               </a>
             </div>
