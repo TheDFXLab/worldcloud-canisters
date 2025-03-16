@@ -23,6 +23,7 @@ import { useConfirmationModal } from "../../context/ConfirmationModalContext/Con
 import UpgradeIcon from "@mui/icons-material/Upgrade";
 import NonSubbed from "./NonSubbed/NonSubbed";
 import Subbed from "./Subbed/Subbed";
+import { usePricing } from "../../context/PricingContext/PricingContext";
 
 const BillingPage: React.FC = () => {
   /** Hooks */
@@ -34,12 +35,14 @@ const BillingPage: React.FC = () => {
   const { summon, destroy } = useLoaderOverlay();
   const {
     subscription,
-    tiers,
+    // tiers,
     isLoadingSub,
     isLoadingTiers,
     subscribe,
     getSubscription,
   } = useSubscription();
+
+  const { tiers } = usePricing();
 
   /** State */
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);

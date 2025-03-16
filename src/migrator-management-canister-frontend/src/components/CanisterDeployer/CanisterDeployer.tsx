@@ -35,7 +35,6 @@ function CanisterDeployer({}: CanisterDeployerProps) {
   const { setIsLoadingProgress, setIsEnded } = useProgress();
   const { agent } = useHttpAgent();
   const {
-    tiers,
     subscription,
     isLoadingSub,
     isLoadingTiers,
