@@ -155,7 +155,7 @@ shared (deployMsg) actor class CanisterManager() = this {
     return await subscription_manager.create_subscription(msg.caller, tier_id);
   };
 
-  public shared (msg) func get_tiers() : async [Types.Tier] {
+  public func get_tiers() : async [Types.Tier] {
     return subscription_manager.tiers_list;
   };
 
