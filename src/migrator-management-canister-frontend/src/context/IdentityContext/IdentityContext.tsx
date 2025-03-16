@@ -19,6 +19,7 @@ import { clearUserData } from "../../utility/cleanup";
 import { useQueryClient } from "@tanstack/react-query";
 import { isLoggedOutPrincipal } from "../../utility/identity";
 import AuthApi from "../../api/auth/AuthApi";
+import { useLoaderOverlay } from "../LoaderOverlayContext/LoaderOverlayContext";
 
 interface IdentityProviderProps {
   children: ReactNode;
@@ -73,6 +74,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
   const { fetchHttpAgent, clearHttpAgent, agent } = useHttpAgent();
   const queryClient = useQueryClient();
 
+  const { setMessage } = useLoaderOverlay();
   const [isConnected, setIsConnected] = useState(() => {
     // Check if user was previously connected
     const stored = localStorage.getItem("connectionStatus");
@@ -251,7 +253,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       );
 
       const authApi = new AuthApi();
-      await authApi.signIn(identity, agent);
+      await authApi.signIn(identity, agent, setMessage);
       setIdentity(identity);
       setIsConnected(true);
       return identity;

@@ -10,9 +10,11 @@ class AuthApi {
     constructor() { }
 
     // Performs challenge-response authentication with off-chain backend
-    public async signIn(identity: Identity, agent: HttpAgent) {
+    public async signIn(identity: Identity, agent: HttpAgent, setMessage: (message: string) => void) {
         try {
             const principal = identity.getPrincipal().toText();
+
+            setMessage("Requesting challenge message to sign...");
 
             // Request challenge message from off-chain
             const url = new URL('/auth/challenge', reverse_proxy_url);
@@ -32,6 +34,8 @@ class AuthApi {
             // Message to sign, optionally show to user
             const { message } = await challengeResponse.json();
 
+            setMessage("Ensuring secure sign in...");
+
             // Get identity's derivced public key from backend canister
             const mainApi = await MainApi.create(identity, agent);
             const publicKeyResult = await mainApi?.getPublicKey();
@@ -39,11 +43,15 @@ class AuthApi {
                 throw new Error(`Failed to get public key: ${publicKeyResult}`);
             }
 
+            setMessage("Signing message...");
+
             // Sign the message via backend canister
             const signatureHex = await mainApi?.signMessage(message);
             if (!signatureHex) {
                 throw new Error(`Failed to sign message: ${signatureHex}`);
             }
+
+            setMessage("Logging in...");
 
             // Create login URL
             const loginUrl = new URL('/auth/login', reverse_proxy_url);
