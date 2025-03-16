@@ -122,7 +122,7 @@ shared (deployMsg) actor class CanisterManager() = this {
       let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
 
       let message_hash : Blob = Blob.fromArray(SHA256.sha256(Blob.toArray(Text.encodeUtf8(message))));
-      ExperimentalCycles.add(25_000_000_000);
+      ExperimentalCycles.add(30_000_000_000);
       let { signature } = await IC.sign_with_ecdsa({
         message_hash;
         derivation_path = [caller];
