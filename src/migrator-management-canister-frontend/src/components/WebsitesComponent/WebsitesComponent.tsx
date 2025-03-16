@@ -58,7 +58,7 @@ const WebsitesComponent: React.FC = () => {
 
   const handleUpdate = (e: React.MouseEvent, canisterId: Principal) => {
     e.stopPropagation();
-    navigate(`/app/deploy/${canisterId}`);
+    navigate(`/dashboard/deploy/${canisterId}`);
   };
 
   useEffect(() => {
@@ -91,7 +91,7 @@ const WebsitesComponent: React.FC = () => {
                 key={deployment.canister_id.toText()}
                 className="website-card"
                 onClick={() =>
-                  navigate(`/app/canister/${deployment.canister_id}`)
+                  navigate(`/dashboard/canister/${deployment.canister_id}`)
                 }
               >
                 <div className="website-header">

@@ -39,7 +39,9 @@ export const AdminPanel = () => {
         <SecurityIcon className="unauthorized-icon" />
         <h2>Unauthorized Access</h2>
         <p>You don't have permission to access the admin panel.</p>
-        <button onClick={() => navigate("/app")}>Return to Dashboard</button>
+        <button onClick={() => navigate("/dashboard")}>
+          Return to Dashboard
+        </button>
       </div>
     );
   }

@@ -21,6 +21,7 @@ const GitHubCallback: React.FC = () => {
   const isInitiatingRef = useRef(false);
 
   useEffect(() => {
+    // Connect github step 3
     const pollForToken = async (deviceCode: string, interval: number) => {
       try {
         const data = await GithubApi.getInstance().requestAccessToken(
@@ -33,13 +34,11 @@ const GitHubCallback: React.FC = () => {
             () => pollForToken(deviceCode, interval),
             interval * 1000
           );
-        } else if (data.access_token) {
+        } else if (data.status) {
           // Success! Store the token and redirect
-          const github = GithubApi.getInstance();
-          github.setAccessToken(data.access_token);
 
           await refreshGithubUser();
-          navigate("/app/settings", { replace: true });
+          navigate("/dashboard/settings", { replace: true });
         } else {
           setError("Authentication failed");
         }
@@ -52,6 +51,7 @@ const GitHubCallback: React.FC = () => {
       }
     };
 
+    // Connect github step 2
     const initiateDeviceFlow = async () => {
       if (initialized.current || isInitiatingRef.current) return;
       isInitiatingRef.current = true;

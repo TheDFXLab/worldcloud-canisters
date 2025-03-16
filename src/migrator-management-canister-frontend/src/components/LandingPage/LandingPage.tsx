@@ -8,9 +8,10 @@ function LandingPage() {
   const navigate = useNavigate();
   const mouseTrailRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0); // handle navbar visibility on scroll
   const { logo } = useTheme();
   const handleLaunchApp = () => {
-    navigate("/app");
+    navigate("/dashboard");
   };
 
   useEffect(() => {
@@ -147,6 +148,42 @@ function LandingPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMenuOpen]);
 
+  useEffect(() => {
+    const controlNavbar = () => {
+      const navContainer = document.querySelector(".nav-container");
+      if (!navContainer) return;
+
+      if (window.scrollY > lastScrollY) {
+        // scrolling down
+        navContainer.classList.add("nav-hidden");
+        navContainer.classList.remove("nav-visible");
+      } else {
+        // scrolling up
+        navContainer.classList.add("nav-visible");
+        navContainer.classList.remove("nav-hidden");
+      }
+
+      setLastScrollY(window.scrollY);
+    };
+
+    // Add some debouncing to avoid too many updates
+    let timeoutId: NodeJS.Timeout;
+    const handleScroll = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(controlNavbar, 200);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [lastScrollY]);
+
   return (
     <div id="main" className="landing-page">
       <div className="nav-container">
@@ -180,7 +217,7 @@ function LandingPage() {
               <a href="#how-it-works">How It Works</a>
               <a href="#pricing">Pricing</a>
               {/* <a href="#docs">Documentation</a> */}
-              <a href="/app" className="action-button">
+              <a href="/dashboard" className="action-button">
                 Launch App
               </a>
             </div>

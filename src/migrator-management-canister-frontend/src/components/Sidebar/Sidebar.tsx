@@ -15,6 +15,7 @@ import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import "./Sidebar.css";
 import { useEffect } from "react";
 import { useAdmin } from "../../context/AdminContext/AdminContext";
+import { useGithub } from "../../context/GithubContext/GithubContext";
 
 export type MenuItem =
   | "publish"
@@ -28,6 +29,7 @@ export type MenuItem =
 function Sidebar() {
   const { isAdmin } = useAdmin();
   const { disconnect } = useIdentity();
+  const { setGithubUser } = useGithub();
   const { activeTab, isMobileMenuOpen, setIsMobileMenuOpen, setActiveTab } =
     useSideBar();
   const navigate = useNavigate();
@@ -35,27 +37,32 @@ function Sidebar() {
   const handleMenuClick = (menuItem: MenuItem) => {
     switch (menuItem) {
       case "billing":
-        navigate("/app/billing");
+        navigate("/dashboard/billing");
         break;
       case "settings":
-        navigate("/app/settings");
+        navigate("/dashboard/settings");
         break;
       case "home":
-        navigate("/app");
+        navigate("/dashboard");
         break;
       case "publish":
-        navigate("/app/new");
+        navigate("/dashboard/new");
         break;
       case "websites":
-        navigate("/app/websites");
+        navigate("/dashboard/websites");
         break;
       case "admin":
         if (isAdmin) {
-          navigate("/app/admin");
+          navigate("/dashboard/admin");
         }
         break;
     }
     setActiveTab(menuItem);
+  };
+
+  const handleLogout = () => {
+    disconnect();
+    setGithubUser(null);
   };
 
   return (
@@ -118,7 +125,7 @@ function Sidebar() {
               className="nav-item logout"
               text="Logout"
               IconComponent={LogoutIcon}
-              onClickIcon={() => disconnect()}
+              onClickIcon={() => handleLogout()}
             />
           </div>
         </nav>

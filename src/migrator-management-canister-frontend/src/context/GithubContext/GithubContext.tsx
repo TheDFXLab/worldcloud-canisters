@@ -8,6 +8,8 @@ import {
 } from "react";
 import { GithubApi } from "../../api/github/GithubApi";
 import { environment } from "../../config/config";
+import AuthState from "../../state/AuthState";
+import { useIdentity } from "../IdentityContext/IdentityContext";
 
 interface GithubUser {
   login: string;
@@ -35,22 +37,22 @@ export function GithubProvider({ children }: GithubProviderProps) {
   const [isGithubConnected, setIsGithubConnected] = useState(false);
   const [githubUser, setGithubUser] = useState<GithubUser | null>(null);
 
+  const { identity } = useIdentity();
+
   const refreshGithubUser = useCallback(async () => {
-    const githubApi = GithubApi.getInstance();
-    const token = githubApi.token;
-
-    if (token) {
+    const jwt = AuthState.getInstance().getAccessToken();
+    if (jwt) {
       try {
-        const response = await fetch("https://api.github.com/user", {
-          headers: {
-            Authorization: `token ${token}`,
-            Accept: "application/json",
-          },
-        });
+        console.log(`Getting github user data with jwt`, jwt);
 
-        if (response.ok) {
-          const userData = await response.json();
-          setGithubUser(userData);
+        const githubApi = GithubApi.getInstance();
+        const data = await githubApi.getUser();
+
+        if (!data) {
+          return;
+        }
+        if (data) {
+          setGithubUser(data);
           setIsGithubConnected(true);
         } else {
           setIsGithubConnected(false);
@@ -69,8 +71,9 @@ export function GithubProvider({ children }: GithubProviderProps) {
   }, []);
 
   useEffect(() => {
+    if (!identity) return;
     refreshGithubUser();
-  }, []);
+  }, [identity]);
 
   useEffect(() => {
     const checkRateLimit = async () => {

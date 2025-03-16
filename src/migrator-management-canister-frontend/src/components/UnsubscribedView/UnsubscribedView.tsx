@@ -18,7 +18,7 @@ const UnsubscribedView: React.FC = () => {
   }, []);
 
   const handleNavigateToBilling = () => {
-    navigate("/app/billing");
+    navigate("/dashboard/billing");
   };
 
   return (
