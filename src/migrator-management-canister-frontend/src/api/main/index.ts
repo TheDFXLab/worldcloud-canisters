@@ -57,6 +57,11 @@ class MainApi {
         }
     }
 
+    async get_all_subscriptions() {
+        const subscriptions = await this.actor?.get_all_subscriptions();
+        return subscriptions;
+    }
+
     // Get identity's derived public key
     async getPublicKey() {
         const publicKeyResult = await this.actor?.public_key();

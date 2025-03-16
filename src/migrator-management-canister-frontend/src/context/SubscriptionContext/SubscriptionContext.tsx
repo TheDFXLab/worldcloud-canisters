@@ -140,7 +140,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   let queryNameTiersList = "tiersList";
   const { data: tiers = false, isLoading: isLoadingTiers } = useQuery({
-    queryKey: [queryNameTiersList, identity?.getPrincipal().toText()],
+    queryKey: [queryNameTiersList],
     queryFn: async () => {
       try {
         const res = await getTiersList();
@@ -148,16 +148,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           return null;
         }
 
-        if (!identity) {
-          console.log("No identity found");
-          return null;
-        }
-
-        // save to local storage
+        // save to local storage - simplified
         const storageData = {
           status: res,
           timestamp: Date.now(),
-          principal: identity.getPrincipal().toText(),
         };
 
         localStorage.setItem(queryNameTiersList, JSON.stringify(storageData));
@@ -174,23 +168,23 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         return null;
       }
 
-      const { status, timestamp, principal } = JSON.parse(stored);
+      const parsedData = JSON.parse(stored);
+      const { status, timestamp } = parsedData;
+
+      // Check if data is expired
       const isExpired = Date.now() - timestamp > VERIFICATION_INTERVAL;
       if (isExpired) {
+        console.log("Tiers data expired");
         localStorage.removeItem(queryNameTiersList);
         return false;
       }
 
-      if (identity && principal !== identity.getPrincipal().toText()) {
-        localStorage.removeItem(queryNameTiersList);
-        return false;
-      }
       return status;
     },
     staleTime: 0,
     refetchInterval: VERIFICATION_INTERVAL,
     refetchOnMount: true,
-    enabled: !!identity && !!agent,
+    enabled: true,
   });
 
   // Function to trigger manual refetch
@@ -244,13 +238,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const getTiersList = async () => {
     try {
-      if (!agent) {
-        throw new Error("Agent not found");
-      }
-      console.log(`fetching tiers by`, identity?.getPrincipal().toText());
-      console.log(`fetching tiers`, agent.config);
       const subscriptionApi = new SubscriptionApi();
-      const tiers = await subscriptionApi.getTiersList(identity, agent);
+      const tiers = await subscriptionApi.getTiersList(identity);
       if (!tiers) {
         throw new Error("Failed to get tiers");
       }

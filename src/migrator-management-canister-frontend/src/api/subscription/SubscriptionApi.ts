@@ -1,6 +1,7 @@
 import { HttpAgent, Identity } from "@dfinity/agent";
 import MainApi from "../main";
 import { Subscription } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { http_host } from "../../config/config";
 
 export interface SubscribeResponse {
     status: boolean;
@@ -12,8 +13,13 @@ class SubscriptionApi {
     constructor() {
     }
 
-    async getTiersList(identity: Identity | null, agent: HttpAgent) {
-        const mainApi = await MainApi.create(identity, agent);
+    async getTiersList(identity: Identity | null, agent?: HttpAgent) {
+        const _agent = agent || await HttpAgent.create({ host: http_host });
+
+        if (!_agent) {
+            throw new Error("Failed to get agent");
+        }
+        const mainApi = await MainApi.create(identity, _agent);
         if (!mainApi) {
             throw new Error("Failed to create main api");
         }

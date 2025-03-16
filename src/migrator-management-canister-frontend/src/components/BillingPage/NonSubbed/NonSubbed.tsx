@@ -7,14 +7,12 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 import { Tooltip } from "@mui/material";
 import { fromE8sStable } from "../../../utility/e8s";
-import {
-  Subscription,
-  Tier,
-} from "../../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { Tier } from "../../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import "../BillingPage.css";
 import { SubscriptionData } from "../../../context/SubscriptionContext/SubscriptionContext";
 
 interface NonSubbedProps {
+  hideButtons?: boolean;
   subscription: SubscriptionData | null;
   tiers: Tier[] | null;
   handleSelectPlan: (tierId: number) => void;
@@ -28,6 +26,7 @@ const tierIcons = [
 ];
 
 export default function NonSubbed({
+  hideButtons,
   subscription,
   tiers,
   handleSelectPlan,
@@ -92,22 +91,25 @@ export default function NonSubbed({
                     </li>
                   ))}
                 </ul>
-                <button
-                  className="select-plan-btn"
-                  onClick={() => handleSelectPlan(Number(tier.id))}
-                  disabled={
-                    subscription
-                      ? Number(subscription.tier_id) === Number(tier.id)
-                      : false
-                  }
-                >
-                  {subscription &&
-                  Number(subscription.tier_id) === Number(tier.id)
-                    ? "Current Plan"
-                    : fromE8sStable(tier.price.e8s) === 0
-                    ? "Get Started"
-                    : "Upgrade Now"}
-                </button>
+
+                {!hideButtons && (
+                  <button
+                    className="select-plan-btn"
+                    onClick={() => handleSelectPlan(Number(tier.id))}
+                    disabled={
+                      subscription
+                        ? Number(subscription.tier_id) === Number(tier.id)
+                        : false
+                    }
+                  >
+                    {subscription &&
+                    Number(subscription.tier_id) === Number(tier.id)
+                      ? "Current Plan"
+                      : fromE8sStable(tier.price.e8s) === 0
+                      ? "Get Started"
+                      : "Upgrade Now"}
+                  </button>
+                )}
               </div>
             </div>
           ))}

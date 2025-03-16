@@ -10,6 +10,7 @@ import AdminApi from "../../api/admin/AdminApi";
 import { useIdentity } from "../IdentityContext/IdentityContext";
 import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 import { useQuery } from "@tanstack/react-query";
+import MainApi from "../../api/main";
 
 interface AdminContextType {
   isAdmin: boolean;
@@ -94,15 +95,18 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       agent
     );
 
+    const mainApi = await MainApi.create(identity, agent);
+    const allSubscriptions = await mainApi?.get_all_subscriptions();
+    console.log("All subscriptions", allSubscriptions);
+
     return isAdmin;
   };
 
   useEffect(() => {
     if (!identity || !agent) {
-      console.log("No identity or agent");
+      console.log("No identity or agent has admin", identity, agent);
       return;
     }
-    console.log("Checking admin role");
     hasAdminRole();
   }, [identity, agent]);
 
