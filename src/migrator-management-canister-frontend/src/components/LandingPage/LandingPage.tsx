@@ -3,6 +3,13 @@ import "./LandingPage.css";
 import { useEffect, useRef, useState } from "react";
 import Footer from "../Footer/Footer";
 import { useTheme } from "../../context/ThemeContext/ThemeContext";
+import GitHubIcon from "@mui/icons-material/GitHub";
+import reactLogo from "../../../assets/images/reactLogo.png";
+import vueLogo from "../../../assets/images/vueLogo.png";
+import angularLogo from "../../../assets/images/angularLogo.png";
+import { usePricing } from "../../context/PricingContext/PricingContext";
+import { Spinner } from "react-bootstrap";
+import NonSubbed from "../BillingPage/NonSubbed/NonSubbed";
 
 function LandingPage() {
   const navigate = useNavigate();
@@ -13,6 +20,7 @@ function LandingPage() {
   const handleLaunchApp = () => {
     navigate("/dashboard");
   };
+  const { tiers } = usePricing();
 
   useEffect(() => {
     // Mouse trail effect
@@ -272,6 +280,17 @@ function LandingPage() {
         </div>
       </section>
 
+      <section>
+        <div className="tech-stack">
+          <div className="icon-container">
+            <GitHubIcon className="icon" />
+            <img className="icon" src={reactLogo}></img>
+            <img className="icon" src={vueLogo}></img>
+            <img className="icon" src={angularLogo}></img>
+          </div>
+        </div>
+      </section>
+
       <section id="how-it-works" className="how-it-works">
         <div className="container">
           <h2>How It Works</h2>
@@ -294,6 +313,23 @@ function LandingPage() {
               <p>Launch your website canister with one click</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section id="pricing" className="pricing-container">
+        <h2>Pricing</h2>
+        <div>
+          {tiers ? (
+            <NonSubbed
+              hideButtons={true}
+              subscription={null}
+              tiers={tiers}
+              handleSelectPlan={() => {}}
+              pricingState={[false, () => {}]}
+            />
+          ) : (
+            <Spinner />
+          )}
         </div>
       </section>
 
