@@ -5,12 +5,12 @@ import Footer from "../Footer/Footer";
 import { useTheme } from "../../context/ThemeContext/ThemeContext";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import reactLogo from "../../../assets/images/reactLogo.svg";
-// import reactLogoDark from "../../../assets/images/reactLogo.png";
 import vueLogo from "../../../assets/images/vueLogo.png";
 import angularLogo from "../../../assets/images/angularLogo.png";
 import { usePricing } from "../../context/PricingContext/PricingContext";
 import { Spinner } from "react-bootstrap";
 import NonSubbed from "../BillingPage/NonSubbed/NonSubbed";
+import SEO from "../SEO/SEO";
 
 function LandingPage() {
   const navigate = useNavigate();
@@ -194,8 +194,30 @@ function LandingPage() {
   }, [lastScrollY]);
 
   return (
-    <div id="main" className="landing-page">
-      <div className="nav-container">
+    <main id="main" className="landing-page">
+      <SEO
+        title="WORLDCLOUD - Seamless Website Migration to Internet Computer"
+        description="Deploy and manage your websites to the Internet Computer with a click of a button. Experience the future of web hosting with unparalleled security and scalability."
+        ogTitle="WORLDCLOUD - Seamless Website Migration to Internet Computer"
+        ogDescription="Deploy and manage your websites to the Internet Computer with unparalleled security and scalability."
+        twitterTitle="WORLDCLOUD - Seamless Website Migration"
+        twitterDescription="Deploy websites to Internet Computer with one click."
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "WORLDCLOUD",
+          applicationCategory: "DeveloperApplication",
+          description:
+            "Deploy and manage your websites to the Internet Computer with a click of a button.",
+          offers: {
+            "@type": "Offer",
+            price: "0",
+            priceCurrency: "USD",
+          },
+        }}
+      />
+
+      <header className="nav-container">
         <nav className="navbar">
           <button
             className="hamburger"
@@ -207,7 +229,7 @@ function LandingPage() {
           <div className="container">
             <div className="logo-container">
               <div className="logo">
-                <img src={logo}></img>
+                <img src={logo} alt="WORLDCLOUD Logo"></img>
 
                 <a href="#main">
                   <span className="logo-text-parent">
@@ -233,16 +255,16 @@ function LandingPage() {
             </div>
           </div>
         </nav>
-      </div>
+      </header>
 
-      <section className="hero">
+      <section className="hero" aria-labelledby="hero-heading">
         <div className="hero-shapes">
           <div className="hero-shape"></div>
           <div className="hero-shape"></div>
           <div className="hero-shape"></div>
         </div>
         <div className="container">
-          <h1>Seamless Website Migration</h1>
+          <h1 id="hero-heading">Seamless Website Migration</h1>
           <p>
             Deploy and manage your websites to the Internet Computer with a
             click of a button. Experience the future of web hosting with
@@ -254,51 +276,60 @@ function LandingPage() {
         </div>
       </section>
 
-      <section id="features" className="features">
+      <section
+        id="features"
+        className="features"
+        aria-labelledby="features-heading"
+      >
         <div className="container">
           <div className="features-shapes">
             <div className="feature-shape"></div>
             <div className="feature-shape"></div>
             <div className="feature-shape"></div>
           </div>
-          <h2>Why use WORLDCLOUD?</h2>
+          <h2 id="features-heading">Why use WORLDCLOUD?</h2>
           <div className="features-grid">
-            <div className="feature-card">
+            <article className="feature-card">
               <h3>Simple Deployment</h3>
               <p>Deploy canisters with just a few clicks</p>
-            </div>
-            <div className="feature-card">
+            </article>
+            <article className="feature-card">
               <h3>Secure Migration</h3>
               <p>Enterprise-grade security for your assets</p>
-            </div>
-            <div className="feature-card">
+            </article>
+            <article className="feature-card">
               <h3>Cost-effective</h3>
               <p>
                 Website deployment to the Internet Computer for a fraction of
                 the cost of traditional hosting
               </p>
-            </div>
+            </article>
           </div>
         </div>
       </section>
 
-      <section>
+      <section aria-label="Supported Technologies">
         <div className="tech-stack">
           <div className="icon-container">
-            <GitHubIcon className="icon" />
+            <GitHubIcon className="icon" aria-label="GitHub" />
             <img
               className="icon"
               src={isDarkMode ? reactLogo : reactLogo}
+              alt="React Logo"
             ></img>
-            <img className="icon" src={vueLogo}></img>
-            <img className="icon" src={angularLogo}></img>
+            <img className="icon" src={vueLogo} alt="Vue.js Logo"></img>
+            <img className="icon" src={angularLogo} alt="Angular Logo"></img>
           </div>
         </div>
       </section>
 
-      <section id="how-it-works" className="how-it-works">
+      <section
+        id="how-it-works"
+        className="how-it-works"
+        aria-labelledby="how-it-works-heading"
+      >
         <div className="container">
-          <h2>How It Works</h2>
+          <h2 id="how-it-works-heading">How It Works</h2>
           <div className="steps">
             <div className="step">
               <div className="step-number">1</div>
@@ -323,8 +354,12 @@ function LandingPage() {
         </div>
       </section>
 
-      <section id="pricing" className="pricing-container">
-        <h2>Pricing</h2>
+      <section
+        id="pricing"
+        className="pricing-container"
+        aria-labelledby="pricing-heading"
+      >
+        <h2 id="pricing-heading">Pricing</h2>
         <div>
           {tiers ? (
             <NonSubbed
@@ -335,19 +370,19 @@ function LandingPage() {
               pricingState={[false, () => {}]}
             />
           ) : (
-            <Spinner />
+            <Spinner aria-label="Loading pricing information" />
           )}
         </div>
       </section>
 
-      <section id="beta">
+      <section id="beta" aria-labelledby="beta-heading">
         <div className="container">
           <div className="hero-shapes">
             <div className="hero-shape"></div>
             <div className="hero-shape"></div>
             <div className="hero-shape"></div>
           </div>
-          <h2>Try Our Beta</h2>
+          <h2 id="beta-heading">Try Our Beta</h2>
           <p className="section-description">
             Experience the future of canister deployment. Join our beta testing
             program.
@@ -357,7 +392,7 @@ function LandingPage() {
       </section>
 
       <Footer />
-    </div>
+    </main>
   );
 }
 
