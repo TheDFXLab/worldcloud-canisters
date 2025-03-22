@@ -22,11 +22,11 @@ const SEO = ({
   ogTitle,
   ogDescription,
   ogType = "website",
-  ogUrl = "https://worldcloud.io",
+  ogUrl = "https://worldcloud.app",
   twitterCard = "summary_large_image",
   twitterTitle,
   twitterDescription,
-  canonicalUrl = "https://worldcloud.io",
+  canonicalUrl = "https://worldcloud.app",
   schema,
 }: SEOProps) => {
   // Default schema for a SaaS product
