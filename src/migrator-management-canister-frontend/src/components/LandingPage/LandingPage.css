@@ -239,6 +239,17 @@ body {
   color: var(--logo-text-quinary);
 }
 
+.beta-text {
+  color: var(--logo-text-quinary);
+  font-weight: 400;
+  font-size: var(--font-size-2xs);
+  margin-left: 0.3rem;
+  margin-bottom: 0.3rem;
+  border: 1px solid var(--logo-text-quinary);
+  padding: 0rem 0.2rem;
+  border-radius: 5px;
+}
+
 .logo img {
   height: 50px;
   width: auto;
@@ -491,6 +502,7 @@ body {
   position: relative;
   overflow: hidden;
   padding-bottom: 5rem;
+  padding-top: 4rem;
 }
 
 .hero::before {
@@ -591,6 +603,10 @@ body {
 }
 
 @media (max-width: 455px) {
+  .hero {
+    padding-top: 4rem;
+  }
+
   .hero-cta {
     padding: 0.5rem 1rem;
     font-size: var(--font-size-lg);
@@ -1105,6 +1121,15 @@ h2 {
   transition: text-shadow 0.3s ease;
 }
 
+@media (max-width: 455px) {
+  .hero .container h1 {
+    /* font-size: var(--font-size-2lg); */
+  }
+  .hero .container p {
+    /* font-size: var(--font-size-xs); */
+  }
+}
+
 .hero .container:hover h1 {
   text-shadow: 0 0 30px rgba(99, 102, 241, 0.3),
     0 0 10px rgba(255, 255, 255, 0.2);
@@ -1118,15 +1143,18 @@ h2 {
   .hero .container {
     opacity: 1;
   }
-  .hero .container p {
-    margin-top: 1rem;
-    font-size: var(--font-size-2lg);
-    text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
-  }
 
   .hero .container h1 {
     text-shadow: 0 0 30px rgba(99, 102, 241, 0.3),
       0 0 10px rgba(255, 255, 255, 0.2);
+    font-size: var(--font-size-2lg);
+  }
+
+  .hero .container p {
+    margin-top: 1rem;
+    font-size: var(--font-size-lg);
+
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
   }
 }
 

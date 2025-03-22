@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Footer from "../Footer/Footer";
 import { useTheme } from "../../context/ThemeContext/ThemeContext";
 import GitHubIcon from "@mui/icons-material/GitHub";
-import reactLogo from "../../../assets/images/reactLogo.png";
+import reactLogo from "../../../assets/images/reactLogo.svg";
+// import reactLogoDark from "../../../assets/images/reactLogo.png";
 import vueLogo from "../../../assets/images/vueLogo.png";
 import angularLogo from "../../../assets/images/angularLogo.png";
 import { usePricing } from "../../context/PricingContext/PricingContext";
@@ -16,7 +17,7 @@ function LandingPage() {
   const mouseTrailRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0); // handle navbar visibility on scroll
-  const { logo } = useTheme();
+  const { logo, isDarkMode } = useTheme();
   const handleLaunchApp = () => {
     navigate("/dashboard");
   };
@@ -215,6 +216,7 @@ function LandingPage() {
                     <span className="logo-text-child">cloud</span>
                     <span className="logo-text-child">{" )"}</span>
                     <span className="logo-text-child">{";"}</span>
+                    <span className="logo-text-child beta-text">{" beta"}</span>
                   </span>
                 </a>
               </div>
@@ -284,7 +286,10 @@ function LandingPage() {
         <div className="tech-stack">
           <div className="icon-container">
             <GitHubIcon className="icon" />
-            <img className="icon" src={reactLogo}></img>
+            <img
+              className="icon"
+              src={isDarkMode ? reactLogo : reactLogo}
+            ></img>
             <img className="icon" src={vueLogo}></img>
             <img className="icon" src={angularLogo}></img>
           </div>
@@ -304,7 +309,9 @@ function LandingPage() {
             <div className="step">
               <div className="step-number">2</div>
               <h3>Configure</h3>
-              <p>Build with GitHub or upload your static website files</p>
+              <p>
+                Build your frontend app with GitHub or upload your static files
+              </p>
             </div>
 
             <div className="step">
