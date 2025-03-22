@@ -126,7 +126,7 @@ shared (deployMsg) actor class CanisterManager() = this {
       let { signature } = await IC.sign_with_ecdsa({
         message_hash;
         derivation_path = [caller];
-        key_id = { curve = #secp256k1; name = "key_1" };
+        key_id = { curve = #secp256k1; name = "dfx_test_key" };
       });
 
       Debug.print("Signature: " # Hex.encode(Blob.toArray(signature)));
