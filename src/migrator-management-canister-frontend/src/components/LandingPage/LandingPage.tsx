@@ -196,19 +196,21 @@ function LandingPage() {
   return (
     <main id="main" className="landing-page">
       <SEO
-        title="WORLDCLOUD - Seamless Website Migration to Internet Computer"
-        description="Deploy and manage your websites to the Internet Computer with a click of a button. Experience the future of web hosting with unparalleled security and scalability."
-        ogTitle="WORLDCLOUD - Seamless Website Migration to Internet Computer"
-        ogDescription="Deploy and manage your websites to the Internet Computer with unparalleled security and scalability."
-        twitterTitle="WORLDCLOUD - Seamless Website Migration"
-        twitterDescription="Deploy websites to Internet Computer with one click."
+        title="Deploy Website to ICP - WORLDCLOUD Internet Computer Migration"
+        description="Deploy your website to the Internet Computer Protocol (ICP) with one click. WORLDCLOUD offers seamless website migration to ICP with enhanced security and scalability."
+        ogTitle="Deploy Website to ICP - WORLDCLOUD Migration Platform"
+        ogDescription="Deploy and migrate websites to Internet Computer Protocol (ICP) easily. One-click deployment with WORLDCLOUD."
+        twitterTitle="Deploy Website to ICP with WORLDCLOUD"
+        twitterDescription="One-click website deployment to Internet Computer Protocol (ICP)."
         schema={{
           "@context": "https://schema.org",
           "@type": "WebApplication",
           name: "WORLDCLOUD",
           applicationCategory: "DeveloperApplication",
           description:
-            "Deploy and manage your websites to the Internet Computer with a click of a button.",
+            "Deploy and migrate websites to the Internet Computer Protocol (ICP) with a click of a button.",
+          keywords:
+            "deploy website to ICP, Internet Computer Protocol, website migration, ICP hosting, ICP deployment",
           offers: {
             "@type": "Offer",
             price: "0",
@@ -264,11 +266,11 @@ function LandingPage() {
           <div className="hero-shape"></div>
         </div>
         <div className="container">
-          <h1 id="hero-heading">Seamless Website Migration</h1>
+          <h1 id="hero-heading">Deploy Website to ICP in One Click</h1>
           <p>
-            Deploy and manage your websites to the Internet Computer with a
-            click of a button. Experience the future of web hosting with
-            unparalleled security and scalability.
+            Deploy and migrate your websites to the Internet Computer Protocol
+            (ICP) with a click of a button. Experience the future of web hosting
+            with unparalleled security and scalability.
           </p>
           <a href="#beta" className="hero-cta">
             Get Started
