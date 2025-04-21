@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import "./Footer.css";
-import { getCanisterUrl } from "../../config/config";
 
 const Footer = () => {
   const currentDate = new Date().getFullYear();
