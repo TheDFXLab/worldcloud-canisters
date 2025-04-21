@@ -15,7 +15,7 @@ const Footer = () => {
           <p>
             © {currentDate} | Built by{" "}
             <a
-              href={getCanisterUrl("7kpjr-wiaaa-aaaam-aeeoa-cai", "ic")}
+              href="https://thedfxlab.com"
               target="_blank"
               rel="noopener noreferrer"
             >
