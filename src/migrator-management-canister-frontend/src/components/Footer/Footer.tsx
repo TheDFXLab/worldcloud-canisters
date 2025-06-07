@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import "./Footer.css";
-import { getCanisterUrl } from "../../config/config";
 
 const Footer = () => {
   const currentDate = new Date().getFullYear();
@@ -15,7 +14,7 @@ const Footer = () => {
           <p>
             © {currentDate} | Built by{" "}
             <a
-              href={getCanisterUrl("7kpjr-wiaaa-aaaam-aeeoa-cai", "ic")}
+              href="https://thedfxlab.com"
               target="_blank"
               rel="noopener noreferrer"
             >
