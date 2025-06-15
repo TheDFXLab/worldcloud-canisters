@@ -1,4 +1,7 @@
 import Cookies from "js-cookie";
+
+type AuthKey = "jwt" | "github_token"
+
 class AuthState {
     private static instance: AuthState;
 
@@ -12,20 +15,20 @@ class AuthState {
         return AuthState.instance;
     }
 
-    public getAccessToken() {
-        const token = Cookies.get("jwt");
+    public getAccessToken(key: AuthKey) {
+        const token = Cookies.get(key);
         if (!token) {
-            throw new Error("No access token found");
+            throw new Error("No access token found, in authstate");
         }
         return token;
     }
 
-    public setAccessToken(token: string) {
-        Cookies.set("jwt", token);
+    public setAccessToken(key: AuthKey, token: string) {
+        Cookies.set(key, token);
     }
 
-    public clearAccessToken() {
-        Cookies.remove("jwt");
+    public clearAccessToken(key: AuthKey) {
+        Cookies.remove(key);
     }
 }
 
