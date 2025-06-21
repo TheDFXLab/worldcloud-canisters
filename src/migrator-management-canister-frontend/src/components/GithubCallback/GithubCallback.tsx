@@ -5,11 +5,17 @@ import GitHubIcon from "@mui/icons-material/GitHub";
 import { useGithub } from "../../context/GithubContext/GithubContext";
 
 import "./GithubCallback.css";
+import AuthState from "../../state/AuthState";
+import { useIdentity } from "../../context/IdentityContext/IdentityContext";
+import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import { HttpAgent } from "@dfinity/agent";
 
 const GitHubCallback: React.FC = () => {
   /** Hooks */
   const navigate = useNavigate();
   const { refreshGithubUser } = useGithub();
+  const { identity, refreshIdentity } = useIdentity();
+  const { agent, fetchHttpAgent } = useHttpAgent();
 
   /** State */
   const [error, setError] = useState<string | null>(null);
@@ -21,22 +27,48 @@ const GitHubCallback: React.FC = () => {
   const isInitiatingRef = useRef(false);
 
   useEffect(() => {
+    console.log(`Refershing INDEINTTY 888********`);
+    // Always refresh identity and agent on mount
+    const doRefresh = async () => {
+      const refreshedIdentity = await refreshIdentity();
+      if (refreshedIdentity) {
+        await fetchHttpAgent(refreshedIdentity);
+        console.log(`Refershed allll()()()()()()()()()()()()()()()`);
+      }
+    };
+    doRefresh();
+  }, []);
+
+  useEffect(() => {
+    if (!identity || !agent) {
+      console.log(`identity ang agent not ssdet, waiting....`, {
+        identity,
+        agent,
+      });
+      return;
+    }
     // Connect github step 3
     const pollForToken = async (deviceCode: string, interval: number) => {
       try {
         const data = await GithubApi.getInstance().requestAccessToken(
-          deviceCode
+          deviceCode,
+          identity,
+          agent
         );
 
         if (data.error === "authorization_pending") {
+          console.log(`Continuing polling, authorization pending.`);
           // Continue polling
           pollTimeoutRef.current = setTimeout(
             () => pollForToken(deviceCode, interval),
             interval * 1000
           );
-        } else if (data.status) {
+        } else if (data.access_token) {
           // Success! Store the token and redirect
-
+          console.log(`Githu auth sucesss..`, data);
+          debugger;
+          const authStore = AuthState.getInstance();
+          authStore.setAccessToken("github_token", data);
           await refreshGithubUser();
           navigate("/dashboard/settings", { replace: true });
         } else {
@@ -56,14 +88,27 @@ const GitHubCallback: React.FC = () => {
       if (initialized.current || isInitiatingRef.current) return;
       isInitiatingRef.current = true;
 
+      console.log(`Identit: `, identity);
+      console.log(`agent: `, agent);
+      console.log(`httpagent: `, HttpAgent);
+      const http_agent = await fetchHttpAgent(identity);
+
+      if (!http_agent) {
+        console.error(`HTTP AGENT FAILED TO INIT`);
+        return;
+      }
       try {
-        const data = await GithubApi.getInstance().requestCode();
+        const data = await GithubApi.getInstance().requestCode(
+          identity,
+          http_agent
+        );
         initialized.current = true;
         setDeviceCode(data.device_code);
         setUserCode(data.user_code);
         setVerificationUri(data.verification_uri);
-
-        pollForToken(data.device_code, data.interval || 5);
+        console.log(`Requested code, device code: `, data.device_code);
+        debugger;
+        pollForToken(data.device_code, parseInt(data.interval) || 5);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Failed to initiate device flow"
@@ -80,7 +125,7 @@ const GitHubCallback: React.FC = () => {
         clearTimeout(pollTimeoutRef.current);
       }
     };
-  }, []);
+  }, [agent, identity]);
 
   if (error) {
     return <div className="error-message">Error: {error}</div>;

@@ -2,9 +2,53 @@ import { Principal } from "@dfinity/principal";
 import { createActor } from "../../../../declarations/migrator-management-canister-backend";
 import { ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
 import { _SERVICE, DepositReceipt, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
-import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
+import { backend_canister_id, githubClientId, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
 import { HttpAgentManager } from "../../agent/http_agent";
+
+import { parse_get_device_code_response, parse_github_query_response, RequestCodeResponse } from "../../utility/url";
+
+
+
+
+interface GithubWorkflowRunsResponse {
+    workflow_runs: GithubWorkflowRunPartial[];
+}
+
+interface GithubWorkflowArtifactResponse {
+    total_count: number;
+    artifacts: Artifact[];
+}
+
+
+export interface GithubWorkflowRunPartial {
+    id: string;
+    name: string;
+    status: string;
+    workflow_id: number;
+    head_branch: string;
+    run_number: number;
+    head_sha: string;
+    created_at: string;
+    path: string; // workflow file path
+}
+interface Artifact {
+    id: number;
+    name: string;
+    size_in_bytes: number;
+    archive_download_url: string;
+    workflow_run: Run;
+}
+
+interface Run {
+    id: number;
+    repository_id: number;
+    head_repository_id: number;
+    head_branch: string;
+    head_sha: string;
+}
+
+export type BackendActor = ActorSubclass<_SERVICE>;
 
 class MainApi {
     private static instance: MainApi | null = null;
@@ -25,6 +69,10 @@ class MainApi {
 
     static async create(identity: Identity | null, agent: HttpAgent) {
         try {
+
+            // if (!identity || !agent) {
+            //     throw new Error(`Identity and agent are requierd.`);
+            // }
             // Clear instance if identity has changed
             if (this.currentIdentity !== identity) {
                 this.instance = null;
@@ -248,6 +296,331 @@ class MainApi {
         }
     }
 
+    async auth_gh_request_code(): Promise<RequestCodeResponse> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            const request_code_result = await this.actor.auth_gh_request_device_code(githubClientId, "repo workflow");
+            console.log(`Request code result form http outcall:`, request_code_result);
+
+            const parsed = parse_get_device_code_response(request_code_result);
+            return parsed as RequestCodeResponse;
+
+        } catch (error) {
+            console.error(`MainApi: failed to request github oauth device code`, error);
+            throw error;
+        }
+    }
+
+    async auth_gh_request_access_token(device_code: string): Promise<any> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+
+            const grant_type = "urn:ietf:params:oauth:grant-type:device_code";
+            const request_code_result = await this.actor.auth_gh_request_access_token(githubClientId, device_code, grant_type);
+            console.log(`Request access token result form http outcall:`, request_code_result);
+
+            const parsed = parse_github_query_response(request_code_result);
+            return parsed;
+
+        } catch (error) {
+            console.error(`MainApi: failed to request github oauth device code`, error);
+            throw error;
+        }
+    }
+
+    async gh_get_user(access_token: string): Promise<any> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+
+            const response = await this.actor.gh_get_user([access_token]);
+            console.log(`Response:`, response)
+
+            const parsed = parse_github_query_response(response);
+            return parsed;
+        } catch (error) {
+            console.error(`MainApi: failed to request github oauth device code`, error);
+            throw error;
+        }
+    }
+
+    async gh_get_repositories(access_token: string): Promise<any> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+
+            const response = await this.actor.gh_get_user([access_token]);
+            console.log(`Response:`, response)
+
+            const parsed = parse_github_query_response(response);
+            return parsed;
+        } catch (error) {
+            console.error(`MainApi: failed to request github oauth device code`, error);
+            throw error;
+        }
+    }
+
+    async gh_get_branches(access_token: string, repo: string): Promise<any> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+
+            const response = await this.actor.gh_get_user([access_token]);
+            console.log(`Response:`, response)
+
+            const parsed = parse_github_query_response(response);
+            return parsed;
+        } catch (error) {
+            console.error(`MainApi: failed to request github oauth device code`, error);
+            throw error;
+        }
+    }
+
+    async gh_get_tree(access_token: string): Promise<any> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+
+            const response = await this.actor.gh_get_user([access_token]);
+            console.log(`Response:`, response)
+
+            const parsed = parse_github_query_response(response);
+            console.log(`parsed response`, parsed)
+
+            const locations = (parsed.tree as string[])
+                .filter((item: any) => item.path.endsWith("package.json"))
+                .map((item: any) => {
+                    const path = item.path.replace("/package.json", "");
+                    // If package.json is in root, use "." as the path
+                    return {
+                        path: path === "package.json" ? "." : path,
+                        hasPackageJson: true,
+                    };
+                });
+
+            return locations;
+        } catch (error) {
+            console.error(`MainApi: failed to request github oauth device code`, error);
+            throw error;
+        }
+    }
+
+    async gh_get_latest_workflow_run(access_token: string, repo_name: string): Promise<any> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+
+            const response = await this.actor.gh_get_workflows([access_token], repo_name);
+            console.log(`Response:`, response)
+
+            const workflows = parse_github_query_response(response);
+
+            if (!workflows || parseInt(workflows.total_count as string) === 0) {
+                return '0';
+            }
+
+            const deployWorkflow = (workflows.workflows as any).find((workflow: any) => workflow.name === 'Build and Deploy to ICP');
+
+            const workflowRuns = await this.gh_get_workflow(access_token, repo_name, deployWorkflow.id);
+
+            return workflowRuns && workflowRuns.workflow_runs.length > 0 ? workflowRuns.workflow_runs[0].id : '0';
+
+        } catch (error) {
+            console.error(`MainApi: failed to request github oauth device code`, error);
+            throw error;
+        }
+    }
+
+
+    async gh_get_workflow(access_token: string, repo_name: string, run_id: string): Promise<any> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+
+            const response = await this.actor.gh_get_workflow_run([access_token], repo_name, run_id);
+            console.log(`Response:`, response)
+
+            const workflow = parse_github_query_response(response);
+            return workflow;
+        } catch (error) {
+            console.error(`MainApi: failed to request github oauth device code`, error);
+            throw error;
+        }
+    }
+
+
+    async gh_get_workflows(access_token: string, previous_run_id: string, repo_name: string): Promise<any> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+
+            const response = await this.actor.gh_get_workflows([access_token], repo_name);
+            console.log(`Response:`, response)
+
+            // const parsed = parse_github_query_response(response);
+            const parsed = JSON.parse(response);
+            console.log(`Get workflows parsed: `, parsed)
+            const workflowRuns: GithubWorkflowRunsResponse = await this.gh_get_workflow(access_token, repo_name, parsed.id);
+
+            if (workflowRuns.workflow_runs.length === 0) {
+                console.log(`No workflow runs found`);
+                return null;
+            }
+
+            // Return if there are no new runs
+            if (workflowRuns.workflow_runs[0].id === previous_run_id) {
+                console.log(`No new runs found`);
+                return null;
+            }
+
+            let newRuns = [];
+            if (previous_run_id === '0') {
+                newRuns = workflowRuns.workflow_runs;
+            }
+            else {
+                // Find the index of the previous run (last run)
+                const previousIndex = workflowRuns.workflow_runs.findIndex(
+                    (run: any) => run.id === previous_run_id
+                );
+
+                // Return if there are no new runs
+                if (previousIndex === 0) {
+                    return null;
+                }
+
+                // New runs since previous run
+                newRuns = workflowRuns.workflow_runs.slice(0, previousIndex);
+            }
+
+
+
+            // Sort new runs chronologically
+            const inProgressRunsChronologicallySorted = newRuns.sort((a: any, b: any) => {
+                return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+            });
+
+
+            // Ensure relevant run
+            const relevantRun = inProgressRunsChronologicallySorted[0];
+            if (!relevantRun) {
+                return null;
+            }
+
+            if (relevantRun) {
+                if (relevantRun.status !== 'completed') {
+                    return null;
+                }
+
+                try {
+                    // Get artifacts for given run id
+                    const artifactsRes: GithubWorkflowArtifactResponse = await this.get_artifacts(
+                        `/repos/${repo_name}/actions/runs/${relevantRun.id}/artifacts`, github_token
+                    );
+
+                    if (artifactsRes && artifactsRes.artifacts) {
+                        // Find the artifact that matches the run id
+                        const targetArtifact: Artifact | undefined = artifactsRes.artifacts.find((artifact: any) => artifact.workflow_run.id === relevantRun.id);
+                        return { targetArtifact, run: relevantRun };
+                    }
+                } catch (error) {
+                    console.log(`Error getting artifacts for run ${relevantRun.id}:`, error);
+                    return null;
+                }
+
+
+            }
+            else {
+                return null;
+            }
+
+
+
+
+        } catch (error) {
+            console.error(`MainApi: failed to request github oauth device code`, error);
+            throw error;
+        }
+    }
+
+
+    async gh_get_artifact(access_token: string) {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+
+            const response = await this.actor.gh_download_artifact([access_token]);
+            console.log(`Response:`, response)
+
+            const parsed = parse_github_query_response(response);
+            return parsed;
+        } catch (error) {
+            console.error(`MainApi: failed to request github oauth device code`, error);
+            throw error;
+        }
+    }
+
+    async gh_create_workflow(access_token: string): Promise<any> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+
+            const response = await this.actor.gh_get_user([access_token]);
+            console.log(`Response:`, response)
+
+            const parsed = parse_github_query_response(response);
+            return parsed;
+        } catch (error) {
+            console.error(`MainApi: failed to request github oauth device code`, error);
+            throw error;
+        }
+    }
+
+    async gh_trigger_workflow(access_token: string): Promise<any> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+
+            const response = await this.actor.gh_get_user([access_token]);
+            console.log(`Response:`, response)
+
+            const parsed = parse_github_query_response(response);
+            return parsed;
+        } catch (error) {
+            console.error(`MainApi: failed to request github oauth device code`, error);
+            throw error;
+        }
+    }
+
+    async gh_download_artifact(access_token: string): Promise<any> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+
+            const response = await this.actor.gh_get_user([access_token]);
+            console.log(`Response:`, response)
+
+            const parsed = parse_github_query_response(response);
+            return parsed;
+        } catch (error) {
+            console.error(`MainApi: failed to request github oauth device code`, error);
+            throw error;
+        }
+    }
 
 }
 

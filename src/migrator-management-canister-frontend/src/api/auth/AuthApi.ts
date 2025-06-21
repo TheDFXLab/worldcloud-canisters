@@ -74,7 +74,7 @@ class AuthApi {
 
             // Set access token in cookies
             const authState = AuthState.getInstance();
-            authState.setAccessToken(data.token);
+            authState.setAccessToken("jwt", data.token);
             return data;
         } catch (error) {
             console.error("Error signing in:", error);
@@ -85,7 +85,7 @@ class AuthApi {
     // Clears access token from cookies
     async signOut() {
         const authState = AuthState.getInstance();
-        authState.clearAccessToken();
+        authState.clearAccessToken("jwt");
     }
 
 }

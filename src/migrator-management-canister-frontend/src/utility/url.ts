@@ -1,5 +1,3 @@
-
-
 export interface RequestCodeResponse {
     device_code: string;
     expires_in: string;
@@ -40,10 +38,10 @@ export function parse_github_query_response(raw: string) {
     const params = new URLSearchParams(queryString);
 
     // Convert to a plain object
-    const result: Record<string, string> = {};
-    for (const [key, value] of params.entries()) {
-        // Decode URI components for values
-        result[key] = decodeURIComponent(value);
+    const result: Record<string, string | string[]> = {};
+    for (const key of params.keys()) {
+        const allValues = params.getAll(key).map(decodeURIComponent);
+        result[key] = allValues.length > 1 ? allValues : allValues[0];
     }
     return result;
 }

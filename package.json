@@ -14,5 +14,8 @@
   "type": "module",
   "workspaces": [
     "src/migrator-management-canister-frontend"
-  ]
+  ],
+  "dependencies": {
+    "@dfinity/vetkeys": "^0.1.0"
+  }
 }

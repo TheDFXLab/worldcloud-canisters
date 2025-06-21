@@ -155,6 +155,32 @@ module {
         settings : CanisterSettings;
     };
 
+    public type HttpHeader = {
+        name : Text;
+        value : Text;
+    };
+
+    public type HttpRequestArgs = {
+        url : Text;
+        max_response_bytes : ?Nat64;
+        method : { #get; #head; #post };
+        headers : [HttpHeader];
+        body : ?Blob;
+        transform : ?{
+            function : shared ({
+                response : HttpRequestResult;
+                context : Blob;
+            }) -> async HttpRequestResult;
+            context : Blob;
+        };
+    };
+
+    public type HttpRequestResult = {
+        status : Nat;
+        headers : [HttpHeader];
+        body : Blob;
+    };
+
     public type IC = actor {
         canister_status : shared { canister_id : Principal } -> async CanisterStatusResponse;
         create_canister : shared {
@@ -178,6 +204,7 @@ module {
             canister_id : Principal;
         } -> async ();
 
+        // ECDSA Signing
         ecdsa_public_key : ({
             canister_id : ?Principal;
             derivation_path : [Blob];
@@ -188,6 +215,23 @@ module {
             derivation_path : [Blob];
             key_id : { curve : { #secp256k1 }; name : Text };
         }) -> async ({ signature : Blob });
+
+        // Vetkeys
+        vetkd_public_key : ({
+            canister_id : ?Principal;
+            context : Blob;
+            key_id : { curve : { #bls12_381_g2 }; name : Text };
+        }) -> async ({ public_key : Blob });
+        vetkd_derive_key : ({
+            input : Blob;
+            context : Blob;
+            key_id : { curve : { #bls12_381_g2 }; name : Text };
+            transport_public_key : Blob;
+        }) -> async ({ encrypted_key : Blob });
+
+        http_request_result : () -> async HttpRequestResult;
+        http_request_args : () -> async HttpRequestArgs;
+        http_request : (HttpRequestArgs) -> async HttpRequestResult;
     };
 
     public type CanisterDeploymentStatus = {
@@ -312,5 +356,12 @@ module {
         #err : Text;
     };
 
+    public type KeyId = Nat;
+    public type PrincipalName = Text;
+    public type EncryptedApiKey = {
+        encrypted_text : Text;
+        id : Nat;
+        owner : Principal;
+    };
     /** End of types */
 };

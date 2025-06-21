@@ -1,13 +1,15 @@
 // asset_manager.mo
-
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
+import Buffer "mo:base/Buffer";
 import Debug "mo:base/Debug";
 import HashMap "mo:base/HashMap";
 import Hash "mo:base/Hash";
 import Nat "mo:base/Nat";
+import Nat8 "mo:base/Nat8";
 import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
+import Option "mo:base/Option";
 import Text "mo:base/Text";
 import Error "mo:base/Error";
 import Iter "mo:base/Iter";
@@ -24,6 +26,8 @@ import SubscriptionManager "./modules/subscription";
 import AccessControl "./modules/access";
 import Hex "./utils/Hex";
 import SHA256 "./utils/SHA256";
+import Github "./modules/github";
+import Crypto "./utils/Crypto";
 
 // TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
 // TODO: Handle stable variables (if needed)
@@ -86,6 +90,11 @@ shared (deployMsg) actor class CanisterManager() = this {
   private let access_control = AccessControl.AccessControl(deployMsg.caller);
   private stable var stable_role_map : [(Principal, Types.Role)] = [];
 
+  private let github_manager = Github.Github();
+  private stable var stable_next_key_id : Nat = 1;
+  private stable var stable_api_key_owner_by_id : [(Types.KeyId, Principal)] = [];
+  private stable var stable_api_keys_by_principal : [(Principal, Types.EncryptedApiKey)] = [];
+
   private let signatures = HashMap.HashMap<Principal, Blob>(0, Principal.equal, Principal.hash);
 
   public shared (msg) func public_key() : async {
@@ -134,6 +143,115 @@ shared (deployMsg) actor class CanisterManager() = this {
     } catch (err) {
       #Err(Error.message(err));
     };
+  };
+
+  /** Github API Key Encryption keys */
+  // Get symmetric key verification key
+  public shared ({ caller }) func symmetric_key_verification_key_for_api_key() : async Text {
+    assert not Principal.isAnonymous(caller);
+    await Crypto.symmetric_key_verification_key_for_api_key();
+  };
+  // Get encrypted symmteric key
+  public shared ({ caller }) func encrypted_symmetric_key_for_api_key(transport_public_key : Blob) : async Text {
+    assert not Principal.isAnonymous(caller);
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    await Crypto.encrypted_symmetric_key_for_api_key(caller, transport_public_key);
+  };
+
+  public shared ({ caller }) func get_github_api_key() : async Types.EncryptedApiKey {
+    assert not Principal.isAnonymous(caller);
+    await github_manager.get_by_principal(caller);
+  };
+
+  public shared ({ caller }) func create_github_api_key(encrypted_api_key : Text) : async Nat {
+    assert not Principal.isAnonymous(caller);
+    await github_manager.create(caller, encrypted_api_key);
+  };
+
+  public shared ({ caller }) func update_github_api_key(new_encrypted_api_key : Text) : async Bool {
+    assert not Principal.isAnonymous(caller);
+    await github_manager.update(caller, new_encrypted_api_key);
+  };
+
+  public shared ({ caller }) func delete_github_api_key() : async Bool {
+    assert not Principal.isAnonymous(caller);
+    await github_manager.delete(caller);
+  };
+
+  public shared ({ caller }) func auth_gh_request_device_code(client_id : Text, scope : Text) : async Text {
+    assert not Principal.isAnonymous(caller);
+    let url = github_manager.base_url # "/login/device/code";
+    let stringified_body = "{ \"client_id\": \"" # client_id # "\", \"scope\": \"" # scope # "\" }";
+    await send_http_post_request(url, stringified_body, null);
+  };
+
+  public shared ({ caller }) func auth_gh_request_access_token(client_id : Text, device_code : Text, grant_type : Text) : async Text {
+    assert not Principal.isAnonymous(caller);
+    let url = github_manager.base_url # "/login/oauth/access_token";
+    let stringified_body = "{ \"client_id\": \"" # client_id # "\", \"device_code\": \"" # device_code # "\", \"grant_type\": \"" # grant_type # "\" }";
+    Debug.print("[auth_gh_request_access_token] Attempt HTTPS Outcall to url " # url # " with body: " # stringified_body);
+
+    await send_http_post_request(url, stringified_body, null);
+  };
+
+  public shared ({ caller }) func gh_get_user(access_token : ?Text) : async Text {
+    assert not Principal.isAnonymous(caller);
+    let url = github_manager.api_base_url # "/user";
+    await send_http_get_request(url, access_token);
+  };
+
+  public shared ({ caller }) func gh_get_repositories(access_token : ?Text) : async Text {
+    assert not Principal.isAnonymous(caller);
+    let url = github_manager.api_base_url # "/user/repos?sort=updated&visibility=all";
+    await send_http_get_request(url, access_token);
+  };
+  public shared ({ caller }) func gh_get_branches(access_token : ?Text, repo : Text) : async Text {
+    assert not Principal.isAnonymous(caller);
+    let url = github_manager.api_base_url # "/repos/" # repo # "/branches";
+    await send_http_get_request(url, access_token);
+  };
+
+  public shared ({ caller }) func gh_get_tree(access_token : ?Text, repo : Text, branch : Text) : async Text {
+    assert not Principal.isAnonymous(caller);
+    let url = github_manager.api_base_url # "/repos/" # repo # "/git/trees/" # branch # "?recursive=1";
+    await send_http_get_request(url, access_token);
+  };
+
+  public shared ({ caller }) func gh_get_workflows(access_token : ?Text, repo_name : Text) : async Text {
+    assert not Principal.isAnonymous(caller);
+    let url = github_manager.api_base_url # "/repos/" # repo_name # "/actions/workflows";
+    await send_http_get_request(url, access_token);
+  };
+
+  public shared ({ caller }) func gh_get_workflow_run(access_token : ?Text, repo_name : Text, run_id : Text) : async Text {
+    assert not Principal.isAnonymous(caller);
+    let url = github_manager.api_base_url # "/repos/" # repo_name # "/actions/workflows" # run_id # "/runs?per_page=5";
+    await send_http_get_request(url, access_token);
+  };
+
+  public shared ({ caller }) func gh_get_repo_info(access_token : ?Text, repo_name : Text) : async Text {
+    assert not Principal.isAnonymous(caller);
+    let url = github_manager.api_base_url # "/repos/" # repo_name;
+    let repo_info = await send_http_get_request(url, access_token);
+  };
+
+  public shared ({ caller }) func gh_create_workflow(repo : Text, workflow_content : Text, branch : Text, access_token : ?Text) : async Text {
+    assert not Principal.isAnonymous(caller);
+    let url = github_manager.api_base_url # "/user";
+
+    await send_http_post_request(url, stringified_body, access_token);
+  };
+
+  public shared ({ caller }) func gh_trigger_workflow(access_token : ?Text) : async Text {
+    assert not Principal.isAnonymous(caller);
+    let url = github_manager.base_url # "/user";
+    await send_http_get_request(url, access_token);
+  };
+
+  public shared ({ caller }) func gh_download_artifact(access_token : ?Text) : async Text {
+    assert not Principal.isAnonymous(caller);
+    let url = github_manager.base_url # "/user";
+    await send_http_get_request(url, access_token);
   };
 
   /** Access Control */
@@ -612,9 +730,11 @@ shared (deployMsg) actor class CanisterManager() = this {
       };
       case (#ok(subscription)) {
         Debug.print("User subscription: " # Nat.toText(subscription.tier_id));
-        let is_valid_subscription = await subscription_manager.validate_subscription(msg.caller);
-        if (is_valid_subscription != true) {
-          return #err("You have reached the maximum number of canisters for your subscription tier.");
+        if (access_control.is_authorized(msg.caller) != true) {
+          let is_valid_subscription = await subscription_manager.validate_subscription(msg.caller);
+          if (is_valid_subscription != true) {
+            return #err("You have reached the maximum number of canisters for your subscription tier.");
+          };
         };
 
         try {
@@ -875,7 +995,9 @@ shared (deployMsg) actor class CanisterManager() = this {
     user_canisters.put(caller, new_canisters);
     canister_table.put(canister_id, deployment); // Add to canister table
 
-    let _pushCanisterId = await subscription_manager.push_canister_id(caller, canister_id); // Update subscription
+    if (access_control.is_authorized(caller) != true) {
+      let _pushCanisterId = await subscription_manager.push_canister_id(caller, canister_id); // Update subscription
+    };
     Debug.print("Added canister deployment by " # Principal.toText(caller) # " for " # Principal.toText(canister_id) # ". Total deployments: " # Nat.toText(new_canisters.size()));
   };
 
@@ -970,6 +1092,207 @@ shared (deployMsg) actor class CanisterManager() = this {
     };
   };
 
+  //function to transform the response
+  public shared func transform({
+    context : Blob;
+    response : Types.HttpRequestResult;
+  }) : async Types.HttpRequestResult {
+    {
+      response with headers = []; // not intersted in the headers
+    };
+  };
+
+  //PULIC METHOD
+  //This method sends a POST request to a URL with a free API we can test.
+  public func send_http_post_request(url : Text, stringified_body : Text, access_token : ?Text) : async Text {
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    //1. SETUP ARGUMENTS FOR HTTP GET request
+
+    // 1.1 Setup the URL and its query parameters
+    //This URL is used because it allows us to inspect the HTTP request sent from the canister
+    // let host : Text = "putsreq.com";
+    // let url = "https://putsreq.com/aL1QS5IbaQd4NTqN3a81"; //HTTP that accepts IPV6
+
+    // 1.2 prepare headers for the system http_request call
+
+    //idempotency keys should be unique so we create a function that generates them.
+    let idempotency_key : Text = generateUUID();
+    Debug.print("Created idempotency key: " # idempotency_key);
+    // 1.2 prepare headers for the system http_request call
+    let base_headers : [{ name : Text; value : Text }] = [
+      { name = "User-Agent"; value = "http_post_sample" },
+      { name = "Content-Type"; value = "application/json" },
+      { name = "Idempotency-Key"; value = idempotency_key },
+    ];
+
+    let request_headers = switch (access_token) {
+      case (?token) Array.append(base_headers, [{ name = "Authorization"; value = "Bearer " # token }]);
+      case (null) base_headers;
+    };
+
+    Debug.print("Request headers: " # debug_show (request_headers));
+
+    // The request body is a Blob, so we do the following:
+    // 1. Write a JSON string
+    // 2. Convert Text into a Blob
+    let request_body_json : Text = stringified_body;
+    let request_body = Text.encodeUtf8(request_body_json);
+
+    Debug.print("JSON Stringified body utf8: " # debug_show (request_body));
+
+    // 1.3 The HTTP request
+    let http_request : Types.HttpRequestArgs = {
+      url = url;
+      max_response_bytes = null; //optional for request
+      headers = request_headers;
+      //note: type of `body` is ?Blob so we pass it here as "?request_body" instead of "request_body"
+      body = ?request_body;
+      method = #post;
+      transform = ?{
+        function = transform;
+        context = Blob.fromArray([]);
+      };
+    };
+
+    //2. ADD CYCLES TO PAY FOR HTTP REQUEST
+
+    //IC management canister will make the HTTP request so it needs cycles
+    //See: https://internetcomputer.org/docs/current/motoko/main/cycles
+
+    //The way Cycles.add() works is that it adds those cycles to the next asynchronous call
+    //See:
+    // - https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request
+    // - https://internetcomputer.org/docs/current/references/https-outcalls-how-it-works#pricing
+    // - https://internetcomputer.org/docs/current/developer-docs/gas-cost
+    ExperimentalCycles.add<system>(230_850_258_000);
+    Debug.print("Added cyles...");
+
+    Debug.print("Making request...");
+
+    //3. MAKE HTTPS REQUEST AND WAIT FOR RESPONSE
+    let http_response : Types.HttpRequestResult = await IC.http_request(http_request);
+    Debug.print("Got encoded response: " # debug_show (http_response));
+    //4. DECODE THE RESPONSE
+
+    //As per the type declarations, the BODY in the HTTP response
+    //comes back as Blob. Type signature:
+
+    //public type http_request_result = {
+    //     status : Nat;
+    //     headers : [HttpHeader];
+    //     body : Blob;
+    // };
+
+    //We need to decode that Blob that is the body into readable text.
+    //To do this, we:
+    //  1. Use Text.decodeUtf8() method to convert the Blob to a ?Text optional
+    //  2. We use a switch to explicitly call out both cases of decoding the Blob into ?Text
+    let decoded_text : Text = switch (Text.decodeUtf8(http_response.body)) {
+      case (null) { "No value returned" };
+      case (?y) { y };
+    };
+
+    Debug.print("Decoded response text:" # decoded_text);
+    //5. RETURN RESPONSE OF THE BODY
+    let result : Text = decoded_text # ". See more info of the request sent at: " # url # "/inspect";
+    result;
+  };
+
+  public func send_http_get_request(url : Text, access_token : ?Text) : async Text {
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+
+    //1. SETUP ARGUMENTS FOR HTTP GET request
+    // let ONE_MINUTE : Nat64 = 60;
+    // let start_timestamp : Nat64 = 1682978460; //May 1, 2023 22:01:00 GMT
+    // let host : Text = "api.exchange.coinbase.com";
+    // let url = "https://" # host # "/products/ICP-USD/candles?start=" # Nat64.toText(start_timestamp) # "&end=" # Nat64.toText(start_timestamp) # "&granularity=" # Nat64.toText(ONE_MINUTE);
+
+    // 1.2 prepare headers for the system http_request call
+    let base_headers : [{ name : Text; value : Text }] = [{
+      name = "User-Agent";
+      value = "price-feed";
+    }];
+
+    let request_headers = switch (access_token) {
+      case (?token) Array.append(base_headers, [{ name = "Authorization"; value = "Bearer " # token }]);
+      case (null) base_headers;
+    };
+
+    // 1.3 The HTTP request
+    let http_request : Types.HttpRequestArgs = {
+      url = url;
+      max_response_bytes = null; //optional for request
+      headers = request_headers;
+      body = null; //optional for request
+      method = #get;
+      transform = ?{
+        function = transform;
+        context = Blob.fromArray([]);
+      };
+    };
+
+    //2. ADD CYCLES TO PAY FOR HTTP REQUEST
+
+    //IC management canister will make the HTTP request so it needs cycles
+    //See: https://internetcomputer.org/docs/current/motoko/main/cycles
+
+    //The way Cycles.add() works is that it adds those cycles to the next asynchronous call
+    //See:
+    // - https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request
+    // - https://internetcomputer.org/docs/current/references/https-outcalls-how-it-works#pricing
+    // - https://internetcomputer.org/docs/current/developer-docs/gas-cost
+    ExperimentalCycles.add<system>(230_949_972_000);
+
+    //3. MAKE HTTPS REQUEST AND WAIT FOR RESPONSE
+    let http_response : Types.HttpRequestResult = await IC.http_request(http_request);
+
+    //4. DECODE THE RESPONSE
+
+    //As per the type declarations, the BODY in the HTTP response
+    //comes back as Blob. Type signature:
+
+    //public type http_request_result = {
+    //     status : Nat;
+    //     headers : [HttpHeader];
+    //     body : Blob;
+    // };
+
+    //We need to decode that Blob that is the body into readable text.
+    //To do this, we:
+    //  1. Use Text.decodeUtf8() method to convert the Blob to a ?Text optional
+    //  2. We use a switch to explicitly call out both cases of decoding the Blob into ?Text
+    let decoded_text : Text = switch (Text.decodeUtf8(http_response.body)) {
+      case (null) { "No value returned" };
+      case (?y) { y };
+    };
+
+    //5. RETURN RESPONSE OF THE BODY
+    //The API response will looks like this:
+    //
+    // ("[[1682978460,5.714,5.718,5.714,5.714,243.5678]]")
+    //
+    //The API response looks like this:
+    //  [
+    //     [
+    //         1682978460, <-- start timestamp
+    //         5.714, <-- lowest price during time range
+    //         5.718, <-- highest price during range
+    //         5.714, <-- price at open
+    //         5.714, <-- price at close
+    //         243.5678 <-- volume of ICP traded
+    //     ],
+    // ]
+    decoded_text;
+  };
+
+  //PRIVATE HELPER FUNCTION
+  //Helper method that generates a Universally Unique Identifier
+  //this method is used for the Idempotency Key used in the request headers of the POST request.
+  //For the purposes of this exercise, it returns a constant, but in practice it should return unique identifiers
+  func generateUUID() : Text {
+    "UUID-123456789";
+  };
+
   /** Handle canister upgrades */
 
   system func preupgrade() {
@@ -990,6 +1313,10 @@ shared (deployMsg) actor class CanisterManager() = this {
     stable_subscriptions := subscription_manager.getStableData();
     Debug.print("Stable subscriptions: " # Nat.toText(stable_subscriptions.size()));
     Debug.print("All Subs" # debug_show (stable_subscriptions));
+
+    stable_next_key_id := github_manager.get_stable_data_next_key_id();
+    stable_api_keys_by_principal := github_manager.get_stable_data_api_keys_by_principal();
+    stable_api_key_owner_by_id := github_manager.get_stable_data_api_keys_by_id();
 
     // Save book to stable array
     stable_book := book.toStable();
@@ -1028,6 +1355,11 @@ shared (deployMsg) actor class CanisterManager() = this {
 
     access_control.loadFromStable(stable_role_map);
     stable_role_map := [];
+
+    // Restore github api keys map
+    github_manager.load_next_key_id(stable_next_key_id);
+    github_manager.load_api_keys_map_by_principal(stable_api_keys_by_principal);
+    github_manager.load_api_keys_map_by_id(stable_api_key_owner_by_id);
 
     sync_assets();
     sync_chunks();

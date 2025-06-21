@@ -10,6 +10,8 @@ import { GithubApi } from "../../api/github/GithubApi";
 import { environment } from "../../config/config";
 import AuthState from "../../state/AuthState";
 import { useIdentity } from "../IdentityContext/IdentityContext";
+import MainApi from "../../api/main";
+import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 
 interface GithubUser {
   login: string;
@@ -25,6 +27,8 @@ interface GithubProviderProps {
 interface GithubContextType {
   isGithubConnected: boolean;
   githubUser: GithubUser | null;
+  isLoadingGithubUser: boolean;
+  isAuthenticated: boolean;
   refreshGithubUser: () => Promise<void>;
   getGithubToken: () => string | null;
   setAccessToken: (token: string) => void;
@@ -36,39 +40,68 @@ const GithubContext = createContext<GithubContextType | undefined>(undefined);
 export function GithubProvider({ children }: GithubProviderProps) {
   const [isGithubConnected, setIsGithubConnected] = useState(false);
   const [githubUser, setGithubUser] = useState<GithubUser | null>(null);
+  const [isLoadingGithubUser, setIsLoadingGithubUser] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const { identity } = useIdentity();
+  const { agent } = useHttpAgent();
 
-  const refreshGithubUser = useCallback(async () => {
-    const jwt = AuthState.getInstance().getAccessToken();
-    if (jwt) {
-      try {
-        console.log(`Getting github user data with jwt`, jwt);
-
-        const githubApi = GithubApi.getInstance();
-        const data = await githubApi.getUser();
-
-        if (!data) {
-          return;
-        }
-        if (data) {
-          setGithubUser(data);
-          setIsGithubConnected(true);
-        } else {
-          setIsGithubConnected(false);
-          setGithubUser(null);
-          githubApi.logout();
-        }
-      } catch (error) {
-        console.error("Failed to fetch GitHub user:", error);
-        setIsGithubConnected(false);
-        setGithubUser(null);
-      }
+  useEffect(() => {
+    const github_token = AuthState.getInstance().getAccessToken("github_token");
+    if (github_token) {
+      setIsAuthenticated(true);
     } else {
-      setIsGithubConnected(false);
-      setGithubUser(null);
+      setIsAuthenticated(false);
     }
   }, []);
+
+  const refreshGithubUser = useCallback(async () => {
+    try {
+      if (!agent) {
+        return;
+      }
+
+      setIsLoadingGithubUser(true);
+      const authStore = AuthState.getInstance();
+
+      const access_token = authStore.getAccessToken("github_token");
+      if (!access_token) {
+        return;
+      }
+
+      const githubApi = GithubApi.getInstance();
+      if (!agent) {
+        throw new Error(`Failed to create main api instance.`);
+      }
+      // const data = await githubApi.getUser();
+      const mainApi = await MainApi.create(identity, agent);
+      const data = await mainApi?.gh_get_user(access_token);
+
+      if (!data) {
+        console.log(`Failed to get gituhb user data....`);
+        return;
+      }
+      if (data) {
+        console.log(`Retreived github user....`, data);
+        setGithubUser(data);
+        setIsGithubConnected(true);
+      } else {
+        setIsGithubConnected(false);
+        setGithubUser(null);
+        githubApi.logout();
+      }
+    } catch (error) {
+      console.error("Failed to fetch GitHub user:", error);
+      setIsGithubConnected(false);
+      setGithubUser(null);
+    } finally {
+      setIsLoadingGithubUser(false);
+    }
+    // } else {
+    //   setIsGithubConnected(false);
+    //   setGithubUser(null);
+    // }
+  }, [agent]);
 
   useEffect(() => {
     if (!identity) return;
@@ -118,6 +151,8 @@ export function GithubProvider({ children }: GithubProviderProps) {
       value={{
         isGithubConnected,
         githubUser,
+        isLoadingGithubUser,
+        isAuthenticated,
         refreshGithubUser,
         getGithubToken,
         setAccessToken,

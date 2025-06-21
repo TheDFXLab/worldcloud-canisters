@@ -189,7 +189,6 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
 
   const connectWallet = async () => {
     try {
-      console.log(`Connecting wallet`);
       setIsLoadingIdentity(true);
       const _authClient = await AuthClient.create({
         idleOptions: {
@@ -198,7 +197,6 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         },
       });
 
-      console.log("Auth client created");
       setGlobalAuthClient(_authClient);
 
       const popUpHeight = 0.42 * window.innerWidth;
@@ -252,8 +250,8 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         })
       );
 
-      const authApi = new AuthApi();
-      await authApi.signIn(identity, agent, setMessage);
+      // const authApi = new AuthApi();
+      // await authApi.signIn(identity, agent, setMessage);
       setIdentity(identity);
       setIsConnected(true);
       return identity;

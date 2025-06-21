@@ -9,14 +9,23 @@ import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { GithubApi } from "../../api/github/GithubApi";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
+import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import { Spinner } from "react-bootstrap";
+import AuthState from "../../state/AuthState";
+import ShimmerAnimationForGithubCard from "../ShimmerAnimationForGithubCard/ShimmerAnimationForGithubCard";
 
 const Settings: React.FC = () => {
-  const { githubUser, setGithubUser } = useGithub();
-  const { identity } = useIdentity();
+  const { githubUser, isLoadingGithubUser, isAuthenticated, setGithubUser } =
+    useGithub();
+  const { identity, isLoadingIdentity } = useIdentity();
+  const { agent } = useHttpAgent();
   const { setActiveTab } = useSideBar();
   const { setActionBar } = useActionBar();
 
   const handleGithubConnect = async () => {
+    console.log(`IDENITTY IN BEFORE`, identity);
+    console.log(`SAGENT BEFORE`, agent);
+
     const github = GithubApi.getInstance();
     await github.authenticate();
   };
@@ -91,15 +100,35 @@ const Settings: React.FC = () => {
                   className="disconnect-button"
                   onClick={handleGithubDisconnect}
                 >
-                  <LogoutIcon />
-                  Disconnect GitHub
+                  {(isLoadingIdentity && isAuthenticated) ||
+                  isLoadingGithubUser ? (
+                    <Spinner />
+                  ) : (
+                    <>
+                      <LogoutIcon />
+                      Disconnect GitHub
+                    </>
+                  )}
                 </button>
               </>
             ) : (
-              <button className="connect-button" onClick={handleGithubConnect}>
-                <GitHubIcon />
-                Connect GitHub
-              </button>
+              <>
+                {isAuthenticated && isLoadingGithubUser ? (
+                  <>
+                    <ShimmerAnimationForGithubCard />
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="connect-button"
+                      onClick={handleGithubConnect}
+                    >
+                      <GitHubIcon />
+                      Connect GitHub
+                    </button>
+                  </>
+                )}
+              </>
             )}
           </div>
         </div>

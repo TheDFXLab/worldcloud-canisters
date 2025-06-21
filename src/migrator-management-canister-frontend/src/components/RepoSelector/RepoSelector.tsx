@@ -149,21 +149,26 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   const loadBranches = async (repo: string) => {
     try {
-      const jwt = AuthState.getInstance().getAccessToken();
-      if (!jwt) {
-        throw new Error("No access token found. Please login again.");
-      }
-      const response = await fetch(
-        `${reverse_proxy_url}/github/list_branches`,
-        {
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-            repo: repo,
-          },
-        }
-      );
+      // const jwt = AuthState.getInstance().getAccessToken("jwt");
+      // if (!jwt) {
+      //   throw new Error("No access token found. Please login again.");
+      // }
+      // const response = await fetch(
+      //   `${reverse_proxy_url}/github/list_branches`,
+      //   {
+      //     headers: {
+      //       Authorization: `Bearer ${jwt}`,
+      //       repo: repo,
+      //     },
+      //   }
+      // );
 
-      const data = await response.json();
+      // const data = await response.json();
+
+      const githubApi = GithubApi.getInstance();
+
+      const data = await githubApi.listBranches(repo);
+      console.log(`List Brancehs data: `, data);
       setRepoStates((prev) => ({
         ...prev,
         [repo]: {
@@ -184,10 +189,11 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   const findPackageJsonLocations = async (repo: string, branch: string) => {
     try {
-      const jwt = AuthState.getInstance().getAccessToken();
+      const jwt = AuthState.getInstance().getAccessToken("jwt");
       if (!jwt) {
         throw new Error("No access token found. Please login again.");
       }
+
       const response = await fetch(`${reverse_proxy_url}/github/tree`, {
         headers: {
           Authorization: `Bearer ${jwt}`,
@@ -264,16 +270,17 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
       setIsDispatched(true);
 
-      // // Update workflow step
-      // const workflowContent = generateWorkflowTemplate(
-      //   repoStates[repo].selectedPath,
-      //   repoStates[repo].selectedBranch
-      // );
+      // Update workflow step
+      const workflowContent = generateWorkflowTemplate(
+        repoStates[repo].selectedPath,
+        repoStates[repo].selectedBranch
+      );
 
       await github.createWorkflow(
         repo,
         repoStates[repo].selectedBranch,
-        repoStates[repo].selectedPath
+        repoStates[repo].selectedPath,
+        workflowContent
       );
 
       await new Promise((resolve) => setTimeout(resolve, 1000));

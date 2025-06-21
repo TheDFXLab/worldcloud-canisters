@@ -6,7 +6,7 @@
   "scripts": {
     "setup": "npm i && dfx canister create migrator-management-canister-backend && dfx generate migrator-management-canister-backend && dfx deploy",
     "start": "vite --port 3000",
-    "dev": "vite",
+    "dev": "vite --port 3000",
     "prebuild": "dfx generate",
     "build": "tsc && vite build",
     "format": "prettier --write \"src/**/*.{json,js,jsx,ts,tsx,css,scss}\""
@@ -37,7 +37,9 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.3.1",
+    "@mui/material": "^7.1.1",
     "@tanstack/react-query": "^5.66.9",
+    "axios": "^1.10.0",
     "bootstrap": "^5.3.3",
     "buffer": "^6.0.3",
     "js-cookie": "^3.0.5",
