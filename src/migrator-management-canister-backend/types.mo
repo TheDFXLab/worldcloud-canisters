@@ -312,5 +312,57 @@ module {
         #err : Text;
     };
 
+    /** Shareable Canister Types */
+
+    public type SharedCanisterStatus = {
+        #available;
+        #occupied;
+    };
+
+    public type ShareableCanister = {
+        canister_id : ?Principal;
+        owner : Principal; // controller of the canister
+        user : Principal; // current user of the canister
+        start_timestamp : Nat; //time user occupied the canister
+        create_timestamp : Nat; //time user occupied the canister
+        duration : Nat; //total time allowed for a single user to occupy a canister
+        start_cycles : Nat; // total cycles available at start_timestamp
+        status : SharedCanisterStatus;
+    };
+
+    public type ShareableCanisterStatistics = {
+        total_cycles_consumed : Nat; //total amount of cycles consumed since genesis of canister
+        create_time : Nat; // time the canister was created
+        usage_count : Nat; // total times the canister was occupied
+    };
+
+    public type UserShareSession = {
+        slot_id : Nat; // slot id currently used by the user
+        // usage_count : Nat; // amount of times the canister was occupied by the user since last used. Resets to 0 when (now - last_used > rate_limit_window)
+        // last_used : Nat; //last time the canister was occupied by the user
+        // rate_limit_window : Nat; //duration of a theoretical session. used to deny occupying a shared canister when (usage_count > max_uses_threshold)
+        // max_uses_threshold : Nat; // maximum number of times the user is allowed to occupy the shared canister within the rate_limit_window
+    };
+
+    public type UsageLog = {
+        is_active : Bool;
+        usage_count : Nat; // amount of times the canister was occupied by the user since last used. Resets to 0 when (now - last_used > rate_limit_window)
+        last_used : Nat; //last time the canister was occupied by the user
+        rate_limit_window : Nat; //duration of a theoretical session. used to deny occupying a shared canister when (usage_count > max_uses_threshold)
+        max_uses_threshold : Nat; // maximum number of times the user is allowed to occupy the shared canister within the rate_limit_window
+    };
+
+    public type SlotToCanister = HashMap.HashMap<Nat, ShareableCanister>;
+    public type UserToSlots = HashMap.HashMap<Principal, ?Nat>;
+    public type UsedCanisters = HashMap.HashMap<Nat, Bool>;
+    public type UsageLogs = HashMap.HashMap<Principal, UsageLog>;
+
+    public type StableDataTypeShareableCanister = {
+        #slot_to_canister;
+        #user_to_slots;
+        #used_canisters;
+        #usage_logs;
+    }
+
     /** End of types */
 };

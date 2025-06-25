@@ -13,4 +13,14 @@ module ErrorType {
     public func Unauthorized() : Text = "Unauthorized";
     public func NotAnAdmin() : Text = "Not an admin";
     public func NotASuperAdmin() : Text = "Not a super admin";
+
+    public func NoUserSession() : Text = "No current active deployment";
+    public func NotFoundSharedCanister() : Text = "Deployment not found";
+    public func NotFoundSlot() : Text = "Slot not found";
+    public func FailedCreateSlot() : Text = "Failed to create slot";
+    public func NotFoundLog() : Text = "Usage log does not exist";
+    public func MaxSlotsReached() : Text = "Maxmium number of runners reached.";
+    public func SlotUnavailable() : Text = "Slot is busy.";
+    public func IndexOutOfBounds() : Text = "Index out of bounds";
+
 };
