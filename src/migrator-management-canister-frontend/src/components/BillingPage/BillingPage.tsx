@@ -124,6 +124,9 @@ const BillingPage: React.FC = () => {
           onHide={() => setShowModal(false)}
           onConfirm={() => handleSubscribe(selectedPlanId)}
           amountState={[amount, setAmount]}
+          overrideEnableSubmit={
+            parseInt(tiers[selectedPlanId].id.toString()) === 3
+          }
           customConfig={{
             totalPrice: fromE8sStable(
               tiers[selectedPlanId].price.e8s +

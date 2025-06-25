@@ -68,6 +68,7 @@ const MODAL_CONFIGS: Record<ModalType, ModalConfig> = {
 
 interface ConfirmationModalProps {
   amountState: [string, (amount: string) => void];
+  overrideEnableSubmit?: boolean;
   onHide: () => void;
   onConfirm: (amount: number) => Promise<void>;
   type?: ModalType;
@@ -76,6 +77,7 @@ interface ConfirmationModalProps {
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   amountState,
+  overrideEnableSubmit,
   onHide,
   onConfirm,
   type = "default",
@@ -298,11 +300,12 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           }}
           onClick={handleClickSubmit}
           disabled={
-            !amount ||
-            parseFloat(amount) <= 0 ||
-            isSubmitting ||
-            balance === BigInt(0) ||
-            (balance ? balance < icpToE8s(parseFloat(amount)) : false)
+            !overrideEnableSubmit &&
+            (!amount ||
+              parseFloat(amount) <= 0 ||
+              isSubmitting ||
+              balance === BigInt(0) ||
+              (balance ? balance < icpToE8s(parseFloat(amount)) : false))
           }
         >
           {isSubmitting ? (
