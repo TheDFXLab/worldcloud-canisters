@@ -10,6 +10,7 @@ import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
 import Text "mo:base/Text";
 import Error "mo:base/Error";
+import Errors "modules/errors";
 import Iter "mo:base/Iter";
 import Int "mo:base/Int";
 import Types "types";
@@ -24,6 +25,7 @@ import SubscriptionManager "./modules/subscription";
 import AccessControl "./modules/access";
 import Hex "./utils/Hex";
 import SHA256 "./utils/SHA256";
+import CanisterShareable "modules/canister_shareable";
 
 // TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
 // TODO: Handle stable variables (if needed)
@@ -33,6 +35,7 @@ shared (deployMsg) actor class CanisterManager() = this {
   // var IC_MANAGEMENT_CANISTER : Text = "rwlgt-iiaaa-aaaaa-aaaaa-cai"; // Local replica
   let IC_MANAGEMENT_CANISTER = "aaaaa-aa"; // Production
   let ledger : Principal = Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai");
+  let BASE_CANISTER_START_CYCLES = 230_949_972_000;
 
   // TODO: Get these from price oracle canister
   let ICP_PRICE : Float = 10;
@@ -88,6 +91,91 @@ shared (deployMsg) actor class CanisterManager() = this {
 
   private let signatures = HashMap.HashMap<Principal, Blob>(0, Principal.equal, Principal.hash);
 
+  private let shareable_canister_manager = CanisterShareable.ShareableCanisterManager();
+  private stable var stable_slot_to_canister : [(Nat, Types.ShareableCanister)] = [];
+  private stable var stable_user_to_slot : [(Principal, ?Nat)] = [];
+  private stable var stable_used_canisters : [(Nat, Bool)] = [];
+  private stable var stable_usage_logs : [(Principal, Types.UsageLog)] = [];
+  private stable var stable_next_canister_id : Nat = 0;
+
+  /** Shareable Canisters */
+  public shared (msg) func get_slots(limit : ?Nat, index : ?Nat) : async Types.Response<[Types.ShareableCanister]> {
+    assert (access_control.is_authorized(msg.caller));
+    if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
+
+    #ok(shareable_canister_manager.get_slots(limit, index));
+  };
+
+  public shared (msg) func get_available_slots(limit : ?Nat, index : ?Nat) : async Types.Response<[Nat]> {
+    assert (access_control.is_authorized(msg.caller));
+    if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
+
+    #ok(shareable_canister_manager.get_available_slots());
+  };
+
+  public shared (msg) func get_user_slot() : async Types.Response<Types.ShareableCanister> {
+    assert not Principal.isAnonymous(msg.caller);
+
+    #ok(shareable_canister_manager.get_canister_by_user(msg.caller));
+  };
+
+  // Entrypoint for deploying a free canister
+  public shared (msg) func request_freemium_session() : async Types.Response<Bool> {
+    assert not Principal.isAnonymous(msg.caller);
+    // TODO: assert is registered user
+
+    let available_slots : [Nat] = shareable_canister_manager.get_available_slots();
+    if (available_slots.size() == 0) {
+
+      Debug.print("No available canister slots, creating new one...");
+      let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+
+      ExperimentalCycles.add(BASE_CANISTER_START_CYCLES);
+      let settings : Types.CanisterSettings = {
+        freezing_threshold = null;
+        controllers = ?[Principal.fromActor(this)];
+        memory_allocation = null;
+        compute_allocation = null;
+      };
+
+      Debug.print("Creating canister now...");
+      // Create the canister
+      let create_result = await IC.create_canister({
+        settings = ?settings;
+      });
+
+      let new_canister_id = create_result.canister_id;
+
+      Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Installing code");
+      let wasm_module = await getWasmModule();
+
+      // Install the asset canister code
+      await IC.install_code({
+        arg = Blob.toArray(to_candid (()));
+        wasm_module = wasm_module;
+        mode = #install;
+        canister_id = new_canister_id;
+      });
+
+      Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Code installed");
+
+      let slot_result = shareable_canister_manager.create_slot(Principal.fromActor(this), msg.caller, new_canister_id, BASE_CANISTER_START_CYCLES);
+      let slot_id : Nat = switch (slot_result) {
+        case (#ok(id)) { id };
+        case (#err(error)) {
+          Debug.trap("Failed to create slot: " # error);
+        };
+      };
+
+      Debug.print("Slot created with id:" # Nat.toText(slot_id));
+
+    };
+
+    Debug.print("Requesting a session...");
+    await shareable_canister_manager.request_session(msg.caller);
+
+  };
+
   public shared (msg) func public_key() : async {
     #Ok : { public_key_hex : Text };
     #Err : Text;
@@ -100,7 +188,7 @@ shared (deployMsg) actor class CanisterManager() = this {
       let { public_key } = await IC.ecdsa_public_key({
         canister_id = null;
         derivation_path = [caller];
-        key_id = { curve = #secp256k1; name = "key_1" };
+        key_id = { curve = #secp256k1; name = "dfx_test_key" };
       });
       Debug.print("Public key: " # Hex.encode(Blob.toArray(public_key)));
       #Ok({ public_key_hex = Hex.encode(Blob.toArray(public_key)) });
@@ -148,6 +236,13 @@ shared (deployMsg) actor class CanisterManager() = this {
   public shared (msg) func check_role(principal : Principal) : async Types.Response<Types.Role> {
     return access_control.check_role(principal);
   };
+
+  /** Shareable Canisters */
+
+  public shared (msg) func request_canister() {
+    // let;
+  };
+  public shared (msg) func check_shared_canister_session() {};
 
   /** Subscription */
   // Create a subscription for the caller
@@ -621,7 +716,7 @@ shared (deployMsg) actor class CanisterManager() = this {
 
           Debug.print("[Identity " # Principal.toText(msg.caller) # "] Adding cycles....");
 
-          return await _create_canister(subscription, msg.caller, _wasm_module);
+          return await _create_canister(subscription.tier_id, subscription.max_slots, msg.caller, _wasm_module);
         } catch (error) {
           return #err("Failed to deploy asset canister: " # Error.message(error));
         };
@@ -630,15 +725,18 @@ shared (deployMsg) actor class CanisterManager() = this {
 
   };
 
-  private func _create_canister(user_subscription : Types.Subscription, controller : Principal, wasm_module : [Nat8]) : async Types.Result {
-    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
-    // Create new canister
-
-    let min_deposit = subscription_manager.tiers_list[user_subscription.tier_id].min_deposit;
-    let deposit_per_canister = Nat64.toNat(min_deposit.e8s) / user_subscription.max_slots;
+  private func _convert_e8s_to_cycles(e8s : Nat64, max_slots : Nat) : Float {
+    let deposit_per_canister = Nat64.toNat(e8s) / max_slots;
 
     let cyclesForCanister = calculateCyclesToAdd(deposit_per_canister);
+  };
 
+  private func _create_canister(tier_id : Nat, max_slots : Nat, controller : Principal, wasm_module : [Nat8]) : async Types.Result {
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    // Create new canister
+    let min_deposit = subscription_manager.tiers_list[tier_id].min_deposit;
+
+    let cyclesForCanister = _convert_e8s_to_cycles(min_deposit.e8s, max_slots);
     Debug.print("Adding cycles for canister: " # Int.toText(Float.toInt(cyclesForCanister)));
     ExperimentalCycles.add(Int.abs(Float.toInt(cyclesForCanister)));
 
@@ -996,6 +1094,12 @@ shared (deployMsg) actor class CanisterManager() = this {
 
     stable_role_map := access_control.getStableData();
 
+    // Backup shareable canister state
+    stable_slot_to_canister := shareable_canister_manager.get_stable_data_slot_to_canister();
+    stable_user_to_slot := shareable_canister_manager.get_stable_data_user_to_slot();
+    stable_used_canisters := shareable_canister_manager.get_stable_data_used_canisters();
+    stable_usage_logs := shareable_canister_manager.get_stable_data_usage_logs();
+
     Debug.print("Preupgrade: Variables initialized, beginning conversion");
     Debug.print("Preupgrade: Preparing to sync assets and chunks.");
     Debug.print("Preupgrade: Assets: " # Nat.toText(assets.size()));
@@ -1021,6 +1125,14 @@ shared (deployMsg) actor class CanisterManager() = this {
     Debug.print("PostUpgrade: Restored subscriptions");
     Debug.print("PostUpgrade: Restored subscriptions size: " # Nat.toText(stable_subscriptions.size()));
     Debug.print("PostUpgrade: Restored subscriptions: " # debug_show (stable_subscriptions));
+
+    // Restore shareable canister stable data
+    shareable_canister_manager.load_from_stable_slot_to_canister(stable_slot_to_canister);
+    shareable_canister_manager.load_from_stable_user_to_slot(stable_user_to_slot);
+    shareable_canister_manager.load_from_stable_used_canisters(stable_used_canisters);
+    shareable_canister_manager.load_from_stable_usage_logs(stable_usage_logs);
+
+    Debug.print("PostUpgrade: Restored shareable canister stable data");
 
     // Restore book
     book.fromStable(stable_book);
