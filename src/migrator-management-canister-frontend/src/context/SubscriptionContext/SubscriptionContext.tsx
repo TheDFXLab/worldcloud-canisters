@@ -18,6 +18,7 @@ import MainApi from "../../api/main";
 import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 import { useQuery } from "@tanstack/react-query";
 import { sanitizeObject } from "../../utility/sanitize";
+import { useLoadBar } from "../LoadBarContext/LoadBarContext";
 
 interface SubscriptionValidation {
   status: boolean;
@@ -72,6 +73,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { identity } = useIdentity();
   const { totalCredits } = useCycles();
   const { agent } = useHttpAgent();
+  const { setShowLoadBar, setCompleteLoadBar } = useLoadBar();
 
   /** States */
   const [shouldRefetchSubscription, setShouldRefetchSubscription] =
@@ -83,6 +85,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     queryKey: [queryNameSubscription, identity?.getPrincipal().toText()],
     queryFn: async () => {
       try {
+        setShowLoadBar(true);
         const res = await getSubscription();
 
         if (!res) {
@@ -111,6 +114,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error("Error in queryFn getSubscription:", error);
         throw error;
+      } finally {
+        setCompleteLoadBar(true);
+        setShouldRefetchSubscription(false);
       }
     },
     initialData: () => {
@@ -270,7 +276,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       if (!agent) {
         return null;
       }
-
       const subscriptionApi = new SubscriptionApi();
       const subscription = await subscriptionApi.getSubscription(
         identity,
@@ -302,7 +307,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       }
 
       // Deposit to canister if not enough credits
-      if (totalCredits.total_credits < amountInIcp) {
+      if (amountInIcp && totalCredits.total_credits < amountInIcp) {
         const ledgerApi = await LedgerApi.create(identity, agent);
         if (!ledgerApi) {
           throw new Error("Failed to create ledger api");
