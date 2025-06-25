@@ -178,7 +178,6 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
 
       // Clear all stored data
       clearUserData();
-      clearHttpAgent();
 
       return true;
     } catch (error) {
