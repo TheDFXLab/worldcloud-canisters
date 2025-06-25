@@ -1,7 +1,7 @@
 import { Principal } from "@dfinity/principal";
 import { createActor } from "../../../../declarations/migrator-management-canister-backend";
 import { ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
-import { _SERVICE, DepositReceipt, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { _SERVICE, DepositReceipt, Response, ShareableCanister, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
 import { HttpAgentManager } from "../../agent/http_agent";
@@ -248,6 +248,65 @@ class MainApi {
         }
     }
 
+    // Request a freemium session for deployment
+    async requestFreemiumSession() {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
+
+            const result = await this.actor.request_freemium_session();
+            if (!result) {
+                throw new Error("Failed to request freemium session");
+            }
+
+            if ("Ok" in result || "ok" in result) {
+                return true;
+            } else {
+                throw new Error("Error requesting freemium session: " + Object.values(result)[0]);
+            }
+        } catch (error) {
+            console.log(`Error requesting freemium session:`, error)
+            return false;
+        }
+    }
+
+
+    // Request a freemium session for deployment
+    async getUserFreemiumUsage() {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
+
+            const result = await this.actor.get_user_slot() as Response;
+            if (!result) {
+                throw new Error("Failed to request freemium session");
+            }
+
+            if ("Ok" in result || "ok" in result) {
+                console.log(`MainApi: result from freemium usage: `, result)
+                return true;
+            } else {
+                throw new Error("Error requesting freemium session: " + Object.values(result)[0]);
+            }
+        } catch (error) {
+            console.log(`Error requesting freemium session:`, error)
+            return false;
+        }
+    }
 
 }
 
