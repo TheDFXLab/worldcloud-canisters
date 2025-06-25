@@ -60,6 +60,20 @@ module {
                     "API Access",
                 ];
             },
+            {
+                id = 3;
+                name = "Freemium";
+                slots = 1;
+                min_deposit = { e8s = 0 }; // 0.5 ICP
+                price = { e8s = 0 }; // Free tier
+                features = [
+                    "1 Canister",
+                    "Manual Deployments",
+                    "GitHub Integration",
+                    "4hrs Demo Hosting Trial",
+                    "3 Free Trials per day",
+                ];
+            },
         ];
 
         public func set_treasury(new_treasury : Principal) : Bool {
@@ -99,6 +113,12 @@ module {
         };
 
         private func _create_subscription(caller : Principal, tier_id : Nat, subscription : Types.Subscription, payment_receiver : Principal) : async Types.Response<Types.Subscription> {
+            // Bypass payment for freemium tier
+            if (tier_id == 3) {
+                subscriptions.put(caller, subscription); // Add subscription plan for caller
+                return #ok(subscription);
+            };
+
             // Get pricing list
             let tier : Types.Tier = tiers_list[tier_id];
 
