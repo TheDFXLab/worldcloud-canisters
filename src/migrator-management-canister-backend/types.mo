@@ -209,6 +209,43 @@ module {
         date_updated : TimeLib.Time;
     };
 
+    public type ProjectPlan = {
+        #freemium;
+        #paid;
+    };
+
+    public type Project = {
+        canister_id : ?Principal; // id of canister deployment
+        name : Text;
+        description : Text;
+        tags : [Text];
+        plan : ProjectPlan;
+        date_created : TimeLib.Time;
+        date_updated : TimeLib.Time;
+    };
+    public type GetProjectsByUserPayload = {
+        user : Principal;
+        limit : ?Nat;
+        page : ?Nat;
+    };
+    public type CreateProjectPayload = {
+        project_name : Text;
+        project_description : Text;
+        tags : [Text];
+        plan : ProjectPlan;
+    };
+
+    public type CreateProjectResponse = {
+        canister_id : ?Principal;
+        project_id : Nat;
+    };
+
+    public type StoreAssetInCanisterPayload = {
+        project_id : Nat;
+        files : [StaticFile];
+        workflow_run_details : ?WorkflowRunDetails;
+    };
+
     public type WorkflowRunStatus = {
         #pending;
         #completed;
@@ -320,6 +357,7 @@ module {
     };
 
     public type ShareableCanister = {
+        project_id : Nat;
         canister_id : ?Principal;
         owner : Principal; // controller of the canister
         user : Principal; // current user of the canister
