@@ -3,6 +3,7 @@ import IconTextRowView from "../IconTextRowView/IconTextRowView";
 import HomeIcon from "@mui/icons-material/Home";
 import LanguageIcon from "@mui/icons-material/Language";
 import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount";
+import MemoryIcon from "@mui/icons-material/Memory";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
 import AddIcon from "@mui/icons-material/Add";
@@ -20,6 +21,7 @@ import { useGithub } from "../../context/GithubContext/GithubContext";
 export type MenuItem =
   | "publish"
   | "websites"
+  | "projects"
   | "admin"
   | "logout"
   | "settings"
@@ -50,6 +52,9 @@ function Sidebar() {
         break;
       case "websites":
         navigate("/dashboard/websites");
+        break;
+      case "projects":
+        navigate("/dashboard/projects");
         break;
       case "admin":
         if (isAdmin) {
@@ -91,6 +96,12 @@ function Sidebar() {
             text="Websites"
             IconComponent={LanguageIcon}
             onClickIcon={() => handleMenuClick("websites")}
+          />
+          <IconTextRowView
+            className={`nav-item ${activeTab === "projects" ? "active" : ""}`}
+            text="Projects"
+            IconComponent={MemoryIcon}
+            onClickIcon={() => handleMenuClick("projects")}
           />
 
           <IconTextRowView
