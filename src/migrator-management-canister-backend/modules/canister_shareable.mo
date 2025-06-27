@@ -348,6 +348,9 @@ module {
         public func get_stable_data_usage_logs() : [(Principal, Types.UsageLog)] {
             Iter.toArray(usage_logs.entries());
         };
+        public func get_stable_data_next_slot_id() : Nat {
+            next_slot_id;
+        };
 
         // Function to restore from stable storage
         public func load_from_stable_slot_to_canister(stable_data : [(Nat, Types.ShareableCanister)]) {
@@ -385,6 +388,10 @@ module {
                 Principal.hash,
             );
         };
+
+        public func load_from_stable_next_slot_id(stable_data : Nat) {
+            next_slot_id := stable_data;
+        }
 
         /** End class */
 

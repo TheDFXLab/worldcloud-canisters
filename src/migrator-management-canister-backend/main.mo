@@ -102,11 +102,13 @@ shared (deployMsg) actor class CanisterManager() = this {
   private let signatures = HashMap.HashMap<Principal, Blob>(0, Principal.equal, Principal.hash);
 
   private let shareable_canister_manager = CanisterShareable.ShareableCanisterManager();
+
   private stable var stable_slot_to_canister : [(Nat, Types.ShareableCanister)] = [];
   private stable var stable_user_to_slot : [(Principal, ?Nat)] = [];
   private stable var stable_used_canisters : [(Nat, Bool)] = [];
   private stable var stable_usage_logs : [(Principal, Types.UsageLog)] = [];
   private stable var stable_next_canister_id : Nat = 0;
+  private stable var stable_next_slot_id : Nat = 0;
 
   /** Projects **/
   private let project_manager = ProjectManager.ProjectManager();
@@ -1245,6 +1247,8 @@ shared (deployMsg) actor class CanisterManager() = this {
     stable_user_to_slot := shareable_canister_manager.get_stable_data_user_to_slot();
     stable_used_canisters := shareable_canister_manager.get_stable_data_used_canisters();
     stable_usage_logs := shareable_canister_manager.get_stable_data_usage_logs();
+    stable_next_slot_id := shareable_canister_manager.get_stable_data_next_slot_id();
+
     stable_projects := project_manager.get_stable_data_projects();
     stable_user_to_projects := project_manager.get_stable_data_user_to_projects();
     stable_next_project_id := project_manager.get_stable_data_next_project_id();
@@ -1284,6 +1288,7 @@ shared (deployMsg) actor class CanisterManager() = this {
     shareable_canister_manager.load_from_stable_user_to_slot(stable_user_to_slot);
     shareable_canister_manager.load_from_stable_used_canisters(stable_used_canisters);
     shareable_canister_manager.load_from_stable_usage_logs(stable_usage_logs);
+    shareable_canister_manager.load_from_stable_next_slot_id(stable_next_slot_id);
 
     Debug.print("PostUpgrade: Restored shareable canister stable data");
 
