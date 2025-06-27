@@ -47,7 +47,7 @@ module {
             {
                 id = 2;
                 name = "Enterprise";
-                slots = 1;
+                slots = 25;
                 min_deposit = { e8s = 500_000_000 }; // 5 ICP
                 price = { e8s = 2_500_000_000 }; // 25 ICP
                 features = [
@@ -64,7 +64,7 @@ module {
                 id = 3;
                 name = "Freemium";
                 slots = 1;
-                min_deposit = { e8s = 0 }; // 0.5 ICP
+                min_deposit = { e8s = 0 };
                 price = { e8s = 0 }; // Free tier
                 features = [
                     "1 Canister",
