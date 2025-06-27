@@ -1,0 +1,205 @@
+.create-project-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  background: var(--background);
+  padding: 2.5rem 0 0 0;
+}
+
+.create-project-card {
+  background: var(--background-secondary);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  padding: 2.5rem 2.2rem 2rem 2.2rem;
+  max-width: 900px;
+  width: 65vw;
+  min-width: 340px;
+  margin-left: 3vw;
+  margin-top: 2vw;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 1.2rem;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: color 0.18s;
+}
+.back-btn:hover {
+  color: var(--color-primary-dark);
+}
+
+.create-project-card h2 {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.create-project-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.create-project-card label {
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.create-project-card input[type="text"],
+.create-project-card textarea,
+.create-project-card select {
+  background: var(--background);
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.7em 1em;
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-top: 0.2rem;
+  transition: border-color 0.18s;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.create-project-card input[type="text"]:focus,
+.create-project-card textarea:focus,
+.create-project-card select:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+.create-project-card textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+
+.required {
+  color: var(--color-error);
+  margin-left: 0.2em;
+}
+
+.desc-count {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  align-self: flex-end;
+  margin-top: -0.5em;
+}
+
+.tags-input-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.2rem;
+}
+
+.tag-chip {
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.3em 1em;
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  margin-right: 0.2em;
+}
+.remove-tag {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.1em;
+  cursor: pointer;
+  margin-left: 0.2em;
+  padding: 0 0.2em;
+  transition: color 0.18s;
+}
+.remove-tag:hover {
+  color: var(--color-error);
+}
+.add-tag-btn {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.3em 1.1em;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.add-tag-btn:disabled {
+  background: var(--border-color);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.freemium-note {
+  background: var(--background);
+  color: var(--color-primary);
+  border-radius: 8px;
+  padding: 0.7em 1em;
+  font-size: 0.95rem;
+  margin-top: 0.5em;
+}
+.freemium-note a {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+  margin-left: 0.5em;
+}
+
+.form-error {
+  color: var(--color-error);
+  background: var(--background);
+  border-radius: 8px;
+  padding: 0.6em 1em;
+  font-size: 0.98rem;
+  margin-bottom: 0.5em;
+  margin-top: 0.2em;
+}
+
+.submit-btn {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.7em 1.2em;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 0.8em;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.submit-btn:hover {
+  background: var(--color-primary-dark);
+}
+
+@media (max-width: 900px) {
+  .create-project-card {
+    width: 95vw;
+    max-width: 98vw;
+    margin-left: 1vw;
+    padding: 1.2rem 0.5rem 1.2rem 0.5rem;
+  }
+}
