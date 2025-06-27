@@ -1,10 +1,18 @@
 import { Principal } from "@dfinity/principal";
 import { createActor } from "../../../../declarations/migrator-management-canister-backend";
 import { ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
-import { _SERVICE, DepositReceipt, Response, ShareableCanister, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { _SERVICE, DepositReceipt, GetProjectsByUserPayload, Project, ProjectPlan, Response, StoreAssetInCanisterPayload, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
-import { HttpAgentManager } from "../../agent/http_agent";
+
+interface CreateProjectPayload {
+    project_name: string;
+    project_description: string;
+    tags: string[];
+    plan: ProjectPlan;
+}
+
+export type PlanType = "#freemium" | "#paid";
 
 class MainApi {
     private static instance: MainApi | null = null;
@@ -249,7 +257,7 @@ class MainApi {
     }
 
     // Request a freemium session for deployment
-    async requestFreemiumSession() {
+    async requestFreemiumSession(project_id: bigint) {
         try {
             if (!this.actor) {
                 throw new Error("Actor not initialized.");
@@ -261,7 +269,7 @@ class MainApi {
                 throw new Error("Identity not initialized.");
             }
 
-            const result = await this.actor.request_freemium_session();
+            const result = await this.actor.request_freemium_session(project_id);
             if (!result) {
                 throw new Error("Failed to request freemium session");
             }
@@ -305,6 +313,125 @@ class MainApi {
         } catch (error) {
             console.log(`Error requesting freemium session:`, error)
             return false;
+        }
+    }
+
+    // Creates a project and deploys a canister
+    async createProject(
+        project_name: string,
+        description: string = "A standard asset canister for serving static site over HTTP.",
+        tags: string[],
+        plan: PlanType
+    ) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        const payload: CreateProjectPayload = {
+            project_name: project_name,
+            project_description: description,
+            tags: tags,
+            plan: plan === '#freemium' ? { freemium: null } : { paid: null }
+        };
+
+        const response = await this.actor.create_project(payload);
+
+        if ("ok" in response) {
+            console.log(`Project created with id ${response.ok.project_id.toString()} and linked to canister ${response.ok.canister_id.toString()}`);
+            return {
+                project_id: response.ok.project_id.toString(),
+                canister_id: response.ok.canister_id.toString()
+            };
+        }
+        else {
+            console.log(`Error creating project.`, response.err);
+            throw new Error(`Failed to create project: ${response.err}`);
+        }
+    }
+
+    async uploadAssetsToProject(project_id: number, files: StaticFile[], workflowRunDetails?: WorkflowRunDetails) {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
+
+            const payload: StoreAssetInCanisterPayload = {
+                project_id: BigInt(project_id),
+                files,
+                workflow_run_details: workflowRunDetails ? [workflowRunDetails] : []
+            }
+
+            const result = await this.actor.upload_assets_to_project(payload);
+            if ("Ok" in result || "ok" in result) {
+                return { status: true, message: "Stored files successfully." };
+            }
+            else {
+                throw { status: false, message: "Error storing in asset canister: " + Object.values(result)[0] };
+            }
+        } catch (error: any) {
+            console.log(`Error storing in asset canister:`, error)
+            return { status: false, message: `Failed to upload file batch. ${error.message}` };
+        }
+    }
+
+    async getUserProjects(page?: number, limit?: number) {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
+
+
+            const payload: GetProjectsByUserPayload = {
+                user: this.identity.getPrincipal(),
+                limit: limit ? [BigInt(limit)] : [],
+                page: page ? [BigInt(page)] : []
+
+            }
+
+            const result = await this.actor.get_projects_by_user(payload);
+            console.log(`Result get projects`, result)
+            if ("ok" in result) {
+                const sanitized = result.ok.map((project: Project) => {
+                    return {
+                        canister_id: project.canister_id ? project.canister_id.toString() : null,
+                        name: project.name,
+                        description: project.description,
+                        tags: project.tags,
+                        plan: project.plan,
+                        date_created: project.date_created,
+                        date_updated: project.date_updated
+                    }
+                })
+
+                console.log(`Got all user projects.`, sanitized);
+                return sanitized;
+            }
+            else {
+                if ("err" in result) {
+                    console.error(`Error getting projects `, result.err);
+                }
+            }
+        } catch (error: any) {
+            console.log(`Error getting user projects:`, error)
+            return null;
         }
     }
 
