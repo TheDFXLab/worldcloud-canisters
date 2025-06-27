@@ -1,19 +1,14 @@
 .websites-container {
-  width: 100%;
+  padding: 2rem;
+  min-height: calc(100vh - 64px);
+  background-color: var(--background);
   height: 100%;
-  padding: 0;
-  padding-top: 10px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  overflow-y: auto;
 }
 
 .websites-header {
-  width: 100%;
-  text-align: center;
-  margin-bottom: 2rem;
+  text-align: left;
+  margin-bottom: 2.5rem;
 }
 
 .websites-header h2 {
@@ -28,18 +23,97 @@
 }
 
 .websites-grid {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem 1rem 0 1rem;
-  margin: -1rem -1rem 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
-  width: 100%;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 2.5rem;
   justify-content: center;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-color) transparent;
-  margin: auto auto;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Dotted Silhouette Card (Empty State) */
+.dotted-card {
+  min-width: 380px;
+  max-width: 420px;
+  min-height: 340px;
+  background: rgba(30, 34, 54, 0.55);
+  border: 2.5px dashed var(--color-primary);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  cursor: pointer;
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.15s;
+  margin: 0 auto;
+  padding: 2.2rem 2rem 2rem 2rem;
+  position: relative;
+}
+.dotted-card:hover {
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18),
+    0 0 0 4px var(--color-primary-light);
+  border-color: var(--color-primary-light);
+  transform: translateY(-3px) scale(1.025);
+}
+.dotted-plus {
+  font-size: 2.5rem !important;
+  color: var(--color-primary);
+  background: var(--background-secondary);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: absolute;
+  top: -28px;
+  left: 24px;
+  z-index: 2;
+  padding: 0.25em;
+  border: 2.5px solid var(--color-primary);
+}
+.dotted-card-upper,
+.dotted-card-lower {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 1;
+  padding-bottom: 1.2rem;
+}
+.dotted-card-divider {
+  border-bottom: 1.5px dashed var(--border-color);
+  margin: 0.5rem 0 1.2rem 0;
+}
+.dotted-card-message {
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 400;
+  margin-top: 0.5rem;
+}
+.dotted-card-message strong {
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+.dotted-card-message p {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  margin: 0.2rem 0 0 0;
+  font-weight: 400;
+}
+
+@media (max-width: 600px) {
+  .dotted-card {
+    min-width: 90vw;
+    max-width: 98vw;
+    padding: 1.2rem 0.5rem 1.2rem 0.5rem;
+  }
+  .websites-grid {
+    gap: 1.2rem;
+  }
 }
 
 .websites-grid::-webkit-scrollbar {
@@ -325,4 +399,62 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.websites-grid.empty-align-left {
+  width: 100%;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+}
+
+.websites-grid.empty-align-left .dotted-card {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.2rem;
+  align-items: center;
+}
+
+.sort-row {
+  margin-bottom: 2rem;
+}
+
+.tag-chip {
+  background: var(--background-secondary);
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border-color);
+  border-radius: 999px;
+  padding: 0.25em 0.8em;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+  outline: none;
+}
+.tag-chip.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.tag-chip:hover:not(.active) {
+  background: var(--color-primary-light);
+  color: var(--text-primary);
+  border-color: var(--color-primary-light);
+}
+
+@media (max-width: 600px) {
+  .tags-row {
+    gap: 0.4rem;
+    margin-bottom: 0.7rem;
+  }
+  .tag-chip {
+    font-size: 0.95rem;
+    padding: 0.35em 0.8em;
+  }
 }
