@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Card } from "react-bootstrap";
+import { Tooltip } from "@mui/material";
 import { FaGithub, FaFileArchive } from "react-icons/fa";
 
 import FileUploader from "../FileUploader/FileUploader";
@@ -10,6 +11,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import HeaderCard from "../HeaderCard/HeaderCard";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
+import { useGithub } from "../../context/GithubContext/GithubContext";
 
 interface ProjectDeploymentProps {}
 
@@ -20,6 +22,7 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
   const { toasterData, setToasterData, setShowToaster } = useToaster();
   const navigate = useNavigate();
   const { isDispatched, setIsDispatched } = useDeployments();
+  const { isGithubConnected } = useGithub();
 
   /** State */
   const [selectedMethod, setSelectedMethod] = useState<
@@ -62,22 +65,33 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
           />
 
           <div className="deployment-methods">
-            <Card
-              className="method-card"
-              onClick={() => setSelectedMethod("github")}
+            <Tooltip
+              title={
+                isGithubConnected
+                  ? ""
+                  : "Connect Github account to use this feature"
+              }
             >
-              <Card.Body>
-                <div className="method-icon">
-                  <FaGithub size={48} />
-                </div>
-                <Card.Title>Deploy from GitHub</Card.Title>
-                <Card.Text>
-                  Connect your GitHub repository and deploy directly from your
-                  source code.
-                </Card.Text>
-              </Card.Body>
-            </Card>
-
+              <div>
+                <Card
+                  className={`method-card ${
+                    !isGithubConnected ? "disabled" : ""
+                  }`}
+                  onClick={() => setSelectedMethod("github")}
+                >
+                  <Card.Body>
+                    <div className="method-icon">
+                      <FaGithub size={48} />
+                    </div>
+                    <Card.Title>Deploy from GitHub</Card.Title>
+                    <Card.Text>
+                      Connect your GitHub repository and deploy directly from
+                      your source code.
+                    </Card.Text>
+                  </Card.Body>
+                </Card>
+              </div>
+            </Tooltip>
             <Card
               className="method-card"
               onClick={() => setSelectedMethod("upload")}
