@@ -273,7 +273,15 @@ const ProjectsComponent: React.FC = () => {
                     <div className="project-header">
                       <LanguageIcon />
                       <div className={`plan-badge ${project.plan}`}>
-                        {planTag}
+                        <span
+                          className={`chip ${
+                            planTag.toLowerCase() === "paid"
+                              ? "paid"
+                              : "freemium"
+                          }`}
+                        >
+                          {planTag}
+                        </span>
                       </div>
                     </div>
                     {/* Row 2: Project name and description */}
@@ -428,7 +436,17 @@ const ProjectsComponent: React.FC = () => {
                         <span>{project.name}</span>
                       </td>
                       <td>{hasCanister ? "Deployed" : "Not deployed"}</td>
-                      <td>{planTag}</td>
+                      <td>
+                        <span
+                          className={`chip ${
+                            planTag.toLowerCase() === "paid"
+                              ? "paid"
+                              : "freemium"
+                          }`}
+                        >
+                          {planTag}
+                        </span>
+                      </td>
                       <td>
                         {project.date_created
                           ? new Date(
