@@ -174,26 +174,6 @@ const ProjectsComponent: React.FC = () => {
           title="Your Projects"
           description="Manage your projects and deployments"
         />
-        {/* <button
-          className="toggle-view-btn"
-          style={{
-            marginLeft: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            fontSize: 16,
-          }}
-          onClick={() => setViewMode(viewMode === "card" ? "table" : "card")}
-          aria-label={
-            viewMode === "card" ? "Switch to table view" : "Switch to card view"
-          }
-        >
-          {viewMode === "card" ? <TableChartIcon /> : <ViewModuleIcon />}{" "}
-          {viewMode === "card" ? "Table View" : "Card View"}
-        </button> */}
       </div>
       {/* Filter tags row */}
       <div style={{ position: "relative" }}>
@@ -256,16 +236,6 @@ const ProjectsComponent: React.FC = () => {
         </div>
         <button
           className="toggle-view-btn"
-          style={{
-            marginLeft: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            fontSize: 16,
-          }}
           onClick={() => setViewMode(viewMode === "card" ? "table" : "card")}
           aria-label={
             viewMode === "card" ? "Switch to table view" : "Switch to card view"
