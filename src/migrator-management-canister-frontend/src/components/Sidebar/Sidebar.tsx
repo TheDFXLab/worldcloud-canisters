@@ -9,12 +9,14 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import AddIcon from "@mui/icons-material/Add";
 import { CreditCard } from "@mui/icons-material";
 import MenuIcon from "@mui/icons-material/Menu";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 import { useNavigate } from "react-router-dom";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 
 import "./Sidebar.css";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAdmin } from "../../context/AdminContext/AdminContext";
 import { useGithub } from "../../context/GithubContext/GithubContext";
 
@@ -28,13 +30,53 @@ export type MenuItem =
   | "billing"
   | "home";
 
-function Sidebar() {
+interface SidebarProps {
+  isSidebarCollapsed: boolean;
+  setIsSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  mobileControl: any;
+}
+
+function Sidebar({
+  isSidebarCollapsed,
+  setIsSidebarCollapsed,
+  mobileControl,
+}: SidebarProps) {
   const { isAdmin } = useAdmin();
   const { disconnect } = useIdentity();
   const { setGithubUser } = useGithub();
   const { activeTab, isMobileMenuOpen, setIsMobileMenuOpen, setActiveTab } =
     useSideBar();
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = mobileControl;
+
+  useEffect(() => {
+    if (isMobile) {
+      setIsSidebarCollapsed(window.innerWidth <= 768 ? true : false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const resize = () =>
+      window.innerWidth <= 768 ? setIsMobile(true) : setIsMobile(false);
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+
+  const handleTabClick = () => {
+    if (isMobile) {
+      setIsSidebarCollapsed((p) => !p);
+      setIsMobileMenuOpen(!isMobileMenuOpen);
+    } else {
+      setIsSidebarCollapsed((v) => !v);
+    }
+  };
+
+  const handleClose = () => {
+    if (isMobile) {
+      setIsMobileMenuOpen(false);
+    }
+    setIsSidebarCollapsed(true);
+  };
 
   const handleMenuClick = (menuItem: MenuItem) => {
     switch (menuItem) {
@@ -73,17 +115,40 @@ function Sidebar() {
   return (
     <div>
       <button
-        className={`mobile-menu-button ${isMobileMenuOpen ? "hidden" : ""}`}
-        onClick={() => setIsMobileMenuOpen(true)}
-        aria-label="Open menu"
+        className={`sidebar-collapse-tab${
+          isSidebarCollapsed ? " collapsed" : ""
+        }`}
+        onClick={() => handleTabClick()}
+        aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        style={{
+          position: isSidebarCollapsed ? "fixed" : "absolute",
+          left: 0,
+          top: isSidebarCollapsed ? "2rem" : "0.75rem",
+          zIndex: 2001,
+          border: "none",
+          background: "var(--background-secondary)",
+          borderTopRightRadius: "1.5rem",
+          borderBottomRightRadius: "1.5rem",
+          width: "2.5rem",
+          height: "2.5rem",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          transition: "left 0.2s, background 0.2s",
+        }}
       >
-        <MenuIcon />
+        {isSidebarCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
       </button>
       <div
         className={`sidebar-overlay ${isMobileMenuOpen ? "show" : ""}`}
-        onClick={() => setIsMobileMenuOpen(false)}
+        onClick={() => handleClose()}
       />
-      <aside className={`sidebar ${isMobileMenuOpen ? "open" : ""}`}>
+      <aside
+        className={`sidebar${isSidebarCollapsed ? " collapsed" : ""} 
+          `}
+      >
         <nav className="sidebar-nav">
           <IconTextRowView
             className={`nav-item ${activeTab === "home" ? "active" : ""}`}

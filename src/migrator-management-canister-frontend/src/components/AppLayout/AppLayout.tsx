@@ -38,11 +38,14 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
     setSelectedDeployment,
   } = useDeployments();
   const { actionBar } = useActionBar();
-  const { toasterData, showToaster, setShowToaster } = useToaster();
   const { activeTab, setIsMobileMenuOpen } = useSideBar();
   const { agent } = useHttpAgent();
   /** State */
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    window.innerWidth <= 768 ? true : false
+  );
 
   /** Functions */
   useEffect(() => {
@@ -111,29 +114,23 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   }
 
   return (
-    <div className="app-layout">
-      {/* <ThemeToggle /> */}
-      <ProgressBar />
-      <LoaderOverlay />
-      {showToaster && toasterData && (
-        <Toaster
-          headerContent={toasterData.headerContent}
-          toastStatus={toasterData.toastStatus}
-          toastData={toasterData.toastData}
-          textColor={toasterData.textColor || "#000000"}
-          show={showToaster}
-          onHide={() => setShowToaster(false)}
-          timeout={toasterData.timeout ? toasterData.timeout : 3000}
-          link=""
-          overrideTextStyle=""
-        />
-      )}
-
-      <Sidebar />
-
-      <main className="main-content" onClick={() => setIsMobileMenuOpen(false)}>
+    <div className="app-layout" style={{ display: "flex", height: "100vh" }}>
+      <Sidebar
+        isSidebarCollapsed={isSidebarCollapsed}
+        setIsSidebarCollapsed={setIsSidebarCollapsed}
+        mobileControl={[isMobile, setIsMobile]}
+      />
+      <main
+        className="main-content"
+        style={{
+          flex: 1,
+          transition: "margin 0.2s",
+          marginLeft: isMobile ? 0 : isSidebarCollapsed ? 0 : 260,
+          minWidth: 0,
+        }}
+        onClick={() => setIsMobileMenuOpen(false)}
+      >
         {children}
-
         {actionBar && <ActionBar {...actionBar} />}
       </main>
     </div>
