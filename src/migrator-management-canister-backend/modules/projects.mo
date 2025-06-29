@@ -54,12 +54,10 @@ module {
 
             // Paginate data
             var start = _page * _limit;
-            var end = if (start >= project_ids.size()) {
-                start; // Return empty array if start is beyond array bounds
-            } else if (start + _limit > project_ids.size()) {
-                project_ids.size() - 1; // Don't go beyond array bounds
+            var end = if (start + _limit >= project_ids.size() - 1) {
+                project_ids.size() - 1; // Return empty array if start is beyond array bounds
             } else {
-                start + _limit - 1; // Normal case
+                start + _limit; // Don't go beyond array bounds
             };
 
             Debug.print("Start " # Nat.toText(start) # " end " # Nat.toText(end));
@@ -72,6 +70,7 @@ module {
             var result_projects : [Types.Project] = [];
             for (index in Iter.range(start, end)) {
                 let project_id = project_ids[index];
+                Debug.print("Index: " # Nat.toText(index) # " project id: " # Nat.toText(project_id));
                 let project = Utility.expect(projects.get(project_id), Errors.NotFoundProject());
                 result_projects := Array.append(result_projects, [project]);
             };
@@ -79,22 +78,12 @@ module {
             #ok(result_projects);
         };
 
-        public func create_project(user : Principal, canister_id : Principal, payload : Types.CreateProjectPayload) : Types.CreateProjectResponse {
-            Debug.print("[Create_Project] Created canister with id: " # Principal.toText(canister_id));
-
-            // Create the new canister deployment record
-            let canister_deployment : Types.CanisterDeployment = {
-                canister_id = canister_id;
-                size = 0;
-                status = #uninitialized;
-                date_created = Time.now();
-                date_updated = Time.now();
-            };
-            canister_table.put(canister_id, canister_deployment);
+        public func create_project(user : Principal, payload : Types.CreateProjectPayload) : Nat {
 
             // Create the project record
             let project : Types.Project = {
-                canister_id = ?canister_id;
+                id = next_project_id;
+                canister_id = null;
                 name = payload.project_name;
                 description = payload.project_description;
                 tags = payload.tags;
@@ -103,6 +92,7 @@ module {
                 date_updated = Time.now();
             };
 
+            Debug.print("Creating new project: " # debug_show (project));
             // Store the records
             projects.put(next_project_id, project);
             let existing_projects : [Nat] = Utility.expect_else(user_to_projects.get(user), []);
@@ -111,10 +101,7 @@ module {
             // Update the next project id
             next_project_id += 1;
 
-            return {
-                canister_id = ?canister_id;
-                project_id = next_project_id - 1;
-            };
+            return next_project_id - 1;
         };
 
         /**Start stable management */
@@ -132,6 +119,28 @@ module {
 
         public func get_stable_data_canister_table() : [(Principal, Types.CanisterDeployment)] {
             Iter.toArray(canister_table.entries());
+        };
+
+        /** Destructive Methods */
+        public func drop_projects() : Bool {
+            projects := HashMap.HashMap<Nat, Types.Project>(0, Nat.equal, Hash.hash);
+            user_to_projects := HashMap.HashMap<Principal, [Nat]>(0, Principal.equal, Principal.hash);
+            next_project_id := 0;
+            return true;
+        };
+
+        public func drop_project(user : Principal, project_id : Nat) : Bool {
+            projects.delete(project_id);
+            let user_projects : [Nat] = Utility.expect(user_to_projects.get(user), Errors.NotFoundProject());
+            var new_array : [Nat] = [];
+            for (index in Iter.range(0, user_projects.size() - 1)) {
+                let project : Types.Project = Utility.expect(projects.get(project_id), Errors.NotFoundProject());
+                if (not (project.id == project_id)) {
+                    let non_matching : [Nat] = Array.append(new_array, [project.id]);
+                };
+            };
+            user_to_projects.put(user, new_array);
+            return true;
         };
 
         // Function to restore from stable storage
