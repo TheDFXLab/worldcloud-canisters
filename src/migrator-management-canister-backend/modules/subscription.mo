@@ -8,7 +8,8 @@ import Book "../book";
 import Nat64 "mo:base/Nat64";
 import Nat "mo:base/Nat";
 import Array "mo:base/Array";
-import ErrorType "../modules/errors";
+import Errors "../modules/errors";
+import Utility "../utils/Utility";
 
 module {
     public class SubscriptionManager(book : Book.Book, ledger : Principal) {
@@ -64,7 +65,7 @@ module {
                 id = 3;
                 name = "Freemium";
                 slots = 1;
-                min_deposit = { e8s = 0 };
+                min_deposit = { e8s = 50_000_000 };
                 price = { e8s = 0 }; // Free tier
                 features = [
                     "1 Canister",
@@ -83,6 +84,20 @@ module {
 
         public func get_treasury() : ?Principal {
             return treasury;
+        };
+
+        public func get_tier_id_freemium() : Nat {
+            var i = 0;
+            let n = tiers_list.size();
+            // Use a while loop for early exit
+            while (i < n) {
+                if (tiers_list[i].name == "Freemium") {
+                    return tiers_list[i].id;
+                };
+                i += 1;
+            };
+            // If not found, throw error
+            return Utility.expect(null, Errors.NotFoundTier());
         };
 
         // TODO: Admin function
@@ -130,7 +145,7 @@ module {
 
             // Validate user has enough ICP balance
             if (deposited_icp < total_cost) {
-                return #err(ErrorType.InsufficientFunds());
+                return #err(Errors.InsufficientFunds());
             };
 
             // Deduct payment from caller's balance
@@ -141,7 +156,7 @@ module {
                 Debug.print("Sub: " # debug_show (subscription));
                 return #ok(subscription);
             } else {
-                return #err(ErrorType.PaymentProcessingFailure());
+                return #err(Errors.PaymentProcessingFailure());
             };
         };
 
@@ -149,7 +164,7 @@ module {
             // Validate treasury principal
             let payment_receiver = switch (treasury) {
                 case null {
-                    return #err(ErrorType.TreasuryNotSet());
+                    return #err(Errors.TreasuryNotSet());
                 };
                 case (?treasury) {
                     treasury;
@@ -157,7 +172,7 @@ module {
             };
 
             if (tier_id >= tiers_list.size()) {
-                return #err(ErrorType.InvalidTier());
+                return #err(Errors.InvalidTier());
             };
 
             // // Get pricing list
@@ -185,7 +200,7 @@ module {
 
                     // Allow upgrade/downgrade only
                     if (sub.tier_id == tier_id) {
-                        return #err(ErrorType.SubscriptionAlreadyExists());
+                        return #err(Errors.SubscriptionAlreadyExists());
                     };
 
                     let subscription : Types.Subscription = {

@@ -1,5 +1,7 @@
 /** Error Types */
 module ErrorType {
+    /** Timer */
+    public func NotFoundTimer() : Text = "Timer not found";
     /** Balance */
     public func InsufficientFunds() : Text = "Insufficient ICP balance";
     public func PaymentProcessingFailure() : Text = "Payment processing failed";
@@ -19,7 +21,7 @@ module ErrorType {
     public func NotFoundProject() : Text = "Project not found";
     public func NotFoundCanister() : Text = "Canister not found";
     public func NotFreemiumType() : Text = "Freemium project is required";
-
+    public func NotFoundTier() : Text = "Tier not found";
     public func NoUserSession() : Text = "No current active deployment";
     public func ActiveSession() : Text = "Session already active";
     public func InactiveSession() : Text = "Session is not active";
