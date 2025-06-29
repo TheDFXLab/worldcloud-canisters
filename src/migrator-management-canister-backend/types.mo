@@ -215,6 +215,7 @@ module {
     };
 
     public type Project = {
+        id : Nat;
         canister_id : ?Principal; // id of canister deployment
         name : Text;
         description : Text;
@@ -236,8 +237,8 @@ module {
     };
 
     public type CreateProjectResponse = {
-        canister_id : ?Principal;
         project_id : Nat;
+        is_freemium : Bool;
     };
 
     public type StoreAssetInCanisterPayload = {
@@ -357,7 +358,7 @@ module {
     };
 
     public type ShareableCanister = {
-        project_id : Nat;
+        project_id : ?Nat;
         canister_id : ?Principal;
         owner : Principal; // controller of the canister
         user : Principal; // current user of the canister
