@@ -57,7 +57,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
   const { getGithubToken } = useGithub();
   const { identity } = useIdentity();
   const { actionBar, setActionBar } = useActionBar();
-  const { canisterId } = useParams();
+  const { canisterId, projectId } = useParams();
   const { toasterData, setToasterData, setShowToaster } = useToaster();
   const navigate = useNavigate();
   const { agent } = useHttpAgent();
@@ -130,11 +130,11 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
   ];
 
   useEffect(() => {
-    if (!canisterId) {
+    if (!canisterId || !projectId) {
       navigate("/dashboard/new");
       return;
     }
-  }, [canisterId]);
+  }, [canisterId, projectId]);
 
   useEffect(() => {
     const loadRepos = async () => {

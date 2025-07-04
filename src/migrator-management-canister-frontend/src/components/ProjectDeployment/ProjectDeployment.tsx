@@ -18,7 +18,7 @@ interface ProjectDeploymentProps {}
 const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
   /** Hooks */
   const { actionBar, setActionBar } = useActionBar();
-  const { canisterId } = useParams();
+  const { canisterId, projectId } = useParams();
   const { toasterData, setToasterData, setShowToaster } = useToaster();
   const navigate = useNavigate();
   const { isDispatched, setIsDispatched } = useDeployments();
@@ -38,13 +38,13 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
 
   useEffect(() => {
     // Redirect to new page if no canister ID provided
-    if (!canisterId) {
+    if (!canisterId || !projectId) {
       // return <div>No canister ID</div>;
-      navigate("/dashboard/websites");
+      navigate("/dashboard/projects");
     }
-  }, [canisterId, navigate]);
+  }, [canisterId, projectId, navigate]);
 
-  if (!canisterId) {
+  if (!canisterId || !projectId) {
     return (
       <div className="project-deployment-container">
         <div className="deployment-header">

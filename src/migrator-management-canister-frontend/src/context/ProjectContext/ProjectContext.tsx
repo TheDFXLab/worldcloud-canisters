@@ -14,6 +14,7 @@ import { sanitizeObject } from "../../utility/sanitize";
 import { useLoadBar } from "../LoadBarContext/LoadBarContext";
 
 export interface ProjectData {
+  id: bigint;
   canister_id: string | null;
   name: string;
   description: string;
