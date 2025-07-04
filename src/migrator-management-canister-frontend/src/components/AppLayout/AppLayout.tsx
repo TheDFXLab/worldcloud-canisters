@@ -115,6 +115,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
 
   return (
     <div className="app-layout" style={{ display: "flex", height: "100vh" }}>
+      <LoaderOverlay />
       <Sidebar
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
