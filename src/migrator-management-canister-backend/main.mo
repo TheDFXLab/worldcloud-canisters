@@ -130,7 +130,7 @@ shared (deployMsg) actor class CanisterManager() = this {
     #ok(shareable_canister_manager.get_available_slots());
   };
 
-  public shared (msg) func get_user_slot() : async Types.Response<Types.ShareableCanister> {
+  public shared (msg) func get_user_slot() : async Types.Response<?Types.ShareableCanister> {
     assert not Principal.isAnonymous(msg.caller);
 
     #ok(shareable_canister_manager.get_canister_by_user(msg.caller));
@@ -218,21 +218,28 @@ shared (deployMsg) actor class CanisterManager() = this {
     let project : Types.Project = project_manager.get_project_by_id(project_id);
     if (project.plan == #freemium) {
       let project : Types.Project = await _request_freemium_session(project_id, msg.caller);
-      let slot : Types.ShareableCanister = shareable_canister_manager.get_canister_by_user(msg.caller);
-      let slot_id : Nat = shareable_canister_manager.get_slot_id_by_user(msg.caller);
-      _set_cleanup_timer(slot.duration, slot_id);
-      return #ok(
-        Principal.toText(
-          switch (project.canister_id) {
-            case (null) {
-              return #err(Errors.NotFoundCanister());
-            };
-            case (?id) {
-              id;
-            };
-          }
-        )
-      );
+      let slot : ?Types.ShareableCanister = shareable_canister_manager.get_canister_by_user(msg.caller);
+      switch (slot) {
+        case (null) {
+          return #err(Errors.NotFoundSlot());
+        };
+        case (?_slot) {
+          let slot_id : Nat = shareable_canister_manager.get_slot_id_by_user(msg.caller);
+          _set_cleanup_timer(_slot.duration, slot_id);
+          return #ok(
+            Principal.toText(
+              switch (project.canister_id) {
+                case (null) {
+                  return #err(Errors.NotFoundCanister());
+                };
+                case (?id) {
+                  id;
+                };
+              }
+            )
+          );
+        };
+      };
     } else if (project.plan == #paid) {
       return #ok(Principal.toText(await _deploy_asset_canister(msg.caller, false)));
     };
@@ -249,10 +256,18 @@ shared (deployMsg) actor class CanisterManager() = this {
     let project : Types.Project = project_manager.get_project_by_id(payload.project_id);
     let canister_id : Principal = Utility.expect(project.canister_id, Errors.NoCanisterInProject());
     if (project.plan == #freemium) {
-      let slot : Types.ShareableCanister = shareable_canister_manager.get_canister_by_user(msg.caller);
-      if (not (msg.caller == slot.user)) {
-        return #err(Errors.Unauthorized());
-      };
+      let slot : ?Types.ShareableCanister = shareable_canister_manager.get_canister_by_user(msg.caller);
+      switch (slot) {
+        case (null) {
+          return #err(Errors.NotFoundSlot());
+        };
+        case (?_slot) {
+          if (not (msg.caller == _slot.user)) {
+            return #err(Errors.Unauthorized());
+          };
+        };
+      }
+
     } else if (project.plan == #paid) {
       if (not (await _isController(canister_id, msg.caller))) {
         return #err(Errors.Unauthorized());
@@ -1000,8 +1015,15 @@ shared (deployMsg) actor class CanisterManager() = this {
       return true;
     } else {
       // TODO: CHeck
-      let slot : Types.ShareableCanister = shareable_canister_manager.get_canister_by_user(caller);
-      return slot.user == caller;
+      let slot : ?Types.ShareableCanister = shareable_canister_manager.get_canister_by_user(caller);
+      switch (slot) {
+        case (null) {
+          return false;
+        };
+        case (?_slot) {
+          return _slot.user == caller;
+        };
+      };
     };
     return false;
   };

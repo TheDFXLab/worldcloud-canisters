@@ -305,16 +305,21 @@ class MainApi {
             }
 
             if ("ok" in result) {
+                const slot = result.ok.length > 0 ? result.ok[0] : null;
+                if (!slot) {
+                    return null;
+                }
+
                 return {
-                    project_id: result.ok.project_id.length > 0 ? result.ok.project_id[0] : null,
-                    canister_id: result.ok.canister_id.length > 0 ? result.ok.canister_id[0] : null,
-                    owner: result.ok.owner,
-                    user: result.ok.user,
-                    start_timestamp: result.ok.start_timestamp,
-                    create_timestamp: result.ok.create_timestamp,
-                    duration: result.ok.duration,
-                    start_cycles: result.ok.start_cycles,
-                    status: result.ok.status
+                    project_id: slot.project_id.length > 0 ? slot.project_id[0] : null,
+                    canister_id: slot.canister_id.length > 0 ? slot.canister_id[0] : null,
+                    owner: slot.owner,
+                    user: slot.user,
+                    start_timestamp: slot.start_timestamp,
+                    create_timestamp: slot.create_timestamp,
+                    duration: slot.duration,
+                    start_cycles: slot.start_cycles,
+                    status: slot.status
 
                 };
             } else {

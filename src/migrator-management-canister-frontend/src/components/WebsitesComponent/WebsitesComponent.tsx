@@ -98,6 +98,9 @@ const WebsitesComponent: React.FC = () => {
   // Filtering logic
   const filteredCanisters = allCanisters.filter(({ canister_id, type }) => {
     if (activeFilterTag === "All") return true;
+    if (!canister_id) {
+      return false;
+    }
     const deployment = getDeployment(canister_id);
     const status = deployment?.status || "default";
     const statusTag = statusMap[status] || statusMap.default;
@@ -116,32 +119,35 @@ const WebsitesComponent: React.FC = () => {
     console.log(`subscription`, subscription);
     console.log(`Sorting canisters`, a, b);
     console.log(`all deployments`, deployments);
-    const depA = getDeployment(a.canister_id);
-    const depB = getDeployment(b.canister_id);
-    console.log(`Depa`, depA);
-    console.log(`Depb`, depB);
-    switch (activeSortTag) {
-      case "createAsc":
-        return (depA?.date_created || 0) - (depB?.date_created || 0);
-      case "createDesc":
-        return (depB?.date_created || 0) - (depA?.date_created || 0);
-      case "activeFirst":
-        return (
-          (depB?.status === "installed" ? 1 : 0) -
-          (depA?.status === "installed" ? 1 : 0)
-        );
-      case "inactiveFirst":
-        return (
-          (depA?.status === "installed" ? 1 : 0) -
-          (depB?.status === "installed" ? 1 : 0)
-        );
-      case "updatedAsc":
-        return (depA?.date_updated || 0) - (depB?.date_updated || 0);
-      case "updatedDesc":
-        return (depB?.date_updated || 0) - (depA?.date_updated || 0);
-      default:
-        return 0;
+    if (a.canister_id && b.canister_id) {
+      const depA = getDeployment(a.canister_id);
+      const depB = getDeployment(b.canister_id);
+      console.log(`Depa`, depA);
+      console.log(`Depb`, depB);
+      switch (activeSortTag) {
+        case "createAsc":
+          return (depA?.date_created || 0) - (depB?.date_created || 0);
+        case "createDesc":
+          return (depB?.date_created || 0) - (depA?.date_created || 0);
+        case "activeFirst":
+          return (
+            (depB?.status === "installed" ? 1 : 0) -
+            (depA?.status === "installed" ? 1 : 0)
+          );
+        case "inactiveFirst":
+          return (
+            (depA?.status === "installed" ? 1 : 0) -
+            (depB?.status === "installed" ? 1 : 0)
+          );
+        case "updatedAsc":
+          return (depA?.date_updated || 0) - (depB?.date_updated || 0);
+        case "updatedDesc":
+          return (depB?.date_updated || 0) - (depA?.date_updated || 0);
+        default:
+          return 0;
+      }
     }
+    return 0;
   });
 
   // If no canisters at all, show the dotted silhouette card
@@ -217,6 +223,9 @@ const WebsitesComponent: React.FC = () => {
       </div>
       <div className="websites-grid">
         {sortedCanisters.map(({ canister_id, type }) => {
+          if (!canister_id) {
+            return;
+          }
           const deployment = getDeployment(canister_id);
           const status = deployment?.status || "default";
           const statusTag = statusMap[status] || statusMap.default;
@@ -233,7 +242,7 @@ const WebsitesComponent: React.FC = () => {
               <div className="website-content">
                 <h3 className="website-title">
                   <LinkIcon className="link-icon" />
-                  {canister_id.slice(0, 8)}...icp0.io
+                  {canister_id?.slice(0, 8)}...icp0.io
                 </h3>
                 <div className="website-details">
                   <div className="detail-item">
@@ -264,6 +273,9 @@ const WebsitesComponent: React.FC = () => {
                   className="action-button primary"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (!canister_id) {
+                      return;
+                    }
                     window.open(getCanisterUrl(canister_id), "_blank");
                   }}
                 >

@@ -110,13 +110,20 @@ module {
             };
         };
 
-        public func get_canister_by_user(user : Principal) : Types.ShareableCanister {
+        public func get_canister_by_user(user : Principal) : ?Types.ShareableCanister {
             assert not Principal.isAnonymous(user);
-            let slot_id_opt : ?Nat = Utility.expect(user_to_slot.get(user), Errors.NoUserSession());
+            let slot_id_opt : ?Nat = switch (user_to_slot.get(user)) {
+                case (null) {
+                    return null;
+                };
+                case (?id) {
+                    id;
+                };
+            };
 
             let slot_id : Nat = Utility.expect(slot_id_opt, Errors.NotFoundSlot());
             let canister : Types.ShareableCanister = Utility.expect(slots.get(slot_id), Errors.NotFoundSharedCanister());
-            return canister;
+            return ?canister;
         };
 
         public func get_next_slot_id() : Nat {
@@ -401,6 +408,7 @@ module {
 
             slots.put(slot_id, updated_slot);
             used_slots.delete(slot_id);
+            user_to_slot.delete(slot.user);
             Debug.print("[end_session] Updated slot #" # Nat.toText(slot_id) # " and usage logs for" # Principal.toText(slot.user));
 
             return slot.project_id;
