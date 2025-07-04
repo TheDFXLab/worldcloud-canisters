@@ -12,7 +12,7 @@ interface CreateProjectPayload {
     plan: ProjectPlan;
 }
 
-export type PlanType = "#freemium" | "#paid";
+export type PlanType = "freemium" | "paid";
 
 class MainApi {
     private static instance: MainApi | null = null;
@@ -201,12 +201,12 @@ class MainApi {
         }
     }
 
-    async deployAssetCanister() {
+    async deployAssetCanister(project_id: bigint) {
         try {
             if (!this.actor) {
                 throw new Error("Actor not initialized.");
             }
-            const result = await this.actor.deployAssetCanister();
+            const result = await this.actor.deployAssetCanister(project_id);
             if ("Ok" in result || "ok" in result) {
                 return { status: true, message: Object.values(result)[0] };
             }
@@ -269,7 +269,7 @@ class MainApi {
                 throw new Error("Identity not initialized.");
             }
 
-            const result = await this.actor.request_freemium_session(project_id);
+            const result = await this.actor.deployAssetCanister(project_id);
             if (!result) {
                 throw new Error("Failed to request freemium session");
             }
@@ -299,14 +299,24 @@ class MainApi {
                 throw new Error("Identity not initialized.");
             }
 
-            const result = await this.actor.get_user_slot() as Response;
+            const result = await this.actor.get_user_slot();
             if (!result) {
                 throw new Error("Failed to request freemium session");
             }
 
-            if ("Ok" in result || "ok" in result) {
-                console.log(`MainApi: result from freemium usage: `, result)
-                return true;
+            if ("ok" in result) {
+                return {
+                    project_id: result.ok.project_id.length > 0 ? result.ok.project_id[0] : null,
+                    canister_id: result.ok.canister_id.length > 0 ? result.ok.canister_id[0] : null,
+                    owner: result.ok.owner,
+                    user: result.ok.user,
+                    start_timestamp: result.ok.start_timestamp,
+                    create_timestamp: result.ok.create_timestamp,
+                    duration: result.ok.duration,
+                    start_cycles: result.ok.start_cycles,
+                    status: result.ok.status
+
+                };
             } else {
                 throw new Error("Error requesting freemium session: " + Object.values(result)[0]);
             }
@@ -337,16 +347,14 @@ class MainApi {
             project_name: project_name,
             project_description: description,
             tags: tags,
-            plan: plan === '#freemium' ? { freemium: null } : { paid: null }
+            plan: plan === 'freemium' ? { freemium: null } : { paid: null }
         };
-
         const response = await this.actor.create_project(payload);
 
         if ("ok" in response) {
-            console.log(`Project created with id ${response.ok.project_id.toString()} and linked to canister ${response.ok.canister_id.toString()}`);
             return {
-                project_id: response.ok.project_id.toString(),
-                canister_id: response.ok.canister_id.toString()
+                project_id: response.ok.project_id,
+                is_freemium: response.ok.is_freemium
             };
         }
         else {
@@ -411,6 +419,7 @@ class MainApi {
             if ("ok" in result) {
                 const sanitized = result.ok.map((project: Project) => {
                     return {
+                        id: project.id,
                         canister_id: project.canister_id ? project.canister_id.toString() : null,
                         name: project.name,
                         description: project.description,
