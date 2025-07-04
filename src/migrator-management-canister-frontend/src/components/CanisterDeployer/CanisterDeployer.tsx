@@ -75,7 +75,7 @@ function CanisterDeployer({}: CanisterDeployerProps) {
     });
   }, [isLoading, subscription]);
 
-  const handleDeploy = async () => {
+  const handleDeploy = async (projectId: bigint) => {
     try {
       summon("Canister deployment in progress...");
 
@@ -109,7 +109,7 @@ function CanisterDeployer({}: CanisterDeployerProps) {
       }
 
       const mainApi = await MainApi.create(identity, agent);
-      const result = await mainApi?.deployAssetCanister();
+      const result = await mainApi?.deployAssetCanister(projectId);
 
       if (result && result.status) {
         const newDeployment = {
