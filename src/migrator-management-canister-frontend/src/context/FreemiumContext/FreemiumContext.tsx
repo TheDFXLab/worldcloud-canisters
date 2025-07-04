@@ -46,7 +46,7 @@ enum SlotStatus {
 }
 
 export interface FreemiumUsageData {
-  canister_id: string;
+  canister_id: string | null;
   owner: string; // controller of the canister
   user: string; // current user of the canister
   start_timestamp: bigint; //time user occupied the canister
@@ -85,13 +85,15 @@ export function FreemiumProvider({ children }: { children: ReactNode }) {
   let queryNameSubscription = "freemium";
 
   const { data: usageData = false, isLoading: isLoadingUsageData } = useQuery({
-    queryKey: [queryNameSubscription, identity?.getPrincipal().toText()],
+    queryKey: [
+      queryNameSubscription,
+      identity?.getPrincipal().toText(),
+      shouldRefetchFreemiumUsage,
+    ],
     queryFn: async () => {
       try {
         setShowLoadBar(true);
-        console.log(`Regreshing freemium usage...`);
         const res = await getFreemiumUsage();
-
         if (!res) {
           console.log("No freemium entry found");
           return null;
@@ -133,12 +135,12 @@ export function FreemiumProvider({ children }: { children: ReactNode }) {
       const isExpired = Date.now() - timestamp > VERIFICATION_INTERVAL;
       if (isExpired) {
         localStorage.removeItem(queryNameSubscription);
-        return false;
+        return null;
       }
 
       if (identity && principal !== identity.getPrincipal().toText()) {
         localStorage.removeItem(queryNameSubscription);
-        return false;
+        return null;
       }
       return status;
     },
