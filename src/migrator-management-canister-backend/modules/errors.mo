@@ -25,6 +25,7 @@ module ErrorType {
     public func NoUserSession() : Text = "No current active deployment";
     public func ActiveSession() : Text = "Session already active";
     public func InactiveSession() : Text = "Session is not active";
+    public func NotFoundSession() : Text = "Session not found";
 
     public func NoCanisterInProject() : Text = "No canister linked to project";
     public func NotFoundSharedCanister() : Text = "Deployment not found";

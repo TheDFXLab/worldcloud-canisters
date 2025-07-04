@@ -19,6 +19,7 @@ import Principal "mo:base/Principal";
 import Bool "mo:base/Bool";
 import Time "mo:base/Time";
 import Float "mo:base/Float";
+import Timer "mo:base/Timer";
 import Account "Account";
 import Book "./book";
 import SubscriptionManager "./modules/subscription";
@@ -46,121 +47,205 @@ shared (deployMsg) actor class CanisterManager() = this {
   let CYCLES_PER_XDR : Float = 1_000_000_000_000;
 
   let icp_fee : Nat = 10_000;
-  // let ledger : Principal = Principal.fromActor(IcpLedger);
   let Ledger : Types.Ledger = actor (Principal.toText(ledger));
 
-  // Store the WASM bytes in stable memory
-  private stable var asset_canister_wasm : ?[Nat8] = null;
-
+  private stable var asset_canister_wasm : ?[Nat8] = null; // Store the WASM bytes in stable memor
   private var canister_files = HashMap.HashMap<Principal, [Types.StaticFile]>(0, Principal.equal, Principal.hash);
-  private stable var stable_canister_files : [(Principal, [Types.StaticFile])] = [];
-
   private var deployed_canisters = HashMap.HashMap<Principal, Bool>(0, Principal.equal, Principal.hash);
-  private stable var stable_deployed_canisters : [(Principal, Bool)] = [];
 
-  //Store asset metadata
-  private var assets = HashMap.HashMap<Types.AssetId, Types.Asset>(0, Text.equal, Text.hash);
-  private stable var stable_assets_array : [Types.Asset] = [];
+  private var assets = HashMap.HashMap<Types.AssetId, Types.Asset>(0, Text.equal, Text.hash); //Store asset metadata
 
   //Store chunks for each asset
   //Key format: "assetId:chunkId"
   private var chunks = HashMap.HashMap<Text, Blob>(0, Text.equal, Text.hash);
-  private stable var stable_chunks_array : [Types.AssetChunk] = [];
-
-  // private var batchMap: HashMap.HashMap<Nat, Nat> = HashMap.HashMap<Nat, Nat>(0, Nat.equal, Hash.hash);
   private var canisterBatchMap : Types.CanisterBatchMap = HashMap.HashMap<Principal, (Types.BatchMap, Types.BatchChunks)>(0, Principal.equal, Principal.hash);
-
-  // private var canister_table : HashMap.HashMap<Principal, Types.CanisterDeployment> = HashMap.HashMap<Principal, Types.CanisterDeployment>(0, Principal.equal, Principal.hash);
-  private stable var stable_canister_table : [(Principal, Types.CanisterDeployment)] = [];
-
-  // private var projects : HashMap.HashMap<Nat, Types.Project> = HashMap.HashMap<Nat, Types.Project>(0, Nat.equal, Hash.hash);
-  private stable var stable_projects : [(Nat, Types.Project)] = [];
-  // private var user_to_projects : HashMap.HashMap<Principal, [Nat]> = HashMap.HashMap<Principal, [Nat]>(0, Principal.equal, Principal.hash);
-  private stable var stable_user_to_projects : [(Principal, [Nat])] = [];
-
-  private stable var stable_next_project_id : Nat = 0;
-
   private var user_canisters : Types.UserCanisters = HashMap.HashMap<Principal, [Principal]>(0, Principal.equal, Principal.hash);
-  private stable var stable_user_canisters : [(Principal, [Principal])] = [];
-
   private var pending_cycles : HashMap.HashMap<Principal, Nat> = HashMap.HashMap<Principal, Nat>(0, Principal.equal, Principal.hash);
+  private var book : Book.Book = Book.Book();
+  private var workflow_run_history : Types.WorkflowRunHistory = HashMap.HashMap<Principal, [Types.WorkflowRunDetails]>(0, Principal.equal, Principal.hash);
+  private var timers : HashMap.HashMap<Nat, Nat> = HashMap.HashMap<Nat, Nat>(0, Nat.equal, Hash.hash);
+
+  /** Canister & Asset stables */
+  private stable var stable_canister_files : [(Principal, [Types.StaticFile])] = [];
+  private stable var stable_deployed_canisters : [(Principal, Bool)] = [];
+  private stable var stable_user_canisters : [(Principal, [Principal])] = [];
+  private stable var stable_assets_array : [Types.Asset] = [];
+  private stable var stable_chunks_array : [Types.AssetChunk] = [];
+  private stable var stable_canister_table : [(Principal, Types.CanisterDeployment)] = [];
   private stable var stable_pending_cycles : [(Principal, Nat)] = [];
 
-  private var book : Book.Book = Book.Book();
+  /** Timer Stables*/
+  private stable var stable_timers : [(Nat, Nat)] = [];
+  private stable var stable_slot_id_active_timer : [Nat] = [];
+
+  /** Book Stables */
   private stable var stable_book : [(Principal, [(Types.Token, Nat)])] = [];
 
-  private var workflow_run_history : Types.WorkflowRunHistory = HashMap.HashMap<Principal, [Types.WorkflowRunDetails]>(0, Principal.equal, Principal.hash);
+  /** Github Stables*/
   private stable var stable_workflow_run_history : [(Principal, [Types.WorkflowRunDetails])] = [];
 
-  // Subscription manager class
-  private let subscription_manager = SubscriptionManager.SubscriptionManager(book, ledger);
+  /** Subscription Stables */
   private stable var stable_subscriptions : [(Principal, Types.Subscription)] = [];
 
-  private let access_control = AccessControl.AccessControl(deployMsg.caller);
+  /** Access Control Stables */
   private stable var stable_role_map : [(Principal, Types.Role)] = [];
 
-  private let signatures = HashMap.HashMap<Principal, Blob>(0, Principal.equal, Principal.hash);
+  /** Projects Stables */
+  private stable var stable_projects : [(Nat, Types.Project)] = [];
+  private stable var stable_user_to_projects : [(Principal, [Nat])] = [];
+  private stable var stable_next_project_id : Nat = 0;
 
-  private let shareable_canister_manager = CanisterShareable.ShareableCanisterManager();
-
-  private stable var stable_slot_to_canister : [(Nat, Types.ShareableCanister)] = [];
+  /** Shareable canister stables */
+  private stable var stable_slots : [(Nat, Types.ShareableCanister)] = [];
   private stable var stable_user_to_slot : [(Principal, ?Nat)] = [];
-  private stable var stable_used_canisters : [(Nat, Bool)] = [];
+  private stable var stable_used_slots : [(Nat, Bool)] = [];
   private stable var stable_usage_logs : [(Principal, Types.UsageLog)] = [];
   private stable var stable_next_canister_id : Nat = 0;
   private stable var stable_next_slot_id : Nat = 0;
 
-  /** Projects **/
+  /** Classes Instances */
   private let project_manager = ProjectManager.ProjectManager();
+  private let subscription_manager = SubscriptionManager.SubscriptionManager(book, ledger);
+  private let access_control = AccessControl.AccessControl(deployMsg.caller);
+  private let signatures = HashMap.HashMap<Principal, Blob>(0, Principal.equal, Principal.hash);
+  private let shareable_canister_manager = CanisterShareable.ShareableCanisterManager();
 
   public shared (msg) func get_projects_by_user(payload : Types.GetProjectsByUserPayload) : async Types.Response<[Types.Project]> {
     assert not Principal.isAnonymous(msg.caller);
     await project_manager.get_projects_by_user(msg.caller, payload);
   };
 
-  // Creates a new project and canister
+  /** Shareable Canisters */
+  public shared (msg) func get_slots(limit : ?Nat, index : ?Nat) : async Types.Response<[Types.ShareableCanister]> {
+    // assert (access_control.is_authorized(msg.caller));
+    // if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
+
+    #ok(shareable_canister_manager.get_slots(limit, index));
+  };
+
+  public shared (msg) func get_available_slots(limit : ?Nat, index : ?Nat) : async Types.Response<[Nat]> {
+    // assert (access_control.is_authorized(msg.caller));
+    // if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
+
+    #ok(shareable_canister_manager.get_available_slots());
+  };
+
+  public shared (msg) func get_user_slot() : async Types.Response<Types.ShareableCanister> {
+    assert not Principal.isAnonymous(msg.caller);
+
+    #ok(shareable_canister_manager.get_canister_by_user(msg.caller));
+  };
+
+  public shared (msg) func get_used_slots() : async [(Nat, Bool)] {
+    return shareable_canister_manager.get_used_slots();
+  };
+
+  public shared (msg) func get_slot_by_id(slot_id : Nat) : async Types.ShareableCanister {
+    return shareable_canister_manager.get_canister_by_slot(slot_id);
+  };
+  private func get_available_slot_id(caller : Principal, project_id : Nat) : async Nat {
+    // Find available slots
+    let available_slot_ids : [Nat] = shareable_canister_manager.get_available_slots();
+    // Create new canister and slot if no available shared canisters
+    if (available_slot_ids.size() == 0) {
+
+      Debug.print("No available canister slots, creating new one...");
+      let new_canister_id : Principal = await _deploy_asset_canister(Principal.fromActor(this), true);
+
+      Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Code installed");
+
+      let slot_id = shareable_canister_manager.create_slot(
+        Principal.fromActor(this),
+        caller,
+        new_canister_id,
+        ?project_id,
+        BASE_CANISTER_START_CYCLES,
+      );
+
+      Debug.print("Slot created with id:" # Nat.toText(slot_id));
+      return slot_id;
+    } else {
+      return available_slot_ids[0];
+    };
+  };
+
+  public shared (msg) func admin_delete_usage_logs() : async () {
+    return shareable_canister_manager.admin_clear_usage_logs();
+  };
+  public shared (msg) func update_slot(slot_id : Nat, updated_slot : Types.ShareableCanister) : async Types.Response<Types.ShareableCanister> {
+    shareable_canister_manager.update_slot(slot_id, updated_slot);
+  };
+  public shared (msg) func delete_projects() : async Bool {
+    return project_manager.drop_projects();
+  };
+
+  public shared (msg) func delete_project(project_id : Nat) : async Bool {
+    return project_manager.drop_project(msg.caller, project_id);
+  };
+  public shared (msg) func reset_slots() {
+    return shareable_canister_manager.reset_slots(Principal.fromActor(this));
+  };
+
+  // Step 1, create project and get project id
+  // Creates a new project (freemium and)
   public shared (msg) func create_project(payload : Types.CreateProjectPayload) : async Types.Response<Types.CreateProjectResponse> {
     assert not Principal.isAnonymous(msg.caller);
 
-    var canister_id : ?Principal = null;
-    if (payload.plan == #freemium) {
-      // Ensure 1 concurrent session for freemium canisters
-      if (shareable_canister_manager.is_active_session(msg.caller)) {
-        return #err(Errors.ActiveSession());
-      };
-
-      let available_slots : [Nat] = shareable_canister_manager.get_available_slots();
-      let canister = shareable_canister_manager.get_canister_by_slot(available_slots[0]);
-      canister_id := ?Utility.expect(canister.canister_id, Errors.NotFoundSlot());
-
-      // Add request a session call
-    } else if (payload.plan == #paid) {
-      // Deploy a new asset canister
-      let canister : Principal = switch (await _deploy_asset_canister(msg.caller)) {
-        case (#err(message)) {
-          return #err(message);
-        };
-        case (#ok(val)) {
-          Principal.fromText(val);
-        };
-      };
-      canister_id := ?canister;
-    };
-
-    let res : Types.CreateProjectResponse = project_manager.create_project(
+    let project_id : Nat = project_manager.create_project(
       msg.caller,
-      Utility.expect(canister_id, Errors.NotFoundProject()),
       payload,
     );
-    return #ok(res);
+
+    return #ok({
+      project_id = project_id;
+      is_freemium = switch (payload.plan) {
+        case (#freemium) {
+          true;
+
+        };
+        case (#paid) {
+          false;
+        };
+      };
+    });
   };
 
+  // Step 2 (freemium projects) -> request a session
+  // Step 2 (paid projects) -> deploy a canister
+  // Create a canister for freemium
+  public shared (msg) func deployAssetCanister(project_id : Nat) : async Types.Result {
+    assert not Principal.isAnonymous(msg.caller);
+    let project : Types.Project = project_manager.get_project_by_id(project_id);
+    if (project.plan == #freemium) {
+      let project : Types.Project = await _request_freemium_session(project_id, msg.caller);
+      let slot : Types.ShareableCanister = shareable_canister_manager.get_canister_by_user(msg.caller);
+      let slot_id : Nat = shareable_canister_manager.get_slot_id_by_user(msg.caller);
+      _set_cleanup_timer(slot.duration, slot_id);
+      return #ok(
+        Principal.toText(
+          switch (project.canister_id) {
+            case (null) {
+              return #err(Errors.NotFoundCanister());
+            };
+            case (?id) {
+              id;
+            };
+          }
+        )
+      );
+    } else if (project.plan == #paid) {
+      return #ok(Principal.toText(await _deploy_asset_canister(msg.caller, false)));
+    };
+
+    return #err(Errors.FailedDeployCanister());
+  };
+
+  // Step 3: Upload assets to project's canister
   // Upload files to project's asset canister
   public shared (msg) func upload_assets_to_project(
     payload : Types.StoreAssetInCanisterPayload
   ) : async Types.Response<Bool> {
     assert not Principal.isAnonymous(msg.caller);
-    // let project : Types.Project = Utility.expect(projects.get(payload.project_id), Errors.NotFoundProject());
     let project : Types.Project = project_manager.get_project_by_id(payload.project_id);
     let canister_id : Principal = Utility.expect(project.canister_id, Errors.NoCanisterInProject());
     if (project.plan == #freemium) {
@@ -174,67 +259,31 @@ shared (deployMsg) actor class CanisterManager() = this {
       };
     };
 
+    // TODO: pass caller as parameter
     await storeInAssetCanister(canister_id, payload.files, payload.workflow_run_details);
 
   };
 
-  /** Shareable Canisters */
-  public shared (msg) func get_slots(limit : ?Nat, index : ?Nat) : async Types.Response<[Types.ShareableCanister]> {
-    assert (access_control.is_authorized(msg.caller));
-    if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
-
-    #ok(shareable_canister_manager.get_slots(limit, index));
-  };
-
-  public shared (msg) func get_available_slots(limit : ?Nat, index : ?Nat) : async Types.Response<[Nat]> {
-    assert (access_control.is_authorized(msg.caller));
-    if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
-
-    #ok(shareable_canister_manager.get_available_slots());
-  };
-
-  public shared (msg) func get_user_slot() : async Types.Response<Types.ShareableCanister> {
-    assert not Principal.isAnonymous(msg.caller);
-
-    #ok(shareable_canister_manager.get_canister_by_user(msg.caller));
-  };
-
   // Entrypoint for deploying a free canister
-  public shared (msg) func request_freemium_session(project_id : Nat) : async Types.Response<Types.Project> {
-    assert not Principal.isAnonymous(msg.caller);
+  private func _request_freemium_session(project_id : Nat, caller : Principal) : async Types.Project {
+    assert not Principal.isAnonymous(caller);
     // TODO: assert is registered user
 
     // Ensure freemium project type
     let project : Types.Project = project_manager.get_project_by_id(project_id);
     if (not (project.plan == #freemium)) {
-      return #err(Errors.NotFreemiumType());
+      // return #err(Errors.NotFreemiumType());
+      Debug.trap(Errors.NotFreemiumType());
     };
 
     // Find available slots
-    let available_slots : [Nat] = shareable_canister_manager.get_available_slots();
-    // Create new canister and slot if no available shared canisters
-    if (available_slots.size() == 0) {
-
-      Debug.print("No available canister slots, creating new one...");
-      let new_canister_id : Principal = await _create_and_install_shared_canister();
-      Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Code installed");
-
-      let slot_result = shareable_canister_manager.create_slot(Principal.fromActor(this), msg.caller, new_canister_id, project_id, BASE_CANISTER_START_CYCLES);
-      let slot_id : Nat = switch (slot_result) {
-        case (#ok(id)) { id };
-        case (#err(error)) {
-          Debug.trap("Failed to create slot: " # error);
-        };
-      };
-
-      Debug.print("Slot created with id:" # Nat.toText(slot_id));
-
-    };
-
+    let slot_id : Nat = await get_available_slot_id(caller, project_id);
+    Debug.print("Available slot ID: " # Nat.toText(slot_id));
     Debug.print("Requesting a session...");
-    let slot : Types.ShareableCanister = Utility.resolve(await shareable_canister_manager.request_session(msg.caller));
+    let slot : Types.ShareableCanister = Utility.expect((await shareable_canister_manager.request_session(caller, project_id), Errors.NotFoundSlot()));
 
     let updated_project : Types.Project = {
+      id = project.id;
       canister_id = slot.canister_id;
       name = project.name;
       description = project.description;
@@ -243,63 +292,79 @@ shared (deployMsg) actor class CanisterManager() = this {
       date_created = project.date_created;
       date_updated = Time.now();
     };
-    // projects.put(project_id, updated_project);
     project_manager.put_project(project_id, updated_project);
 
-    return #ok(updated_project);
+    return updated_project;
   };
 
-  public shared (msg) func end_freemium_session(slot_id : Nat) : async Types.Response<Bool> {
+  public shared (msg) func end_freemium_session(slot_id : Nat) : async Types.Response<?Nat> {
+    let response = _end_freemium_session(slot_id);
+
+    _delete_timer(slot_id); // Clear the timer and pop from stable array of timer ids
+    response;
+  };
+
+  public shared (msg) func purge_expired_sessions() {
+    let slots : [Types.ShareableCanister] = shareable_canister_manager.get_slots(null, null);
+    var failed : [Nat] = [];
+    for ((slot_id, slot_entry) in shareable_canister_manager.slots.entries()) {
+      Debug.print("[purge_expired_sessions] Checking slot #" # Nat.toText(slot_id));
+      if (shareable_canister_manager.is_expired_session(slot_id)) {
+        Debug.print("[purge_expired_sessions] Slot #" # Nat.toText(slot_id) # " is expired. Ending freemium session.");
+        let project_id : ?Nat = switch (_end_freemium_session(slot_id)) {
+          case (#err(msg)) {
+            Debug.print("[purge_expired_sessions] Failed to end freemium session. Error: " # msg);
+            let _new_array = Array.append(failed, [slot_id]);
+            null;
+          };
+          case (#ok(id)) {
+            _delete_timer(slot_id);
+            Debug.print("[purge_expired_sessions] Project session ended.");
+            id;
+          };
+        };
+        Debug.print("Successfully purged session for project id #" # debug_show (project_id));
+      };
+    };
+
+    if (failed.size() > 0) {
+      Debug.print("Failed to purge " # Nat.toText(failed.size()) # " slots.");
+    };
+
+  };
+
+  private func _end_freemium_session(slot_id : Nat) : Types.Response<?Nat> {
     let slot : Types.ShareableCanister = shareable_canister_manager.get_canister_by_slot(slot_id);
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     let cycles = 0;
 
-    let project : Types.Project = project_manager.get_project_by_id(slot.project_id);
-    let updated_project : Types.Project = {
-      canister_id = null;
-      name = project.name;
-      description = project.description;
-      tags = project.tags;
-      plan = project.plan;
-      date_created = project.date_created;
-      date_updated = Time.now();
+    let _project_id : ?Nat = switch (slot.project_id) {
+      case (null) {
+        // Debug.trap("Project id not attached.");
+        null;
+      };
+      case (?id) {
+        let project : Types.Project = project_manager.get_project_by_id(id);
+        let updated_project : Types.Project = {
+          id = project.id;
+          canister_id = null;
+          name = project.name;
+          description = project.description;
+          tags = project.tags;
+          plan = project.plan;
+          date_created = project.date_created;
+          date_updated = Time.now();
+        };
+
+        project_manager.put_project(id, updated_project);
+        ?id;
+      };
     };
 
-    project_manager.put_project(slot.project_id, updated_project);
     // projects.put(slot.project_id, updated_project);
-    await shareable_canister_manager.terminate_session(slot_id, cycles);
-  };
-
-  private func _create_and_install_shared_canister() : async Principal {
-    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
-
-    ExperimentalCycles.add(BASE_CANISTER_START_CYCLES);
-    let settings : Types.CanisterSettings = {
-      freezing_threshold = null;
-      controllers = ?[Principal.fromActor(this)];
-      memory_allocation = null;
-      compute_allocation = null;
-    };
-
-    Debug.print("Creating canister now...");
-    // Create the canister
-    let create_result = await IC.create_canister({
-      settings = ?settings;
-    });
-
-    let new_canister_id = create_result.canister_id;
-
-    Debug.print("[Canister " # Principal.toText(new_canister_id) # "] Installing code");
-    let wasm_module = await getWasmModule();
-
-    // Install the asset canister code
-    await IC.install_code({
-      arg = Blob.toArray(to_candid (()));
-      wasm_module = wasm_module;
-      mode = #install;
-      canister_id = new_canister_id;
-    });
-    return new_canister_id;
+    let response = shareable_canister_manager.terminate_session(slot_id, cycles);
+    Debug.print("[_end_freemium_session] Ended freemium session for slot #" # Nat.toText(slot_id));
+    response;
   };
 
   public shared (msg) func public_key() : async {
@@ -802,7 +867,7 @@ shared (deployMsg) actor class CanisterManager() = this {
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     let claimable = book.fetchUserIcpBalance(msg.caller, ledger);
     let amount_in_e8s = Float.floor(amountInIcp * E8S_PER_ICP);
-
+    //
     let cyclesToAdd = await getCyclesToAdd(?Float.toInt(amount_in_e8s), ?msg.caller);
 
     switch (cyclesToAdd) {
@@ -819,44 +884,44 @@ shared (deployMsg) actor class CanisterManager() = this {
     };
   };
 
-  public shared (msg) func deployAssetCanister() : async Types.Result {
-    await _deploy_asset_canister(msg.caller);
-  };
-
   // Function to deploy new asset canister
-  private func _deploy_asset_canister(user : Principal) : async Types.Result {
+  private func _deploy_asset_canister(user : Principal, is_freemium : Bool) : async Principal {
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
-    // Get the stored WASM
-    let _wasm_module = switch (asset_canister_wasm) {
-      case null { return #err("Asset canister WASM not uploaded yet") };
-      case (?wasm) { wasm };
-    };
-    Debug.print("Getting sub for user " # Principal.toText(user));
-    // Validate user subscription limits
-    let user_subscription_res = await subscription_manager.get_subscription(user);
-    switch (user_subscription_res) {
-      case (#err(error)) {
-        Debug.print("Error getting sub for: " # Principal.toText(user));
 
-        return #err(error);
-      };
-      case (#ok(subscription)) {
-        Debug.print("User subscription: " # Nat.toText(subscription.tier_id));
-        let is_valid_subscription = await subscription_manager.validate_subscription(user);
-        if (is_valid_subscription != true) {
-          return #err("You have reached the maximum number of canisters for your subscription tier.");
+    // Only create a canister if freemium
+    if (is_freemium) {
+      let tier_id : Nat = subscription_manager.get_tier_id_freemium();
+      return await _create_canister(tier_id, user, true);
+
+    } else {
+
+      // Create canister and update user subscription
+      Debug.print("Getting sub for user " # Principal.toText(user));
+      // Validate user subscription limits
+      let user_subscription_res = await subscription_manager.get_subscription(user);
+      switch (user_subscription_res) {
+        case (#err(error)) {
+          Debug.print("Error getting sub for: " # Principal.toText(user));
+          Debug.trap(error);
         };
+        case (#ok(subscription)) {
+          Debug.print("User subscription: " # Nat.toText(subscription.tier_id));
+          let is_valid_subscription = await subscription_manager.validate_subscription(user);
+          if (is_valid_subscription != true) {
+            Debug.trap("You have reached the maximum number of canisters for your subscription tier.");
+          };
 
-        try {
+          try {
 
-          Debug.print("[Identity " # Principal.toText(user) # "] Adding cycles....");
+            Debug.print("[Identity " # Principal.toText(user) # "] Adding cycles....");
 
-          return await _create_canister(subscription.tier_id, subscription.max_slots, user, _wasm_module);
-        } catch (error) {
-          return #err("Failed to deploy asset canister: " # Error.message(error));
+            return await _create_canister(subscription.tier_id, user, false);
+          } catch (error) {
+            Debug.trap("Failed to deploy asset canister: " # Error.message(error));
+          };
         };
       };
-    };
+    }
 
   };
 
@@ -866,22 +931,42 @@ shared (deployMsg) actor class CanisterManager() = this {
     let cyclesForCanister = calculateCyclesToAdd(deposit_per_canister);
   };
 
-  private func _create_canister(tier_id : Nat, max_slots : Nat, controller : Principal, wasm_module : [Nat8]) : async Types.Result {
-    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
-    // Create new canister
+  private func _get_cycles_for_canister_init(tier_id : Nat) : Int {
     let min_deposit = subscription_manager.tiers_list[tier_id].min_deposit;
-
-    let cyclesForCanister = _convert_e8s_to_cycles(min_deposit.e8s, max_slots);
+    let cyclesForCanister = _convert_e8s_to_cycles(min_deposit.e8s, subscription_manager.tiers_list[tier_id].slots);
     Debug.print("Adding cycles for canister: " # Int.toText(Float.toInt(cyclesForCanister)));
-    ExperimentalCycles.add(Int.abs(Float.toInt(cyclesForCanister)));
+    return Float.toInt(cyclesForCanister);
+  };
 
+  private func _create_canister(tier_id : Nat, controller : Principal, is_freemium : Bool) : async Principal {
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    let wasm_module = switch (asset_canister_wasm) {
+      case null { Debug.trap("Asset canister WASM not uploaded yet") };
+      case (?wasm) { wasm };
+    };
+
+    let controllers = switch (is_freemium) {
+      case (false) {
+        [Principal.fromActor(this), controller];
+      };
+      case (true) {
+        [Principal.fromActor(this)];
+      };
+    };
+
+    // Get cycles to add to fresh canister
+    let cyclesForCanister : Int = _get_cycles_for_canister_init(tier_id);
+    ExperimentalCycles.add(Int.abs(cyclesForCanister));
+
+    // Set controller
     let settings : Types.CanisterSettings = {
       freezing_threshold = null;
-      controllers = ?[Principal.fromActor(this), controller];
+      controllers = ?controllers;
       memory_allocation = null;
       compute_allocation = null;
     };
 
+    // Create new canister
     let create_result = await IC.create_canister({
       settings = ?settings;
     });
@@ -903,9 +988,22 @@ shared (deployMsg) actor class CanisterManager() = this {
     // After successful deployment, add to tracking
     deployed_canisters.put(new_canister_id, true);
 
-    await _addCanisterDeployment(controller, new_canister_id);
+    await _addCanisterDeployment(controller, new_canister_id, is_freemium);
 
-    return #ok(Principal.toText(new_canister_id));
+    return new_canister_id;
+  };
+
+  private func _is_allowed_store_assets(canister_id : Principal, caller : Principal) : async Bool {
+    if (access_control.is_authorized(caller)) {
+      return true;
+    } else if (await _isController(canister_id, caller)) {
+      return true;
+    } else {
+      // TODO: CHeck
+      let slot : Types.ShareableCanister = shareable_canister_manager.get_canister_by_user(caller);
+      return slot.user == caller;
+    };
+    return false;
   };
 
   // TODO: Add counter for size
@@ -915,12 +1013,13 @@ shared (deployMsg) actor class CanisterManager() = this {
   * @param files - The files to store in the asset canister
   * @returns A result indicating the success or failure of the operation
 */
+  // TODO: Reject calls with canister_id being a shareable canister
   public shared (msg) func storeInAssetCanister(
     canister_id : Principal,
     files : [Types.StaticFile],
     workflow_run_details : ?Types.WorkflowRunDetails,
   ) : async Types.Response<Bool> {
-    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
+    assert (await _is_allowed_store_assets(canister_id, msg.caller));
 
     Debug.print("Storing files in asset canister for user: " # Principal.toText(msg.caller));
     _updateCanisterDeployment(canister_id, #installing); // Update canister deployment status to installing
@@ -1100,7 +1199,8 @@ shared (deployMsg) actor class CanisterManager() = this {
 
   };
 
-  private func _addCanisterDeployment(caller : Principal, canister_id : Principal) : async () {
+  // TODO: Add is_freemium
+  private func _addCanisterDeployment(caller : Principal, canister_id : Principal, is_freemium : Bool) : async () {
     let deployment = {
       canister_id = canister_id;
       status = #uninitialized;
@@ -1109,19 +1209,23 @@ shared (deployMsg) actor class CanisterManager() = this {
       size = 0;
     };
 
-    let canisters = switch (user_canisters.get(caller)) {
-      case null { [] };
-      case (?d) { d };
+    if (not is_freemium) {
+      // Add to user subscription
+      let canisters = switch (user_canisters.get(caller)) {
+        case null { [] };
+        case (?d) { d };
+      };
+
+      // Update user canisters
+      let new_canisters = Array.append(canisters, [canister_id]);
+      user_canisters.put(caller, new_canisters);
+
+      // Count canister usage in user subscription
+      let _pushCanisterId = await subscription_manager.push_canister_id(caller, canister_id); // Update subscription
+      Debug.print("Added canister deployment by " # Principal.toText(caller) # " for " # Principal.toText(canister_id) # ". Total deployments: " # Nat.toText(new_canisters.size()));
+
     };
-
-    let new_canisters = Array.append(canisters, [canister_id]);
-
-    user_canisters.put(caller, new_canisters);
-    // canister_table.put(canister_id, deployment); // Add to canister table
     project_manager.put_canister_table(canister_id, deployment);
-
-    let _pushCanisterId = await subscription_manager.push_canister_id(caller, canister_id); // Update subscription
-    Debug.print("Added canister deployment by " # Principal.toText(caller) # " for " # Principal.toText(canister_id) # ". Total deployments: " # Nat.toText(new_canisters.size()));
   };
 
   private func _handleChunkedFile(file : Types.StaticFile, asset_canister : Types.AssetCanister, batch_id : Nat, canister_id : Principal) : async () {
@@ -1168,6 +1272,7 @@ shared (deployMsg) actor class CanisterManager() = this {
 
   // Gets the actual batch id for a given file id
   private func _getBatchId(canister_id : Principal, file_batch_id : Nat) : (Bool, Nat) {
+
     let batchMap = canisterBatchMap.get(canister_id);
     switch (batchMap) {
       case null {
@@ -1243,9 +1348,9 @@ shared (deployMsg) actor class CanisterManager() = this {
     stable_role_map := access_control.getStableData();
 
     // Backup shareable canister state
-    stable_slot_to_canister := shareable_canister_manager.get_stable_data_slot_to_canister();
+    stable_slots := shareable_canister_manager.get_stable_data_slots();
     stable_user_to_slot := shareable_canister_manager.get_stable_data_user_to_slot();
-    stable_used_canisters := shareable_canister_manager.get_stable_data_used_canisters();
+    stable_used_slots := shareable_canister_manager.get_stable_data_used_slots();
     stable_usage_logs := shareable_canister_manager.get_stable_data_usage_logs();
     stable_next_slot_id := shareable_canister_manager.get_stable_data_next_slot_id();
 
@@ -1262,6 +1367,9 @@ shared (deployMsg) actor class CanisterManager() = this {
     chunks_to_stable_array();
 
     stable_deployed_canisters := Iter.toArray(deployed_canisters.entries());
+    // stable_projects := project_manager.migrate_projects_add_project_id(stable_projects);
+
+    _backup_timer_slots(); // Keep track of existing cleanup timers to be reestablished
     Debug.print("Preupgrade: Finished preupgrade procedure. Ready for upgrade. ");
   };
 
@@ -1284,9 +1392,9 @@ shared (deployMsg) actor class CanisterManager() = this {
     Debug.print("PostUpgrade: Restored subscriptions: " # debug_show (stable_subscriptions));
 
     // Restore shareable canister stable data
-    shareable_canister_manager.load_from_stable_slot_to_canister(stable_slot_to_canister);
+    shareable_canister_manager.load_from_stable_slots(stable_slots);
     shareable_canister_manager.load_from_stable_user_to_slot(stable_user_to_slot);
-    shareable_canister_manager.load_from_stable_used_canisters(stable_used_canisters);
+    shareable_canister_manager.load_from_stable_used_slots(stable_used_slots);
     shareable_canister_manager.load_from_stable_usage_logs(stable_usage_logs);
     shareable_canister_manager.load_from_stable_next_slot_id(stable_next_slot_id);
 
@@ -1310,17 +1418,87 @@ shared (deployMsg) actor class CanisterManager() = this {
 
     // Initialize access control
     access_control.init();
+
+    _recover_timers();
   };
 
-  // private func canister_table_to_stable_array() {
-  //   stable_canister_table := Iter.toArray(canister_table.entries());
-  //   Debug.print("Preupgrade: Backing up canister deployments: " # Nat.toText(stable_user_canisters.size()));
-  // };
+  private func _backup_timer_slots() {
+    let slot_ids = Iter.toArray(timers.keys());
+    // slot_ids;
 
-  // private func canister_table_from_stable_array() {
-  //   canister_table := HashMap.fromIter(stable_canister_table.vals(), 0, Principal.equal, Principal.hash);
-  //   Debug.print("Postupgrade: Restored canister deployments: " # Nat.toText(canister_table.size()));
-  // };
+    stable_slot_id_active_timer := slot_ids;
+  };
+
+  private func _recover_timers<system>() {
+    for ((slot_id) in Iter.fromArray(stable_slot_id_active_timer)) {
+      Debug.print("[_recover_timers] Slot #" # Nat.toText(slot_id) # " recovering timer");
+      let slot : Types.ShareableCanister = shareable_canister_manager.get_canister_by_slot(slot_id);
+      let now = Int.abs(Time.now());
+      let remaining_duration : Nat = if (now > slot.start_timestamp) {
+        now - slot.start_timestamp;
+      } else {
+        0;
+      };
+      // Only recover valid non-expired session. Force end if less than 50s is left before expiry
+      if (remaining_duration > 50 * 1_000_000_000) {
+        _set_cleanup_timer(remaining_duration, slot_id);
+        Debug.print("[RecoverTimers] Project freemium session is active. Setup cleanup timer for slot #" # Nat.toText(slot_id));
+      } else {
+        let _project_id = _end_freemium_session(slot_id);
+        Debug.print("[RecoverTimers] Project freemium session expired. Terminated session for slot #" # Nat.toText(slot_id));
+      };
+    };
+  };
+
+  private func _get_timer_id(slot_id : Nat) : Nat {
+    Utility.expect(timers.get(slot_id), Errors.NotFoundTimer());
+  };
+
+  // Delete slot id to timer id reference from `timers` mapping
+  // Pop out slot id from array of slot ids with active timers
+  private func _delete_timer(slot_id : Nat) {
+    let _res = switch (timers.get(slot_id)) {
+      case (null) {
+        0;
+      };
+      case (?_timer_id) {
+        timers.delete(_timer_id);
+        0;
+      };
+    };
+
+    let new_active_slot_timers : [Nat] = Array.filter(stable_slot_id_active_timer, func(slot : Nat) : Bool { slot != slot_id });
+
+    Debug.print("Removed " # Int.toText(Int.abs(new_active_slot_timers.size() - stable_slot_id_active_timer.size())));
+    stable_slot_id_active_timer := new_active_slot_timers;
+  };
+
+  private func _set_cleanup_timer<system>(duration : Nat, slot_id : Nat) : () {
+    let timer_id = Timer.setTimer<system>(
+      #seconds duration,
+      func() : async () {
+        // This code runs after 10 seconds
+        Debug.print("[Timer Triggered] Ending session on slot #" # Nat.toText(slot_id));
+        let res = _end_freemium_session(slot_id);
+        switch (res) {
+          case (#err(error)) {
+            Debug.print("Failed to stop session on slot #" # Nat.toText(slot_id) # " error: " # error);
+          };
+          case (#ok(?project_id)) {
+            Debug.print("Stopped session running on slot #" # Nat.toText(slot_id) # " for project id: " # Nat.toText(project_id) # " @ " # Int.toText(Int.abs(Time.now() / 1_000_000_000)));
+            _delete_timer(slot_id);
+          };
+          case (#ok(null)) {
+            Debug.print("Stopped session running on slot # " #Nat.toText(slot_id) # " Project id not set.");
+            _delete_timer(slot_id);
+          };
+        };
+      },
+    );
+
+    Debug.print("[Timer] Created timer with id: " # Nat.toText(timer_id) # ". Triggers @" # Int.toText(Int.abs(Time.now() / 1_000_000_000)) # "s UNIX Time.");
+    timers.put(slot_id, timer_id);
+  };
 
   private func canister_deployments_to_stable_array() {
     stable_user_canisters := Iter.toArray(user_canisters.entries());
