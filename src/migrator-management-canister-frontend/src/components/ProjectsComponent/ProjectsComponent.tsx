@@ -17,6 +17,11 @@ import HeaderCard from "../HeaderCard/HeaderCard";
 import { ProjectData } from "../../context/ProjectContext/ProjectContext";
 import TableChartIcon from "@mui/icons-material/TableChart";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
+import MainApi from "../../api/main";
+import { useIdentity } from "../../context/IdentityContext/IdentityContext";
+import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import CountdownChip from "./CountdownChip";
+import { useFreemium } from "../../context/FreemiumContext/FreemiumContext";
 
 // Tag and sorting options
 const planMap: Record<string, string> = {
@@ -52,6 +57,13 @@ const ProjectsComponent: React.FC = () => {
   const { setActiveTab } = useSideBar();
   const navigate = useNavigate();
   const { setActionBar } = useActionBar();
+  const { identity } = useIdentity();
+  const { agent } = useHttpAgent();
+  const {
+    usageData: freemiumSlot,
+    isLoadingUsageData,
+    refreshFreemiumUsage,
+  } = useFreemium();
 
   useEffect(() => {
     setActiveTab("projects");
@@ -75,6 +87,10 @@ const ProjectsComponent: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    refreshFreemiumUsage();
+  }, []);
+
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
         filterRef.current &&
@@ -95,15 +111,17 @@ const ProjectsComponent: React.FC = () => {
   }, [filterTagsExpanded, sortTagsExpanded, isMobile]);
 
   // Filtering logic
-  const filteredProjects =
-    projects?.filter((project) => {
-      if (activeFilterTag === "All") return true;
-      const planTag = getPlanDisplayName(project.plan);
-      return activeFilterTag === planTag;
-    }) || [];
+  const filteredProjects = projects
+    ? projects?.filter((project) => {
+        if (activeFilterTag === "All") return true;
+        const planTag = getPlanDisplayName(project.plan);
+        return activeFilterTag === planTag;
+      })
+    : [];
 
   // Sorting logic
   const sortedProjects = [...filteredProjects].sort((a, b) => {
+    console.log(`Projects`);
     switch (activeSortTag) {
       case "createAsc":
         return (a.date_created || 0) - (b.date_created || 0);
@@ -255,7 +273,14 @@ const ProjectsComponent: React.FC = () => {
             sortedProjects.map((project) => {
               const planTag = getPlanDisplayName(project.plan);
               const hasCanister = !!project.canister_id;
-
+              const isFreemium = planTag.toLowerCase() === "freemium";
+              // Check if this project is the current user's active freemium session
+              const showCountdown =
+                isFreemium &&
+                hasCanister &&
+                freemiumSlot &&
+                freemiumSlot?.canister_id &&
+                freemiumSlot.canister_id === project.canister_id;
               return (
                 <div
                   key={`${project.name}-${project.date_created}`}
@@ -264,7 +289,7 @@ const ProjectsComponent: React.FC = () => {
                     if (hasCanister) {
                       navigate(`/dashboard/canister/${project.canister_id}`);
                     } else {
-                      navigate(`/dashboard/new`);
+                      // navigate(`/dashboard/new`);
                     }
                   }}
                 >
@@ -272,7 +297,14 @@ const ProjectsComponent: React.FC = () => {
                     {/* Row 1: Icon and Paid/Freemium badge */}
                     <div className="project-header">
                       <LanguageIcon />
-                      <div className={`plan-badge ${project.plan}`}>
+                      <div
+                        className={`plan-badge ${project.plan}`}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
                         <span
                           className={`chip ${
                             planTag.toLowerCase() === "paid"
@@ -282,6 +314,12 @@ const ProjectsComponent: React.FC = () => {
                         >
                           {planTag}
                         </span>
+                        {showCountdown && (
+                          <CountdownChip
+                            startTimestamp={freemiumSlot.start_timestamp}
+                            duration={freemiumSlot.duration}
+                          />
+                        )}
                       </div>
                     </div>
                     {/* Row 2: Project name and description */}
@@ -365,18 +403,48 @@ const ProjectsComponent: React.FC = () => {
                       <Tooltip title="Deploy new version" arrow>
                         <button
                           className="action-button secondary"
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
                             if (hasCanister) {
                               navigate(
-                                `/dashboard/deploy/${project.canister_id}`
+                                `/dashboard/deploy/${project.canister_id}/${project.canister_id}`
                               );
                             } else {
-                              navigate(`/dashboard/new`);
+                              if (!agent) {
+                                console.log(`HttpAgent not set.`);
+                                return;
+                              }
+
+                              const mainApi = await MainApi.create(
+                                identity,
+                                agent
+                              );
+
+                              const res = await mainApi?.deployAssetCanister(
+                                project.id
+                              );
+                              if (!res?.status) {
+                                console.error(
+                                  `Failed to attach canister id:`,
+                                  res?.message
+                                );
+                                return;
+                              }
+
+                              navigate(`/dashboard/projects`);
                             }
                           }}
                         >
-                          <CodeIcon /> Install Code
+                          {hasCanister ? (
+                            <>
+                              <CodeIcon />
+                              <span>Install Code</span>
+                            </>
+                          ) : (
+                            <>
+                              <CodeIcon /> <span>Attach Canister</span>
+                            </>
+                          )}
                         </button>
                       </Tooltip>
                     </div>
@@ -410,6 +478,12 @@ const ProjectsComponent: React.FC = () => {
                 sortedProjects.map((project) => {
                   const planTag = getPlanDisplayName(project.plan);
                   const hasCanister = !!project.canister_id;
+                  const isFreemium = planTag.toLowerCase() === "freemium";
+                  const showCountdown =
+                    isFreemium &&
+                    hasCanister &&
+                    freemiumSlot &&
+                    freemiumSlot.canister_id === project.canister_id;
                   return (
                     <tr
                       key={`${project.name}-${project.date_created}`}
@@ -443,8 +517,19 @@ const ProjectsComponent: React.FC = () => {
                               ? "paid"
                               : "freemium"
                           }`}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
                         >
                           {planTag}
+                          {showCountdown && (
+                            <CountdownChip
+                              startTimestamp={freemiumSlot.start_timestamp}
+                              duration={freemiumSlot.duration}
+                            />
+                          )}
                         </span>
                       </td>
                       <td>
