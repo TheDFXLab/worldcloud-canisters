@@ -8,6 +8,12 @@ import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
 import { useLoadBar } from "../../context/LoadBarContext/LoadBarContext";
+import { useProjects } from "../../context/ProjectContext/ProjectContext";
+import { useProgress } from "../../context/ProgressBarContext/ProgressBarContext";
+import { Principal } from "@dfinity/principal";
+import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
+import { useFreemium } from "../../context/FreemiumContext/FreemiumContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 const MAX_TAGS = 5;
 const MAX_DESC = 100;
@@ -18,8 +24,9 @@ const planOptions = [
 ];
 
 const CreateProjectForm: React.FC = () => {
+  const [status, setStatus] = useState("");
+
   const navigate = useNavigate();
-  const { subscription } = useSubscription();
   const [projectName, setProjectName] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -31,6 +38,18 @@ const CreateProjectForm: React.FC = () => {
   const { setShowLoadBar, setCompleteLoadBar } = useLoadBar();
   const { identity } = useIdentity();
   const { agent } = useHttpAgent();
+  const { setShouldRefetchProjects, refreshProjects } = useProjects();
+  const { refreshFreemiumUsage } = useFreemium();
+  const queryClient = useQueryClient();
+  const {
+    subscription,
+    isLoadingSub,
+    isLoadingTiers,
+    getSubscription,
+    validateSubscription,
+  } = useSubscription();
+  const { setIsLoadingProgress, setIsEnded } = useProgress();
+  const { addDeployment, refreshDeployments } = useDeployments();
 
   const handleAddTag = () => {
     const trimmed = tagInput.trim();
@@ -97,6 +116,8 @@ const CreateProjectForm: React.FC = () => {
       return;
     }
 
+    let project_id: bigint | null = null;
+    let is_freemium: boolean | null = null;
     try {
       summon("Creating Project...");
       setShowLoadBar(true);
@@ -107,8 +128,12 @@ const CreateProjectForm: React.FC = () => {
         tags,
         plan as PlanType
       );
-      console.log(`Created project: `, create_res);
-      navigate(`/dashboard/deploy/${create_res?.canister_id}`);
+
+      if (!create_res) {
+        throw new Error("Failed to create project.");
+      }
+      project_id = create_res.project_id;
+      is_freemium = create_res.is_freemium;
     } catch (error) {
       console.error(`Failed to create project.`, error);
       setToasterData({
@@ -121,6 +146,112 @@ const CreateProjectForm: React.FC = () => {
       return;
     } finally {
       setCompleteLoadBar(true);
+      destroy();
+    }
+
+    // Deploy the asset canister in case of paid
+    // Allocate slot to user project in case of freemium
+    await handleDeploy(project_id, is_freemium);
+  };
+
+  const handleDeploy = async (projectId: bigint, isFreemium: boolean) => {
+    try {
+      let message: string = "";
+      let title: string = "";
+      if (isFreemium) {
+        title = "Requesting";
+        message = "Allocating freemium slot to project...";
+        summon(message);
+      } else {
+        title = "Deploying";
+        message = "Canister deployment in progress...";
+        summon(message);
+
+        const validation = await validateSubscription(true);
+        if (!validation.status) {
+          setToasterData({
+            headerContent: "Error",
+            toastStatus: true,
+            toastData: validation.message,
+            textColor: "red",
+            timeout: 5000,
+          });
+
+          setShowToaster(true);
+          navigate("/dashboard/billing");
+          return;
+        }
+      }
+
+      setIsLoadingProgress(true);
+      setIsEnded(false);
+      setToasterData({
+        headerContent: title,
+        toastStatus: true,
+        toastData: message,
+        textColor: "green",
+      });
+      setShowToaster(true);
+
+      if (!agent) {
+        throw new Error("Agent not found");
+      }
+
+      const mainApi = await MainApi.create(identity, agent);
+
+      const result = await mainApi?.deployAssetCanister(projectId);
+
+      if (result && result.status) {
+        const newDeployment = {
+          canister_id: Principal.fromText(result?.message as string),
+          status: "uninitialized" as const,
+          date_created: Date.now(),
+          date_updated: Date.now(),
+          size: 0,
+        };
+
+        setToasterData({
+          headerContent: "Success",
+          toastStatus: true,
+          toastData: `Canister ID:  ${result?.message}`,
+          textColor: "green",
+        });
+        setShowToaster(true);
+        addDeployment(newDeployment);
+        refreshDeployments();
+        // setCanisterId(result?.message as string);
+
+        getSubscription();
+
+        console.log(`Navigating to deploy page...`);
+        // Navigate to publishing page
+        // navigate(`/dashboard/deploy/${result?.message as string}/${projectId}`);
+        if (identity) {
+          await queryClient.refetchQueries({
+            queryKey: ["freemium", identity?.getPrincipal().toText()],
+          });
+        }
+
+        refreshProjects();
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        navigate(`/dashboard/projects`);
+      } else {
+        setStatus(`Error: ${result?.message}`);
+      }
+    } catch (error) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: true,
+        toastData: `Error: ${error}`,
+        textColor: "red",
+        timeout: 5000,
+      });
+      setShowToaster(true);
+      return;
+    } finally {
+      setIsLoadingProgress(false);
+      setIsEnded(true);
       destroy();
     }
   };
