@@ -41,6 +41,8 @@ import { HttpAgentProvider } from "./context/HttpAgentContext/HttpAgentContext";
 import { AdminProvider } from "./context/AdminContext/AdminContext";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Provider } from "react-redux";
+import { store } from "./state/store";
 import { PricingProvider } from "./context/PricingContext/PricingContext";
 import { FreemiumProvider } from "./context/FreemiumContext/FreemiumContext";
 import CreateProjectForm from "./components/WebsitesComponent/CreateProjectForm";
@@ -68,138 +70,140 @@ function App() {
 
   return (
     <div className="app">
-      <QueryClientProvider client={queryClient}>
-        <HelmetProvider>
-          <Router>
-            <ThemeProvider>
-              <ThemeToggle />
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <HelmetProvider>
+            <Router>
+              <ThemeProvider>
+                <ThemeToggle />
 
-              <ProgressBarProvider>
-                <LoaderOverayProvider>
-                  <HttpAgentProvider>
-                    <IdentityProvider>
-                      <AdminProvider>
-                        <GithubProvider>
-                          <ToasterProvider>
-                            <SideBarProvider>
-                              <LoadBarProvider>
-                                <ActionBarProvider>
-                                  <PricingProvider>
-                                    <Routes>
-                                      <Route
-                                        path="/"
-                                        element={<LandingPage />}
-                                      />
-                                      <Route
-                                        path="/github/callback"
-                                        element={<GitHubCallback />}
-                                      />
-                                      <Route
-                                        path="/gh-select-repo"
-                                        element={<RepoSelector />}
-                                      />
-                                      <Route
-                                        path="/dashboard/*"
-                                        element={
-                                          <AuthWrapper>
-                                            <AuthorityProvider state={state}>
-                                              <DeploymentsProvider>
-                                                <CyclesProvider>
-                                                  <SubscriptionProvider>
-                                                    <FreemiumProvider>
-                                                      <ProjectProvider>
-                                                        <ConfirmationModalProvider>
-                                                          <LedgerProvider>
-                                                            <AppLayout
-                                                              setState={
-                                                                setState
-                                                              }
-                                                              state={state}
-                                                            >
-                                                              <Routes>
-                                                                <Route
-                                                                  index
-                                                                  element={
-                                                                    <HomePage />
-                                                                  }
-                                                                />
-                                                                <Route
-                                                                  path="billing"
-                                                                  element={
-                                                                    <BillingPage />
-                                                                  }
-                                                                />
-                                                                <Route
-                                                                  path="settings"
-                                                                  element={
-                                                                    <Settings />
-                                                                  }
-                                                                />
-                                                                <Route
-                                                                  path="new"
-                                                                  element={
-                                                                    <CreateProjectForm />
-                                                                  }
-                                                                />
-                                                                <Route
-                                                                  path="deploy/:canisterId?/:projectId"
-                                                                  element={
-                                                                    <ProjectDeployment />
-                                                                  }
-                                                                />
-                                                                <Route
-                                                                  path="websites"
-                                                                  element={
-                                                                    <WebsitesComponent />
-                                                                  }
-                                                                />
-                                                                <Route
-                                                                  path="projects"
-                                                                  element={
-                                                                    <ProjectsComponent />
-                                                                  }
-                                                                />
-                                                                <Route
-                                                                  path="admin"
-                                                                  element={
-                                                                    <AdminPanel />
-                                                                  }
-                                                                />
-                                                                <Route
-                                                                  path="canister/:canisterId"
-                                                                  element={
-                                                                    <CanisterOverview />
-                                                                  }
-                                                                />
-                                                              </Routes>
-                                                            </AppLayout>
-                                                          </LedgerProvider>
-                                                        </ConfirmationModalProvider>
-                                                      </ProjectProvider>
-                                                    </FreemiumProvider>
-                                                  </SubscriptionProvider>
-                                                </CyclesProvider>
-                                              </DeploymentsProvider>
-                                            </AuthorityProvider>
-                                          </AuthWrapper>
-                                        }
-                                      />
-                                    </Routes>
-                                  </PricingProvider>
-                                </ActionBarProvider>
-                              </LoadBarProvider>
-                            </SideBarProvider>
-                          </ToasterProvider>
-                        </GithubProvider>
-                      </AdminProvider>
-                    </IdentityProvider>
-                  </HttpAgentProvider>
-                </LoaderOverayProvider>
-              </ProgressBarProvider>
-            </ThemeProvider>
-          </Router>
-        </HelmetProvider>
-      </QueryClientProvider>
+                <ProgressBarProvider>
+                  <LoaderOverayProvider>
+                    <HttpAgentProvider>
+                      <IdentityProvider>
+                        <AdminProvider>
+                          <GithubProvider>
+                            <ToasterProvider>
+                              <SideBarProvider>
+                                <LoadBarProvider>
+                                  <ActionBarProvider>
+                                    <PricingProvider>
+                                      <Routes>
+                                        <Route
+                                          path="/"
+                                          element={<LandingPage />}
+                                        />
+                                        <Route
+                                          path="/github/callback"
+                                          element={<GitHubCallback />}
+                                        />
+                                        <Route
+                                          path="/gh-select-repo"
+                                          element={<RepoSelector />}
+                                        />
+                                        <Route
+                                          path="/dashboard/*"
+                                          element={
+                                            <AuthWrapper>
+                                              <AuthorityProvider state={state}>
+                                                <DeploymentsProvider>
+                                                  <CyclesProvider>
+                                                    <SubscriptionProvider>
+                                                      <FreemiumProvider>
+                                                        <ProjectProvider>
+                                                          <ConfirmationModalProvider>
+                                                            <LedgerProvider>
+                                                              <AppLayout
+                                                                setState={
+                                                                  setState
+                                                                }
+                                                                state={state}
+                                                              >
+                                                                <Routes>
+                                                                  <Route
+                                                                    index
+                                                                    element={
+                                                                      <HomePage />
+                                                                    }
+                                                                  />
+                                                                  <Route
+                                                                    path="billing"
+                                                                    element={
+                                                                      <BillingPage />
+                                                                    }
+                                                                  />
+                                                                  <Route
+                                                                    path="settings"
+                                                                    element={
+                                                                      <Settings />
+                                                                    }
+                                                                  />
+                                                                  <Route
+                                                                    path="new"
+                                                                    element={
+                                                                      <CreateProjectForm />
+                                                                    }
+                                                                  />
+                                                                  <Route
+                                                                    path="deploy/:canisterId?/:projectId"
+                                                                    element={
+                                                                      <ProjectDeployment />
+                                                                    }
+                                                                  />
+                                                                  <Route
+                                                                    path="websites"
+                                                                    element={
+                                                                      <WebsitesComponent />
+                                                                    }
+                                                                  />
+                                                                  <Route
+                                                                    path="projects"
+                                                                    element={
+                                                                      <ProjectsComponent />
+                                                                    }
+                                                                  />
+                                                                  <Route
+                                                                    path="admin"
+                                                                    element={
+                                                                      <AdminPanel />
+                                                                    }
+                                                                  />
+                                                                  <Route
+                                                                    path="canister/:canisterId"
+                                                                    element={
+                                                                      <CanisterOverview />
+                                                                    }
+                                                                  />
+                                                                </Routes>
+                                                              </AppLayout>
+                                                            </LedgerProvider>
+                                                          </ConfirmationModalProvider>
+                                                        </ProjectProvider>
+                                                      </FreemiumProvider>
+                                                    </SubscriptionProvider>
+                                                  </CyclesProvider>
+                                                </DeploymentsProvider>
+                                              </AuthorityProvider>
+                                            </AuthWrapper>
+                                          }
+                                        />
+                                      </Routes>
+                                    </PricingProvider>
+                                  </ActionBarProvider>
+                                </LoadBarProvider>
+                              </SideBarProvider>
+                            </ToasterProvider>
+                          </GithubProvider>
+                        </AdminProvider>
+                      </IdentityProvider>
+                    </HttpAgentProvider>
+                  </LoaderOverayProvider>
+                </ProgressBarProvider>
+              </ThemeProvider>
+            </Router>
+          </HelmetProvider>
+        </QueryClientProvider>
+      </Provider>
     </div>
   );
 }

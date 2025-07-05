@@ -1,0 +1,180 @@
+import React, { useEffect } from "react";
+import { DeserializedProject } from "../../utility/bigint";
+import { getPlanDisplayName } from "../../hooks/useProjectsLogic";
+import LanguageIcon from "@mui/icons-material/Language";
+import StorageIcon from "@mui/icons-material/Storage";
+import UpdateIcon from "@mui/icons-material/Update";
+import CodeIcon from "@mui/icons-material/Code";
+import { Tooltip } from "@mui/material";
+import CountdownChip from "./CountdownChip";
+import { FreemiumUsageData } from "../../state/slices/freemiumSlice";
+
+interface ProjectCardProps {
+  project: DeserializedProject;
+  freemiumSlot: FreemiumUsageData | null;
+  onInstallCode: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  onVisitWebsite: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  onClick: () => void;
+}
+
+export const ProjectCard: React.FC<ProjectCardProps> = ({
+  project,
+  freemiumSlot,
+  onInstallCode,
+  onVisitWebsite,
+  onClick,
+}) => {
+  const planTag = getPlanDisplayName(project.plan);
+  const hasCanister = !!project.canister_id;
+  const isFreemium = planTag.toLowerCase() === "freemium";
+
+  // Break down the conditions for better debugging
+  const hasFreemiumSlot = !!freemiumSlot;
+  const hasFreemiumCanisterId = hasFreemiumSlot && !!freemiumSlot.canister_id;
+  const canisterIdsMatch =
+    hasFreemiumCanisterId &&
+    String(freemiumSlot.canister_id).toLowerCase() ===
+      String(project.canister_id).toLowerCase();
+
+  // Show countdown if it's a freemium project with a canister and has active slot data
+  const showCountdown =
+    isFreemium &&
+    hasCanister &&
+    hasFreemiumSlot &&
+    freemiumSlot.status === "occupied";
+
+  useEffect(() => {
+    console.log("Countdown Debug:", {
+      projectName: project.name,
+      isFreemium,
+      hasCanister,
+      hasFreemiumSlot,
+      hasFreemiumCanisterId,
+      projectCanisterId: project.canister_id,
+      freemiumCanisterId: freemiumSlot?.canister_id,
+      freemiumStatus: freemiumSlot?.status,
+      canisterIdsMatch,
+      showCountdown,
+      allConditions: {
+        isFreemium,
+        hasCanister,
+        hasFreemiumSlot,
+        statusCheck: freemiumSlot?.status === "occupied",
+      },
+    });
+  }, [
+    isFreemium,
+    hasCanister,
+    freemiumSlot,
+    project.canister_id,
+    project.name,
+  ]);
+
+  return (
+    <div className={`project-card ${project.plan}`} onClick={onClick}>
+      <div className="project-card-content">
+        <div className="project-header">
+          <LanguageIcon />
+          <div
+            className={`plan-badge ${project.plan}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <span
+              className={`chip ${
+                planTag.toLowerCase() === "paid" ? "paid" : "freemium"
+              }`}
+            >
+              {planTag}
+            </span>
+            {showCountdown && freemiumSlot && (
+              <CountdownChip
+                startTimestamp={freemiumSlot.start_timestamp}
+                duration={freemiumSlot.duration}
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="project-main-info">
+          <h3 className="project-title">{project.name}</h3>
+          <p className="project-description">{project.description}</p>
+        </div>
+
+        <div className="project-details-row">
+          <div className="detail-item">
+            <StorageIcon />
+            <div className="detail-content">
+              <span className="detail-label">Canister ID</span>
+              <span className="detail-value">
+                {hasCanister
+                  ? `${project.canister_id?.slice(0, 8)}...icp0.io`
+                  : "Not deployed"}
+              </span>
+            </div>
+          </div>
+          <div className="detail-item">
+            <UpdateIcon />
+            <div className="detail-content">
+              <span className="detail-label">Last Updated</span>
+              <span className="detail-value">
+                {project.date_updated
+                  ? new Date(project.date_updated / 1000000).toLocaleString()
+                  : "-"}
+              </span>
+            </div>
+          </div>
+          <div className="detail-item">
+            <UpdateIcon style={{ transform: "rotate(-90deg)" }} />
+            <div className="detail-content">
+              <span className="detail-label">Date Created</span>
+              <span className="detail-value">
+                {project.date_created
+                  ? new Date(project.date_created / 1000000).toLocaleString()
+                  : "-"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {project.tags.length > 0 && (
+          <div className="project-tags">
+            {project.tags.slice(0, 3).map((tag, index) => (
+              <span key={index} className="tag">
+                {tag}
+              </span>
+            ))}
+            {project.tags.length > 3 && (
+              <span className="tag more-tags">+{project.tags.length - 3}</span>
+            )}
+          </div>
+        )}
+
+        <div className="project-actions">
+          {hasCanister && (
+            <button className="action-button primary" onClick={onVisitWebsite}>
+              Visit Website
+            </button>
+          )}
+          <Tooltip title="Deploy new version" arrow>
+            <button className="action-button secondary" onClick={onInstallCode}>
+              {hasCanister ? (
+                <>
+                  <CodeIcon />
+                  <span>Install Code</span>
+                </>
+              ) : (
+                <>
+                  <CodeIcon /> <span>Attach Canister</span>
+                </>
+              )}
+            </button>
+          </Tooltip>
+        </div>
+      </div>
+    </div>
+  );
+};

@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
 import "./ProjectsComponent.css";
-import { useProjects } from "../../context/ProjectContext/ProjectContext";
 import LanguageIcon from "@mui/icons-material/Language";
 import StorageIcon from "@mui/icons-material/Storage";
 import UpdateIcon from "@mui/icons-material/Update";
@@ -14,14 +13,18 @@ import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import CodeIcon from "@mui/icons-material/Code";
 import { Tooltip } from "@mui/material";
 import HeaderCard from "../HeaderCard/HeaderCard";
-import { ProjectData } from "../../context/ProjectContext/ProjectContext";
 import TableChartIcon from "@mui/icons-material/TableChart";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import MainApi from "../../api/main";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 import CountdownChip from "./CountdownChip";
-import { useFreemium } from "../../context/FreemiumContext/FreemiumContext";
+import { useFreemiumLogic } from "../../hooks/useFreemiumLogic";
+import { useProjectsLogic } from "../../hooks/useProjectsLogic";
+import { ProjectCard } from "./ProjectCard";
+import { ProjectTableRow } from "./ProjectTableRow";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../../state/store";
 
 // Tag and sorting options
 const planMap: Record<string, string> = {
@@ -53,17 +56,26 @@ const TAGS_SHOWN_MOBILE = 3;
 
 const ProjectsComponent: React.FC = () => {
   /** Hooks */
-  const { projects, isLoading } = useProjects();
   const { setActiveTab } = useSideBar();
   const navigate = useNavigate();
   const { setActionBar } = useActionBar();
   const { identity } = useIdentity();
   const { agent } = useHttpAgent();
+  const { usageData: freemiumSlot, fetchUsage } = useFreemiumLogic();
   const {
-    usageData: freemiumSlot,
-    isLoadingUsageData,
-    refreshFreemiumUsage,
-  } = useFreemium();
+    projects,
+    isLoading,
+    activeFilterTag,
+    activeSortTag,
+    viewMode,
+    handleFilterChange,
+    handleSortChange,
+    handleViewModeChange,
+    handleInstallCode,
+    handleVisitWebsite,
+    handleProjectClick,
+    refreshProjects,
+  } = useProjectsLogic();
 
   useEffect(() => {
     setActiveTab("projects");
@@ -71,14 +83,13 @@ const ProjectsComponent: React.FC = () => {
   }, []);
 
   // Tag filter state
-  const [activeFilterTag, setActiveFilterTag] = useState<string>("All");
-  const [activeSortTag, setActiveSortTag] = useState<string>("all");
   const [filterTagsExpanded, setFilterTagsExpanded] = useState(false);
   const [sortTagsExpanded, setSortTagsExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const filterRef = useRef<HTMLDivElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
-  const [viewMode, setViewMode] = useState<"card" | "table">("card");
+
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -86,9 +97,9 @@ const ProjectsComponent: React.FC = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => {
-    refreshFreemiumUsage();
-  }, []);
+  // useEffect(() => {
+  //   refreshFreemiumUsage();
+  // }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -109,36 +120,6 @@ const ProjectsComponent: React.FC = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [filterTagsExpanded, sortTagsExpanded, isMobile]);
-
-  // Filtering logic
-  const filteredProjects = projects
-    ? projects?.filter((project) => {
-        if (activeFilterTag === "All") return true;
-        const planTag = getPlanDisplayName(project.plan);
-        return activeFilterTag === planTag;
-      })
-    : [];
-
-  // Sorting logic
-  const sortedProjects = [...filteredProjects].sort((a, b) => {
-    console.log(`Projects`);
-    switch (activeSortTag) {
-      case "createAsc":
-        return (a.date_created || 0) - (b.date_created || 0);
-      case "createDesc":
-        return (b.date_created || 0) - (a.date_created || 0);
-      case "updatedAsc":
-        return (a.date_updated || 0) - (b.date_updated || 0);
-      case "updatedDesc":
-        return (b.date_updated || 0) - (a.date_updated || 0);
-      case "nameAsc":
-        return a.name.localeCompare(b.name);
-      case "nameDesc":
-        return b.name.localeCompare(a.name);
-      default:
-        return 0;
-    }
-  });
 
   // If no projects at all, show the dotted silhouette card
   if (!isLoading && (!projects || projects.length === 0)) {
@@ -208,7 +189,7 @@ const ProjectsComponent: React.FC = () => {
             <button
               key={tag}
               className={`tag-chip${activeFilterTag === tag ? " active" : ""}`}
-              onClick={() => setActiveFilterTag(tag)}
+              onClick={() => handleFilterChange(tag)}
             >
               {tag}
             </button>
@@ -238,7 +219,7 @@ const ProjectsComponent: React.FC = () => {
               className={`tag-chip${
                 activeSortTag === sort.value ? " active" : ""
               }`}
-              onClick={() => setActiveSortTag(sort.value)}
+              onClick={() => handleSortChange(sort.value)}
             >
               {sort.label}
             </button>
@@ -254,7 +235,7 @@ const ProjectsComponent: React.FC = () => {
         </div>
         <button
           className="toggle-view-btn"
-          onClick={() => setViewMode(viewMode === "card" ? "table" : "card")}
+          onClick={handleViewModeChange}
           aria-label={
             viewMode === "card" ? "Switch to table view" : "Switch to card view"
           }
@@ -265,193 +246,39 @@ const ProjectsComponent: React.FC = () => {
       </div>
       {viewMode === "card" ? (
         <div className="projects-grid">
-          {sortedProjects.length === 0 ? (
+          {projects?.length === 0 ? (
             <div className="no-projects-message">
               No projects match your filter.
             </div>
           ) : (
-            sortedProjects.map((project) => {
-              const planTag = getPlanDisplayName(project.plan);
-              const hasCanister = !!project.canister_id;
-              const isFreemium = planTag.toLowerCase() === "freemium";
-              // Check if this project is the current user's active freemium session
-              const showCountdown =
-                isFreemium &&
-                hasCanister &&
-                freemiumSlot &&
-                freemiumSlot?.canister_id &&
-                freemiumSlot.canister_id === project.canister_id;
-              return (
-                <div
-                  key={`${project.name}-${project.date_created}`}
-                  className={`project-card ${project.plan}`}
-                  onClick={() => {
-                    if (hasCanister) {
-                      navigate(`/dashboard/canister/${project.canister_id}`);
-                    } else {
-                      // navigate(`/dashboard/new`);
-                    }
-                  }}
-                >
-                  <div className="project-card-content">
-                    {/* Row 1: Icon and Paid/Freemium badge */}
-                    <div className="project-header">
-                      <LanguageIcon />
-                      <div
-                        className={`plan-badge ${project.plan}`}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <span
-                          className={`chip ${
-                            planTag.toLowerCase() === "paid"
-                              ? "paid"
-                              : "freemium"
-                          }`}
-                        >
-                          {planTag}
-                        </span>
-                        {showCountdown && (
-                          <CountdownChip
-                            startTimestamp={freemiumSlot.start_timestamp}
-                            duration={freemiumSlot.duration}
-                          />
-                        )}
-                      </div>
-                    </div>
-                    {/* Row 2: Project name and description */}
-                    <div className="project-main-info">
-                      <h3 className="project-title">{project.name}</h3>
-                      <p className="project-description">
-                        {project.description}
-                      </p>
-                    </div>
-                    {/* Row 3: Canister ID, Last Updated, Date Created */}
-                    <div className="project-details-row">
-                      <div className="detail-item">
-                        <StorageIcon />
-                        <div className="detail-content">
-                          <span className="detail-label">Canister ID</span>
-                          <span className="detail-value">
-                            {hasCanister
-                              ? `${project.canister_id?.slice(0, 8)}...icp0.io`
-                              : "Not deployed"}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="detail-item">
-                        <UpdateIcon />
-                        <div className="detail-content">
-                          <span className="detail-label">Last Updated</span>
-                          <span className="detail-value">
-                            {project.date_updated
-                              ? new Date(
-                                  Number(project.date_updated) / 1000000
-                                ).toLocaleString()
-                              : "-"}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="detail-item">
-                        <UpdateIcon style={{ transform: "rotate(-90deg)" }} />
-                        <div className="detail-content">
-                          <span className="detail-label">Date Created</span>
-                          <span className="detail-value">
-                            {project.date_created
-                              ? new Date(
-                                  Number(project.date_created) / 1000000
-                                ).toLocaleString()
-                              : "-"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Row 4: Tags */}
-                    {project.tags.length > 0 && (
-                      <div className="project-tags">
-                        {project.tags.slice(0, 3).map((tag, index) => (
-                          <span key={index} className="tag">
-                            {tag}
-                          </span>
-                        ))}
-                        {project.tags.length > 3 && (
-                          <span className="tag more-tags">
-                            +{project.tags.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {/* Row 5: Actions */}
-                    <div className="project-actions">
-                      {hasCanister && (
-                        <button
-                          className="action-button primary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(
-                              getCanisterUrl(project.canister_id!),
-                              "_blank"
-                            );
-                          }}
-                        >
-                          Visit Website
-                        </button>
-                      )}
-                      <Tooltip title="Deploy new version" arrow>
-                        <button
-                          className="action-button secondary"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (hasCanister) {
-                              navigate(
-                                `/dashboard/deploy/${project.canister_id}/${project.canister_id}`
-                              );
-                            } else {
-                              if (!agent) {
-                                console.log(`HttpAgent not set.`);
-                                return;
-                              }
-
-                              const mainApi = await MainApi.create(
-                                identity,
-                                agent
-                              );
-
-                              const res = await mainApi?.deployAssetCanister(
-                                project.id
-                              );
-                              if (!res?.status) {
-                                console.error(
-                                  `Failed to attach canister id:`,
-                                  res?.message
-                                );
-                                return;
-                              }
-
-                              navigate(`/dashboard/projects`);
-                            }
-                          }}
-                        >
-                          {hasCanister ? (
-                            <>
-                              <CodeIcon />
-                              <span>Install Code</span>
-                            </>
-                          ) : (
-                            <>
-                              <CodeIcon /> <span>Attach Canister</span>
-                            </>
-                          )}
-                        </button>
-                      </Tooltip>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+            projects?.map((project) => (
+              <ProjectCard
+                key={`${project.name}-${project.date_created}`}
+                project={project}
+                freemiumSlot={freemiumSlot}
+                onInstallCode={async (e) => {
+                  console.log(`INSTALLING CODE>....`);
+                  await handleInstallCode(
+                    e,
+                    !!project.canister_id,
+                    project.id,
+                    project.canister_id,
+                    identity,
+                    agent
+                  );
+                  // Refresh after installation completes
+                  // await refreshProjects();
+                  // await fetchUsage();
+                  // await refreshFreemiumUsage();
+                }}
+                onVisitWebsite={(e) =>
+                  handleVisitWebsite(e, project.canister_id!)
+                }
+                onClick={() =>
+                  handleProjectClick(!!project.canister_id, project.canister_id)
+                }
+              />
+            ))
           )}
         </div>
       ) : (
@@ -468,120 +295,39 @@ const ProjectsComponent: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {sortedProjects.length === 0 ? (
+              {projects?.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: "center" }}>
                     No projects match your filter.
                   </td>
                 </tr>
               ) : (
-                sortedProjects.map((project) => {
-                  const planTag = getPlanDisplayName(project.plan);
-                  const hasCanister = !!project.canister_id;
-                  const isFreemium = planTag.toLowerCase() === "freemium";
-                  const showCountdown =
-                    isFreemium &&
-                    hasCanister &&
-                    freemiumSlot &&
-                    freemiumSlot.canister_id === project.canister_id;
-                  return (
-                    <tr
-                      key={`${project.name}-${project.date_created}`}
-                      className={`project-row ${project.plan}`}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => {
-                        if (hasCanister) {
-                          navigate(
-                            `/dashboard/canister/${project.canister_id}`
-                          );
-                        } else {
-                          navigate(`/dashboard/new`);
-                        }
-                      }}
-                    >
-                      <td
-                      // style={{
-                      //   display: "flex",
-                      //   alignItems: "center",
-                      //   gap: 8,
-                      // }}
-                      >
-                        {/* <LanguageIcon fontSize="small" /> */}
-                        <span>{project.name}</span>
-                      </td>
-                      <td>{hasCanister ? "Deployed" : "Not deployed"}</td>
-                      <td>
-                        <span
-                          className={`chip ${
-                            planTag.toLowerCase() === "paid"
-                              ? "paid"
-                              : "freemium"
-                          }`}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
-                        >
-                          {planTag}
-                          {showCountdown && (
-                            <CountdownChip
-                              startTimestamp={freemiumSlot.start_timestamp}
-                              duration={freemiumSlot.duration}
-                            />
-                          )}
-                        </span>
-                      </td>
-                      <td>
-                        {project.date_created
-                          ? new Date(
-                              Number(project.date_created) / 1000000
-                            ).toLocaleString()
-                          : "-"}
-                      </td>
-                      <td>
-                        {project.date_updated
-                          ? new Date(
-                              Number(project.date_updated) / 1000000
-                            ).toLocaleString()
-                          : "-"}
-                      </td>
-                      <td style={{ display: "flex", gap: 8 }}>
-                        {hasCanister && (
-                          <button
-                            className="action-button primary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(
-                                getCanisterUrl(project.canister_id!),
-                                "_blank"
-                              );
-                            }}
-                          >
-                            Visit Website
-                          </button>
-                        )}
-                        <Tooltip title="Deploy new version" arrow>
-                          <button
-                            className="action-button secondary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (hasCanister) {
-                                navigate(
-                                  `/dashboard/deploy/${project.canister_id}`
-                                );
-                              } else {
-                                navigate(`/dashboard/new`);
-                              }
-                            }}
-                          >
-                            <CodeIcon /> Install Code
-                          </button>
-                        </Tooltip>
-                      </td>
-                    </tr>
-                  );
-                })
+                projects?.map((project) => (
+                  <ProjectTableRow
+                    key={`${project.name}-${project.date_created}`}
+                    project={project}
+                    freemiumSlot={freemiumSlot}
+                    onInstallCode={(e) =>
+                      handleInstallCode(
+                        e,
+                        !!project.canister_id,
+                        project.id,
+                        project.canister_id,
+                        identity,
+                        agent
+                      )
+                    }
+                    onVisitWebsite={(e) =>
+                      handleVisitWebsite(e, project.canister_id!)
+                    }
+                    onClick={() =>
+                      handleProjectClick(
+                        !!project.canister_id,
+                        project.canister_id
+                      )
+                    }
+                  />
+                ))
               )}
             </tbody>
           </table>

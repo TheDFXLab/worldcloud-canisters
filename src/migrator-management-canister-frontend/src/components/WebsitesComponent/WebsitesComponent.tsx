@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import "./WebsitesComponent.css";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import { useSubscription } from "../../context/SubscriptionContext/SubscriptionContext";
@@ -16,6 +16,9 @@ import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import CodeIcon from "@mui/icons-material/Code";
 import { Tooltip } from "@mui/material";
 import HeaderCard from "../HeaderCard/HeaderCard";
+import { useFreemiumLogic } from "../../hooks/useFreemiumLogic";
+import { useSubscriptionLogic } from "../../hooks/useSubscriptionLogic";
+import { useDeploymentLogic } from "../../hooks/useDeploymentLogic";
 
 // Tag and sorting options
 const statusMap: Record<string, string> = {
@@ -53,9 +56,10 @@ const sortTagOptions = [
 
 const WebsitesComponent: React.FC = () => {
   /** Hooks */
-  const { deployments } = useDeployments();
-  const { subscription } = useSubscription();
-  const { usageData: freemiumUsage } = useFreemium();
+  // const { deployments } = useDeployments();
+  const { deployments } = useDeploymentLogic();
+  const { subscription } = useSubscriptionLogic();
+  const { usageData: freemiumUsage } = useFreemiumLogic();
   const { setActiveTab } = useSideBar();
   const navigate = useNavigate();
   const { setActionBar } = useActionBar();
@@ -65,90 +69,102 @@ const WebsitesComponent: React.FC = () => {
     setActionBar(null);
   }, []);
 
-  // Combine all canisters from subscription and freemium
-  const subCanisters = subscription?.canisters || [];
-  const subCanisterIds: string[] = Array.isArray(subCanisters)
-    ? subCanisters.map((c: any) =>
-        typeof c === "object" && c !== null && typeof c.toText === "function"
-          ? c.toText()
-          : c
-      )
-    : [];
-  const freemiumCanisters =
-    freemiumUsage && freemiumUsage.canister_id ? [freemiumUsage] : [];
-  const allCanisters = [
-    ...subCanisterIds.map((id: string) => ({
-      canister_id: id,
-      type: "private",
-    })),
-    ...freemiumCanisters.map((c) => ({
-      canister_id: c.canister_id,
-      type: "freemium",
-    })),
-  ];
+  // Combine all canisters from subscription and freemium - memoized to prevent unnecessary recalculations
+  const allCanisters = useMemo(() => {
+    const subCanisters = subscription?.canisters || [];
+    const subCanisterIds: string[] = Array.isArray(subCanisters)
+      ? subCanisters.map((c: any) =>
+          typeof c === "object" && c !== null && typeof c.toText === "function"
+            ? c.toText()
+            : c
+        )
+      : [];
+    const freemiumCanisters =
+      freemiumUsage && freemiumUsage.canister_id ? [freemiumUsage] : [];
 
-  // Helper to get deployment details by canister id
-  const getDeployment = (canisterId: string) =>
-    deployments.find((d) => d.canister_id.toText() === canisterId);
+    return [
+      ...subCanisterIds.map((id: string) => ({
+        canister_id: id,
+        type: "private",
+      })),
+      ...freemiumCanisters.map((c) => ({
+        canister_id: c.canister_id,
+        type: "freemium",
+      })),
+    ];
+  }, [subscription?.canisters, freemiumUsage]);
+
+  // Helper to get deployment details by canister id - memoized to prevent recalculation
+  const getDeployment = useMemo(
+    () => (canisterId: string) =>
+      deployments.find((d) => d.canister_id.toText() === canisterId),
+    [deployments]
+  );
 
   // Tag filter state
   const [activeFilterTag, setActiveFilterTag] = useState<string>("All");
   const [activeSortTag, setActiveSortTag] = useState<string>("all");
 
-  // Filtering logic
-  const filteredCanisters = allCanisters.filter(({ canister_id, type }) => {
-    if (activeFilterTag === "All") return true;
-    if (!canister_id) {
-      return false;
-    }
-    const deployment = getDeployment(canister_id);
-    const status = deployment?.status || "default";
-    const statusTag = statusMap[status] || statusMap.default;
-    const typeTag = typeMap[type] || type;
-    if (activeFilterTag === statusTag) return true;
-    if (activeFilterTag === typeTag) return true;
-    if (activeFilterTag === "Code Installing" && status === "installing")
-      return true;
-    if (activeFilterTag === "Code Not Installed" && status === "uninitialized")
-      return true;
-    return false;
-  });
+  // Filtering logic - memoized
+  const filteredCanisters = useMemo(
+    () =>
+      allCanisters.filter(({ canister_id, type }) => {
+        if (activeFilterTag === "All") return true;
+        if (!canister_id) return false;
 
-  // Sorting logic
-  const sortedCanisters = [...filteredCanisters].sort((a, b) => {
-    console.log(`subscription`, subscription);
-    console.log(`Sorting canisters`, a, b);
-    console.log(`all deployments`, deployments);
-    if (a.canister_id && b.canister_id) {
-      const depA = getDeployment(a.canister_id);
-      const depB = getDeployment(b.canister_id);
-      console.log(`Depa`, depA);
-      console.log(`Depb`, depB);
-      switch (activeSortTag) {
-        case "createAsc":
-          return (depA?.date_created || 0) - (depB?.date_created || 0);
-        case "createDesc":
-          return (depB?.date_created || 0) - (depA?.date_created || 0);
-        case "activeFirst":
-          return (
-            (depB?.status === "installed" ? 1 : 0) -
-            (depA?.status === "installed" ? 1 : 0)
-          );
-        case "inactiveFirst":
-          return (
-            (depA?.status === "installed" ? 1 : 0) -
-            (depB?.status === "installed" ? 1 : 0)
-          );
-        case "updatedAsc":
-          return (depA?.date_updated || 0) - (depB?.date_updated || 0);
-        case "updatedDesc":
-          return (depB?.date_updated || 0) - (depA?.date_updated || 0);
-        default:
-          return 0;
-      }
-    }
-    return 0;
-  });
+        const deployment = getDeployment(canister_id);
+        const status = deployment?.status || "default";
+        const statusTag = statusMap[status] || statusMap.default;
+        const typeTag = typeMap[type] || type;
+
+        if (activeFilterTag === statusTag) return true;
+        if (activeFilterTag === typeTag) return true;
+        if (activeFilterTag === "Code Installing" && status === "installing")
+          return true;
+        if (
+          activeFilterTag === "Code Not Installed" &&
+          status === "uninitialized"
+        )
+          return true;
+        return false;
+      }),
+    [allCanisters, activeFilterTag, getDeployment]
+  );
+
+  // Sorting logic - memoized
+  const sortedCanisters = useMemo(
+    () =>
+      [...filteredCanisters].sort((a, b) => {
+        if (!a.canister_id || !b.canister_id) return 0;
+
+        const depA = getDeployment(a.canister_id);
+        const depB = getDeployment(b.canister_id);
+
+        switch (activeSortTag) {
+          case "createAsc":
+            return (depA?.date_created || 0) - (depB?.date_created || 0);
+          case "createDesc":
+            return (depB?.date_created || 0) - (depA?.date_created || 0);
+          case "activeFirst":
+            return (
+              (depB?.status === "installed" ? 1 : 0) -
+              (depA?.status === "installed" ? 1 : 0)
+            );
+          case "inactiveFirst":
+            return (
+              (depA?.status === "installed" ? 1 : 0) -
+              (depB?.status === "installed" ? 1 : 0)
+            );
+          case "updatedAsc":
+            return (depA?.date_updated || 0) - (depB?.date_updated || 0);
+          case "updatedDesc":
+            return (depB?.date_updated || 0) - (depA?.date_updated || 0);
+          default:
+            return 0;
+        }
+      }),
+    [filteredCanisters, activeSortTag, getDeployment]
+  );
 
   // If no canisters at all, show the dotted silhouette card
   if (allCanisters.length === 0) {

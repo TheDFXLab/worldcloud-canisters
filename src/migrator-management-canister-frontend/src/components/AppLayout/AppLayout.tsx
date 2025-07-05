@@ -62,7 +62,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   useEffect(() => {
     console.log(`refreshIdentity`);
 
-    refreshIdentity();
+    // refreshIdentity();
   }, [activeTab]);
 
   useEffect(() => {

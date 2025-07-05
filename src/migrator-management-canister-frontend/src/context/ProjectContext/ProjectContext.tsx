@@ -12,25 +12,26 @@ import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 import { useQuery } from "@tanstack/react-query";
 import { sanitizeObject } from "../../utility/sanitize";
 import { useLoadBar } from "../LoadBarContext/LoadBarContext";
-
-export interface ProjectData {
-  id: bigint;
-  canister_id: string | null;
-  name: string;
-  description: string;
-  tags: string[];
-  plan: Project["plan"];
-  date_created: number;
-  date_updated: number;
-}
+import {
+  DeserializedProject,
+  SerializedProject,
+  serializeProjects,
+  deserializeProjects,
+} from "../../utility/bigint";
 
 interface ProjectContextType {
-  projects: ProjectData[] | null;
+  projects: DeserializedProject[] | null;
   isLoading: boolean;
   shouldRefetchProjects: boolean;
   setShouldRefetchProjects: (value: boolean) => void;
   refreshProjects: () => void;
-  getProjects: () => Promise<ProjectData[] | null>;
+  getProjects: () => Promise<DeserializedProject[] | null>;
+}
+
+interface StorageData {
+  status: SerializedProject[];
+  timestamp: number;
+  principal: string;
 }
 
 export const ProjectContext = createContext<ProjectContextType | undefined>(
@@ -67,8 +68,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         }
 
         // save to local storage
-        const storageData = {
-          status: res,
+        const storageData: StorageData = {
+          status: serializeProjects(res),
           timestamp: Date.now(),
           principal: identity.getPrincipal().toText(),
         };
@@ -90,18 +91,20 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         return null;
       }
 
-      const { status, timestamp, principal } = JSON.parse(stored);
+      const { status, timestamp, principal } = JSON.parse(
+        stored
+      ) as StorageData;
       const isExpired = Date.now() - timestamp > VERIFICATION_INTERVAL;
       if (isExpired) {
         localStorage.removeItem(queryNameProjects);
-        return false;
+        return null;
       }
 
       if (identity && principal !== identity.getPrincipal().toText()) {
         localStorage.removeItem(queryNameProjects);
-        return false;
+        return null;
       }
-      return status;
+      return deserializeProjects(status);
     },
     staleTime: 0,
     refetchInterval: VERIFICATION_INTERVAL,
@@ -129,7 +132,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       if (!projects) {
         return null;
       } else {
-        return sanitizeObject(projects) as ProjectData[];
+        return sanitizeObject(projects) as DeserializedProject[];
       }
     } catch (error) {
       console.error(error);

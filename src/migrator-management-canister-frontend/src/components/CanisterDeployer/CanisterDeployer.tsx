@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Principal } from "@dfinity/principal";
-import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import MainApi from "../../api/main";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
@@ -9,7 +8,6 @@ import { useNavigate } from "react-router-dom";
 import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 import { useProgress } from "../../context/ProgressBarContext/ProgressBarContext";
 import HeaderCard from "../HeaderCard/HeaderCard";
-import { useSubscription } from "../../context/SubscriptionContext/SubscriptionContext";
 import UnsubscribedView from "../UnsubscribedView/UnsubscribedView";
 import LoadingView from "../LoadingView/LoadingView";
 import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
@@ -21,12 +19,16 @@ import LanguageIcon from "@mui/icons-material/Language";
 import "./CanisterDeployer.css";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 import { decodeError } from "../../utility/errors";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../../state/store";
+import { useSubscriptionLogic } from "../../hooks/useSubscriptionLogic";
+import { deployProject } from "../../state/slices/projectsSlice";
 
 interface CanisterDeployerProps {}
 
 function CanisterDeployer({}: CanisterDeployerProps) {
   /** Hooks */
-  const { addDeployment, refreshDeployments } = useDeployments();
+  const dispatch = useDispatch<AppDispatch>();
   const { identity } = useIdentity();
   const { setActionBar } = useActionBar();
   const { setToasterData, setShowToaster } = useToaster();
@@ -34,13 +36,8 @@ function CanisterDeployer({}: CanisterDeployerProps) {
   const { setActiveTab } = useSideBar();
   const { setIsLoadingProgress, setIsEnded } = useProgress();
   const { agent } = useHttpAgent();
-  const {
-    subscription,
-    isLoadingSub,
-    isLoadingTiers,
-    getSubscription,
-    validateSubscription,
-  } = useSubscription();
+  const { subscription, isLoadingSub, isLoadingTiers, validateSubscription } =
+    useSubscriptionLogic();
   const { summon, destroy } = useLoaderOverlay();
 
   /**State */
@@ -50,8 +47,6 @@ function CanisterDeployer({}: CanisterDeployerProps) {
     message: "",
   });
 
-  const [, setCanisterId] = useState("");
-  const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   // Set the active tab to publish
@@ -75,6 +70,15 @@ function CanisterDeployer({}: CanisterDeployerProps) {
     });
   }, [isLoading, subscription]);
 
+  // Create a wrapper function that matches the expected type
+  const validateSubscriptionWrapper = async () => {
+    const result = await validateSubscription(true);
+    return {
+      status: result.status,
+      message: result.message,
+    };
+  };
+
   const handleDeploy = async (projectId: bigint) => {
     try {
       summon("Canister deployment in progress...");
@@ -93,8 +97,11 @@ function CanisterDeployer({}: CanisterDeployerProps) {
         navigate("/dashboard/billing");
         return;
       }
+
       setIsLoadingProgress(true);
       setIsEnded(false);
+      setIsLoading(true);
+
       setToasterData({
         headerContent: "Deploying",
         toastStatus: true,
@@ -103,46 +110,38 @@ function CanisterDeployer({}: CanisterDeployerProps) {
       });
       setShowToaster(true);
 
-      setIsLoading(true);
-      if (!agent) {
-        throw new Error("Agent not found");
+      if (!agent || !identity) {
+        throw new Error("Agent or identity not found");
       }
 
-      const mainApi = await MainApi.create(identity, agent);
-      const result = await mainApi?.deployAssetCanister(projectId);
+      // Use Redux thunk for deployment
+      const result = await dispatch(
+        deployProject({
+          identity,
+          agent,
+          projectId,
+          isFreemium: false,
+          validateSubscription: validateSubscriptionWrapper,
+        })
+      ).unwrap();
 
-      if (result && result.status) {
-        const newDeployment = {
-          canister_id: Principal.fromText(result?.message as string),
-          status: "uninitialized" as const,
-          date_created: Date.now(),
-          date_updated: Date.now(),
-          size: 0,
-        };
+      setToasterData({
+        headerContent: "Success",
+        toastStatus: true,
+        toastData: `Canister deployed at ${result.canisterId}`,
+        textColor: "green",
+      });
+      setShowToaster(true);
 
-        setToasterData({
-          headerContent: "Success",
-          toastStatus: true,
-          toastData: `Canister deployed at ${result?.message}`,
-          textColor: "green",
-        });
-        setShowToaster(true);
-        addDeployment(newDeployment);
-        refreshDeployments();
-        setCanisterId(result?.message as string);
-
-        getSubscription();
-
-        // Navigate to publishing page
-        navigate(`/dashboard/deploy/${result?.message as string}`);
-      } else {
-        setStatus(`Error: ${result?.message}`);
-      }
+      // Navigate to publishing page
+      navigate(`/dashboard/deploy/${result.canisterId}`);
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "An unknown error occurred";
       setToasterData({
         headerContent: "Error",
         toastStatus: true,
-        toastData: `Error: ${error}`,
+        toastData: `Error: ${errorMessage}`,
         textColor: "red",
         timeout: 5000,
       });
@@ -176,7 +175,6 @@ function CanisterDeployer({}: CanisterDeployerProps) {
             <HeaderCard
               title="Deploy Your Canister"
               description="Get started with Internet Computer hosting"
-              // className="deployment-header"
             />
 
             <div className="info-grid">
@@ -203,7 +201,7 @@ function CanisterDeployer({}: CanisterDeployerProps) {
                 </span>
                 <h3>High Performance</h3>
                 <p>
-                  Benefit from IC's distributed infrastructure for optimal speed
+                  Enjoy fast loading times with distributed content delivery
                 </p>
               </div>
               <div className="info-card">
@@ -211,19 +209,9 @@ function CanisterDeployer({}: CanisterDeployerProps) {
                   <LanguageIcon />
                 </span>
                 <h3>Global Access</h3>
-                <p>Your site is accessible worldwide through IC's network</p>
+                <p>Your website is accessible from anywhere in the world</p>
               </div>
             </div>
-
-            {status && (
-              <div
-                className={`status ${
-                  status.includes("Error") ? "error" : "success"
-                }`}
-              >
-                {decodeError(status)?.message}
-              </div>
-            )}
           </div>
         </div>
       </section>

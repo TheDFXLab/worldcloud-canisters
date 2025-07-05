@@ -22,26 +22,25 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import InfoIcon from "@mui/icons-material/Info";
 import { Tooltip } from "@mui/material";
-import { useSubscription } from "../../context/SubscriptionContext/SubscriptionContext";
 import { useLoadBar } from "../../context/LoadBarContext/LoadBarContext";
 import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
-import { useFreemium } from "../../context/FreemiumContext/FreemiumContext";
+import { useFreemiumLogic } from "../../hooks/useFreemiumLogic";
+import { useSubscriptionLogic } from "../../hooks/useSubscriptionLogic";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../../state/store";
+import { createSubscription } from "../../state/slices/subscriptionSlice";
 
 const UnsubscribedView: React.FC = () => {
   /** Hooks */
+  const dispatch = useDispatch<AppDispatch>();
   const { setActiveTab } = useSideBar();
   const navigate = useNavigate();
   const { identity } = useIdentity();
   const { agent } = useHttpAgent();
   const { setToasterData, setShowToaster } = useToaster();
-  const {
-    subscribe,
-    isLoadingSub,
-    getSubscription,
-    setShouldRefetchSubscription,
-  } = useSubscription();
   const { summon, destroy } = useLoaderOverlay();
-  const { usageData, isLoadingUsageData } = useFreemium();
+  const { usageData, isLoading: isLoadingUsageData } = useFreemiumLogic();
+  const { subscription, isLoadingSub } = useSubscriptionLogic();
 
   /** State variables */
   const { setShowLoadBar } = useLoadBar();
@@ -68,38 +67,41 @@ const UnsubscribedView: React.FC = () => {
     }
 
     try {
-      const mainApi = await MainApi.create(identity, agent);
-      if (!mainApi) {
-        throw new Error(`Failed to create main api instance`);
-      }
-      console.log(`Loading subscription...`);
       setShowLoadBar(true);
       summon("Subscribing...");
 
-      const res = await subscribe(3, 0);
-      if (res.status) {
-        console.log(`Subscription success...`);
-        getSubscription();
-        setToasterData({
-          headerContent: "Subscription Created",
-          toastStatus: true,
-          toastData: res.message,
-          timeout: 2000,
-        });
-        setShowToaster(true);
-        // refreshSubscription();
-        setShouldRefetchSubscription(true);
+      const result = await dispatch(
+        createSubscription({
+          identity,
+          agent,
+          tierId: 3,
+          amountInIcp: 0,
+          totalCredits: 0,
+        })
+      ).unwrap();
 
-        navigate("/dashboard/new");
-      } else {
-        throw new Error(res.message);
+      if (!result.status) {
+        throw new Error(result.message);
       }
+
+      setToasterData({
+        headerContent: "Subscription Created",
+        toastStatus: true,
+        toastData: result.message,
+        timeout: 2000,
+      });
+      setShowToaster(true);
+      navigate("/dashboard/new");
     } catch (error) {
       console.error("Error subscribing to freemium:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to subscribe. Please try again.";
       setToasterData({
         headerContent: "Error",
         toastStatus: false,
-        toastData: "Failed to subscribe. Please try again.",
+        toastData: errorMessage,
         textColor: "white",
       });
       setShowToaster(true);
@@ -108,53 +110,6 @@ const UnsubscribedView: React.FC = () => {
       destroy();
     }
   };
-  // const handleSubscribeFreemium = async () => {
-  //   if (!identity || !agent) {
-  //     setToasterData({
-  //       headerContent: "Error",
-  //       toastStatus: false,
-  //       toastData: "Please connect your wallet first",
-  //       textColor: "white",
-  //     });
-  //     setShowToaster(true);
-  //     return;
-  //   }
-
-  //   setIsRequestingFreemium(true);
-  //   try {
-  //     const mainApi = await MainApi.create(identity, agent);
-  //     if (!mainApi) {
-  //       throw new Error("Failed to create main api.");
-  //     }
-
-  //     const result = await mainApi.requestFreemiumSession();
-  //     if (result) {
-  //       setToasterData({
-  //         headerContent: "Success",
-  //         toastStatus: true,
-  //         toastData:
-  //           "Freemium session created! You can now deploy your website.",
-  //         textColor: "white",
-  //       });
-  //       setShowToaster(true);
-  //       // Navigate to deployment flow
-  //       navigate("/dashboard/publish");
-  //     } else {
-  //       throw new Error("Failed to create freemium session");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error requesting freemium session:", error);
-  //     setToasterData({
-  //       headerContent: "Error",
-  //       toastStatus: false,
-  //       toastData: "Failed to create freemium session. Please try again.",
-  //       textColor: "white",
-  //     });
-  //     setShowToaster(true);
-  //   } finally {
-  //     setIsRequestingFreemium(false);
-  //   }
-  // };
 
   return (
     <div className="unsubscribed-container">

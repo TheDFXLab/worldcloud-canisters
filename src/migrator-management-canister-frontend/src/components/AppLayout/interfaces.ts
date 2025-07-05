@@ -1,15 +1,12 @@
 import { Principal } from "@dfinity/principal";
-
-export interface Deployment {
-    canister_id: Principal;
-    date_created: number;
-    date_updated: number;
-    size: number;
-    status: CanisterDeploymentStatus;
-}
+import { SerializedDeployment, DeserializedDeployment } from "../../utility/principal";
 
 export type CanisterDeploymentStatus =
     | "uninitialized"
     | "installing"
     | "installed"
     | "failed";
+
+// Re-export the deployment types
+export type { SerializedDeployment, DeserializedDeployment };
+export type Deployment = DeserializedDeployment;

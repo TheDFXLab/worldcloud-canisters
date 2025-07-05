@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   ReactNode,
+  useCallback,
 } from "react";
 
 import { Principal } from "@dfinity/principal";
@@ -20,6 +21,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { isLoggedOutPrincipal } from "../../utility/identity";
 import AuthApi from "../../api/auth/AuthApi";
 import { useLoaderOverlay } from "../LoaderOverlayContext/LoaderOverlayContext";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../../state/store";
+import { getUserProjects } from "../../state/slices/projectsSlice";
+import { fetchFreemiumUsage } from "../../state/slices/freemiumSlice";
+import {
+  fetchSubscription,
+  fetchTiers,
+} from "../../state/slices/subscriptionSlice";
 
 interface IdentityProviderProps {
   children: ReactNode;
@@ -30,7 +39,7 @@ interface IdentityContextType {
   identity: Identity | null;
   isLoadingIdentity: boolean;
   refreshIdentity: () => Promise<Identity | null>;
-  connectWallet: (canisterId: Principal) => Promise<Identity | null>;
+  connectWallet: (principal?: Principal) => Promise<Identity | null>;
   disconnect: () => Promise<boolean>;
 }
 
@@ -73,6 +82,7 @@ const getGlobalAuthClient = async () => {
 export function IdentityProvider({ children }: IdentityProviderProps) {
   const { fetchHttpAgent, clearHttpAgent, agent } = useHttpAgent();
   const queryClient = useQueryClient();
+  const dispatch = useDispatch<AppDispatch>();
 
   const { setMessage } = useLoaderOverlay();
   const [isConnected, setIsConnected] = useState(() => {
@@ -92,6 +102,43 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [isLoadingIdentity, setIsLoadingIdentity] = useState(true);
   const [authClient, setAuthClient] = useState<AuthClient | null>(null);
+
+  // Function to load initial data after authentication
+  const loadInitialData = useCallback(
+    async (_identity: Identity, _agent: any) => {
+      try {
+        console.log(`(((LOADING INITIAL DATA)))`);
+        // Load projects
+        await dispatch(
+          getUserProjects({ identity: _identity, agent: _agent, silent: true })
+        );
+        console.log(`DISPATCHING FETCH FREMIUM USAGE`);
+        // Load freemium usage
+        await dispatch(
+          fetchFreemiumUsage({
+            identity: _identity,
+            agent: _agent,
+            silent: true,
+          })
+        );
+
+        // Load subscription data
+        await dispatch(
+          fetchSubscription({
+            identity: _identity,
+            agent: _agent,
+            silent: true,
+          })
+        );
+        await dispatch(
+          fetchTiers({ identity: _identity, agent: _agent, silent: true })
+        );
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+      }
+    },
+    [dispatch]
+  );
 
   async function getIdentity() {
     try {
@@ -135,7 +182,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         return null;
       }
 
-      await fetchHttpAgent(_identity);
+      const _agent = await fetchHttpAgent(_identity);
       setIdentity(_identity);
       setIsConnected(true);
 
@@ -148,6 +195,11 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
           principal: _identity.getPrincipal().toText(),
         })
       );
+
+      // Load initial data after successful authentication
+      if (_agent) {
+        await loadInitialData(_identity, _agent);
+      }
 
       return _identity;
     } catch (error) {
@@ -255,6 +307,10 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       await authApi.signIn(identity, agent, setMessage);
       setIdentity(identity);
       setIsConnected(true);
+
+      // Load initial data after successful authentication
+      await loadInitialData(identity, agent);
+
       return identity;
     } catch (error) {
       console.error("Error during wallet connection:", error);

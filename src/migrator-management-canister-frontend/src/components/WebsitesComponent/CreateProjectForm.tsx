@@ -1,19 +1,22 @@
 import React, { useState } from "react";
 import "./CreateProjectForm.css";
 import { useNavigate } from "react-router-dom";
-import { useSubscription } from "../../context/SubscriptionContext/SubscriptionContext";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
-import MainApi, { PlanType } from "../../api/main";
+import { PlanType } from "../../api/main";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
 import { useLoadBar } from "../../context/LoadBarContext/LoadBarContext";
-import { useProjects } from "../../context/ProjectContext/ProjectContext";
 import { useProgress } from "../../context/ProgressBarContext/ProgressBarContext";
 import { Principal } from "@dfinity/principal";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import { useFreemium } from "../../context/FreemiumContext/FreemiumContext";
-import { useQueryClient } from "@tanstack/react-query";
+import { useDispatch, useSelector } from "react-redux";
+import { createProject, deployProject } from "../../state/slices/projectsSlice";
+import { AppDispatch, RootState } from "../../state/store";
+import MainApi from "../../api/main";
+import { validateSubscription } from "../../state/slices/subscriptionSlice";
+import { useFreemiumLogic } from "../../hooks/useFreemiumLogic";
 
 const MAX_TAGS = 5;
 const MAX_DESC = 100;
@@ -23,9 +26,11 @@ const planOptions = [
   { label: "Paid", value: "paid" },
 ];
 
-const CreateProjectForm: React.FC = () => {
-  const [status, setStatus] = useState("");
+const useAppDispatch = () => useDispatch<AppDispatch>();
 
+const CreateProjectForm: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const [status, setStatus] = useState("");
   const navigate = useNavigate();
   const [projectName, setProjectName] = useState("");
   const [description, setDescription] = useState("");
@@ -33,21 +38,19 @@ const CreateProjectForm: React.FC = () => {
   const [tagInput, setTagInput] = useState("");
   const [plan, setPlan] = useState("freemium");
   const [error, setError] = useState("");
+
+  // Redux selectors
+  const { subscription, tiers, isLoadingSub, isLoadingTiers } = useSelector(
+    (state: RootState) => state.subscription
+  );
+
+  const { fetchUsage } = useFreemiumLogic();
   const { setShowToaster, setToasterData } = useToaster();
   const { summon, destroy } = useLoaderOverlay();
   const { setShowLoadBar, setCompleteLoadBar } = useLoadBar();
   const { identity } = useIdentity();
   const { agent } = useHttpAgent();
-  const { setShouldRefetchProjects, refreshProjects } = useProjects();
   const { refreshFreemiumUsage } = useFreemium();
-  const queryClient = useQueryClient();
-  const {
-    subscription,
-    isLoadingSub,
-    isLoadingTiers,
-    getSubscription,
-    validateSubscription,
-  } = useSubscription();
   const { setIsLoadingProgress, setIsEnded } = useProgress();
   const { addDeployment, refreshDeployments } = useDeployments();
 
@@ -116,24 +119,32 @@ const CreateProjectForm: React.FC = () => {
       return;
     }
 
-    let project_id: bigint | null = null;
-    let is_freemium: boolean | null = null;
     try {
       summon("Creating Project...");
       setShowLoadBar(true);
-      const mainApi = await MainApi.create(identity, agent);
-      const create_res = await mainApi?.createProject(
-        projectName,
-        description,
-        tags,
-        plan as PlanType
-      );
 
-      if (!create_res) {
-        throw new Error("Failed to create project.");
-      }
-      project_id = create_res.project_id;
-      is_freemium = create_res.is_freemium;
+      const result = await dispatch(
+        createProject({
+          identity,
+          agent,
+          name: projectName,
+          description,
+          tags,
+          plan: plan as PlanType,
+        })
+      ).unwrap();
+
+      // Deploy the asset canister in case of paid
+      console.log(
+        `DEBUG HANDLE DEBOY: is paid plan?:`,
+        "paid" in result.newProject.plan
+      );
+      debugger;
+      // Allocate slot to user project in case of freemium
+      await handleDeploy(
+        BigInt(result.newProject.id),
+        "freemium" in result.newProject.plan
+      );
     } catch (error) {
       console.error(`Failed to create project.`, error);
       setToasterData({
@@ -143,15 +154,10 @@ const CreateProjectForm: React.FC = () => {
         timeout: 3000,
       });
       setShowToaster(true);
-      return;
     } finally {
       setCompleteLoadBar(true);
       destroy();
     }
-
-    // Deploy the asset canister in case of paid
-    // Allocate slot to user project in case of freemium
-    await handleDeploy(project_id, is_freemium);
   };
 
   const handleDeploy = async (projectId: bigint, isFreemium: boolean) => {
@@ -161,28 +167,12 @@ const CreateProjectForm: React.FC = () => {
       if (isFreemium) {
         title = "Requesting";
         message = "Allocating freemium slot to project...";
-        summon(message);
       } else {
         title = "Deploying";
         message = "Canister deployment in progress...";
-        summon(message);
-
-        const validation = await validateSubscription(true);
-        if (!validation.status) {
-          setToasterData({
-            headerContent: "Error",
-            toastStatus: true,
-            toastData: validation.message,
-            textColor: "red",
-            timeout: 5000,
-          });
-
-          setShowToaster(true);
-          navigate("/dashboard/billing");
-          return;
-        }
       }
 
+      summon(message);
       setIsLoadingProgress(true);
       setIsEnded(false);
       setToasterData({
@@ -192,63 +182,58 @@ const CreateProjectForm: React.FC = () => {
         textColor: "green",
       });
       setShowToaster(true);
+      const result = await dispatch(
+        deployProject({
+          identity,
+          agent,
+          projectId,
+          isFreemium,
+          validateSubscription: async () => {
+            const validation = await dispatch(
+              validateSubscription({ subscription, tiers })
+            ).unwrap();
+            return validation;
+          },
+        })
+      ).unwrap();
 
-      if (!agent) {
-        throw new Error("Agent not found");
-      }
+      console.log(`RESULT FROM DEPLOY PROJECT DISPAYCH`, result);
 
-      const mainApi = await MainApi.create(identity, agent);
+      const newDeployment = {
+        canister_id: Principal.fromText(result.canisterId),
+        status: "uninitialized" as const,
+        date_created: Date.now(),
+        date_updated: Date.now(),
+        size: 0,
+      };
 
-      const result = await mainApi?.deployAssetCanister(projectId);
+      setToasterData({
+        headerContent: "Success",
+        toastStatus: true,
+        toastData: `Canister ID: ${result.canisterId}`,
+        textColor: "green",
+      });
+      setShowToaster(true);
+      addDeployment(newDeployment);
+      refreshDeployments();
 
-      if (result && result.status) {
-        const newDeployment = {
-          canister_id: Principal.fromText(result?.message as string),
-          status: "uninitialized" as const,
-          date_created: Date.now(),
-          date_updated: Date.now(),
-          size: 0,
-        };
-
-        setToasterData({
-          headerContent: "Success",
-          toastStatus: true,
-          toastData: `Canister ID:  ${result?.message}`,
-          textColor: "green",
-        });
-        setShowToaster(true);
-        addDeployment(newDeployment);
-        refreshDeployments();
-        // setCanisterId(result?.message as string);
-
-        getSubscription();
-
-        console.log(`Navigating to deploy page...`);
-        // Navigate to publishing page
-        // navigate(`/dashboard/deploy/${result?.message as string}/${projectId}`);
-        if (identity) {
-          await queryClient.refetchQueries({
-            queryKey: ["freemium", identity?.getPrincipal().toText()],
-          });
-        }
-
-        refreshProjects();
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        navigate(`/dashboard/projects`);
-      } else {
-        setStatus(`Error: ${result?.message}`);
-      }
-    } catch (error) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log(`Navigating to projects...`);
+      debugger;
+      navigate(`/dashboard/projects`);
+    } catch (error: any) {
+      console.log(`ERRO HAPPNED:`, error);
       setToasterData({
         headerContent: "Error",
         toastStatus: true,
-        toastData: `Error: ${error}`,
+        toastData: `Error: ${error.message}`,
         textColor: "red",
         timeout: 5000,
       });
       setShowToaster(true);
-      return;
+      if (error.message.includes("subscription")) {
+        navigate("/dashboard/billing");
+      }
     } finally {
       setIsLoadingProgress(false);
       setIsEnded(true);

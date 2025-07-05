@@ -4,6 +4,7 @@ import { ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
 import { _SERVICE, DepositReceipt, GetProjectsByUserPayload, Project, ProjectPlan, Response, StoreAssetInCanisterPayload, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
+import { DeserializedProject } from "../../utility/bigint";
 
 interface CreateProjectPayload {
     project_name: string;
@@ -306,10 +307,14 @@ class MainApi {
 
             if ("ok" in result) {
                 const slot = result.ok.length > 0 ? result.ok[0] : null;
+                console.log(`((((SLOT)))) slot,`, slot)
+
+                // If no slot exists, return null (this is a valid state)
                 if (!slot) {
                     return null;
                 }
 
+                // Return the slot data in a consistent format
                 return {
                     project_id: slot.project_id.length > 0 ? slot.project_id[0] : null,
                     canister_id: slot.canister_id.length > 0 ? slot.canister_id[0] : null,
@@ -320,14 +325,15 @@ class MainApi {
                     duration: slot.duration,
                     start_cycles: slot.start_cycles,
                     status: slot.status
-
                 };
             } else {
+                // If there's an error in the response, throw it
                 throw new Error("Error requesting freemium session: " + Object.values(result)[0]);
             }
         } catch (error) {
-            console.log(`Error requesting freemium session:`, error)
-            return false;
+            console.log(`Error requesting freemium session:`, error);
+            // Instead of returning false, throw the error to be handled by the thunk
+            throw error;
         }
     }
 
@@ -337,34 +343,50 @@ class MainApi {
         description: string = "A standard asset canister for serving static site over HTTP.",
         tags: string[],
         plan: PlanType
-    ) {
-        if (!this.actor) {
-            throw new Error("Actor not initialized.");
-        }
-        if (!this.idenitified) {
-            throw new Error("Actor not identified.");
-        }
-        if (!this.identity) {
-            throw new Error("Identity not initialized.");
-        }
+    ): Promise<DeserializedProject | null> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
 
-        const payload: CreateProjectPayload = {
-            project_name: project_name,
-            project_description: description,
-            tags: tags,
-            plan: plan === 'freemium' ? { freemium: null } : { paid: null }
-        };
-        const response = await this.actor.create_project(payload);
+            const projectPlan: ProjectPlan = plan === "freemium" ? { freemium: null } : { paid: null };
 
-        if ("ok" in response) {
-            return {
-                project_id: response.ok.project_id,
-                is_freemium: response.ok.is_freemium
+            const payload: CreateProjectPayload = {
+                project_name,
+                project_description: description,
+                tags,
+                plan: projectPlan,
             };
-        }
-        else {
-            console.log(`Error creating project.`, response.err);
-            throw new Error(`Failed to create project: ${response.err}`);
+
+            const result = await this.actor.create_project(payload);
+
+            if (!result) {
+                throw new Error("Failed to create project");
+            }
+
+            if ('err' in result) {
+                throw new Error(result.err);
+            }
+
+            return {
+                id: result.ok.project_id,
+                name: project_name,
+                description,
+                tags,
+                plan: projectPlan,
+                canister_id: null,
+                date_created: Date.now(),
+                date_updated: Date.now()
+            };
+        } catch (error) {
+            console.error(`Error creating project:`, error);
+            return null;
         }
     }
 
@@ -399,7 +421,7 @@ class MainApi {
         }
     }
 
-    async getUserProjects(page?: number, limit?: number) {
+    async getUserProjects(page?: number, limit?: number): Promise<DeserializedProject[] | null> {
         try {
             if (!this.actor) {
                 throw new Error("Actor not initialized.");
@@ -411,40 +433,48 @@ class MainApi {
                 throw new Error("Identity not initialized.");
             }
 
-
             const payload: GetProjectsByUserPayload = {
                 user: this.identity.getPrincipal(),
+                page: page ? [BigInt(page)] : [],
                 limit: limit ? [BigInt(limit)] : [],
-                page: page ? [BigInt(page)] : []
-
-            }
+            };
 
             const result = await this.actor.get_projects_by_user(payload);
-            console.log(`Result get projects`, result)
-            if ("ok" in result) {
-                const sanitized = result.ok.map((project: Project) => {
-                    return {
-                        id: project.id,
-                        canister_id: project.canister_id ? project.canister_id.toString() : null,
-                        name: project.name,
-                        description: project.description,
-                        tags: project.tags,
-                        plan: project.plan,
-                        date_created: project.date_created,
-                        date_updated: project.date_updated
-                    }
-                })
+            console.log(`REUSLT froM get USER FEREMIUM`, result)
+            if (!result) {
+                throw new Error("Failed to get projects");
+            }
 
-                console.log(`Got all user projects.`, sanitized);
-                return sanitized;
+            if ('err' in result) {
+                console.log(`ERROR IN REUSLT`)
+                throw new Error(result.err);
             }
-            else {
-                if ("err" in result) {
-                    console.error(`Error getting projects `, result.err);
-                }
-            }
-        } catch (error: any) {
-            console.log(`Error getting user projects:`, error)
+
+            return result.ok.map((project: Project) => {
+                const canisterId = project.canister_id && project.canister_id.length > 0 ? project.canister_id[0] : null;
+                console.log("RETURNINGINGIN", {
+                    id: project.id,
+                    name: project.name,
+                    description: project.description,
+                    tags: project.tags,
+                    plan: project.plan,
+                    canister_id: canisterId ? canisterId.toText() : null,
+                    date_created: Number(project.date_created),
+                    date_updated: Number(project.date_updated)
+                })
+                return {
+                    id: project.id,
+                    name: project.name,
+                    description: project.description,
+                    tags: project.tags,
+                    plan: project.plan,
+                    canister_id: canisterId ? canisterId.toText() : null,
+                    date_created: Number(project.date_created),
+                    date_updated: Number(project.date_updated)
+                };
+            });
+        } catch (error) {
+            console.error(`Error getting projects:`, error);
             return null;
         }
     }

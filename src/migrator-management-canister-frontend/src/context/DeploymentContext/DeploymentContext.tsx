@@ -1,29 +1,7 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
+import { createContext, useContext, ReactNode } from "react";
 import { Deployment } from "../../components/AppLayout/interfaces";
-import MainApi from "../../api/main";
-import { useIdentity } from "../IdentityContext/IdentityContext";
-import { Principal } from "@dfinity/principal";
 import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
-import { useProgress } from "../ProgressBarContext/ProgressBarContext";
-import { internetIdentityConfig } from "../../config/config";
-import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
-
-export interface DeploymentDetails {
-  workflow_run_id: number;
-  repo_name: string;
-  date_created: number;
-  status: "pending" | "completed" | "failed";
-  branch?: string;
-  commit_hash?: string;
-  error_message?: string;
-  size?: number;
-}
+import { useDeploymentLogic } from "../../hooks/useDeploymentLogic";
 
 interface DeploymentsContextType {
   deployments: Deployment[];
@@ -46,115 +24,36 @@ const DeploymentsContext = createContext<DeploymentsContextType | undefined>(
 );
 
 export function DeploymentsProvider({ children }: { children: ReactNode }) {
-  /** Hooks */
-  const { identity } = useIdentity();
-  const { agent } = useHttpAgent();
-  const { setIsLoadingProgress, setIsEnded } = useProgress();
+  const {
+    deployments,
+    selectedDeployment,
+    isLoading,
+    isDispatched,
+    refreshDeployments,
+    getDeployment,
+    getWorkflowRunHistory,
+    addDeployment,
+    updateDeployment,
+    setSelectedDeployment,
+    setIsDispatched,
+  } = useDeploymentLogic();
 
-  /** State */
-  const [deployments, setDeployments] = useState<Deployment[]>([]);
-  const [selectedDeployment, setSelectedDeployment] =
-    useState<Deployment | null>(null);
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDispatched, setIsDispatched] = useState(false);
-
-  const getDeployment = (canisterId: string) => {
-    return deployments.find(
-      (deployment) => deployment.canister_id.toText() === canisterId
-    );
+  const value = {
+    deployments,
+    selectedDeployment,
+    setSelectedDeployment,
+    isLoading,
+    refreshDeployments,
+    getDeployment,
+    getWorkflowRunHistory,
+    addDeployment,
+    updateDeployment,
+    isDispatched,
+    setIsDispatched,
   };
-
-  const refreshDeployments = async () => {
-    try {
-      if (!identity || !agent) {
-        return;
-      }
-      if (
-        identity.getPrincipal().toText() ===
-        internetIdentityConfig.loggedOutPrincipal
-      ) {
-        console.log("Logged out, skipping deployment refresh");
-        return;
-      }
-
-      setIsLoadingProgress(true);
-      setIsEnded(false);
-
-      const mainApi = await MainApi.create(identity, agent);
-      const result = await mainApi?.getCanisterDeployments();
-
-      if (!result) {
-        throw new Error("No deployments found");
-      }
-
-      const deploymentsArray = result.map((deployment) => ({
-        ...deployment,
-        size: Number(deployment.size),
-        status: Object.keys(deployment.status)[0] as Deployment["status"],
-        date_created: Number(deployment.date_created),
-        date_updated: Number(deployment.date_updated),
-      }));
-      setDeployments(deploymentsArray);
-    } catch (error) {
-      console.error("Failed to fetch deployments:", error);
-    } finally {
-      setIsLoading(false);
-      setIsLoadingProgress(false);
-      setIsEnded(true);
-    }
-  };
-
-  const addDeployment = (deployment: Deployment) => {
-    setDeployments((prev) => [...prev, deployment]);
-  };
-
-  const getWorkflowRunHistory = async (canisterId: string) => {
-    if (!agent) {
-      throw new Error("Agent not found");
-    }
-    const mainApi = await MainApi.create(identity, agent);
-    if (!mainApi) {
-      throw new Error(`Failed to create main api instance.`);
-    }
-    const runsHistory = await mainApi.getWorkflowHistory(
-      Principal.fromText(canisterId)
-    );
-
-    return runsHistory;
-  };
-
-  const updateDeployment = (
-    canisterId: string,
-    updates: Partial<Deployment>
-  ) => {
-    setDeployments((prev) =>
-      prev.map((dep) =>
-        dep.canister_id.toText() === canisterId ? { ...dep, ...updates } : dep
-      )
-    );
-  };
-
-  useEffect(() => {
-    refreshDeployments();
-  }, [identity, agent]);
 
   return (
-    <DeploymentsContext.Provider
-      value={{
-        deployments,
-        selectedDeployment,
-        setSelectedDeployment,
-        getDeployment,
-        getWorkflowRunHistory,
-        isLoading,
-        refreshDeployments,
-        addDeployment,
-        updateDeployment,
-        isDispatched,
-        setIsDispatched,
-      }}
-    >
+    <DeploymentsContext.Provider value={value}>
       {children}
     </DeploymentsContext.Provider>
   );
