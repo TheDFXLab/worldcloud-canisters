@@ -19,6 +19,8 @@ import { useLedger } from "../../context/LedgerContext/LedgerContext";
 import LoaderOverlay from "../LoaderOverlay/LoaderOverlay";
 import Sidebar from "../Sidebar/Sidebar";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import HeaderCard from "../HeaderCard/HeaderCard";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 
 interface AppLayoutProps {
   state: State;
@@ -40,6 +42,8 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   const { actionBar } = useActionBar();
   const { activeTab, setIsMobileMenuOpen } = useSideBar();
   const { agent } = useHttpAgent();
+  const { headerCard } = useHeaderCard();
+
   /** State */
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -112,10 +116,14 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
       />
     );
   }
+  useEffect(() => {
+    console.log(`HWEADER CARD>`, headerCard);
+  }, [headerCard]);
 
   return (
     <div className="app-layout" style={{ display: "flex", height: "100vh" }}>
       <LoaderOverlay />
+
       <Sidebar
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
@@ -131,6 +139,16 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
         }}
         onClick={() => setIsMobileMenuOpen(false)}
       >
+        {headerCard && (
+          <div className="app-layout-header">
+            <HeaderCard
+              title={headerCard.title}
+              description={headerCard.description}
+              className={headerCard.className}
+            />
+          </div>
+        )}
+
         {children}
         {actionBar && <ActionBar {...actionBar} />}
       </main>

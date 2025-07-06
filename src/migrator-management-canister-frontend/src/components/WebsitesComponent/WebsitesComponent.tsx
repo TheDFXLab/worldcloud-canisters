@@ -170,10 +170,10 @@ const WebsitesComponent: React.FC = () => {
   if (allCanisters.length === 0) {
     return (
       <div className="websites-container">
-        <HeaderCard
+        {/* <HeaderCard
           title="Your Websites"
           description="Manage your deployed websites and canisters"
-        />
+        /> */}
         <div className="websites-grid empty-align-left">
           <div
             className="website-card dotted-card"
@@ -207,10 +207,10 @@ const WebsitesComponent: React.FC = () => {
 
   return (
     <div className="websites-container">
-      <HeaderCard
+      {/* <HeaderCard
         title="Your Websites"
         description="Manage your deployed websites and canisters"
-      />
+      /> */}
       {/* Tag filter row */}
       <div className="tags-row">
         {filterTagOptions.map((tag) => (

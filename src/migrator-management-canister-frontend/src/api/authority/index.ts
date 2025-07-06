@@ -4,8 +4,9 @@ import { HttpAgent, Identity } from "@dfinity/agent";
 import MainApi from "../main";
 import { internetIdentityConfig } from "../../config/config";
 
+type CanisterAvailabilityStatus = "running" | "stopped" | "stopping";
 export interface CanisterStatus {
-    status: string;
+    status: CanisterAvailabilityStatus;
     cycles: number;
     controllers: string[];
 }
@@ -53,8 +54,9 @@ class AuthorityApi {
         if (!response) {
             throw new Error("Failed to get canister status");
         }
+        const statusType = Object.keys(response.status)[0];
         const status = {
-            status: Object.keys(response.status)[0],
+            status: statusType === "#running" ? "running" : (statusType === '#stopped' ? "stopped" : "stopping") as CanisterAvailabilityStatus,
             controllers: response.settings.controllers[0]?.map((controller) => controller.toString()) || [],
             cycles: Number(response.cycles)
         }

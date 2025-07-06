@@ -76,18 +76,18 @@ const UnsubscribedView: React.FC = () => {
           agent,
           tierId: 3,
           amountInIcp: 0,
-          totalCredits: 0,
+          totalCredits: BigInt(0),
         })
       ).unwrap();
 
-      if (!result.status) {
-        throw new Error(result.message);
+      if (!result) {
+        throw new Error("Failed to create subscription");
       }
 
       setToasterData({
         headerContent: "Subscription Created",
         toastStatus: true,
-        toastData: result.message,
+        toastData: `Subscribed to plan`,
         timeout: 2000,
       });
       setShowToaster(true);

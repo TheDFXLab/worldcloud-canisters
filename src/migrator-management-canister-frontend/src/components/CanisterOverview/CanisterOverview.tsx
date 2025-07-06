@@ -32,11 +32,9 @@ import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import { Tooltip } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import IconTextRowView from "../IconTextRowView/IconTextRowView";
 import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
 import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
-
 import BatteryAlertIcon from "@mui/icons-material/BatteryAlert";
 import Battery20Icon from "@mui/icons-material/Battery20";
 import Battery30Icon from "@mui/icons-material/Battery30";
@@ -45,10 +43,33 @@ import Battery60Icon from "@mui/icons-material/Battery60";
 import Battery80Icon from "@mui/icons-material/Battery80";
 import Battery90Icon from "@mui/icons-material/Battery90";
 import BatteryFullIcon from "@mui/icons-material/BatteryFull";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "../../state/store";
+import { fetchUserUsage } from "../../state/slices/projectsSlice";
+import { fetchFreemiumUsage } from "../../state/slices/freemiumSlice";
+import { formatDate } from "../../utility/formatter";
+import IconTextRowView from "../IconTextRowView/IconTextRowView";
+import { bigIntToDate, bigIntToNumber } from "../../utility/bigint";
+import HeaderCard from "../HeaderCard/HeaderCard";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
+import HistoryIcon from "@mui/icons-material/History";
+import { CanisterStatus } from "../../api/authority";
+import { useCyclesLogic } from "../../hooks/useCyclesLogic";
 
-export const CanisterOverview = () => {
+const useAppDispatch = () => useDispatch<AppDispatch>();
+
+interface Project {
+  name: string;
+  description: string;
+  canister_id: string;
+  plan: { freemium: null } | { paid: null };
+  date_created: bigint;
+  tags: string[];
+}
+
+export const CanisterOverview: React.FC = () => {
   /** Hooks */
-  const { canisterId } = useParams();
+  const { projectId } = useParams();
   const { deployments, getDeployment, getWorkflowRunHistory } =
     useDeployments();
   const navigate = useNavigate();
@@ -70,10 +91,12 @@ export const CanisterOverview = () => {
     cyclesStatus,
     maxCyclesExchangeable,
     isLoadingEstimateCycles,
-  } = useCycles();
+  } = useCyclesLogic();
   const { setShowModal } = useConfirmationModal();
   const { summon, destroy } = useLoaderOverlay();
   const { agent } = useHttpAgent();
+  const dispatch = useAppDispatch();
+  const { setHeaderCard } = useHeaderCard();
 
   /** States */
   const [icpToDeposit, setIcpToDeposit] = useState<string>("0");
@@ -89,18 +112,46 @@ export const CanisterOverview = () => {
     undefined
   );
 
+  const [canisterDetails, setCanisterDetails] = useState<
+    CanisterStatus | undefined
+  >({
+    status: "stopped",
+    cycles: BigInt(0),
+    controllers: [],
+  });
+
+  const { projects, userUsage, isLoadingUsage } = useSelector(
+    (state: RootState) => state.projects
+  );
+
+  const {
+    usageData,
+    hasActiveSlot,
+    isLoading: isLoadingFreemium,
+  } = useSelector((state: RootState) => state.freemium);
+
+  // Find the current project
+  const currentProject = projects.find((p) => p.id === projectId) as
+    | Project
+    | undefined;
+  const isFreemium = currentProject && "freemium" in currentProject.plan;
+
   useEffect(() => {
     const getCanisterStatus = async () => {
+      const canisterId = currentProject?.canister_id;
       if (!canisterId) {
         return;
       }
-      await getStatus(canisterId);
+      const status = await getStatus(canisterId);
+      console.log(`STATUs:`, status);
+      setCanisterDetails(status);
     };
     getCanisterStatus();
   }, []);
 
   useEffect(() => {
     const getCanisterInfo = async () => {
+      const canisterId = currentProject?.canister_id;
       if (!canisterId) return;
       const info = getDeployment(canisterId);
       if (info) {
@@ -108,11 +159,13 @@ export const CanisterOverview = () => {
       }
     };
     getCanisterInfo();
-  }, [canisterId, deployments]);
+  }, [currentProject?.canister_id, deployments]);
 
+  // TODO: Get project deployments once records are available in backend
   useEffect(() => {
     const fetchDeploymentDetails = async () => {
       try {
+        const canisterId = currentProject?.canister_id;
         setIsLoading(true);
         if (!canisterId) {
           throw new Error("Canister ID not found");
@@ -131,22 +184,35 @@ export const CanisterOverview = () => {
     fetchDeploymentDetails();
   }, []);
 
+  useEffect(() => {
+    if (identity && agent) {
+      dispatch(fetchUserUsage({ identity, agent }));
+      dispatch(fetchFreemiumUsage({ identity, agent, silent: true }));
+    }
+  }, [dispatch, identity, agent]);
+
+  // Get canisters status if project has a canister
+  useEffect(() => {
+    if (usageData && currentProject?.canister_id) {
+      getStatus(currentProject?.canister_id);
+    }
+  }, [dispatch, identity, agent, usageData, currentProject?.canister_id]);
+
+  useEffect(() => {
+    console.log(`setting header card...`);
+    setHeaderCard({
+      title: "Project Details",
+      description:
+        "View and manage your project's details and deployment status.",
+    });
+  }, []);
+
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  };
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   const handleAddCycles = useCallback(async () => {
@@ -157,6 +223,7 @@ export const CanisterOverview = () => {
     isTransferringRef.current = true;
 
     try {
+      const canisterId = currentProject?.canister_id;
       if (!canisterId) {
         setToasterData({
           headerContent: "Error",
@@ -254,7 +321,13 @@ export const CanisterOverview = () => {
     } finally {
       isTransferringRef.current = false;
     }
-  }, [identity, canisterId, icpToDeposit, setToasterData, setShowToaster]);
+  }, [
+    identity,
+    currentProject?.canister_id,
+    icpToDeposit,
+    setToasterData,
+    setShowToaster,
+  ]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -477,9 +550,7 @@ export const CanisterOverview = () => {
                 </div>
                 <span className="deployment-date">
                   <ScheduleIcon className="time-icon" />
-                  {formatDate(
-                    new Date(Number(deployment.date_created) / 1000000)
-                  )}
+                  {bigIntToDate(deployment.date_created / BigInt(1000000))}
                 </span>
               </div>
             </div>
@@ -525,120 +596,152 @@ export const CanisterOverview = () => {
     );
   };
 
+  const calculateTimeRemaining = () => {
+    if (!usageData) return null;
+    const endTime =
+      bigIntToNumber(usageData.start_timestamp)! +
+      bigIntToNumber(usageData.duration)!;
+    const now = Date.now();
+    const remaining = endTime - now;
+
+    if (remaining <= 0) return "Expired";
+
+    const hours = Math.floor(remaining / (1000 * 60 * 60));
+    const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  if (!currentProject) {
+    return <div>Project not found</div>;
+  }
+
+  const getPlanDisplay = (plan: Project["plan"]) => {
+    return "freemium" in plan ? "Freemium" : "Paid";
+  };
+
   return (
     <div className="canister-overview">
-      <div className="overview-header">
+      {/* <div className="back-button-container">
         <button
-          className="back-button"
-          onClick={() => navigate("/dashboard/websites")}
+          className="back-button-ff"
+          onClick={() => navigate("/dashboard/projects")}
         >
-          <ArrowBackIcon /> Back to Websites
+          <ArrowBackIcon />{" "}
+          <span className="back-button-text">Back to Projects</span>
         </button>
-        <h1>Canister Details</h1>
-      </div>
+      </div> */}
+
+      {/* <div className="overview-header"> */}
+      {/* <span className="overview-header-title">Project Details</span> */}
+      {/* <HeaderCard title="Project Details" className="overview-header-title" /> */}
+      {/* </div> */}
 
       <div className="details-grid">
-        <div className="detail-card">
-          <h3>Canister Information</h3>
-          <div className="canister-stats-container">
-            <div className="stat-item">
-              <div className="stat-label">
-                Canister ID
-                <Tooltip
-                  title="Unique identifier for this canister"
-                  arrow
-                  placement="top"
-                >
-                  <InfoIcon className="info-icon" />
-                </Tooltip>
-              </div>
-              <div className="stat-value with-copy">
-                <a
-                  href={getCanisterUrl(canisterId || "")}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {canisterId}
-                </a>
-                <button
-                  className="copy-button"
-                  onClick={() =>
-                    navigator.clipboard.writeText(canisterId || "")
-                  }
-                  title="Copy to clipboard"
-                >
-                  <ContentCopyIcon />
-                </button>
+        {!isFreemium && currentProject.canister_id && (
+          <>
+            <div className="detail-card">
+              <h3>Canister Information</h3>
+              <div className="canister-stats-container">
+                <div className="stat-item">
+                  <div className="stat-label">
+                    Canister ID
+                    <Tooltip
+                      title="Unique identifier for this canister"
+                      arrow
+                      placement="top"
+                    >
+                      <InfoIcon className="info-icon" />
+                    </Tooltip>
+                  </div>
+                  <div className="stat-value with-copy">
+                    <a
+                      href={getCanisterUrl(currentProject.canister_id || "")}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {currentProject.canister_id}
+                    </a>
+                    <button
+                      className="copy-button"
+                      onClick={() =>
+                        navigator.clipboard.writeText(
+                          currentProject.canister_id || ""
+                        )
+                      }
+                      title="Copy to clipboard"
+                    >
+                      <ContentCopyIcon />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="stat-item">
+                  <div className="stat-label">
+                    Status
+                    <Tooltip
+                      title="Current operational status of the canister"
+                      arrow
+                      placement="top"
+                    >
+                      <InfoIcon className="info-icon" />
+                    </Tooltip>
+                  </div>
+                  {canisterInfo?.status && (
+                    <span className={`status-badge ${canisterStatus?.status}`}>
+                      {canisterInfo?.status}
+                    </span>
+                  )}
+                </div>
+
+                <div className="stat-item">
+                  <div className="stat-label">
+                    Total Size
+                    <Tooltip
+                      title="Total storage space used by the canister"
+                      arrow
+                      placement="top"
+                    >
+                      <InfoIcon className="info-icon" />
+                    </Tooltip>
+                  </div>
+                  <div className="stat-value">
+                    {canisterInfo?.size
+                      ? formatBytes(Number(canisterInfo.size))
+                      : "N/A"}
+                  </div>
+                </div>
+
+                <div className="stat-item">
+                  <div className="stat-label">
+                    Created On
+                    <Tooltip
+                      title="Date when this canister was created"
+                      arrow
+                      placement="top"
+                    >
+                      <InfoIcon className="info-icon" />
+                    </Tooltip>
+                  </div>
+                  <div className="stat-value">
+                    {canisterInfo?.date_created
+                      ? formatDate(bigIntToDate(canisterInfo.date_created))
+                      : "N/A"}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="stat-item">
-              <div className="stat-label">
-                Status
-                <Tooltip
-                  title="Current operational status of the canister"
-                  arrow
-                  placement="top"
-                >
-                  <InfoIcon className="info-icon" />
-                </Tooltip>
-              </div>
-              {canisterInfo?.status && (
-                <span className={`status-badge ${canisterStatus?.status}`}>
-                  {canisterInfo?.status}
-                </span>
-              )}
+            <div className="detail-card deployments-section">
+              <h3 style={{ paddingBottom: "10px" }}>Cycles</h3>
+              {renderCyclesList()}
             </div>
 
-            <div className="stat-item">
-              <div className="stat-label">
-                Total Size
-                <Tooltip
-                  title="Total storage space used by the canister"
-                  arrow
-                  placement="top"
-                >
-                  <InfoIcon className="info-icon" />
-                </Tooltip>
-              </div>
-              <div className="stat-value">
-                {canisterInfo?.size
-                  ? formatBytes(Number(canisterInfo.size))
-                  : "N/A"}
-              </div>
+            <div className="detail-card deployments-section">
+              <h3 style={{ paddingBottom: "10px" }}>Deployment History</h3>
+              {renderDeploymentsList()}
             </div>
-
-            <div className="stat-item">
-              <div className="stat-label">
-                Created On
-                <Tooltip
-                  title="Date when this canister was created"
-                  arrow
-                  placement="top"
-                >
-                  <InfoIcon className="info-icon" />
-                </Tooltip>
-              </div>
-              <div className="stat-value">
-                {canisterInfo?.date_created
-                  ? formatDate(
-                      new Date(Number(canisterInfo.date_created) / 1000000)
-                    )
-                  : "N/A"}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="detail-card deployments-section">
-          <h3 style={{ paddingBottom: "10px" }}>Cycles</h3>
-          {renderCyclesList()}
-        </div>
-
-        <div className="detail-card deployments-section">
-          <h3 style={{ paddingBottom: "10px" }}>Deployment History</h3>
-          {renderDeploymentsList()}
-        </div>
+          </>
+        )}
       </div>
 
       <ConfirmationModal
@@ -650,8 +753,6 @@ export const CanisterOverview = () => {
           totalPrice: parseFloat(icpToDeposit),
           showTotalPrice: false,
         }}
-        // title="Add Cycles"
-        // message="Are you sure you want to add cycles to this canister?"
       />
 
       {status === "uninitialized" && (
@@ -661,6 +762,195 @@ export const CanisterOverview = () => {
           <ProjectDeployment />
         </div>
       )}
+
+      <div className="grid-container">
+        {/* Project Details Card */}
+        <div className="card project-details">
+          <span className="card-title">Project Information</span>
+          <div className="content">
+            <div className="detail-row">
+              <span className="label">Name:</span>
+              <span className="value">{currentProject.name}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Description:</span>
+              <span className="value">{currentProject.description}</span>
+            </div>
+
+            {currentProject.canister_id && (
+              <div className="detail-row">
+                <span className="label">Canister ID:</span>
+                <span className="value">{currentProject.canister_id}</span>
+              </div>
+            )}
+
+            {cyclesStatus && (
+              <div className="detail-row">
+                <span className="label">Cycles Available:</span>
+                <span className="value">{cyclesStatus.cycles.toString()}</span>
+              </div>
+            )}
+
+            <div className="detail-row">
+              <span className="label">Plan:</span>
+              <span className="value">
+                {getPlanDisplay(currentProject.plan)}
+              </span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Created:</span>
+              <span className="value">
+                {formatDate(bigIntToDate(currentProject.date_created))}
+              </span>
+            </div>
+            <div className="tags">
+              {currentProject.tags.map((tag: string, index: number) => (
+                <span key={index} className="tag">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="project-details">
+          {canisterStatus && (
+            <div className="detail-row">
+              <span className="label">Canister cycles</span>
+              <span className="value">{canisterStatus.cycles.toString()}</span>
+            </div>
+          )}
+          <div className="card-secondary project-details">
+            <div className="detail-card-header">
+              <HistoryIcon />
+              <h3>Recent Activity</h3>
+            </div>
+            <div className="detail-card-content">
+              {deployments.slice(0, 5).map((deployment) => (
+                <div
+                  key={deployment.canister_id.toText()}
+                  className="activity-item"
+                >
+                  <div className="activity-icon">
+                    <div className={`status-dot ${deployment.status}`} />
+                  </div>
+                  <div className="activity-details">
+                    <p className="activity-title">
+                      {deployment.canister_id.toText()}
+                    </p>
+                    <p className="activity-time">
+                      {new Date(
+                        Number(deployment.date_updated) / 1000000
+                      ).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="activity-status">{deployment.status}</div>
+                </div>
+              ))}
+              {deployments.length === 0 && (
+                <p className="no-data">No recent activity</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {canisterStatus && (
+          <div className="card project-details">
+            <span className="card-title">Deployment Status</span>
+            <div className="content">
+              <div className="detail-row">
+                <span className="label">Name:</span>
+                <span className="value">{currentProject.name}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Description:</span>
+                <span className="value">{currentProject.description}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="card project-details">
+          <span className="card-title">Quick Actions</span>
+          <div className="content">
+            <div className="detail-row">
+              <span className="label">Name:</span>
+              <span className="value">{currentProject.name}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Description:</span>
+              <span className="value">{currentProject.description}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Freemium Session Card */}
+        {isFreemium && hasActiveSlot && (
+          <div className="card freemium-session">
+            <h2>Active Freemium Session</h2>
+            <div className="content">
+              <div className="detail-row">
+                <span className="label">Status:</span>
+                <span className="value status-active">Active</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Time Remaining:</span>
+                <span className="value countdown">
+                  {calculateTimeRemaining()}
+                </span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Started:</span>
+                <span className="value">
+                  {formatDate(bigIntToDate(usageData?.start_timestamp))}
+                </span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Expires:</span>
+                <span className="value">
+                  {formatDate(
+                    usageData
+                      ? bigIntToDate(
+                          usageData.start_timestamp + usageData.duration
+                        )
+                      : undefined
+                  )}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Usage Statistics Card */}
+        {!isLoadingUsage && userUsage && (
+          <div className="card usage-stats">
+            <h2>Usage Statistics</h2>
+            <div className="content">
+              <div className="detail-row">
+                <span className="label">Total Usage Count:</span>
+                <span className="value">{userUsage.usage_count}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Last Used:</span>
+                <span className="value">
+                  {formatDate(bigIntToDate(userUsage.last_used))}
+                </span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Rate Limit Window:</span>
+                <span className="value">
+                  {bigIntToNumber(userUsage.rate_limit_window)! / (60 * 60)}{" "}
+                  hours
+                </span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Max Uses:</span>
+                <span className="value">{userUsage.max_uses_threshold}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -24,6 +24,7 @@ import UpgradeIcon from "@mui/icons-material/Upgrade";
 import NonSubbed from "./NonSubbed/NonSubbed";
 import Subbed from "./Subbed/Subbed";
 import { usePricing } from "../../context/PricingContext/PricingContext";
+import { useSubscriptionLogic } from "../../hooks/useSubscriptionLogic";
 
 const BillingPage: React.FC = () => {
   /** Hooks */
@@ -34,13 +35,21 @@ const BillingPage: React.FC = () => {
   const { setToasterData, setShowToaster } = useToaster();
   const { summon, destroy } = useLoaderOverlay();
   const {
+    // subscription,
+    // tiers,
+    // isLoadingSub,
+    // isLoadingTiers,
+    // subscribe,
+  } = useSubscription();
+
+  const {
     subscription,
     // tiers,
     isLoadingSub,
     isLoadingTiers,
-    subscribe,
     getSubscription,
-  } = useSubscription();
+    subscribe,
+  } = useSubscriptionLogic();
 
   const { tiers } = usePricing();
 
@@ -86,18 +95,28 @@ const BillingPage: React.FC = () => {
       summon("Processing your request...");
 
       const res = await subscribe(tierId, Number(amount));
-      if (res.status) {
-        getSubscription();
-        setToasterData({
-          headerContent: "Subscription Created",
-          toastStatus: true,
-          toastData: res.message,
-          timeout: 2000,
-        });
+      if (!res.status) {
         setShowToaster(true);
-      } else {
-        throw new Error(res.message);
+        setToasterData({
+          headerContent: "Subscription Error",
+          toastStatus: false,
+          toastData: `${
+            res.message ? res.message : "Unexpected error occured."
+          }`,
+          timeout: 3000,
+        });
+        return;
       }
+
+      // Refersh subscription
+      getSubscription();
+      setToasterData({
+        headerContent: "Subscription Created",
+        toastStatus: true,
+        toastData: res.message,
+        timeout: 2000,
+      });
+      setShowToaster(true);
     } catch (error: any) {
       setToasterData({
         headerContent: "Error",
@@ -143,12 +162,12 @@ const BillingPage: React.FC = () => {
         />
       )}
 
-      <div className="billing-header">
+      {/* <div className="billing-header">
         <HeaderCard
           title="Subscription & Billing"
           description="Manage your subscription and billing preferences"
         />
-      </div>
+      </div> */}
 
       <div className="billing-content">
         {showPricing || !subscription ? (

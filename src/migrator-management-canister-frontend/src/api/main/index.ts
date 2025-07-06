@@ -4,7 +4,7 @@ import { ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
 import { _SERVICE, DepositReceipt, GetProjectsByUserPayload, Project, ProjectPlan, Response, StoreAssetInCanisterPayload, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
-import { DeserializedProject } from "../../utility/bigint";
+import { DeserializedProject, DeserializedUsageLog, SerializedUsageLog, serializedUsageLog } from "../../utility/bigint";
 
 interface CreateProjectPayload {
     project_name: string;
@@ -163,6 +163,7 @@ class MainApi {
             }
             console.log("Getting canister deployments", this.agent);
             const deployments = await this.actor.getCanisterDeployments();
+
             return deployments;
         } catch (error) {
             console.log(`Error getting canister deployments:`, error)
@@ -478,6 +479,38 @@ class MainApi {
             return null;
         }
     }
+    async getUserUsage(): Promise<SerializedUsageLog | null> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
+
+
+            const result = await this.actor.get_user_usage();
+            if (!result) {
+                throw new Error("Failed to get projects");
+            }
+
+            if ('err' in result) {
+                console.log(`ERROR IN REUSLT`)
+                throw new Error(result.err);
+            }
+
+
+            return serializedUsageLog(result.ok);
+        } catch (error) {
+            console.error(`Error getting projects:`, error);
+            return null;
+        }
+    }
+
+
 
 }
 

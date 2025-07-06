@@ -38,14 +38,25 @@ export const useSubscriptionLogic = () => {
     // Effect to fetch initial data
     useEffect(() => {
         if (identity && agent) {
-            dispatch(fetchSubscription({ identity, agent }));
-            dispatch(fetchTiers({ identity }));
+            dispatch(fetchSubscription({ identity, agent, silent: true }));
+            dispatch(fetchTiers({ identity, agent, silent: true }));
         }
     }, [dispatch, identity, agent]);
 
     const refreshSubscription = useCallback(() => {
         if (identity && agent) {
-            dispatch(fetchSubscription({ identity, agent }));
+            dispatch(fetchSubscription({ identity, agent, silent: true }));
+        }
+    }, [dispatch, identity, agent]);
+
+    const getSubscription = useCallback(async () => {
+        if (!identity || !agent) return 0;
+        try {
+            const result = await dispatch(fetchSubscription({ identity, agent, silent: true })).unwrap();
+            return result;
+        } catch (error) {
+            console.error('Failed to get credits:', error);
+            return 0;
         }
     }, [dispatch, identity, agent]);
 
@@ -111,16 +122,21 @@ export const useSubscriptionLogic = () => {
                         agent,
                         tierId,
                         amountInIcp,
-                        totalCredits: totalCredits.total_credits,
+                        totalCredits: BigInt(totalCredits.total_credits),
                     })
                 ).unwrap();
 
+                if (!response) {
+                    throw new Error('Failed to create subscription.');
+                }
+
                 await refreshSubscription();
-                return response;
+                return { status: true, message: "Retrieved subscription", data: response };
             } catch (error: any) {
                 return {
                     status: false,
                     message: error.message || 'Failed to create subscription',
+                    data: {}
                 };
             }
         },
@@ -141,5 +157,6 @@ export const useSubscriptionLogic = () => {
         validateSubscription,
         subscribe,
         clearError: handleClearError,
+        getSubscription
     };
 }; 

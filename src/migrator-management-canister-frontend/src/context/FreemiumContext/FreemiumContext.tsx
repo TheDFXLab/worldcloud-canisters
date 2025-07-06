@@ -13,10 +13,10 @@ interface FreemiumContextType {
   usageData: FreemiumUsageData | null;
   isLoading: boolean;
   error: string | null;
-  refreshFreemiumUsage: () => void;
-  validateSubscription: (
-    refreshSubscription: boolean
-  ) => Promise<FreemiumValidation>;
+  fetchUsage: () => void;
+  // validateSubscription: (
+  //   refreshSubscription: boolean
+  // ) => Promise<FreemiumValidation>;
 }
 
 export const FreemiumContext = createContext<FreemiumContextType | undefined>(
@@ -24,20 +24,13 @@ export const FreemiumContext = createContext<FreemiumContextType | undefined>(
 );
 
 export function FreemiumProvider({ children }: { children: ReactNode }) {
-  const {
-    usageData,
-    isLoading,
-    error,
-    refreshFreemiumUsage,
-    validateSubscription,
-  } = useFreemiumLogic();
+  const { usageData, isLoading, error, fetchUsage } = useFreemiumLogic();
 
   const value = {
     usageData,
     isLoading,
     error,
-    refreshFreemiumUsage,
-    validateSubscription,
+    fetchUsage,
   };
 
   return (

@@ -11,7 +11,7 @@ import { fromE8sStable } from "../../../utility/e8s";
 import { Tier } from "../../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import "./Subbed.css";
 import "../BillingPage.css";
-import { SubscriptionData } from "../../../context/SubscriptionContext/SubscriptionContext";
+import { SubscriptionData } from "../../../state/slices/subscriptionSlice";
 
 interface SubbedProps {
   subscription: SubscriptionData | null;

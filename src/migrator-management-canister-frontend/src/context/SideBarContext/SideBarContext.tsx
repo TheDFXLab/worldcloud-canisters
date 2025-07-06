@@ -14,7 +14,7 @@ const SideBarContext = createContext<SideBarContextType | undefined>(undefined);
 
 export function SideBarProvider({ children }: { children: ReactNode }) {
   const [showSideBar, setShowSideBar] = useState(false);
-  const [activeTab, setActiveTab] = useState<MenuItem | null>(null);
+  const [activeTab, setActiveTab] = useState<MenuItem | null>("home");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (

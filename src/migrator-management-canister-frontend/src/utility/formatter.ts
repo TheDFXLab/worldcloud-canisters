@@ -1,4 +1,3 @@
-
 // Helper function to determine badge color based on content type
 export const getTypeBadgeColor = (contentType: string): string => {
     if (contentType.startsWith('image')) return 'info';
@@ -18,4 +17,17 @@ export const formatFileSize = (bytes: number): string => {
 
 export const shortenPrincipal = (principal: string) => {
     return `${principal.substring(0, 10)}...${principal.substring(principal.length - 10)}`;
+};
+
+export const formatDate = (timestamp: number | undefined): string => {
+    if (!timestamp) return 'N/A';
+
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 };

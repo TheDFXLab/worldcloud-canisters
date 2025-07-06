@@ -12,7 +12,8 @@ import {
     setActiveFilterTag,
     setActiveSortTag,
     setViewMode,
-    getUserProjects
+    getUserProjects,
+    setLoading
 } from '../state/slices/projectsSlice';
 import { RootState, AppDispatch } from '../state/store';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
@@ -114,10 +115,10 @@ export const useProjectsLogic = () => {
         window.open(getCanisterUrl(canisterId), '_blank');
     }, []);
 
-    const handleProjectClick = useCallback((hasCanister: boolean, canisterId: string | null) => {
-        if (hasCanister && canisterId) {
-            navigate(`/dashboard/canister/${canisterId}`);
-        }
+    const handleProjectClick = useCallback((projectId: string, hasCanister: boolean, canisterId: string | null) => {
+        // if (hasCanister && canisterId) {
+        navigate(`/dashboard/canister/${projectId}`);
+        // }
     }, [navigate]);
 
     const filteredProjects = useMemo(() => {

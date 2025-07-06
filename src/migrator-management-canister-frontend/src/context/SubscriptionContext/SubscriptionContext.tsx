@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useContext } from "react";
-import { Tier } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { FrontendTier } from "../../state/slices/subscriptionSlice";
 import { SubscriptionData } from "../../state/slices/subscriptionSlice";
 import { useSubscriptionLogic } from "../../hooks/useSubscriptionLogic";
 import { SubscribeResponse } from "../../api/subscription/SubscriptionApi";
@@ -13,7 +13,7 @@ interface SubscriptionValidation {
 
 interface SubscriptionContextType {
   subscription: SubscriptionData | null;
-  tiers: Tier[] | null;
+  tiers: FrontendTier[] | null;
   isLoadingSub: boolean;
   isLoadingTiers: boolean;
   refreshSubscription: () => void;

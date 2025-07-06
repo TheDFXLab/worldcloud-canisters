@@ -3,6 +3,7 @@ import { Principal } from "@dfinity/principal";
 import { CanisterStatusResponse } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { useCyclesLogic } from "../../hooks/useCyclesLogic";
 import { CreditsResponse } from "../../state/slices/cyclesSlice";
+import { CanisterStatus } from "../../api/authority";
 
 interface CyclesContextType {
   isLoadingCycles: boolean;
@@ -16,7 +17,7 @@ interface CyclesContextType {
   setCurrentCanisterId: (canisterId: Principal) => void;
   canisterStatus: CanisterStatusResponse | null;
   estimateCycles: (amountInIcp: number) => Promise<number>;
-  getStatus: (canisterId: string) => Promise<void>;
+  getStatus: (canisterId: string) => Promise<CanisterStatus | undefined>;
   cyclesStatus: CanisterStatusResponse | null;
   cyclesRate: number;
 }
@@ -56,7 +57,7 @@ export function CyclesProvider({ children }: { children: ReactNode }) {
     estimateCycles,
     getStatus,
     setCurrentCanisterId,
-  };
+  } as CyclesContextType;
 
   return (
     <CyclesContext.Provider value={value}>{children}</CyclesContext.Provider>

@@ -23,6 +23,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import HeaderCard from "../HeaderCard/HeaderCard";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 
 interface FileUploaderProps {}
 
@@ -39,6 +40,7 @@ function FileUploader() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setActionBar } = useActionBar();
   const { agent } = useHttpAgent();
+  const { setHeaderCard } = useHeaderCard();
 
   /** State */
   const [currentBytes, setCurrentBytes] = useState(0);
@@ -61,6 +63,14 @@ function FileUploader() {
   const [canisterType, setCanisterType] = useState<CanisterType>("website");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  useEffect(() => {
+    setHeaderCard({
+      description: `Your canister is deployed with principal ${canisterId}`,
+      title: "Upload the zip file containing your website assets.",
+      className: "deployment-header",
+    });
+  }, []);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (canisterType === "website") {
@@ -470,11 +480,11 @@ function FileUploader() {
 
   return (
     <div className="zip-uploader">
-      <HeaderCard
+      {/* <HeaderCard
         description={`Your canister is deployed with principal ${canisterId}`}
         title="Upload the zip file containing your website assets."
         className="deployment-header"
-      />
+      /> */}
       <p className="step-title">
         {canisterType === "website"
           ? "Upload the zip file containing your website assets."

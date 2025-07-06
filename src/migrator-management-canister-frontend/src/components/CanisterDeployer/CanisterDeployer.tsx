@@ -172,10 +172,10 @@ function CanisterDeployer({}: CanisterDeployerProps) {
       <section className="beta-test-section">
         <div className="container">
           <div className="canister-deployer">
-            <HeaderCard
+            {/* <HeaderCard
               title="Deploy Your Canister"
               description="Get started with Internet Computer hosting"
-            />
+            /> */}
 
             <div className="info-grid">
               <div className="info-card">

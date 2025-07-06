@@ -7,9 +7,14 @@ import {
     serializeProject,
     deserializeProject,
     serializeProjects,
-    deserializeProjects
+    deserializeProjects,
+    bigIntToNumber,
+    deserializeUsageLog,
+    DeserializedUsageLog
 } from '../../utility/bigint';
 import { fetchFreemiumUsage } from './freemiumSlice';
+
+export type UsageLog = DeserializedUsageLog;
 
 export interface ProjectsState {
     projects: SerializedProject[];
@@ -18,6 +23,8 @@ export interface ProjectsState {
     activeSortTag: string;
     viewMode: 'card' | 'table';
     error: string | null;
+    userUsage: UsageLog | null;
+    isLoadingUsage: boolean;
 }
 
 const initialState: ProjectsState = {
@@ -27,6 +34,8 @@ const initialState: ProjectsState = {
     activeSortTag: 'all',
     viewMode: 'card',
     error: null,
+    userUsage: null,
+    isLoadingUsage: false
 };
 
 export const getUserProjects = createAsyncThunk(
@@ -152,6 +161,22 @@ export const deployProject = createAsyncThunk(
     }
 );
 
+export const fetchUserUsage = createAsyncThunk(
+    'projects/fetchUserUsage',
+    async ({ identity, agent }: { identity: any, agent: any }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) {
+            throw new Error("MainApi is not initialized.");
+        }
+        const result = await mainApi.getUserUsage();
+        // if ('err' in result) {
+        //     throw new Error(result.err);
+        // }
+        // return result.ok;
+        return result;
+    }
+);
+
 export const projectsSlice = createSlice({
     name: 'projects',
     initialState,
@@ -219,6 +244,17 @@ export const projectsSlice = createSlice({
             .addCase(deployProject.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.error.message || 'Failed to deploy project';
+            })
+            .addCase(fetchUserUsage.pending, (state) => {
+                state.isLoadingUsage = true;
+            })
+            .addCase(fetchUserUsage.fulfilled, (state, action) => {
+                state.isLoadingUsage = false;
+                state.userUsage = action.payload ? deserializeUsageLog(action.payload) : null;
+            })
+            .addCase(fetchUserUsage.rejected, (state, action) => {
+                state.isLoadingUsage = false;
+                state.error = action.error.message || 'Failed to fetch user usage';
             });
     },
 });

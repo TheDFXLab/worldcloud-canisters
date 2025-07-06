@@ -25,6 +25,8 @@ import { ProjectCard } from "./ProjectCard";
 import { ProjectTableRow } from "./ProjectTableRow";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "../../state/store";
+import { mapHeaderContent } from "../../utility/headerCard";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 
 // Tag and sorting options
 const planMap: Record<string, string> = {
@@ -58,6 +60,7 @@ const ProjectsComponent: React.FC = () => {
   /** Hooks */
   const { setActiveTab } = useSideBar();
   const navigate = useNavigate();
+  const { setHeaderCard } = useHeaderCard();
   const { setActionBar } = useActionBar();
   const { identity } = useIdentity();
   const { agent } = useHttpAgent();
@@ -97,10 +100,6 @@ const ProjectsComponent: React.FC = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // useEffect(() => {
-  //   refreshFreemiumUsage();
-  // }, []);
-
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -121,14 +120,14 @@ const ProjectsComponent: React.FC = () => {
     };
   }, [filterTagsExpanded, sortTagsExpanded, isMobile]);
 
+  useEffect(() => {
+    setHeaderCard(mapHeaderContent("projects"));
+  }, []);
+
   // If no projects at all, show the dotted silhouette card
   if (!isLoading && (!projects || projects.length === 0)) {
     return (
       <div className="projects-container">
-        <HeaderCard
-          title="Your Projects"
-          description="Manage your projects and deployments"
-        />
         <div className="projects-grid empty-align-left">
           <div
             className="project-card dotted-card"
@@ -160,6 +159,14 @@ const ProjectsComponent: React.FC = () => {
     );
   }
 
+  // useEffect(() => {
+  //   setHeaderCard({
+  //     description: `Your canister is deployed with principal ${canisterId}`,
+  //     title: "Upload the zip file containing your website assets.",
+  //     className: "deployment-header",
+  //   });
+  // }, []);
+
   return (
     <div className="projects-container">
       <div
@@ -169,10 +176,10 @@ const ProjectsComponent: React.FC = () => {
           alignItems: "center",
         }}
       >
-        <HeaderCard
+        {/* <HeaderCard
           title="Your Projects"
           description="Manage your projects and deployments"
-        />
+        /> */}
       </div>
       {/* Filter tags row */}
       <div style={{ position: "relative" }}>
@@ -275,7 +282,11 @@ const ProjectsComponent: React.FC = () => {
                   handleVisitWebsite(e, project.canister_id!)
                 }
                 onClick={() =>
-                  handleProjectClick(!!project.canister_id, project.canister_id)
+                  handleProjectClick(
+                    project.id.toString(),
+                    !!project.canister_id,
+                    project.canister_id
+                  )
                 }
               />
             ))
@@ -322,6 +333,7 @@ const ProjectsComponent: React.FC = () => {
                     }
                     onClick={() =>
                       handleProjectClick(
+                        project.id.toString(),
                         !!project.canister_id,
                         project.canister_id
                       )

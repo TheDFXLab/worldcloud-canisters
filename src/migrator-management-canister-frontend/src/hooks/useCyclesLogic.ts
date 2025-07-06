@@ -62,6 +62,20 @@ export const useCyclesLogic = () => {
         }
     }, [dispatch, identity, agent, balance]);
 
+    const fetchCredits = useCallback(async () => {
+        if (!identity || !agent || !(typeof balance !== 'bigint' && balance)) return 0;
+        try {
+            const result = await dispatch(
+
+                fetchCreditsAvailable({ identity, agent, balance })
+            ).unwrap();
+            return result;
+        } catch (error) {
+            console.error('Failed to get credits:', error);
+            return 0;
+        }
+    }, [dispatch, identity, agent]);
+
     const handleEstimateCycles = useCallback(async (amountInIcp: number) => {
         if (!identity || !agent) return 0;
         try {
@@ -78,11 +92,14 @@ export const useCyclesLogic = () => {
     const handleGetStatus = useCallback(async (canisterId: string) => {
         if (!identity || !agent) return;
         try {
-            await dispatch(
+            const result = await dispatch(
                 fetchCanisterStatus({ identity, agent, canisterId })
             ).unwrap();
+            console.log(`GETTING STATSS:`, result)
+            return result;
         } catch (error) {
             console.error('Failed to fetch canister status:', error);
+            throw error;
         }
     }, [dispatch, identity, agent]);
 
@@ -102,6 +119,7 @@ export const useCyclesLogic = () => {
         isLoadingStatus: isLoading.status,
         isLoadingCredits: isLoading.credits,
         isLoadingEstimateCycles: isLoading.estimateCycles,
+        fetchCredits: fetchCredits,
         estimateCycles: handleEstimateCycles,
         getStatus: handleGetStatus,
         setCurrentCanisterId: handleSetCurrentCanisterId,

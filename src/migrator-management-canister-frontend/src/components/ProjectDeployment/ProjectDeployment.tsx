@@ -12,6 +12,7 @@ import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import HeaderCard from "../HeaderCard/HeaderCard";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import { useGithub } from "../../context/GithubContext/GithubContext";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 
 interface ProjectDeploymentProps {}
 
@@ -23,6 +24,7 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
   const navigate = useNavigate();
   const { isDispatched, setIsDispatched } = useDeployments();
   const { isGithubConnected } = useGithub();
+  const { setHeaderCard } = useHeaderCard();
 
   /** State */
   const [selectedMethod, setSelectedMethod] = useState<
@@ -44,6 +46,17 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
     }
   }, [canisterId, projectId, navigate]);
 
+  useEffect(() => {
+    if (!selectedMethod) {
+      setHeaderCard({
+        description: "Choose Deployment Method",
+        title:
+          "Select how you want to deploy your project to Internet Computer",
+        className: "deployment-header",
+      });
+    }
+  }, []);
+
   if (!canisterId || !projectId) {
     return (
       <div className="project-deployment-container">
@@ -58,11 +71,11 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
     <div className="project-deployment">
       {!selectedMethod ? (
         <>
-          <HeaderCard
+          {/* <HeaderCard
             title={"Choose Deployment Method"}
             description="Select how you want to deploy your project to Internet Computer"
             className="deployment-header"
-          />
+          /> */}
 
           <div className="deployment-methods">
             <Tooltip

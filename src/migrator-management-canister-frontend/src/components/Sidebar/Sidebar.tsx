@@ -16,9 +16,15 @@ import { useNavigate } from "react-router-dom";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 
 import "./Sidebar.css";
-import { useEffect, useState } from "react";
+import { act, useEffect, useState } from "react";
 import { useAdmin } from "../../context/AdminContext/AdminContext";
 import { useGithub } from "../../context/GithubContext/GithubContext";
+import {
+  HeaderCardData,
+  useHeaderCard,
+} from "../../context/HeaderCardContext/HeaderCardContext";
+import { mapHeaderContent } from "../../utility/headerCard";
+import { mapKeyToRoute } from "../../utility/navigation";
 
 export type MenuItem =
   | "publish"
@@ -43,9 +49,10 @@ function Sidebar({
 }: SidebarProps) {
   const { isAdmin } = useAdmin();
   const { disconnect } = useIdentity();
-  const { setGithubUser } = useGithub();
+  const { githubUser, setGithubUser } = useGithub();
   const { activeTab, isMobileMenuOpen, setIsMobileMenuOpen, setActiveTab } =
     useSideBar();
+  const { setHeaderCard } = useHeaderCard();
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = mobileControl;
 
@@ -53,6 +60,7 @@ function Sidebar({
     if (isMobile) {
       setIsSidebarCollapsed(window.innerWidth <= 768 ? true : false);
     }
+    handleMenuClick(activeTab ? activeTab : "home", false);
   }, []);
 
   useEffect(() => {
@@ -69,6 +77,7 @@ function Sidebar({
     } else {
       setIsSidebarCollapsed((v) => !v);
     }
+    handleMenuClick(activeTab ? activeTab : "home", true);
   };
 
   const handleClose = () => {
@@ -78,33 +87,24 @@ function Sidebar({
     setIsSidebarCollapsed(true);
   };
 
-  const handleMenuClick = (menuItem: MenuItem) => {
-    switch (menuItem) {
-      case "billing":
-        navigate("/dashboard/billing");
-        break;
-      case "settings":
-        navigate("/dashboard/settings");
-        break;
-      case "home":
-        navigate("/dashboard");
-        break;
-      case "publish":
-        navigate("/dashboard/new");
-        break;
-      case "websites":
-        navigate("/dashboard/websites");
-        break;
-      case "projects":
-        navigate("/dashboard/projects");
-        break;
-      case "admin":
-        if (isAdmin) {
-          navigate("/dashboard/admin");
-        }
-        break;
-    }
+  const handleMenuClick = (
+    menuItem: MenuItem,
+    shouldNavigate: boolean = true
+  ) => {
+    console.log(`cloicked menu option`, menuItem, shouldNavigate);
+    const headerCardData: HeaderCardData = mapHeaderContent(
+      menuItem ? menuItem : "home",
+      githubUser,
+      isAdmin
+    );
+
+    const navigateToPath = mapKeyToRoute(menuItem ? menuItem : "home");
+    setHeaderCard(headerCardData.title.length > 0 ? headerCardData : null);
     setActiveTab(menuItem);
+    if (shouldNavigate) {
+      console.log(`Navigating to `, navigateToPath);
+      navigate(navigateToPath);
+    }
   };
 
   const handleLogout = () => {
@@ -154,26 +154,26 @@ function Sidebar({
             className={`nav-item ${activeTab === "home" ? "active" : ""}`}
             text="Home"
             IconComponent={HomeIcon}
-            onClickIcon={() => handleMenuClick("home")}
+            onClickIcon={() => handleMenuClick("home", true)}
           />
           <IconTextRowView
             className={`nav-item ${activeTab === "websites" ? "active" : ""}`}
             text="Websites"
             IconComponent={LanguageIcon}
-            onClickIcon={() => handleMenuClick("websites")}
+            onClickIcon={() => handleMenuClick("websites", true)}
           />
           <IconTextRowView
             className={`nav-item ${activeTab === "projects" ? "active" : ""}`}
             text="Projects"
             IconComponent={MemoryIcon}
-            onClickIcon={() => handleMenuClick("projects")}
+            onClickIcon={() => handleMenuClick("projects", true)}
           />
 
           <IconTextRowView
             className={`nav-item ${activeTab === "publish" ? "active" : ""}`}
             text="New"
             IconComponent={AddIcon}
-            onClickIcon={() => handleMenuClick("publish")}
+            onClickIcon={() => handleMenuClick("publish", true)}
           />
           <div className="bottom-nav-group">
             {isAdmin && (
@@ -181,7 +181,7 @@ function Sidebar({
                 className={`nav-item ${activeTab === "admin" ? "active" : ""}`}
                 text="Admin"
                 IconComponent={SupervisorAccountIcon}
-                onClickIcon={() => handleMenuClick("admin")}
+                onClickIcon={() => handleMenuClick("admin", true)}
               />
             )}
 

@@ -50,7 +50,6 @@ const CreateProjectForm: React.FC = () => {
   const { setShowLoadBar, setCompleteLoadBar } = useLoadBar();
   const { identity } = useIdentity();
   const { agent } = useHttpAgent();
-  const { refreshFreemiumUsage } = useFreemium();
   const { setIsLoadingProgress, setIsEnded } = useProgress();
   const { addDeployment, refreshDeployments } = useDeployments();
 

@@ -48,6 +48,7 @@ import { FreemiumProvider } from "./context/FreemiumContext/FreemiumContext";
 import CreateProjectForm from "./components/WebsitesComponent/CreateProjectForm";
 import { ProjectProvider } from "./context/ProjectContext/ProjectContext";
 import ProjectsComponent from "./components/ProjectsComponent/ProjectsComponent";
+import { HeaderCardProvider } from "./context/HeaderCardContext/HeaderCardContext";
 const queryClient = new QueryClient();
 export interface State {
   canister_id: string;
@@ -113,69 +114,71 @@ function App() {
                                                         <ProjectProvider>
                                                           <ConfirmationModalProvider>
                                                             <LedgerProvider>
-                                                              <AppLayout
-                                                                setState={
-                                                                  setState
-                                                                }
-                                                                state={state}
-                                                              >
-                                                                <Routes>
-                                                                  <Route
-                                                                    index
-                                                                    element={
-                                                                      <HomePage />
-                                                                    }
-                                                                  />
-                                                                  <Route
-                                                                    path="billing"
-                                                                    element={
-                                                                      <BillingPage />
-                                                                    }
-                                                                  />
-                                                                  <Route
-                                                                    path="settings"
-                                                                    element={
-                                                                      <Settings />
-                                                                    }
-                                                                  />
-                                                                  <Route
-                                                                    path="new"
-                                                                    element={
-                                                                      <CreateProjectForm />
-                                                                    }
-                                                                  />
-                                                                  <Route
-                                                                    path="deploy/:canisterId?/:projectId"
-                                                                    element={
-                                                                      <ProjectDeployment />
-                                                                    }
-                                                                  />
-                                                                  <Route
-                                                                    path="websites"
-                                                                    element={
-                                                                      <WebsitesComponent />
-                                                                    }
-                                                                  />
-                                                                  <Route
-                                                                    path="projects"
-                                                                    element={
-                                                                      <ProjectsComponent />
-                                                                    }
-                                                                  />
-                                                                  <Route
-                                                                    path="admin"
-                                                                    element={
-                                                                      <AdminPanel />
-                                                                    }
-                                                                  />
-                                                                  <Route
-                                                                    path="canister/:canisterId"
-                                                                    element={
-                                                                      <CanisterOverview />
-                                                                    }
-                                                                  />
-                                                                </Routes>
-                                                              </AppLayout>
+                                                              <HeaderCardProvider>
+                                                                <AppLayout
+                                                                  setState={
+                                                                    setState
+                                                                  }
+                                                                  state={state}
+                                                                >
+                                                                  <Routes>
+                                                                    <Route
+                                                                      index
+                                                                      element={
+                                                                        <HomePage />
+                                                                      }
+                                                                    />
+                                                                    <Route
+                                                                      path="billing"
+                                                                      element={
+                                                                        <BillingPage />
+                                                                      }
+                                                                    />
+                                                                    <Route
+                                                                      path="settings"
+                                                                      element={
+                                                                        <Settings />
+                                                                      }
+                                                                    />
+                                                                    <Route
+                                                                      path="new"
+                                                                      element={
+                                                                        <CreateProjectForm />
+                                                                      }
+                                                                    />
+                                                                    <Route
+                                                                      path="deploy/:canisterId?/:projectId"
+                                                                      element={
+                                                                        <ProjectDeployment />
+                                                                      }
+                                                                    />
+                                                                    <Route
+                                                                      path="websites"
+                                                                      element={
+                                                                        <WebsitesComponent />
+                                                                      }
+                                                                    />
+                                                                    <Route
+                                                                      path="projects"
+                                                                      element={
+                                                                        <ProjectsComponent />
+                                                                      }
+                                                                    />
+                                                                    <Route
+                                                                      path="admin"
+                                                                      element={
+                                                                        <AdminPanel />
+                                                                      }
+                                                                    />
+                                                                    <Route
+                                                                      path="canister/:projectId"
+                                                                      element={
+                                                                        <CanisterOverview />
+                                                                      }
+                                                                    />
+                                                                  </Routes>
+                                                                </AppLayout>
+                                                              </HeaderCardProvider>
                                                             </LedgerProvider>
                                                           </ConfirmationModalProvider>
                                                         </ProjectProvider>
