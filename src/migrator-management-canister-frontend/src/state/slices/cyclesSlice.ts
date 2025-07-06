@@ -4,6 +4,7 @@ import MainApi from '../../api/main';
 import CyclesApi from '../../api/cycles';
 import { fromE8sStable } from '../../utility/e8s';
 import { CanisterStatusResponse } from '../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did';
+import { CanisterStatus } from '../../api/authority';
 
 export interface CreditsResponse {
     total_credits: number;
@@ -15,8 +16,8 @@ interface CyclesState {
     totalCredits: CreditsResponse | null;
     maxCyclesExchangeable: number;
     currentCanisterId: string | null;
-    canisterStatus: CanisterStatusResponse | null;
-    cyclesStatus: CanisterStatusResponse | null;
+    canisterStatus: CanisterStatus | null;
+    cyclesStatus: CanisterStatus | null;
     cyclesRate: number;
     isLoading: {
         cycles: boolean;

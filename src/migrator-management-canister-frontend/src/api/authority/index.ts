@@ -7,7 +7,7 @@ import { internetIdentityConfig } from "../../config/config";
 type CanisterAvailabilityStatus = "running" | "stopped" | "stopping";
 export interface CanisterStatus {
     status: CanisterAvailabilityStatus;
-    cycles: number;
+    cycles: bigint;
     controllers: string[];
 }
 
@@ -44,6 +44,7 @@ class AuthorityApi {
      * @param identity 
      * @returns status, controllers list and cycles balance
      */
+    // TODO: Use thunk
     async getCanisterStatus(canister_id: Principal, identity: Identity | null, agent: HttpAgent): Promise<CanisterStatus> {
         const mainApi = await MainApi.create(identity, agent);
 
@@ -58,7 +59,7 @@ class AuthorityApi {
         const status = {
             status: statusType === "#running" ? "running" : (statusType === '#stopped' ? "stopped" : "stopping") as CanisterAvailabilityStatus,
             controllers: response.settings.controllers[0]?.map((controller) => controller.toString()) || [],
-            cycles: Number(response.cycles)
+            cycles: response.cycles
         }
         return status;
     }

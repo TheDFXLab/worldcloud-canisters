@@ -5,6 +5,7 @@ import { _SERVICE, DepositReceipt, GetProjectsByUserPayload, Project, ProjectPla
 import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
 import { DeserializedProject, DeserializedUsageLog, SerializedUsageLog, serializedUsageLog } from "../../utility/bigint";
+import { CanisterStatus } from "../authority";
 
 interface CreateProjectPayload {
     project_name: string;
@@ -185,7 +186,22 @@ class MainApi {
             throw new Error("Failed to get canister status");
         }
 
-        return result;
+        if ('ok' in result) {
+            return {
+                status: 'running' in result.status ? "running" : 'stopped' in result.status ? 'stopped' : 'stopping',
+                cycles: result.cycles,
+                controllers: []
+            } as CanisterStatus;
+        }
+        else {
+            if ('err' in result) {
+                throw new Error(result.err as string);
+            }
+            else {
+                throw new Error("Unexpected error occured.");
+            }
+        }
+
     }
 
     async uploadWasm(wasmBytes: number[]) {
