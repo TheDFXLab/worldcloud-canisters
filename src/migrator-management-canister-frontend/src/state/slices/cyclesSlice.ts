@@ -5,6 +5,7 @@ import CyclesApi from '../../api/cycles';
 import { fromE8sStable } from '../../utility/e8s';
 import { CanisterStatusResponse } from '../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did';
 import { CanisterStatus } from '../../api/authority';
+import { serializeCanisterStatus, SerializedCanisterStatus } from '../../utility/bigint';
 
 export interface CreditsResponse {
     total_credits: number;
@@ -16,8 +17,8 @@ interface CyclesState {
     totalCredits: CreditsResponse | null;
     maxCyclesExchangeable: number;
     currentCanisterId: string | null;
-    canisterStatus: CanisterStatus | null;
-    cyclesStatus: CanisterStatus | null;
+    canisterStatus: SerializedCanisterStatus | null;
+    cyclesStatus: SerializedCanisterStatus | null;
     cyclesRate: number;
     isLoading: {
         cycles: boolean;
@@ -85,12 +86,15 @@ export const estimateCycles = createAsyncThunk(
 
 export const fetchCanisterStatus = createAsyncThunk(
     'cycles/fetchStatus',
-    async ({ identity, agent, canisterId }: { identity: any; agent: any; canisterId: string }) => {
+    async ({ identity, agent, project_id }: { identity: any; agent: any; project_id: bigint }) => {
         const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) {
             throw new Error('Main API not created');
         }
-        return await mainApi.getCanisterStatus(Principal.fromText(canisterId));
+
+        const result = await mainApi.getCanisterStatus(project_id);
+        const serialized = serializeCanisterStatus(result);
+        return serialized;
     }
 );
 
