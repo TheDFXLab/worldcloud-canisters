@@ -25,7 +25,6 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
   const { isDispatched, setIsDispatched } = useDeployments();
   const { isGithubConnected } = useGithub();
   const { setHeaderCard } = useHeaderCard();
-
   /** State */
   const [selectedMethod, setSelectedMethod] = useState<
     "github" | "upload" | null
@@ -41,7 +40,6 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
   useEffect(() => {
     // Redirect to new page if no canister ID provided
     if (!canisterId || !projectId) {
-      // return <div>No canister ID</div>;
       navigate("/dashboard/projects");
     }
   }, [canisterId, projectId, navigate]);
@@ -98,8 +96,8 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
                     </div>
                     <Card.Title>Deploy from GitHub</Card.Title>
                     <Card.Text>
-                      Connect your GitHub repository and deploy directly from
-                      your source code.
+                      Link your GitHub repository and deploy directly from your
+                      source code.
                     </Card.Text>
                   </Card.Body>
                 </Card>
@@ -137,7 +135,11 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
             </button>
           )}
 
-          {selectedMethod === "github" ? <RepoSelector /> : <FileUploader />}
+          {selectedMethod === "github" ? (
+            <RepoSelector />
+          ) : (
+            <FileUploader project_id={BigInt(projectId)} />
+          )}
         </div>
       )}
     </div>
