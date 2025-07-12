@@ -1,5 +1,8 @@
 import React, { useEffect } from "react";
-import { DeserializedProject } from "../../utility/bigint";
+import {
+  DeserializedProject,
+  SerializedCanisterDeployment,
+} from "../../utility/bigint";
 import { getPlanDisplayName } from "../../hooks/useProjectsLogic";
 import LanguageIcon from "@mui/icons-material/Language";
 import StorageIcon from "@mui/icons-material/Storage";
@@ -8,11 +11,17 @@ import CodeIcon from "@mui/icons-material/Code";
 import { Tooltip } from "@mui/material";
 import CountdownChip from "./CountdownChip";
 import { FreemiumUsageData } from "../../state/slices/freemiumSlice";
+import { CanisterDeployment } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { DeserializedDeployment } from "../AppLayout/interfaces";
+import { CanisterDeploymentStatus } from "../../utility/principal";
+import LaunchIcon from "@mui/icons-material/Launch";
 
 interface ProjectCardProps {
   project: DeserializedProject;
   freemiumSlot: FreemiumUsageData | null;
+  canisterDeployment: DeserializedDeployment | undefined;
   onInstallCode: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  onDeployNewCode: (e: React.MouseEvent<HTMLButtonElement>) => void;
   onVisitWebsite: (e: React.MouseEvent<HTMLButtonElement>) => void;
   onClick: () => void;
 }
@@ -20,12 +29,18 @@ interface ProjectCardProps {
 export const ProjectCard: React.FC<ProjectCardProps> = ({
   project,
   freemiumSlot,
+  canisterDeployment,
   onInstallCode,
+  onDeployNewCode,
   onVisitWebsite,
   onClick,
 }) => {
   const planTag = getPlanDisplayName(project.plan);
   const hasCanister = !!project.canister_id;
+  const hasInstalledCode = false;
+  const deploymentStatus: CanisterDeploymentStatus = canisterDeployment?.status
+    ? (canisterDeployment.status as CanisterDeploymentStatus)
+    : "uninitialized";
   const isFreemium = planTag.toLowerCase() === "freemium";
 
   // Break down the conditions for better debugging
@@ -75,6 +90,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
       <div className="project-card-content">
         <div className="project-header">
           <LanguageIcon />
+
           <div
             className={`plan-badge ${project.plan}`}
             style={{
@@ -83,6 +99,11 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               gap: 6,
             }}
           >
+            <div>
+              {hasCanister && (
+                <span className={`tag `}>{deploymentStatus}</span>
+              )}
+            </div>
             <span
               className={`chip ${
                 planTag.toLowerCase() === "paid" ? "paid" : "freemium"
@@ -154,25 +175,65 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         )}
 
         <div className="project-actions">
-          {hasCanister && (
-            <button className="action-button primary" onClick={onVisitWebsite}>
+          {/* {hasCanister && deploymentStatus === "uninitialized" && (
+            <span
+              className={`tag`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "6px 16px",
+                height: "32px",
+                minWidth: "120px",
+                borderRadius: "6px",
+                backgroundColor: "var(--background-light)",
+                color: "var(--text-secondary)",
+                fontSize: "0.875rem",
+                fontWeight: 500,
+                whiteSpace: "nowrap",
+                lineHeight: 1,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              Installing Website
+            </span>
+          )} */}
+          {hasCanister && deploymentStatus === "installed" && (
+            <button
+              className="action-button primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                onVisitWebsite(e);
+              }}
+            >
               Visit Website
             </button>
           )}
-          <Tooltip title="Deploy new version" arrow>
-            <button className="action-button secondary" onClick={onInstallCode}>
-              {hasCanister ? (
-                <>
-                  <CodeIcon />
-                  <span>Install Code</span>
-                </>
-              ) : (
-                <>
-                  <CodeIcon /> <span>Attach Canister</span>
-                </>
-              )}
-            </button>
-          </Tooltip>
+          <button
+            className="action-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (hasCanister) {
+                onDeployNewCode(e);
+              } else {
+                onInstallCode(e);
+              }
+            }}
+          >
+            <CodeIcon />
+
+            {hasCanister ? (
+              <span>
+                {deploymentStatus === "installed" && "Update Code"}
+                {(deploymentStatus === "uninitialized" ||
+                  deploymentStatus === "failed") &&
+                  "Deploy New Code"}
+              </span>
+            ) : (
+              "Attach Canister"
+            )}
+          </button>
         </div>
       </div>
     </div>
