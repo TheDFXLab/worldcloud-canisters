@@ -27,6 +27,8 @@ import { useDispatch } from "react-redux";
 import { AppDispatch } from "../../state/store";
 import { mapHeaderContent } from "../../utility/headerCard";
 import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
+import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
+import { useDeploymentLogic } from "../../hooks/useDeploymentLogic";
 
 // Tag and sorting options
 const planMap: Record<string, string> = {
@@ -64,6 +66,7 @@ const ProjectsComponent: React.FC = () => {
   const { setActionBar } = useActionBar();
   const { identity } = useIdentity();
   const { agent } = useHttpAgent();
+  const { summon, destroy } = useLoaderOverlay();
   const { usageData: freemiumSlot, fetchUsage } = useFreemiumLogic();
   const {
     projects,
@@ -80,6 +83,7 @@ const ProjectsComponent: React.FC = () => {
     refreshProjects,
   } = useProjectsLogic();
 
+  const { getDeployment } = useDeploymentLogic();
   useEffect(() => {
     setActiveTab("projects");
     setActionBar(null);
@@ -260,19 +264,36 @@ const ProjectsComponent: React.FC = () => {
           ) : (
             projects?.map((project) => (
               <ProjectCard
+                canisterDeployment={
+                  project.canister_id
+                    ? getDeployment(project.canister_id)
+                    : undefined
+                }
                 key={`${project.name}-${project.date_created}`}
                 project={project}
                 freemiumSlot={freemiumSlot}
-                onInstallCode={async (e) => {
-                  console.log(`INSTALLING CODE>....`);
-                  await handleInstallCode(
-                    e,
-                    !!project.canister_id,
-                    project.id,
-                    project.canister_id,
-                    identity,
-                    agent
+                onDeployNewCode={() => {
+                  navigate(
+                    `/dashboard/deploy/${project.canister_id}/${project.id}`
                   );
+                }}
+                onInstallCode={async (e) => {
+                  try {
+                    console.log(`INSTALLING CODE>....`);
+                    summon("Setting up canister...");
+                    await handleInstallCode(
+                      e,
+                      !!project.canister_id,
+                      project.id,
+                      project.canister_id,
+                      identity,
+                      agent
+                    );
+                  } catch (error) {
+                  } finally {
+                    destroy();
+                  }
+
                   // Refresh after installation completes
                   // await refreshProjects();
                   // await fetchUsage();
