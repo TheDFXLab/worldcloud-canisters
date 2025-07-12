@@ -89,7 +89,7 @@ export const useProjectsLogic = () => {
             hasCanister, project_id, canister_id
         });
         if (hasCanister) {
-            navigate(`/dashboard/deploy/${canister_id}/${canister_id}`);
+            navigate(`/dashboard/deploy/${canister_id}/${project_id}`);
         } else {
             if (!agent) {
                 console.log(`HttpAgent not set.`);
@@ -116,9 +116,10 @@ export const useProjectsLogic = () => {
     }, []);
 
     const handleProjectClick = useCallback((projectId: string, hasCanister: boolean, canisterId: string | null) => {
-        // if (hasCanister && canisterId) {
-        navigate(`/dashboard/canister/${projectId}`);
-        // }
+        // Only navigate to canister overview if it's not a button click
+        if (hasCanister && canisterId) {
+            navigate(`/dashboard/canister/${projectId}`);
+        }
     }, [navigate]);
 
     const filteredProjects = useMemo(() => {
