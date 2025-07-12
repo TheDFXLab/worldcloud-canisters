@@ -100,12 +100,13 @@ function CanisterOptions({ deployment, show, onHide }: CanisterOptionsProps) {
           )}
         </div>
 
-        {deployment.status === "uninitialized" && (
+        {/* TODO USE IF NEEDED */}
+        {/* {deployment.status === "uninitialized" && (
           <div className="upload-section mt-4">
             <span className="label">Pending Actions:</span>
-            <FileUploader />
+            <FileUploader project_id={project_id} />
           </div>
-        )}
+        )} */}
       </Modal.Body>
     </Modal>
   );
