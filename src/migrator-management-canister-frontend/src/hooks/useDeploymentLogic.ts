@@ -14,7 +14,7 @@ import { useHttpAgent } from '../context/HttpAgentContext/HttpAgentContext';
 import { useProgress } from '../context/ProgressBarContext/ProgressBarContext';
 import { Deployment } from '../components/AppLayout/interfaces';
 import { Principal } from '@dfinity/principal';
-import { deserializeDeployments, deserializeDeployment } from '../utility/principal';
+import { deserializeDeployments, deserializeDeployment, serializeDeployment } from '../utility/principal';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -63,11 +63,11 @@ export const useDeploymentLogic = () => {
         );
     }, [deployments]);
 
-    const getWorkflowRunHistory = useCallback(async (canisterId: string) => {
+    const getWorkflowRunHistory = useCallback(async (project_id: bigint) => {
         if (!identity || !agent) return;
         try {
             const result = await dispatch(
-                fetchWorkflowHistory({ identity, agent, canisterId })
+                fetchWorkflowHistory({ identity, agent, project_id })
             ).unwrap();
             return result;
         } catch (error) {
@@ -76,7 +76,7 @@ export const useDeploymentLogic = () => {
     }, [dispatch, identity, agent]);
 
     const handleAddDeployment = useCallback((deployment: Deployment) => {
-        dispatch(addDeployment(deployment));
+        dispatch(addDeployment(serializeDeployment(deployment)));
     }, [dispatch]);
 
     const handleUpdateDeployment = useCallback((canisterId: string, updates: Partial<Deployment>) => {

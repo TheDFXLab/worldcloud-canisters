@@ -241,6 +241,9 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       if (!repoStates[repo].selectedPath) {
         throw new Error("Please select a source path");
       }
+      if (!projectId) {
+        throw new Error("Project not selected.");
+      }
 
       setShowToaster(true);
       setToasterData({
@@ -330,7 +333,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       const fileUploadApi = new FileUploadApi();
       const result = await fileUploadApi.uploadFromZip(
         zipFile,
-        canisterId,
+        BigInt(projectId),
         identity,
         workflowRunDetails,
         agent

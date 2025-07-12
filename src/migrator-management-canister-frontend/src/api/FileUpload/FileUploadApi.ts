@@ -17,18 +17,18 @@ class FileUploadApi {
         return mainApi.idenitified;
     }
 
-    async uploadFromZip(zipFile: File, canisterId: string, identity: Identity | null, workflowRunDetails: WorkflowRunDetails, agent: HttpAgent) {
+    async uploadFromZip(zipFile: File, projectId: bigint, identity: Identity | null, workflowRunDetails: WorkflowRunDetails, agent: HttpAgent) {
         const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) {
             throw new Error("Failed to create main api");
         }
         const sanitizedFiles = await this.processZipFile(zipFile);
 
-        return await this.handleUploadToCanister(sanitizedFiles, canisterId, identity, workflowRunDetails, agent);
+        return await this.handleUploadToCanister(sanitizedFiles, projectId, identity, workflowRunDetails, agent);
 
     }
 
-    private async handleUploadToCanister(unzippedFiles: StaticFile[], canisterId: string, identity: Identity | null, workflowRunDetails: WorkflowRunDetails, agent: HttpAgent) {
+    private async handleUploadToCanister(unzippedFiles: StaticFile[], projectId: bigint, identity: Identity | null, workflowRunDetails: WorkflowRunDetails, agent: HttpAgent) {
         try {
             const totalSize = unzippedFiles.reduce(
                 (acc, file) => acc + file.content.length,
@@ -38,7 +38,7 @@ class FileUploadApi {
             let totalUploadedSize = 0;
             // 2MB limit
             if (totalSize < 2000000) {
-                const result = await this.storeAssetsInCanister(unzippedFiles, canisterId, identity, workflowRunDetails, agent);
+                const result = await this.storeAssetsInCanister(unzippedFiles, projectId, identity, workflowRunDetails, agent);
                 totalUploadedSize += result.uploadedSize ?? 0;
                 // setUploadedSize(totalUploadedSize);
             } else {
@@ -107,7 +107,7 @@ class FileUploadApi {
 
                     const totalSize = this.calculateTotalSize(files);
 
-                    const result = await this.storeAssetsInCanister(files, canisterId, identity, workflowRunDetails, agent);
+                    const result = await this.storeAssetsInCanister(files, projectId, identity, workflowRunDetails, agent);
                     if (!result) {
                         console.log(`Error: Failed to store batch ${i + 1}`);
                     }
@@ -129,7 +129,7 @@ class FileUploadApi {
         }
     };
 
-    private async storeAssetsInCanister(files: StaticFile[], canisterId: string, identity: Identity | null, workflowRunDetails: WorkflowRunDetails, agent: HttpAgent) {
+    private async storeAssetsInCanister(files: StaticFile[], projectId: bigint, identity: Identity | null, workflowRunDetails: WorkflowRunDetails, agent: HttpAgent) {
         try {
             const sanitizedFiles = files.filter(
                 (file) => !file.path.includes("MACOS")
@@ -144,7 +144,7 @@ class FileUploadApi {
 
             const mainApi = await MainApi.create(identity, agent);
             const result = await mainApi?.storeInAssetCanister(
-                Principal.fromText(canisterId),
+                projectId,
                 sanitizedFiles,
                 workflowRunDetails
             );

@@ -17,7 +17,7 @@ interface CyclesContextType {
   setCurrentCanisterId: (canisterId: Principal) => void;
   canisterStatus: CanisterStatusResponse | null;
   estimateCycles: (amountInIcp: number) => Promise<number>;
-  getStatus: (canisterId: string) => Promise<CanisterStatus | undefined>;
+  getStatus: (projectId: number) => Promise<CanisterStatus | undefined>;
   cyclesStatus: CanisterStatusResponse | null;
   cyclesRate: number;
 }

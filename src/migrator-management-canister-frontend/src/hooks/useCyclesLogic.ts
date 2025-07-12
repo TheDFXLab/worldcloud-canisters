@@ -89,11 +89,11 @@ export const useCyclesLogic = () => {
         }
     }, [dispatch, identity, agent]);
 
-    const handleGetStatus = useCallback(async (canisterId: string) => {
+    const handleGetStatus = useCallback(async (project_id: number) => {
         if (!identity || !agent) return;
         try {
             const result = await dispatch(
-                fetchCanisterStatus({ identity, agent, canisterId })
+                fetchCanisterStatus({ identity, agent, project_id: BigInt(project_id) })
             ).unwrap();
             console.log(`GETTING STATSS:`, result)
             return result;

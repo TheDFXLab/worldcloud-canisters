@@ -29,7 +29,7 @@ interface FileUploaderProps {}
 
 type CanisterType = "website" | "drive";
 
-function FileUploader() {
+function FileUploader({ project_id }: { project_id: bigint }) {
   /** Hooks */
   const { updateDeployment, refreshDeployments } = useDeployments();
   const { toasterData, setToasterData, setShowToaster } = useToaster();
@@ -278,7 +278,7 @@ function FileUploader() {
 
       const mainApi = await MainApi.create(identity, agent);
       const result = await mainApi?.storeInAssetCanister(
-        Principal.fromText(canisterId),
+        project_id,
         sanitizedFiles,
         undefined // since we are uploading files directly from zip
       );

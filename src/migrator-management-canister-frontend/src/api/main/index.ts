@@ -1,11 +1,11 @@
 import { Principal } from "@dfinity/principal";
 import { createActor } from "../../../../declarations/migrator-management-canister-backend";
 import { ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
-import { _SERVICE, DepositReceipt, GetProjectsByUserPayload, Project, ProjectPlan, Response, StoreAssetInCanisterPayload, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { _SERVICE, ActivityLog, DepositReceipt, GetProjectsByUserPayload, Project, ProjectPlan, Response, StoreAssetInCanisterPayload, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
 import { DeserializedProject, DeserializedUsageLog, SerializedUsageLog, serializedUsageLog } from "../../utility/bigint";
-import { CanisterStatus } from "../authority";
+// import { CanisterStatus } from "../authority";
 
 interface CreateProjectPayload {
     project_name: string;
@@ -68,8 +68,8 @@ class MainApi {
     }
 
     async get_all_subscriptions() {
-        const subscriptions = await this.actor?.get_all_subscriptions();
-        return subscriptions;
+        // const subscriptions = await this.actor?.get_all_subscriptions();
+        // return subscriptions;
     }
 
     // Get identity's derived public key
@@ -136,16 +136,19 @@ class MainApi {
             return pendingDeposits;
         } catch (error) {
             console.log(`Error getting pending deposits:`, error)
-            return null;
+            // return null;
+            throw error;
         }
     }
 
     async getCreditsAvailable() {
         try {
             const credits = await this.actor?.getMyCredits();
+            if (credits === null || credits === undefined) { throw new Error(`Failed to get credits available for user.`) }
             return credits;
         } catch (error) {
-            return null;
+            // return null;
+            throw error;
         }
     }
 
@@ -172,26 +175,34 @@ class MainApi {
         }
     }
 
-    async getWorkflowHistory(canisterId: Principal) {
+    async getWorkflowHistory(project_id: bigint) {
         const runsHistory = await this.actor?.getWorkflowRunHistory(
-            canisterId
+            project_id
         );
         return runsHistory;
     }
 
-    async getCanisterStatus(canisterId: Principal) {
-        const result = await this.actor?.getCanisterStatus(canisterId);
+    async getCanisterStatus(project_id: bigint) {
+        const result = await this.actor?.getCanisterStatus(project_id);
 
         if (!result) {
             throw new Error("Failed to get canister status");
         }
 
+        // if ('ok' in result) {
+        //     return {
+        //         status: 'running' in result.ok.status ? "running" : 'stopped' in result.ok.status ? 'stopped' : 'stopping',
+        //         cycles: result.ok.cycles,
+        //         controllers: []
+        //     } as CanisterStatus;
+        // }
         if ('ok' in result) {
             return {
-                status: 'running' in result.status ? "running" : 'stopped' in result.status ? 'stopped' : 'stopping',
-                cycles: result.cycles,
-                controllers: []
-            } as CanisterStatus;
+                // status: 'running' in result.ok.status ? "running" : 'stopped' in result.ok.status ? 'stopped' : 'stopping',
+                status: result.ok.status,
+                cycles: result.ok.cycles,
+                settings: result.ok.settings
+            };
         }
         else {
             if ('err' in result) {
@@ -237,12 +248,12 @@ class MainApi {
         }
     }
 
-    async storeInAssetCanister(canisterId: Principal, files: StaticFile[], workflowRunDetails?: WorkflowRunDetails) {
+    async storeInAssetCanister(project_id: bigint, files: StaticFile[], workflowRunDetails?: WorkflowRunDetails) {
         try {
             if (!this.actor) {
                 throw new Error("Actor not initialized.");
             }
-            const result = await this.actor.storeInAssetCanister(canisterId, files, workflowRunDetails ? [workflowRunDetails] : []);
+            const result = await this.actor.storeInAssetCanister(project_id, files, workflowRunDetails ? [workflowRunDetails] : []);
             if ("Ok" in result || "ok" in result) {
                 return { status: true, message: "Stored files successfully." };
             }
@@ -391,6 +402,8 @@ class MainApi {
                 throw new Error(result.err);
             }
 
+            const currentTimeNano = BigInt(Date.now()) * BigInt(1_000_000); // Convert current time to nanoseconds
+
             return {
                 id: result.ok.project_id,
                 name: project_name,
@@ -398,8 +411,8 @@ class MainApi {
                 tags,
                 plan: projectPlan,
                 canister_id: null,
-                date_created: Date.now(),
-                date_updated: Date.now()
+                date_created: Number(currentTimeNano),
+                date_updated: Number(currentTimeNano)
             };
         } catch (error) {
             console.error(`Error creating project:`, error);
@@ -526,7 +539,38 @@ class MainApi {
         }
     }
 
+    async getProjectActivityLogs(projectId: bigint): Promise<any> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
 
+            const result = await this.actor.get_project_activity_logs(projectId);
+            if (!result) {
+                throw new Error("Failed to get activity logs");
+            }
+            console.log(`Activity lgs`, result)
+            if ('err' in result) {
+                throw new Error(result.err);
+            }
+            if ('ok' in result) {
+                console.log(`retr`, result.ok[0])
+                console.log(`retr`, result.ok.map(o => { return { ...o, create_time: Number(o.create_time / BigInt(1_000_000)) } }));
+
+                return result.ok.map(o => { return { ...o, create_time: Number(o.create_time / BigInt(1_000_000)) } });
+            }
+            return result as ActivityLog[];
+        } catch (error) {
+            console.error(`Error getting activity logs:`, error);
+            throw error;
+        }
+    }
 
 }
 

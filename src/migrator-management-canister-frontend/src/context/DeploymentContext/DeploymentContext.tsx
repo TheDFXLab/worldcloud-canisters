@@ -2,6 +2,7 @@ import { createContext, useContext, ReactNode } from "react";
 import { Deployment } from "../../components/AppLayout/interfaces";
 import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { useDeploymentLogic } from "../../hooks/useDeploymentLogic";
+import { SerializedWorkflowRunDetail } from "../../utility/principal";
 
 interface DeploymentsContextType {
   deployments: Deployment[];
@@ -11,8 +12,8 @@ interface DeploymentsContextType {
   refreshDeployments: () => Promise<void>;
   getDeployment: (canisterId: string) => Deployment | undefined;
   getWorkflowRunHistory: (
-    canisterId: string
-  ) => Promise<WorkflowRunDetails[] | undefined>;
+    project_id: bigint
+  ) => Promise<SerializedWorkflowRunDetail[] | undefined>;
   addDeployment: (deployment: Deployment) => void;
   updateDeployment: (canisterId: string, updates: Partial<Deployment>) => void;
   isDispatched: boolean;
@@ -50,7 +51,7 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
     updateDeployment,
     isDispatched,
     setIsDispatched,
-  };
+  } as DeploymentsContextType;
 
   return (
     <DeploymentsContext.Provider value={value}>
