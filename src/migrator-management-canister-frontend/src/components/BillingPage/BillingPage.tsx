@@ -91,10 +91,12 @@ const BillingPage: React.FC = () => {
       });
       return;
     }
+
     try {
       summon("Processing your request...");
 
       const res = await subscribe(tierId, Number(amount));
+
       if (!res.status) {
         setShowToaster(true);
         setToasterData({

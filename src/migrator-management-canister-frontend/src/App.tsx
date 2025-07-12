@@ -147,7 +147,7 @@ function App() {
                                                                       }
                                                                     />
                                                                     <Route
-                                                                      path="deploy/:canisterId?/:projectId"
+                                                                      path="deploy/:canisterId/:projectId"
                                                                       element={
                                                                         <ProjectDeployment />
                                                                       }

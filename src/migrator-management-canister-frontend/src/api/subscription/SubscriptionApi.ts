@@ -36,11 +36,11 @@ class SubscriptionApi {
             if (!mainApi) {
                 throw new Error("Failed to create main api");
             }
-            const subscriptions = await mainApi.actor?.get_all_subscriptions();
-            if (!subscriptions) {
-                throw new Error("Failed to get all subscriptions");
-            }
-            return subscriptions;
+            // const subscriptions = await mainApi.actor?.get_all_subscriptions();
+            // if (!subscriptions) {
+            //     throw new Error("Failed to get all subscriptions");
+            // }
+            // return subscriptions;
         } catch (error) {
             console.error(error);
         }

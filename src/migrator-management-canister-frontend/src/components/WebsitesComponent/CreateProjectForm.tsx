@@ -134,11 +134,6 @@ const CreateProjectForm: React.FC = () => {
       ).unwrap();
 
       // Deploy the asset canister in case of paid
-      console.log(
-        `DEBUG HANDLE DEBOY: is paid plan?:`,
-        "paid" in result.newProject.plan
-      );
-      debugger;
       // Allocate slot to user project in case of freemium
       await handleDeploy(
         BigInt(result.newProject.id),
@@ -218,7 +213,6 @@ const CreateProjectForm: React.FC = () => {
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
       console.log(`Navigating to projects...`);
-      debugger;
       navigate(`/dashboard/projects`);
     } catch (error: any) {
       console.log(`ERRO HAPPNED:`, error);

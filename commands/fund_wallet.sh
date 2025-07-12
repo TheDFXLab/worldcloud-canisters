@@ -20,8 +20,8 @@
 # $2: deposit amount in ICP
 
 echo "===========FUND WALLET==========="
-RECEIVER_PRINCIPAL="3cunh-vzt4t-cqtz2-rilfu-twq6t-u43r4-wvtnd-37vwd-ndzsx-oia6d-vqe"
-DEPOSIT_AMOUNT_ICP=50
+RECEIVER_PRINCIPAL="kt6u4-grx3c-eswp4-undf4-rdrrg-udzxn-odbjz-wwzuj-rhqkd-537yl-eqe"
+DEPOSIT_AMOUNT_ICP=10
 
 # Check args for receiver and amount
 if [ $1 != "" ]; then
