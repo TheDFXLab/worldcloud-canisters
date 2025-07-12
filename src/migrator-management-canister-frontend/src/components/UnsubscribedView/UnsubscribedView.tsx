@@ -75,8 +75,6 @@ const UnsubscribedView: React.FC = () => {
           identity,
           agent,
           tierId: 3,
-          amountInIcp: 0,
-          totalCredits: BigInt(0),
         })
       ).unwrap();
 
