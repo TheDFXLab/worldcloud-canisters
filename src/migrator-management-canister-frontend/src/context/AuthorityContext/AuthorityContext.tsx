@@ -16,7 +16,7 @@ import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 interface AuthorityContextType {
   status: CanisterStatus | null;
   isLoadingStatus: boolean;
-  refreshStatus: () => Promise<void>;
+  // refreshStatus: () => Promise<void>;
   handleAddController: (newController: string) => Promise<boolean>;
   handleRemoveController: (controller: string) => Promise<boolean>;
 }
@@ -37,30 +37,31 @@ export function AuthorityProvider({
   const { identity } = useIdentity();
   const { canisterId } = useParams();
   const { agent } = useHttpAgent();
-  const refreshStatus = async () => {
-    try {
-      if (!canisterId) {
-        throw new Error("Canister ID is not set");
-      }
-      const authApi = new AuthorityApi(Principal.fromText(canisterId));
 
-      setIsLoadingStatus(true);
-      if (!agent) {
-        throw new Error("Agent not found");
-      }
-      const result = await authApi.getCanisterStatus(
-        authApi.canisterId,
-        identity,
-        agent
-      );
-      setStatus(result);
-    } catch (error) {
-      console.log(`Error:`, error);
-      setIsLoadingStatus(false);
-    } finally {
-      setIsLoadingStatus(false);
-    }
-  };
+  // const refreshStatus = async () => {
+  //   try {
+  //     if (!canisterId) {
+  //       throw new Error("Canister ID is not set");
+  //     }
+  //     const authApi = new AuthorityApi(Principal.fromText(canisterId));
+
+  //     setIsLoadingStatus(true);
+  //     if (!agent) {
+  //       throw new Error("Agent not found");
+  //     }
+  //     const result = await authApi.getCanisterStatus(
+  //       authApi.canisterId,
+  //       identity,
+  //       agent
+  //     );
+  //     setStatus(result);
+  //   } catch (error) {
+  //     console.log(`Error:`, error);
+  //     setIsLoadingStatus(false);
+  //   } finally {
+  //     setIsLoadingStatus(false);
+  //   }
+  // };
 
   const handleAddController = async (newController: string) => {
     try {
@@ -125,16 +126,16 @@ export function AuthorityProvider({
   };
 
   // TODO: remove this and propagate changes in project
-  useEffect(() => {
-    refreshStatus();
-  }, []);
+  // useEffect(() => {
+  //   refreshStatus();
+  // }, []);
 
   return (
     <AuthorityContext.Provider
       value={{
         status,
         isLoadingStatus,
-        refreshStatus,
+        // refreshStatus,
         handleAddController,
         handleRemoveController,
       }}
