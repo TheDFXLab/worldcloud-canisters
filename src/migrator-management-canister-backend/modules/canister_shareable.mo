@@ -35,6 +35,7 @@ module {
         public func reset_slots(actor_principal : Principal) {
             for ((slot_id, slot) in slots.entries()) {
                 let updated_slot : Types.ShareableCanister = {
+                    id = slot.id;
                     project_id = null;
                     canister_id = slot.canister_id;
                     owner = slot.owner;
@@ -93,19 +94,44 @@ module {
             Iter.toArray(used_slots.entries());
         };
 
-        public func get_canister_by_slot(slot_id : Nat) : Types.ShareableCanister {
-            let canister : Types.ShareableCanister = Utility.expect(slots.get(slot_id), "Slot " # " does not exist.");
-            return canister;
+        public func get_canister_by_slot(slot_id : Nat) : Types.Response<Types.ShareableCanister> {
+            let slot : Types.ShareableCanister = switch (slots.get(slot_id)) {
+                case (null) {
+                    return #err(Errors.NotFoundSlot());
+                };
+                case (?_slot) {
+                    _slot;
+                };
+            };
+            return #ok(slot);
         };
 
-        public func get_slot_id_by_user(user : Principal) : Nat {
+        public func get_user_usage(user : Principal) : Types.UsageLog {
+            switch (usage_logs.get(user)) {
+                case (null) {
+                    let new_usage : Types.UsageLog = {
+                        is_active = false;
+                        usage_count = 0;
+                        last_used = 0;
+                        rate_limit_window = RATE_LIMIT_WINDOW;
+                        max_uses_threshold = MAX_USES_THRESHOLD;
+                    };
+                    return new_usage;
+                };
+                case (?log) {
+                    return log;
+                };
+            };
+        };
+
+        public func get_slot_id_by_user(user : Principal) : ?Nat {
             let slot_id : ?Nat = Utility.expect(user_to_slot.get(user), Errors.NotFoundSession());
             switch (slot_id) {
                 case (null) {
-                    Debug.trap("Session not found");
+                    return null;
                 };
                 case (?id) {
-                    return id;
+                    return ?id;
                 };
             };
         };
@@ -343,6 +369,7 @@ module {
 
             usage_logs.put(user, updated_usage_log);
             let updated_slot : Types.ShareableCanister = {
+                id = slot.id;
                 project_id = ?project_id;
                 canister_id = slot.canister_id;
                 owner = slot.owner;
@@ -369,6 +396,7 @@ module {
             // Get and update slot details
             let slot : Types.ShareableCanister = Utility.expect(slots.get(slot_id), Errors.NotFoundSlot());
             let updated_slot : Types.ShareableCanister = {
+                id = slot.id;
                 project_id = null;
                 canister_id = slot.canister_id;
                 owner = slot.owner;
@@ -422,10 +450,11 @@ module {
 
             // TODO: can add canister principal  and is_wasm_installed here
             let new_slot_canister : Types.ShareableCanister = {
-                project_id = project_id;
+                id = next_slot_id;
+                project_id = null;
                 canister_id = ?canister_id;
                 owner = owner;
-                user = user;
+                user = owner;
                 create_timestamp = Int.abs(Time.now());
                 start_timestamp = Int.abs(Time.now());
                 duration = DEFAULT_DURATION;
