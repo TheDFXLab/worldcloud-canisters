@@ -29,6 +29,8 @@ import SHA256 "./utils/SHA256";
 import CanisterShareable "modules/canister_shareable";
 import Utility "utils/Utility";
 import ProjectManager "modules/projects";
+import WorkflowManager "modules/workflow";
+import ActivityManager "modules/activity";
 
 // TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
 // TODO: Handle stable variables (if needed)
@@ -62,7 +64,7 @@ shared (deployMsg) actor class CanisterManager() = this {
   private var user_canisters : Types.UserCanisters = HashMap.HashMap<Principal, [Principal]>(0, Principal.equal, Principal.hash);
   private var pending_cycles : HashMap.HashMap<Principal, Nat> = HashMap.HashMap<Principal, Nat>(0, Principal.equal, Principal.hash);
   private var book : Book.Book = Book.Book();
-  private var workflow_run_history : Types.WorkflowRunHistory = HashMap.HashMap<Principal, [Types.WorkflowRunDetails]>(0, Principal.equal, Principal.hash);
+  // private var workflow_run_history : Types.WorkflowRunHistory = HashMap.HashMap<Principal, [Types.WorkflowRunDetails]>(0, Principal.equal, Principal.hash);
   private var timers : HashMap.HashMap<Nat, Nat> = HashMap.HashMap<Nat, Nat>(0, Nat.equal, Hash.hash);
 
   /** Canister & Asset stables */
@@ -82,7 +84,7 @@ shared (deployMsg) actor class CanisterManager() = this {
   private stable var stable_book : [(Principal, [(Types.Token, Nat)])] = [];
 
   /** Github Stables*/
-  private stable var stable_workflow_run_history : [(Principal, [Types.WorkflowRunDetails])] = [];
+  private stable var stable_workflow_run_history : [(Nat, [Types.WorkflowRunDetails])] = [];
 
   /** Subscription Stables */
   private stable var stable_subscriptions : [(Principal, Types.Subscription)] = [];
@@ -102,6 +104,7 @@ shared (deployMsg) actor class CanisterManager() = this {
   private stable var stable_usage_logs : [(Principal, Types.UsageLog)] = [];
   private stable var stable_next_canister_id : Nat = 0;
   private stable var stable_next_slot_id : Nat = 0;
+  private stable var stable_project_activity_logs : [(Types.ProjectId, [Types.ActivityLog])] = [];
 
   /** Classes Instances */
   private let project_manager = ProjectManager.ProjectManager();
@@ -109,10 +112,27 @@ shared (deployMsg) actor class CanisterManager() = this {
   private let access_control = AccessControl.AccessControl(deployMsg.caller);
   private let signatures = HashMap.HashMap<Principal, Blob>(0, Principal.equal, Principal.hash);
   private let shareable_canister_manager = CanisterShareable.ShareableCanisterManager();
+  private let workflow_manager = WorkflowManager.WorkflowManager();
+  private let activity_manager = ActivityManager.ActivityManager();
 
+  /*
+   *
+   * END CLASSES AND VARIABLES
+   *
+   */
+
+  /*
+   *
+   * START SLOTS METHODS (Shareable canisters)
+   *
+   */
   public shared (msg) func get_projects_by_user(payload : Types.GetProjectsByUserPayload) : async Types.Response<[Types.Project]> {
     assert not Principal.isAnonymous(msg.caller);
     await project_manager.get_projects_by_user(msg.caller, payload);
+  };
+
+  public shared (msg) func get_user_usage() : async Types.Response<Types.UsageLog> {
+    return #ok(shareable_canister_manager.get_user_usage(msg.caller));
   };
 
   /** Shareable Canisters */
@@ -140,7 +160,7 @@ shared (deployMsg) actor class CanisterManager() = this {
     return shareable_canister_manager.get_used_slots();
   };
 
-  public shared (msg) func get_slot_by_id(slot_id : Nat) : async Types.ShareableCanister {
+  public shared (msg) func get_slot_by_id(slot_id : Nat) : async Types.Response<Types.ShareableCanister> {
     return shareable_canister_manager.get_canister_by_slot(slot_id);
   };
   private func get_available_slot_id(caller : Principal, project_id : Nat) : async Nat {
@@ -168,7 +188,17 @@ shared (deployMsg) actor class CanisterManager() = this {
       return available_slot_ids[0];
     };
   };
+  /*
+   *
+   * END SLOT METHODS
+   *
+   */
 
+  /*
+   *
+   * START ADMIN METHODS
+   *
+   */
   public shared (msg) func admin_delete_usage_logs() : async () {
     return shareable_canister_manager.admin_clear_usage_logs();
   };
@@ -184,139 +214,6 @@ shared (deployMsg) actor class CanisterManager() = this {
   };
   public shared (msg) func reset_slots() {
     return shareable_canister_manager.reset_slots(Principal.fromActor(this));
-  };
-
-  // Step 1, create project and get project id
-  // Creates a new project (freemium and)
-  public shared (msg) func create_project(payload : Types.CreateProjectPayload) : async Types.Response<Types.CreateProjectResponse> {
-    assert not Principal.isAnonymous(msg.caller);
-
-    let project_id : Nat = project_manager.create_project(
-      msg.caller,
-      payload,
-    );
-
-    return #ok({
-      project_id = project_id;
-      is_freemium = switch (payload.plan) {
-        case (#freemium) {
-          true;
-
-        };
-        case (#paid) {
-          false;
-        };
-      };
-    });
-  };
-
-  // Step 2 (freemium projects) -> request a session
-  // Step 2 (paid projects) -> deploy a canister
-  // Create a canister for freemium
-  public shared (msg) func deployAssetCanister(project_id : Nat) : async Types.Result {
-    assert not Principal.isAnonymous(msg.caller);
-    let project : Types.Project = project_manager.get_project_by_id(project_id);
-    if (project.plan == #freemium) {
-      let project : Types.Project = await _request_freemium_session(project_id, msg.caller);
-      let slot : ?Types.ShareableCanister = shareable_canister_manager.get_canister_by_user(msg.caller);
-      switch (slot) {
-        case (null) {
-          return #err(Errors.NotFoundSlot());
-        };
-        case (?_slot) {
-          let slot_id : Nat = shareable_canister_manager.get_slot_id_by_user(msg.caller);
-          _set_cleanup_timer(_slot.duration, slot_id);
-          return #ok(
-            Principal.toText(
-              switch (project.canister_id) {
-                case (null) {
-                  return #err(Errors.NotFoundCanister());
-                };
-                case (?id) {
-                  id;
-                };
-              }
-            )
-          );
-        };
-      };
-    } else if (project.plan == #paid) {
-      return #ok(Principal.toText(await _deploy_asset_canister(msg.caller, false)));
-    };
-
-    return #err(Errors.FailedDeployCanister());
-  };
-
-  // Step 3: Upload assets to project's canister
-  // Upload files to project's asset canister
-  public shared (msg) func upload_assets_to_project(
-    payload : Types.StoreAssetInCanisterPayload
-  ) : async Types.Response<Bool> {
-    assert not Principal.isAnonymous(msg.caller);
-    let project : Types.Project = project_manager.get_project_by_id(payload.project_id);
-    let canister_id : Principal = Utility.expect(project.canister_id, Errors.NoCanisterInProject());
-    if (project.plan == #freemium) {
-      let slot : ?Types.ShareableCanister = shareable_canister_manager.get_canister_by_user(msg.caller);
-      switch (slot) {
-        case (null) {
-          return #err(Errors.NotFoundSlot());
-        };
-        case (?_slot) {
-          if (not (msg.caller == _slot.user)) {
-            return #err(Errors.Unauthorized());
-          };
-        };
-      }
-
-    } else if (project.plan == #paid) {
-      if (not (await _isController(canister_id, msg.caller))) {
-        return #err(Errors.Unauthorized());
-      };
-    };
-
-    // TODO: pass caller as parameter
-    await storeInAssetCanister(canister_id, payload.files, payload.workflow_run_details);
-
-  };
-
-  // Entrypoint for deploying a free canister
-  private func _request_freemium_session(project_id : Nat, caller : Principal) : async Types.Project {
-    assert not Principal.isAnonymous(caller);
-    // TODO: assert is registered user
-
-    // Ensure freemium project type
-    let project : Types.Project = project_manager.get_project_by_id(project_id);
-    if (not (project.plan == #freemium)) {
-      // return #err(Errors.NotFreemiumType());
-      Debug.trap(Errors.NotFreemiumType());
-    };
-
-    // Find available slots
-    let slot_id : Nat = await get_available_slot_id(caller, project_id);
-    Debug.print("Available slot ID: " # Nat.toText(slot_id));
-    Debug.print("Requesting a session...");
-    let slot : Types.ShareableCanister = Utility.expect((await shareable_canister_manager.request_session(caller, project_id), Errors.NotFoundSlot()));
-
-    let updated_project : Types.Project = {
-      id = project.id;
-      canister_id = slot.canister_id;
-      name = project.name;
-      description = project.description;
-      tags = project.tags;
-      plan = project.plan;
-      date_created = project.date_created;
-      date_updated = Time.now();
-    };
-    project_manager.put_project(project_id, updated_project);
-
-    return updated_project;
-  };
-
-  public shared (msg) func end_freemium_session(slot_id : Nat) : async Types.Response<?Nat> {
-    let response = _end_freemium_session(slot_id);
-
-    _delete_timer(slot_id); // Clear the timer and pop from stable array of timer ids
-    response;
   };
 
   public shared (msg) func purge_expired_sessions() {
@@ -348,8 +245,194 @@ shared (deployMsg) actor class CanisterManager() = this {
 
   };
 
+  /*
+   *
+   * END PPROJECT METHODS
+   *
+   */
+
+  /*
+   *
+   * START PROJECT CREATION METHODS
+   *
+   */
+
+  // Step 1, create project and get project id
+  // Creates a new project (freemium and)
+  public shared (msg) func create_project(payload : Types.CreateProjectPayload) : async Types.Response<Types.CreateProjectResponse> {
+    assert not Principal.isAnonymous(msg.caller);
+
+    let project_id : Nat = project_manager.create_project(
+      msg.caller,
+      payload,
+    );
+
+    let is_created_log = switch (activity_manager.create_project_activity(project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(result)) { result };
+    };
+
+    return #ok({
+      project_id = project_id;
+      is_freemium = switch (payload.plan) {
+        case (#freemium) { true };
+        case (#paid) { false };
+      };
+    });
+  };
+
+  // Step 2 (freemium projects) -> request a session
+  // Step 2 (paid projects) -> deploy a canister
+  // Create a canister for freemium
+  public shared (msg) func deployAssetCanister(project_id : Nat) : async Types.Result {
+    assert not Principal.isAnonymous(msg.caller);
+    let project : Types.Project = project_manager.get_project_by_id(project_id);
+    if (project.plan == #freemium) {
+
+      let slot = switch (shareable_canister_manager.get_canister_by_user(msg.caller)) {
+        case (null) { return #err(Errors.NotFoundSlot()) };
+        case (?_slot) { _slot };
+      };
+
+      _set_cleanup_timer(slot.duration, slot.id);
+      let updated = switch (activity_manager.update_project_activity(project_id, "Canister", "Freemium session started.")) {
+        case (#err(_msg)) {
+          Debug.print("Failed to update activity log for project " # Nat.toText(project_id) # ". Error: " # _msg);
+        };
+        case (#ok(is_updated)) {
+          is_updated;
+        };
+      };
+      return #ok(
+        Principal.toText(
+          switch (project.canister_id) {
+            case (null) {
+              return #err(Errors.NotFoundCanister());
+            };
+            case (?id) {
+              id;
+            };
+          }
+        )
+      );
+    } else if (project.plan == #paid) {
+      let canister_id : Principal = switch (project.canister_id) {
+        case (null) {
+          let canister_id : Principal = await _deploy_asset_canister(msg.caller, false);
+          let updated_project : Types.Project = {
+            user = msg.caller;
+            id = project.id;
+            canister_id = ?canister_id;
+            name = project.name;
+            description = project.description;
+            tags = project.tags;
+            plan = project.plan;
+            date_created = project.date_created;
+            date_updated = Time.now();
+          };
+          project_manager.put_project(project_id, updated_project);
+          let updated = activity_manager.update_project_activity(project_id, "Canister", "Deployed premium asset canister");
+          canister_id;
+        };
+        case (?id) {
+          return #err(Errors.AlreadyCreated());
+          // id;
+        };
+      };
+
+      return #ok(Principal.toText(canister_id));
+    };
+
+    return #err(Errors.FailedDeployCanister());
+  };
+
+  // Step 3: Upload assets to project's canister
+  // Upload files to project's asset canister
+  public shared (msg) func upload_assets_to_project(
+    payload : Types.StoreAssetInCanisterPayload
+  ) : async Types.Response<Bool> {
+    assert not Principal.isAnonymous(msg.caller);
+    let project : Types.Project = project_manager.get_project_by_id(payload.project_id);
+    let canister_id : Principal = Utility.expect(project.canister_id, Errors.NoCanisterInProject());
+    if (project.plan == #freemium) {
+      let slot : ?Types.ShareableCanister = shareable_canister_manager.get_canister_by_user(msg.caller);
+      switch (slot) {
+        case (null) { return #err(Errors.NotFoundSlot()) };
+        case (?_slot) {
+          if (not (msg.caller == _slot.user)) {
+            return #err(Errors.Unauthorized());
+          };
+        };
+      }
+
+    } else if (project.plan == #paid) {
+      if (not (await _isController(canister_id, msg.caller))) {
+        return #err(Errors.Unauthorized());
+      };
+    };
+
+    // TODO: pass caller as parameter
+    await storeInAssetCanister(payload.project_id, payload.files, payload.workflow_run_details);
+
+  };
+
+  /*
+   * END PROJECT CREATION METHODS
+   *
+   */
+
+  /*
+   * START FREEMIUM METHODS
+   *
+   */
+
+  // Entrypoint for deploying a free canister
+  private func _request_freemium_session(project_id : Nat, caller : Principal) : async Types.Project {
+
+    assert not Principal.isAnonymous(caller);
+    // TODO: assert is registered user
+
+    // Ensure freemium project type
+    let project : Types.Project = project_manager.get_project_by_id(project_id);
+    if (not (project.plan == #freemium)) {
+      // return #err(Errors.NotFreemiumType());
+      Debug.trap(Errors.NotFreemiumType());
+    };
+
+    // Find available slots
+    let slot_id : Nat = await get_available_slot_id(caller, project_id);
+    Debug.print("Available slot ID: " # Nat.toText(slot_id));
+    Debug.print("Requesting a session...");
+    let slot : Types.ShareableCanister = Utility.expect((await shareable_canister_manager.request_session(caller, project_id), Errors.NotFoundSlot()));
+
+    let updated_project : Types.Project = {
+      user = caller;
+      id = project.id;
+      canister_id = slot.canister_id;
+      name = project.name;
+      description = project.description;
+      tags = project.tags;
+      plan = project.plan;
+      date_created = project.date_created;
+      date_updated = Time.now();
+    };
+    project_manager.put_project(project_id, updated_project);
+
+    return updated_project;
+  };
+
+  public shared (msg) func end_freemium_session(slot_id : Nat) : async Types.Response<?Nat> {
+    let response = _end_freemium_session(slot_id);
+
+    _delete_timer(slot_id); // Clear the timer and pop from stable array of timer ids
+    response;
+  };
+
   private func _end_freemium_session(slot_id : Nat) : Types.Response<?Nat> {
-    let slot : Types.ShareableCanister = shareable_canister_manager.get_canister_by_slot(slot_id);
+    let slot : Types.ShareableCanister = switch (shareable_canister_manager.get_canister_by_slot(slot_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(_slot)) { _slot };
+    };
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     let cycles = 0;
 
@@ -361,6 +444,7 @@ shared (deployMsg) actor class CanisterManager() = this {
       case (?id) {
         let project : Types.Project = project_manager.get_project_by_id(id);
         let updated_project : Types.Project = {
+          user = project.user;
           id = project.id;
           canister_id = null;
           name = project.name;
@@ -382,6 +466,88 @@ shared (deployMsg) actor class CanisterManager() = this {
     response;
   };
 
+  /*
+   *
+   * END FREEMIUM METHODS
+   *
+   */
+
+  /*
+   *
+   * START ACTIVITY LOG METHODS
+   *
+   */
+
+  public shared (msg) func get_project_activity_logs(project_id : Types.ProjectId) : async Types.Response<[Types.ActivityLog]> {
+    let is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(authorized)) { authorized };
+    };
+    return activity_manager.get_project_activity(project_id);
+  };
+
+  /*
+   *
+   * START WORKFLOW METHODS
+   *
+   */
+
+  public shared (msg) func getWorkflowRunHistory(project_id : Nat) : async Types.Response<[Types.WorkflowRunDetails]> {
+    let is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(authorized)) { authorized };
+    };
+
+    let canister_id = switch (_get_canister_id_by_project(project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(id)) { id };
+    };
+
+    return #ok(workflow_manager.get_workflow_history(project_id));
+  };
+
+  /*
+   *
+   * END WORKFLOW METHODS
+   *
+   */
+
+  /*
+   *
+   * START CANISTER METHODS
+   *
+   */
+
+  public shared (msg) func getCanisterStatus(project_id : Nat) : async Types.Response<Types.CanisterStatusResponse> {
+    let is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(res)) { res };
+    };
+
+    let canister_id = switch (_get_canister_id_by_project(project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(id)) { id };
+    };
+
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    let current_settings = await IC.canister_status({
+      canister_id = canister_id;
+    });
+
+    return #ok(current_settings);
+  };
+
+  /*
+   *
+   * END CANISTER METHODS
+   *
+   */
+
+  /*
+   *
+   * START ECDSA METHODS
+   *
+   */
   public shared (msg) func public_key() : async {
     #Ok : { public_key_hex : Text };
     #Err : Text;
@@ -430,6 +596,15 @@ shared (deployMsg) actor class CanisterManager() = this {
     };
   };
 
+  /*
+   * END ECDSA METHODS
+   *
+   */
+
+  /*
+   * START ACCESS CONTROL METHODS
+   *
+   */
   /** Access Control */
   public shared (msg) func grant_role(principal : Principal, role : Types.Role) : async Types.Response<Text> {
     return access_control.add_role(principal, role, msg.caller);
@@ -443,12 +618,29 @@ shared (deployMsg) actor class CanisterManager() = this {
     return access_control.check_role(principal);
   };
 
+  /*
+   * END ACCESS CONTROL METHODS
+   *
+   */
+
+  /*
+   * START ACCESS CONTROL METHODS
+   *
+   */
+
   /** Shareable Canisters */
 
-  public shared (msg) func request_canister() {
-    // let;
-  };
   public shared (msg) func check_shared_canister_session() {};
+
+  /*
+   * END SHAREABLE CANISTERS METHODS
+   *
+   */
+
+  /*
+   * START SUBSCRIPTION METHODS
+   *
+   */
 
   /** Subscription */
   // Create a subscription for the caller
@@ -467,6 +659,16 @@ shared (deployMsg) actor class CanisterManager() = this {
     let sub = await subscription_manager.get_subscription(msg.caller);
     return sub;
   };
+
+  /*
+   * END SUBSCRIPTION METHODS
+   *
+   */
+
+  /*
+   * START ASSET CANISTER METHODS
+   *
+   */
 
   /** Asset Canister */
   // Function to upload the asset canister WASM
@@ -494,6 +696,62 @@ shared (deployMsg) actor class CanisterManager() = this {
     return wasm_module;
   };
 
+  public shared (msg) func getAssetList(canister_id : Principal) : async Types.ListResponse {
+
+    // Only owner or admins
+    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
+
+    try {
+      let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
+      Debug.print("Getting asset list for canister " # Principal.toText(canister_id));
+      let response = await asset_canister.list({});
+      Debug.print("Got asset list for canister " # Principal.toText(canister_id));
+
+      return {
+        count = response.size();
+        assets = response;
+      };
+    } catch (error) {
+      Debug.print("Error getting asset list: " # Error.message(error));
+      return {
+        count = 0;
+        assets = [];
+      };
+    };
+  };
+
+  public shared (msg) func getCanisterFiles(canister_id : Principal) : async [Types.StaticFile] {
+    // Only owner or admins
+    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
+
+    switch (canister_files.get(canister_id)) {
+      case null return [];
+      case (?files) return files;
+    };
+  };
+
+  public shared (msg) func getCanisterAsset(canister_id : Principal, asset_key : Text) : async Types.AssetCanisterAsset {
+    // Only owner or admins
+    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
+
+    let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
+    let asset = await asset_canister.get({
+      key = asset_key;
+      accept_encodings = ["identity", "gzip", "compress"];
+    });
+
+    return asset;
+  };
+
+  /*
+   * END ASSET CANISTERS METHODS
+   *
+   */
+
+  /*
+   * START DEPOSIT METHODS
+   *
+   */
   public func get_deposit_account_id(canisterPrincipal : Principal, caller : Principal) : async Blob {
     let accountIdentifier = Account.accountIdentifier(canisterPrincipal, Account.principalToSubaccount(caller));
     return accountIdentifier;
@@ -529,41 +787,15 @@ shared (deployMsg) actor class CanisterManager() = this {
     return book.fetchUserIcpBalance(msg.caller, ledger);
   };
 
-  public shared (msg) func getAssetList(canister_id : Principal) : async Types.ListResponse {
+  /*
+   * END DEPOSIT METHODS
+   *
+   */
 
-    // Only owner or admins
-    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
-
-    try {
-      let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
-      Debug.print("Getting asset list for canister " # Principal.toText(canister_id));
-      let response = await asset_canister.list({});
-      Debug.print("Got asset list for canister " # Principal.toText(canister_id));
-
-      return {
-        count = response.size();
-        assets = response;
-      };
-    } catch (error) {
-      Debug.print("Error getting asset list: " # Error.message(error));
-      return {
-        count = 0;
-        assets = [];
-      };
-    };
-  };
-
-  public shared (msg) func getWorkflowRunHistory(canister_id : Principal) : async [Types.WorkflowRunDetails] {
-    // Only owner or admins
-    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
-
-    var workflow_run_history_array : [Types.WorkflowRunDetails] = switch (workflow_run_history.get(canister_id)) {
-      case null { [] };
-      case (?workflow_run_history) { workflow_run_history };
-    };
-
-    return workflow_run_history_array;
-  };
+  /*
+   * START DEPLOYMENT METHODS
+   *
+   */
 
   public shared (msg) func getCanisterDeployments() : async [Types.CanisterDeployment] {
     switch (user_canisters.get(msg.caller)) {
@@ -587,39 +819,31 @@ shared (deployMsg) actor class CanisterManager() = this {
     };
   };
 
-  public shared (msg) func getCanisterFiles(canister_id : Principal) : async [Types.StaticFile] {
-    // Only owner or admins
-    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
+  private func _validate_project_access(user : Principal, project_id : Nat) : Types.Response<Bool> {
+    // Reject anonymous users
+    if (Principal.isAnonymous(user)) return #err(Errors.Unauthorized());
 
-    switch (canister_files.get(canister_id)) {
-      case null return [];
-      case (?files) return files;
+    // Allow admin access
+    let is_authorized = access_control.is_authorized(user);
+    if (is_authorized) {
+      return #ok(true);
     };
+
+    // Ensure users access their own projects
+    let project : Types.Project = project_manager.get_project_by_id(project_id);
+    if (not (project.user == user)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    return #ok(true);
   };
 
-  public shared (msg) func getCanisterAsset(canister_id : Principal, asset_key : Text) : async Types.AssetCanisterAsset {
-    // Only owner or admins
-    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
-
-    let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
-    let asset = await asset_canister.get({
-      key = asset_key;
-      accept_encodings = ["identity", "gzip", "compress"];
-    });
-
-    return asset;
-  };
-
-  public shared (msg) func getCanisterStatus(canister_id : Principal) : async Types.CanisterStatusResponse {
-    // Only owner or admins
-    assert ((await _isController(canister_id, msg.caller)) or access_control.is_authorized(msg.caller));
-
-    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
-    let current_settings = await IC.canister_status({
-      canister_id = canister_id;
-    });
-
-    return current_settings;
+  private func _get_canister_id_by_project(project_id : Nat) : Types.Response<Principal> {
+    let project : Types.Project = project_manager.get_project_by_id(project_id);
+    switch (project.canister_id) {
+      case (null) { return #err(Errors.InactiveSession()) };
+      case (?id) { return #ok(id) };
+    };
   };
 
   public shared (msg) func getControllers(canister_id : Principal) : async [Principal] {
@@ -656,51 +880,6 @@ shared (deployMsg) actor class CanisterManager() = this {
   /**********
   * Write Methods
   **********/
-
-  private func _updateWorkflowRun(canister_id : Principal, workflow_run_details : Types.WorkflowRunDetails) : async Types.Result {
-    // assert (await _isController(canister_id, msg.caller));
-
-    let workflow_run_history_array = switch (workflow_run_history.get(canister_id)) {
-      case null { [] };
-      case (?workflow_run_history) { workflow_run_history };
-    };
-
-    let target_workflow_run = Array.filter(workflow_run_history_array, func(workflow_run : Types.WorkflowRunDetails) : Bool { workflow_run.workflow_run_id == workflow_run_details.workflow_run_id });
-
-    // Create new entry for workflow run
-    if (target_workflow_run.size() == 0) {
-      let updated_history = Array.append(workflow_run_history_array, [workflow_run_details]);
-      workflow_run_history.put(canister_id, updated_history);
-      return #ok("New workflow run created for: " # Principal.toText(canister_id) # " with id: " # Nat.toText(workflow_run_details.workflow_run_id));
-    };
-
-    // Update existing entry for workflow run
-    var updated_workflow_run : Types.WorkflowRunDetails = {
-      workflow_run_id = target_workflow_run[0].workflow_run_id;
-      repo_name = target_workflow_run[0].repo_name;
-      date_created = target_workflow_run[0].date_created;
-      status = workflow_run_details.status;
-      branch = target_workflow_run[0].branch;
-      commit_hash = target_workflow_run[0].commit_hash;
-      error_message = target_workflow_run[0].error_message;
-      size = workflow_run_details.size;
-    };
-
-    let updated_history = Array.map(
-      workflow_run_history_array,
-      func(run : Types.WorkflowRunDetails) : Types.WorkflowRunDetails {
-        if (run.workflow_run_id == updated_workflow_run.workflow_run_id) {
-          return updated_workflow_run;
-        } else {
-          return run;
-        };
-      },
-    );
-
-    workflow_run_history.put(canister_id, updated_history);
-
-    return #ok("Workflow run updated");
-  };
 
   // After user transfers ICP to the target subaccount
   public shared (msg) func depositIcp() : async Types.DepositReceipt {
@@ -1037,11 +1216,24 @@ shared (deployMsg) actor class CanisterManager() = this {
 */
   // TODO: Reject calls with canister_id being a shareable canister
   public shared (msg) func storeInAssetCanister(
-    canister_id : Principal,
+    project_id : Nat,
     files : [Types.StaticFile],
     workflow_run_details : ?Types.WorkflowRunDetails,
   ) : async Types.Response<Bool> {
-    assert (await _is_allowed_store_assets(canister_id, msg.caller));
+    let canister_id = switch (_get_canister_id_by_project(project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(id)) { id };
+    };
+
+    if (not (await _is_allowed_store_assets(canister_id, msg.caller))) {
+
+      return #err(Errors.Unauthorized());
+    };
+
+    let is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(res)) { res };
+    };
 
     Debug.print("Storing files in asset canister for user: " # Principal.toText(msg.caller));
     _updateCanisterDeployment(canister_id, #installing); // Update canister deployment status to installing
@@ -1154,10 +1346,10 @@ shared (deployMsg) actor class CanisterManager() = this {
                 error_message = null;
                 size = null;
               };
-              let _updateHistory = await _updateWorkflowRun(canister_id, workflow_details);
+              let _updateHistory = await workflow_manager.update_workflow_run(project_id, workflow_details);
             };
             case (?workflow_run_details) {
-              let _updateHistory = await _updateWorkflowRun(canister_id, workflow_run_details);
+              let _updateHistory = await workflow_manager.update_workflow_run(project_id, workflow_run_details);
             };
           };
 
@@ -1356,8 +1548,10 @@ shared (deployMsg) actor class CanisterManager() = this {
     // canister_table_to_stable_array();
     stable_canister_table := project_manager.get_stable_data_canister_table();
 
-    workflow_run_history_to_stable_array();
-    workflow_run_history_from_stable_array();
+    // workflow_run_history_to_stable_array();
+    // workflow_run_history_from_stable_array();
+
+    stable_workflow_run_history := workflow_manager.get_stable_data_workflow_run_history();
 
     // Restore subscriptions
     stable_subscriptions := subscription_manager.getStableData();
@@ -1379,6 +1573,8 @@ shared (deployMsg) actor class CanisterManager() = this {
     stable_projects := project_manager.get_stable_data_projects();
     stable_user_to_projects := project_manager.get_stable_data_user_to_projects();
     stable_next_project_id := project_manager.get_stable_data_next_project_id();
+
+    stable_project_activity_logs := activity_manager.get_stable_data_project_activity();
 
     Debug.print("Preupgrade: Variables initialized, beginning conversion");
     Debug.print("Preupgrade: Preparing to sync assets and chunks.");
@@ -1419,8 +1615,11 @@ shared (deployMsg) actor class CanisterManager() = this {
     shareable_canister_manager.load_from_stable_used_slots(stable_used_slots);
     shareable_canister_manager.load_from_stable_usage_logs(stable_usage_logs);
     shareable_canister_manager.load_from_stable_next_slot_id(stable_next_slot_id);
-
     Debug.print("PostUpgrade: Restored shareable canister stable data");
+
+    // Workflow Run History stable data
+    workflow_manager.load_from_stable_workflow_run_history(stable_workflow_run_history);
+    Debug.print("PostUpgrade: Restored workflow run stable data");
 
     // Restore book
     book.fromStable(stable_book);
@@ -1454,7 +1653,14 @@ shared (deployMsg) actor class CanisterManager() = this {
   private func _recover_timers<system>() {
     for ((slot_id) in Iter.fromArray(stable_slot_id_active_timer)) {
       Debug.print("[_recover_timers] Slot #" # Nat.toText(slot_id) # " recovering timer");
-      let slot : Types.ShareableCanister = shareable_canister_manager.get_canister_by_slot(slot_id);
+      let slot : Types.ShareableCanister = switch (shareable_canister_manager.get_canister_by_slot(slot_id)) {
+        case (#err(_msg)) {
+          return;
+        };
+        case (#ok(_slot)) {
+          _slot;
+        };
+      };
       let now = Int.abs(Time.now());
       let remaining_duration : Nat = if (now > slot.start_timestamp) {
         now - slot.start_timestamp;
@@ -1532,15 +1738,15 @@ shared (deployMsg) actor class CanisterManager() = this {
     Debug.print("Postupgrade: Restored canister deployments: " # Nat.toText(user_canisters.size()));
   };
 
-  private func workflow_run_history_to_stable_array() {
-    stable_workflow_run_history := Iter.toArray(workflow_run_history.entries());
-    Debug.print("Preupgrade: Backing up workflow run history: " # Nat.toText(stable_workflow_run_history.size()));
-  };
+  // private func workflow_run_history_to_stable_array() {
+  //   stable_workflow_run_history := Iter.toArray(workflow_run_history.entries());
+  //   Debug.print("Preupgrade: Backing up workflow run history: " # Nat.toText(stable_workflow_run_history.size()));
+  // };
 
-  private func workflow_run_history_from_stable_array() {
-    workflow_run_history := HashMap.fromIter(stable_workflow_run_history.vals(), stable_workflow_run_history.size(), Principal.equal, Principal.hash);
-    Debug.print("Postupgrade: Restored workflow run history: " # Nat.toText(workflow_run_history.size()));
-  };
+  // private func workflow_run_history_from_stable_array() {
+  //   workflow_run_history := HashMap.fromIter(stable_workflow_run_history.vals(), stable_workflow_run_history.size(), Principal.equal, Principal.hash);
+  //   Debug.print("Postupgrade: Restored workflow run history: " # Nat.toText(workflow_run_history.size()));
+  // };
 
   // Convert assets to stable array
   private func assets_to_stable_array() {
