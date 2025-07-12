@@ -10,6 +10,9 @@ import {
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
 import { useHttpAgent } from '../context/HttpAgentContext/HttpAgentContext';
 import { useCycles } from '../context/CyclesContext/CyclesContext';
+import { useLedger } from '../context/LedgerContext/LedgerContext';
+import { backend_canister_id } from '../config/config';
+import MainApi from '../api/main';
 
 // Add typed dispatch hook
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -25,6 +28,7 @@ export const useSubscriptionLogic = () => {
     const dispatch = useAppDispatch(); // Use typed dispatch
     const { identity } = useIdentity();
     const { agent } = useHttpAgent();
+    const { transfer, getPendingDeposits } = useLedger();
     const { totalCredits } = useCycles();
 
     const {
@@ -107,22 +111,62 @@ export const useSubscriptionLogic = () => {
     );
 
     const subscribe = useCallback(
-        async (tierId: number, amountInIcp: number) => {
-            if (!identity || !agent || !totalCredits) {
-                return {
+        async (
+            tierId: number,
+            amountInIcp: number
+        ) => {
+            if (!identity || !agent
+                // || !totalCredits
+            ) {
+                throw {
                     status: false,
                     message: 'Missing required dependencies',
                 };
             }
 
+            const mainApi = await MainApi.create(identity, agent);
+            if (!mainApi) throw new Error(`MainApi is not initialized.`);
             try {
+                const credits_available = await mainApi.getCreditsAvailable();
+                // Not enough credits depositted to backend
+                if (credits_available < amountInIcp) {
+                    console.log(`============================================`)
+                    console.log(`============================================`)
+                    console.log(`Available Credits is less than required amount. Available: ${credits_available.toString()}, Required: ${amountInIcp}`);
+                    console.log(`============================================`)
+                    console.log(`============================================`)
+
+                    // Check if there are any pending deposits
+                    const pending_deposits = await getPendingDeposits();
+                    if (pending_deposits < amountInIcp) {
+                        // Pay full amount 
+                        let amount_to_deposit = amountInIcp;
+
+                        // Pay remaining amount only
+                        if (pending_deposits < amountInIcp) {
+                            amount_to_deposit = amountInIcp - pending_deposits;
+                        }
+
+                        const deposit = await transfer(amount_to_deposit, backend_canister_id);
+                        if (!deposit) {
+                            throw new Error(`Failed to transfer ${amountInIcp} ICP tokens to backend canister.`);
+                        }
+                    }
+
+                    const available_balance = await mainApi.deposit();
+                    console.log(`============================================`)
+                    console.log(`============================================`)
+                    console.log(`available balance after deposit:`, available_balance);
+                    console.log(`============================================`)
+                    console.log(`============================================`)
+
+                }
+
                 const response = await dispatch(
                     createSubscription({
                         identity,
                         agent,
                         tierId,
-                        amountInIcp,
-                        totalCredits: BigInt(totalCredits.total_credits),
                     })
                 ).unwrap();
 
@@ -133,6 +177,11 @@ export const useSubscriptionLogic = () => {
                 await refreshSubscription();
                 return { status: true, message: "Retrieved subscription", data: response };
             } catch (error: any) {
+                console.log(`============================================`)
+                console.log(`============================================`)
+                console.log(`Error in ():`, error.message)
+                console.log(`============================================`)
+                console.log(`============================================`)
                 return {
                     status: false,
                     message: error.message || 'Failed to create subscription',

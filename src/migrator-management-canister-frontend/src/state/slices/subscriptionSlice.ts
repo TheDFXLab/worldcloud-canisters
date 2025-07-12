@@ -1,11 +1,7 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { Tier, Subscription } from '../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did';
-import SubscriptionApi from '../../api/subscription/SubscriptionApi';
-import LedgerApi from '../../api/ledger/LedgerApi';
 import MainApi from '../../api/main';
-import { backend_canister_id } from '../../config/config';
-import { sanitizeObject } from '../../utility/sanitize';
-import { Principal } from '@dfinity/principal';
+;
 
 // Frontend interfaces
 export interface FrontendTier {
@@ -121,14 +117,10 @@ export const createSubscription = createAsyncThunk(
         identity,
         agent,
         tierId,
-        amountInIcp,
-        totalCredits
     }: {
         identity: any;
         agent: any;
         tierId: number;
-        amountInIcp: number;
-        totalCredits: bigint;
     }) => {
         const mainApi = await MainApi.create(identity, agent);
         const result = await mainApi?.actor?.create_subscription(BigInt(tierId));
