@@ -10,7 +10,8 @@ import {
     serializeDeployment,
     deserializeDeployment,
     serializeDeployments,
-    deserializeDeployments
+    deserializeDeployments,
+    serializeWorkflowRunDetails
 } from '../../utility/principal';
 
 interface DeploymentState {
@@ -58,12 +59,24 @@ export const fetchDeployments = createAsyncThunk(
 
 export const fetchWorkflowHistory = createAsyncThunk(
     'deployments/fetchWorkflowHistory',
-    async ({ identity, agent, canisterId }: { identity: any; agent: any; canisterId: string }) => {
+    async ({ identity, agent, project_id }: { identity: any; agent: any; project_id: bigint }) => {
         const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) {
             throw new Error('Failed to create main api instance.');
         }
-        return await mainApi.getWorkflowHistory(Principal.fromText(canisterId));
+
+        const response = await mainApi.getWorkflowHistory(project_id);
+        if (!response) {
+            throw new Error("Unexpected error");
+        }
+        if ('ok' in response) {
+            return serializeWorkflowRunDetails(response.ok);
+        }
+        else {
+            if ('err' in response) {
+                throw new Error(response.err);
+            }
+        }
     }
 );
 
