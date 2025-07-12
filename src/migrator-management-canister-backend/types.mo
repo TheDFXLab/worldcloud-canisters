@@ -216,6 +216,7 @@ module {
 
     public type Project = {
         id : Nat;
+        user : Principal;
         canister_id : ?Principal; // id of canister deployment
         name : Text;
         description : Text;
@@ -265,7 +266,7 @@ module {
     };
 
     public type UserCanisters = HashMap.HashMap<Principal, [Principal]>;
-    public type WorkflowRunHistory = HashMap.HashMap<Principal, [WorkflowRunDetails]>;
+    public type WorkflowRunHistory = HashMap.HashMap<Nat, [WorkflowRunDetails]>;
 
     public type AccountIdentifier = Blob;
     public type SubAccount = Blob;
@@ -358,6 +359,7 @@ module {
     };
 
     public type ShareableCanister = {
+        id : Nat;
         project_id : ?Nat;
         canister_id : ?Principal;
         owner : Principal; // controller of the canister
@@ -401,6 +403,22 @@ module {
         #user_to_slots;
         #used_canisters;
         #usage_logs;
+    };
+
+    public type ProjectId = Nat;
+    public type ProjectActivity = HashMap.HashMap<ProjectId, [ActivityLog]>;
+    public type ActivityLog = {
+        id : Nat;
+        category : Text;
+        description : Text;
+        create_time : Time;
+    };
+
+    public type TimeFormat = {
+        #nanoseconds;
+        #microseconds;
+        #milliseconds;
+        #seconds;
     }
 
     /** End of types */

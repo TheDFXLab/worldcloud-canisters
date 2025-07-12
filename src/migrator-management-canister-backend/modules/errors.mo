@@ -13,6 +13,7 @@ module ErrorType {
 
     /** Access Control */
     public func Unauthorized() : Text = "Unauthorized";
+    public func NotController() : Text = "Not controller of canister.";
     public func NotAnAdmin() : Text = "Not an admin";
     public func NotASuperAdmin() : Text = "Not a super admin";
 
@@ -35,5 +36,6 @@ module ErrorType {
     public func MaxSlotsReached() : Text = "Maxmium number of runners reached.";
     public func SlotUnavailable() : Text = "Slot is busy.";
     public func IndexOutOfBounds() : Text = "Index out of bounds";
+    public func AlreadyCreated() : Text = "Resource already created";
 
 };
