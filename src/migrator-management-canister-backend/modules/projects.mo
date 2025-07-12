@@ -83,6 +83,7 @@ module {
             // Create the project record
             let project : Types.Project = {
                 id = next_project_id;
+                user = user;
                 canister_id = null;
                 name = payload.project_name;
                 description = payload.project_description;
