@@ -1,4 +1,30 @@
-import { Project, UsageLog } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { Principal } from "@dfinity/principal";
+import { CanisterDeployment, CanisterSettings, CanisterStatus, Project, UsageLog } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { CanisterDeploymentStatus } from "./principal";
+export interface SerializedCanisterStatus {
+    status: string;
+    cycles: number;
+    settings: {
+        freezing_threshold?: number;
+        controllers?: string[];
+        memory_allocation?: number;
+        compute_allocation?: number;
+    };
+}
+
+export interface DeserializedCanisterStatus {
+    status: CanisterStatus;
+    cycles: bigint;
+    settings: CanisterSettings;
+}
+// export type CanisterDeploymentStatus = "uninitialized" | "installing" | "installed" | "failed";
+export interface SerializedCanisterDeployment {
+    canister_id: string;
+    status: CanisterDeploymentStatus;
+    size: number;
+    date_created: number;
+    date_updated: number;
+}
 
 export interface SerializedProject {
     id: string;
@@ -38,6 +64,20 @@ export interface DeserializedUsageLog {
     max_uses_threshold: number;
 }
 
+export interface DeserializedActivityLog {
+    id: number;
+    category: string;
+    description: string;
+    create_time: number;
+}
+
+export interface SerializedActivityLog {
+    id: bigint;
+    category: string;
+    description: string;
+    create_time: bigint;
+}
+
 export const serializedUsageLog = (usageLog: UsageLog): SerializedUsageLog => ({
     ...usageLog,
     usage_count: usageLog.usage_count.toString(),
@@ -70,6 +110,56 @@ export const serializeProjects = (projects: DeserializedProject[]): SerializedPr
 export const deserializeProjects = (projects: SerializedProject[]): DeserializedProject[] =>
     projects.map(deserializeProject);
 
+export const serializeActivityLog = (log: DeserializedActivityLog): SerializedActivityLog => ({
+    id: BigInt(log.id),
+    category: log.category,
+    description: log.description,
+    create_time: BigInt(log.create_time)
+});
+
+export const deserializeActivityLog = (log: SerializedActivityLog): DeserializedActivityLog => ({
+    id: Number(log.id),
+    category: log.category,
+    description: log.description,
+    create_time: Number(log.create_time)
+});
+
+export const serializeActivityLogs = (logs: DeserializedActivityLog[]): SerializedActivityLog[] =>
+    logs.map(serializeActivityLog);
+
+export const deserializeActivityLogs = (logs: SerializedActivityLog[]): DeserializedActivityLog[] =>
+    logs.map(deserializeActivityLog);
+
+// export const deserializeCanisterStatus = (status: SerializedCanisterStatus): DeserializedCanisterStatus => ({
+//     status: status.status === "running" ? { running: null } : status.status === 'stopped' ? { stopped: null } : { stopping: null },
+//     cycles: BigInt(status.cycles),
+//     settings: {
+//         freezing_threshold: status.settings.freezing_threshold ? [BigInt(status.settings.freezing_threshold)] : [],
+//         controllers: status.settings.controllers ? status.settings.controllers : [],
+//         memory_allocation: status.settings.memory_allocation ? [BigInt(status.settings.memory_allocation)] : [BigInt(0)],
+//         compute_allocation: status.settings.compute_allocation ? [BigInt(status.settings.compute_allocation)] : [BigInt(0)],
+//     }
+// })
+
+export const serializeCanisterStatus = (status: DeserializedCanisterStatus): SerializedCanisterStatus => ({
+    status: "running" in status.status ? "running" : "stopping" in status.status ? "stopping" : "stopped",
+    cycles: Number(status.cycles),
+    settings: {
+        ...{ freezing_threshold: status.settings.freezing_threshold.length > 0 ? Number(status.settings.freezing_threshold[0]) : undefined, },
+        ...{ controllers: status.settings.controllers.length > 0 ? status.settings.controllers.map(c => c.toString()) : undefined, },
+        ...{ memory_allocation: status.settings.memory_allocation.length > 0 ? Number(status.settings.memory_allocation) : undefined },
+        ...{ compute_allocation: status.settings.compute_allocation.length > 0 ? Number(status.settings.compute_allocation) : undefined }
+    }
+})
+export const serializeCanisterDeployment = (canister_deployment: CanisterDeployment): SerializedCanisterDeployment => ({
+    canister_id: canister_deployment.canister_id.toString(),
+    status: "uninitialized" in canister_deployment.status ? "uninitialized" : "installing" in canister_deployment.status ? "installing" : "installed" in canister_deployment ? "installed" : "failed",
+    size: Number(canister_deployment.size),
+    date_created: Number(canister_deployment.date_created),
+    date_updated: Number(canister_deployment.date_updated)
+})
+
+
 export const bigIntToNumber = (value: bigint | number | undefined): number | undefined => {
     if (value === undefined) return undefined;
     if (typeof value === 'number') return value;
@@ -80,7 +170,7 @@ export const bigIntToDate = (nanoseconds: bigint | number | undefined): number |
     if (nanoseconds === undefined) return undefined;
     const value = bigIntToNumber(nanoseconds);
     if (value === undefined) return undefined;
-    return value / 1_000_000; // Convert nanoseconds to milliseconds
+    return Math.floor(value / 1_000_000); // Convert nanoseconds to milliseconds by dividing by 1M
 };
 
 export const dateToNano = (date: Date): bigint => {
