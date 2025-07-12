@@ -10,7 +10,10 @@ import {
     deserializeProjects,
     bigIntToNumber,
     deserializeUsageLog,
-    DeserializedUsageLog
+    DeserializedUsageLog,
+    DeserializedActivityLog,
+    SerializedActivityLog,
+    deserializeActivityLogs
 } from '../../utility/bigint';
 import { fetchFreemiumUsage } from './freemiumSlice';
 
@@ -25,6 +28,8 @@ export interface ProjectsState {
     error: string | null;
     userUsage: UsageLog | null;
     isLoadingUsage: boolean;
+    activityLogs: DeserializedActivityLog[];
+    isLoadingActivityLogs: boolean;
 }
 
 const initialState: ProjectsState = {
@@ -35,7 +40,9 @@ const initialState: ProjectsState = {
     viewMode: 'card',
     error: null,
     userUsage: null,
-    isLoadingUsage: false
+    isLoadingUsage: false,
+    activityLogs: [],
+    isLoadingActivityLogs: false
 };
 
 export const getUserProjects = createAsyncThunk(
@@ -177,6 +184,19 @@ export const fetchUserUsage = createAsyncThunk(
     }
 );
 
+export const fetchActivityLogs = createAsyncThunk(
+    'projects/fetchActivityLogs',
+    async ({ identity, agent, projectId }: { identity: any, agent: any, projectId: bigint }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) {
+            throw new Error("MainApi is not initialized.");
+        }
+        const result = await mainApi.getProjectActivityLogs(projectId);
+
+        return deserializeActivityLogs(result);
+    }
+);
+
 export const projectsSlice = createSlice({
     name: 'projects',
     initialState,
@@ -255,6 +275,17 @@ export const projectsSlice = createSlice({
             .addCase(fetchUserUsage.rejected, (state, action) => {
                 state.isLoadingUsage = false;
                 state.error = action.error.message || 'Failed to fetch user usage';
+            })
+            .addCase(fetchActivityLogs.pending, (state) => {
+                state.isLoadingActivityLogs = true;
+            })
+            .addCase(fetchActivityLogs.fulfilled, (state, action) => {
+                state.isLoadingActivityLogs = false;
+                state.activityLogs = action.payload;
+            })
+            .addCase(fetchActivityLogs.rejected, (state, action) => {
+                state.isLoadingActivityLogs = false;
+                state.error = action.error.message || 'Failed to fetch activity logs';
             });
     },
 });
