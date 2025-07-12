@@ -3,6 +3,7 @@
   max-width: 80vw;
   width: 100%;
   margin: 0 auto;
+  margin-top: 10rem;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -368,7 +369,11 @@
   color: white;
   border-color: var(--color-primary);
 }
-
+.chip.text {
+  background: var(--background-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
 .chip.paid {
   background: var(--color-primary);
   color: white;

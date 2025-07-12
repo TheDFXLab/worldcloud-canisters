@@ -8,10 +8,13 @@
 }
 
 .app-layout-header {
-  position: sticky;
-  top: 0.5rem;
+  position: absolute;
+  min-width: 95%;
+  top: 10px;
   height: max-content;
-  padding: 1rem 1rem;
+  padding: 0;
+  z-index: 10;
+  background: transparent;
 }
 
 /* 
