@@ -4,10 +4,12 @@ import LedgerApi from "../../api/ledger/LedgerApi";
 import MainApi from "../../api/main";
 import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 import { useQuery } from "@tanstack/react-query";
+import { e8sToIcp } from "../../utility/e8s";
 
 interface LedgerContextType {
   balance: bigint | null | undefined;
   isLoadingBalance: boolean;
+  getPendingDeposits: () => Promise<number>;
   getBalance: () => Promise<bigint | null>;
   transfer: (amount: number, to: string) => Promise<boolean>;
   setShouldRefetchBalance: (value: boolean) => void;
@@ -97,10 +99,13 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
       throw new Error("Agent not found");
     }
     const mainApi = await MainApi.create(identity, agent);
-    const pendingDeposits = await mainApi?.getPendingDeposits();
+    if (!mainApi) throw new Error("MainApi not initialized.");
+    const pendingDeposits = await mainApi.getPendingDeposits();
     if (pendingDeposits && pendingDeposits.e8s > 0) {
       setPendingDeposits(Number(pendingDeposits.e8s));
     }
+
+    return e8sToIcp(pendingDeposits.e8s);
   };
 
   const getBalance = async () => {
@@ -157,6 +162,7 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
     <LedgerContext.Provider
       value={{
         getBalance,
+        getPendingDeposits,
         transfer,
         setShouldRefetchBalance,
         isTransferring,
