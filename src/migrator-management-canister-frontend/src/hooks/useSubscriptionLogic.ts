@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../state/store';
 import {
@@ -13,6 +13,10 @@ import { useCycles } from '../context/CyclesContext/CyclesContext';
 import { useLedger } from '../context/LedgerContext/LedgerContext';
 import { backend_canister_id } from '../config/config';
 import MainApi from '../api/main';
+import { useToaster } from '../context/ToasterContext/ToasterContext';
+import { useLoaderOverlay } from '../context/LoaderOverlayContext/LoaderOverlayContext';
+import { useSideBar } from '../context/SideBarContext/SideBarContext';
+import { useActionBar } from '../context/ActionBarContext/ActionBarContext';
 
 // Add typed dispatch hook
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -25,27 +29,75 @@ interface SubscriptionValidation {
 }
 
 export const useSubscriptionLogic = () => {
-    const dispatch = useAppDispatch(); // Use typed dispatch
+    const dispatch = useAppDispatch();
     const { identity } = useIdentity();
     const { agent } = useHttpAgent();
     const { transfer, getPendingDeposits } = useLedger();
     const { totalCredits } = useCycles();
+    const { setToasterData, setShowToaster } = useToaster();
+    const { summon, destroy } = useLoaderOverlay();
+
+    // Single loading state for all subscription-related operations
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const loadSubscriptionData = useCallback(async (silent = false) => {
+        if (!identity || !agent) {
+            setError("Not authenticated");
+            setIsLoading(false);
+            return;
+        }
+
+        if (!silent) {
+            setIsLoading(true);
+        }
+        setError(null);
+
+        try {
+            // Load both subscription and tiers in parallel
+            const [subscriptionResult, tiersResult] = await Promise.all([
+                dispatch(fetchSubscription({ identity, agent, silent })).unwrap(),
+                dispatch(fetchTiers({ identity, agent, silent })).unwrap()
+            ]);
+
+            debugger;
+
+            return {
+                subscription: subscriptionResult,
+                tiers: tiersResult
+            };
+        } catch (err: any) {
+            const errorMessage = err.message || "Failed to load subscription data";
+            setError(errorMessage);
+
+            // Only show toast for non-silent failures
+            if (!silent) {
+                setToasterData({
+                    headerContent: "Loading Error",
+                    toastStatus: false,
+                    toastData: errorMessage,
+                    timeout: 5000
+                });
+                setShowToaster(true);
+            }
+
+            throw err;
+        } finally {
+            if (!silent) {
+                setIsLoading(false);
+            }
+        }
+    }, [dispatch, identity, agent, setToasterData, setShowToaster]);
+
+    // Load data on mount
+    useEffect(() => {
+        loadSubscriptionData();
+    }, [loadSubscriptionData]);
 
     const {
         subscription,
         tiers,
-        isLoadingSub,
-        isLoadingTiers,
-        error,
     } = useSelector((state: RootState) => state.subscription);
-
-    // Effect to fetch initial data
-    useEffect(() => {
-        if (identity && agent) {
-            dispatch(fetchSubscription({ identity, agent, silent: true }));
-            dispatch(fetchTiers({ identity, agent, silent: true }));
-        }
-    }, [dispatch, identity, agent]);
 
     const refreshSubscription = useCallback(() => {
         if (identity && agent) {
@@ -116,7 +168,6 @@ export const useSubscriptionLogic = () => {
             amountInIcp: number
         ) => {
             if (!identity || !agent
-                // || !totalCredits
             ) {
                 throw {
                     status: false,
@@ -199,11 +250,9 @@ export const useSubscriptionLogic = () => {
     return {
         subscription,
         tiers,
-        isLoadingSub,
-        isLoadingTiers,
+        isLoading,
         error,
-        refreshSubscription,
-        validateSubscription,
+        loadSubscriptionData,
         subscribe,
         clearError: handleClearError,
         getSubscription

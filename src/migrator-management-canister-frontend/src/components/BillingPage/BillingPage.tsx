@@ -34,20 +34,13 @@ const BillingPage: React.FC = () => {
   const { setActionBar } = useActionBar();
   const { setToasterData, setShowToaster } = useToaster();
   const { summon, destroy } = useLoaderOverlay();
-  const {
-    // subscription,
-    // tiers,
-    // isLoadingSub,
-    // isLoadingTiers,
-    // subscribe,
-  } = useSubscription();
 
   const {
     subscription,
     // tiers,
-    isLoadingSub,
-    isLoadingTiers,
-    getSubscription,
+    isLoading,
+    error,
+    loadSubscriptionData,
     subscribe,
   } = useSubscriptionLogic();
 
@@ -64,11 +57,23 @@ const BillingPage: React.FC = () => {
     <CorporateFareIcon />,
   ];
 
-  // Set the active tab to settings
+  // Set the active tab and load initial data
   useEffect(() => {
     setActiveTab("billing");
     setActionBar(null);
   }, []);
+
+  // Handle subscription errors with retry
+  const handleRetry = async () => {
+    try {
+      summon("Retrying...");
+      await loadSubscriptionData();
+    } catch (err) {
+      // Error handling is done in loadSubscriptionData
+    } finally {
+      destroy();
+    }
+  };
 
   const handleSelectPlan = (tierId: number | null) => {
     if (!tiers || tierId === null) return;
@@ -82,36 +87,27 @@ const BillingPage: React.FC = () => {
 
   const handleSubscribe = async (tierId: number | null) => {
     if (tierId === null) {
-      setShowToaster(true);
       setToasterData({
         headerContent: "Error",
         toastStatus: false,
         toastData: "Please select a plan",
         timeout: 2000,
       });
+      setShowToaster(true);
       return;
     }
 
     try {
       summon("Processing your request...");
-
       const res = await subscribe(tierId, Number(amount));
 
       if (!res.status) {
-        setShowToaster(true);
-        setToasterData({
-          headerContent: "Subscription Error",
-          toastStatus: false,
-          toastData: `${
-            res.message ? res.message : "Unexpected error occured."
-          }`,
-          timeout: 3000,
-        });
-        return;
+        throw new Error(res.message || "Unexpected error occurred.");
       }
 
-      // Refersh subscription
-      getSubscription();
+      // Refresh data after successful subscription
+      await loadSubscriptionData(true); // silent refresh
+
       setToasterData({
         headerContent: "Subscription Created",
         toastStatus: true,
@@ -127,14 +123,25 @@ const BillingPage: React.FC = () => {
         timeout: 2000,
       });
       setShowToaster(true);
-      console.log(`Error subscribing.`, error);
     } finally {
       destroy();
     }
   };
 
-  if (isLoadingSub || isLoadingTiers) {
+  // Show loading state
+  if (isLoading) {
     return <LoadingView type="billing" />;
+  }
+
+  // Show error state with retry button
+  if (error) {
+    return (
+      <div className="billing-container error-container">
+        <h3>Failed to load subscription data</h3>
+        <p>{error}</p>
+        <button onClick={handleRetry}>Retry</button>
+      </div>
+    );
   }
 
   return (

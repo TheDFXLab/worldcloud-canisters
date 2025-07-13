@@ -14,16 +14,6 @@ interface SubscriptionValidation {
 interface SubscriptionContextType {
   subscription: SubscriptionData | null;
   tiers: FrontendTier[] | null;
-  isLoadingSub: boolean;
-  isLoadingTiers: boolean;
-  refreshSubscription: () => void;
-  subscribe: (
-    tierId: number,
-    amountInIcp: number
-  ) => Promise<SubscribeResponse>;
-  validateSubscription: (
-    refreshSubscription: boolean
-  ) => Promise<SubscriptionValidation>;
 }
 
 export const SubscriptionContext = createContext<
@@ -32,23 +22,11 @@ export const SubscriptionContext = createContext<
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   // Instead of managing state here, we use our Redux hook
-  const {
-    subscription,
-    tiers,
-    isLoadingSub,
-    isLoadingTiers,
-    refreshSubscription,
-    validateSubscription,
-    subscribe,
-  } = useSubscriptionLogic();
+  const { subscription, tiers, subscribe } = useSubscriptionLogic();
 
   const value = {
     subscription,
     tiers,
-    isLoadingSub,
-    isLoadingTiers,
-    refreshSubscription,
-    validateSubscription,
     subscribe,
   };
 
