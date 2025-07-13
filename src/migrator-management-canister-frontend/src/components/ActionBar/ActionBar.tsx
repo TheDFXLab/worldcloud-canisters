@@ -34,7 +34,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
       <div className="action-bar-content">
         <div className="selected-repo">
           <span className="repo-icon">{icon}</span>
-          <span>{text}</span>
+          <span className="action-bar-text">{text}</span>
         </div>
         {customButton ? (
           customButton

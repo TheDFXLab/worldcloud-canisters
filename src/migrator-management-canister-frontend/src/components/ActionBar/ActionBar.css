@@ -40,7 +40,15 @@
 }
 
 .repo-icon {
-  font-size: 1.1rem;
+  font-size: var(--font-size-xs);
+  margin: 0;
+  padding: 0;
+}
+
+.action-bar-text {
+  font-size: var(--font-size-sm);
+  margin: 0;
+  padding: 0;
 }
 
 .next-button {
