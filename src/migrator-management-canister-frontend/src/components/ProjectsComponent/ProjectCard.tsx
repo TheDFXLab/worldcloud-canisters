@@ -58,6 +58,47 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     hasFreemiumSlot &&
     freemiumSlot.status === "occupied";
 
+  const getActionButtonMessage = () => {
+    let title = "";
+    let tooltipMessage = "";
+    let isButton = true;
+    if (hasCanister) {
+      switch (deploymentStatus) {
+        case "installed":
+          title = "Update Code";
+          tooltipMessage = "Deploy a new version of the web application.";
+          break;
+        case "uninitialized":
+          title = "Deploy New Code";
+          tooltipMessage =
+            "No code is installed in the project's canister yet. Click here to deploy a new version of the web application.";
+          break;
+        case "failed":
+          title = "Deploy New Code";
+          tooltipMessage = "Deploy a new version of the web application.";
+          break;
+        case "installing":
+          title = "Installing...";
+          tooltipMessage = "Project is in the process of installing new code.";
+          isButton = false;
+          break;
+        default:
+          break;
+      }
+    } else {
+      if (isFreemium) {
+        title = "Request Freemium Session";
+        tooltipMessage =
+          "Freemium projects require requesting access to a shareable runner and acquiring a time slot. Click here to receive a time slot.";
+      } else {
+        title = "Attach Runner";
+        tooltipMessage =
+          "Project requires a runner for hosting the web application. Click here to get started, this will consume 1 canister from your plan.";
+      }
+    }
+    return { title, tooltipMessage, isButton };
+  };
+
   useEffect(() => {
     console.log("Countdown Debug:", {
       projectName: project.name,
@@ -210,30 +251,39 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               Visit Website
             </button>
           )}
-          <button
-            className="action-button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (hasCanister) {
-                onDeployNewCode(e);
-              } else {
-                onInstallCode(e);
-              }
-            }}
+          <Tooltip
+            title={getActionButtonMessage().tooltipMessage}
+            disableHoverListener={
+              getActionButtonMessage().tooltipMessage.length === 0
+            }
           >
-            <CodeIcon />
-
-            {hasCanister ? (
-              <span>
-                {deploymentStatus === "installed" && "Update Code"}
-                {(deploymentStatus === "uninitialized" ||
-                  deploymentStatus === "failed") &&
-                  "Deploy New Code"}
-              </span>
-            ) : (
-              "Attach Canister"
-            )}
-          </button>
+            <button
+              className="action-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (hasCanister) {
+                  onDeployNewCode(e);
+                } else {
+                  onInstallCode(e);
+                }
+              }}
+            >
+              <CodeIcon />
+              {getActionButtonMessage().title}
+              {/* {hasCanister ? (
+                <span>
+                  {deploymentStatus === "installed" && "Update Code"}
+                  {(deploymentStatus === "uninitialized" ||
+                    deploymentStatus === "failed") &&
+                    "Deploy New Code"}
+                </span>
+              ) : "freemium" in project.plan ? (
+                "Request Freemium Session"
+              ) : (
+                "Attach Canister"
+              )} */}
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>
