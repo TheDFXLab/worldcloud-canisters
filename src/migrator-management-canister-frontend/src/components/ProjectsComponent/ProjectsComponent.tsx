@@ -278,6 +278,7 @@ const ProjectsComponent: React.FC = () => {
                       !!project.canister_id,
                       project.id,
                       project.canister_id,
+                      "freemium" in project.plan,
                       identity,
                       agent
                     );
@@ -332,6 +333,7 @@ const ProjectsComponent: React.FC = () => {
                         !!project.canister_id,
                         project.id,
                         project.canister_id,
+                        "freemium" in project.plan,
                         identity,
                         agent
                       )

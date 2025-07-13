@@ -64,6 +64,7 @@ const ProjectCreationFlow: React.FC<ProjectCreationFlowProps> = () => {
       false,
       BigInt(data.id),
       null,
+      "freemium" in data.plan,
       identity,
       agent
     );

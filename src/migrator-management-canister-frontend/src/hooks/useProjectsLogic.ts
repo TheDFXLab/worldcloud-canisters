@@ -13,7 +13,8 @@ import {
     setActiveSortTag,
     setViewMode,
     getUserProjects,
-    setLoading
+    setLoading,
+    deployProject
 } from '../state/slices/projectsSlice';
 import { RootState, AppDispatch } from '../state/store';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
@@ -81,34 +82,52 @@ export const useProjectsLogic = () => {
         hasCanister: boolean,
         project_id: bigint,
         canister_id: string | null,
+        is_freemium: boolean,
         identity: any,
         agent: any
     ) => {
         e.stopPropagation();
-        console.log(`HANDLING INStALL CODE:`, {
-            hasCanister, project_id, canister_id
-        });
+
         if (hasCanister) {
             navigate(`/dashboard/deploy/${canister_id}/${project_id}`);
-        } else {
-            if (!agent) {
-                console.log(`HttpAgent not set.`);
-                return;
-            }
-
-            const mainApi = await MainApi.create(identity, agent);
-            const res = await mainApi?.deployAssetCanister(project_id);
-
-            if (!res?.status) {
-                console.error(`Failed to attach canister id:`, res?.message);
-                return;
-            }
-
-            // Refresh projects after successful deployment
-            await refreshProjects();
-            await fetchUsage();
+            return;
         }
-    }, [navigate, refreshProjects]);
+
+        if (!agent) {
+            console.log(`HttpAgent not set.`);
+            throw new Error("HttpAgent not set.");
+        }
+
+        try {
+            const result = await dispatch(deployProject({
+                identity,
+                agent,
+                projectId: project_id,
+                isFreemium: is_freemium,
+                validateSubscription: async () => ({ status: true, message: '' }) // implement proper validation
+            })).unwrap();
+
+            fetchUsage(); // Keep this if needed
+            const updatedProject = result.updatedProjects.find(
+                (p: SerializedProject) => p.id === project_id.toString()
+            );
+
+            if (!updatedProject) {
+                throw new Error("Failed to find updated project after deployment");
+            }
+
+            return {
+                canisterId: result.canisterId,
+                project: updatedProject
+            };
+
+        } catch (error) {
+            console.error('Failed to deploy project:', error);
+            // Handle error appropriately
+            throw error;
+        }
+    }, [dispatch, navigate, fetchUsage]);
+
 
     const handleVisitWebsite = useCallback((e: React.MouseEvent<HTMLButtonElement>, canisterId: string) => {
         e.stopPropagation();
@@ -118,6 +137,9 @@ export const useProjectsLogic = () => {
     const handleProjectClick = useCallback((projectId: string, hasCanister: boolean, canisterId: string | null) => {
         // Only navigate to canister overview if it's not a button click
         if (hasCanister && canisterId) {
+            navigate(`/dashboard/canister/${projectId}`);
+        }
+        else {
             navigate(`/dashboard/canister/${projectId}`);
         }
     }, [navigate]);
