@@ -1,0 +1,42 @@
+.tabPanel {
+  margin-top: 2rem;
+}
+
+.tabContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.tabIndicator {
+  background-color: var(--color-primary);
+}
+
+.tab {
+  color: var(--text-primary);
+  opacity: 1;
+}
+
+.tab.disabled {
+  opacity: 0.5;
+}
+
+.lockIcon {
+  margin-left: 0.5rem;
+  font-size: 1rem;
+}
+
+.container {
+  width: 100%;
+  margin-top: 10rem;
+  background-color: var(--background);
+}
+
+/* Ensure RepoSelector fits within our tab panel */
+.repoSelectorContainer {
+  height: calc(100vh - 300px);
+  overflow: auto;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: var(--background);
+}

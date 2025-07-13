@@ -14,9 +14,15 @@ import { useDeployments } from "../../context/DeploymentContext/DeploymentContex
 import { useGithub } from "../../context/GithubContext/GithubContext";
 import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 
-interface ProjectDeploymentProps {}
+interface ProjectDeploymentProps {
+  onMethodSelected?: () => void;
+  projectData?: any;
+}
 
-const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
+const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
+  onMethodSelected,
+  projectData,
+}) => {
   /** Hooks */
   const { actionBar, setActionBar } = useActionBar();
   const { canisterId, projectId } = useParams();
@@ -25,6 +31,7 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
   const { isDispatched, setIsDispatched } = useDeployments();
   const { isGithubConnected } = useGithub();
   const { setHeaderCard } = useHeaderCard();
+
   /** State */
   const [selectedMethod, setSelectedMethod] = useState<
     "github" | "upload" | null
@@ -38,24 +45,30 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
   }, []);
 
   useEffect(() => {
-    // Redirect to new page if no canister ID provided
-    if (!canisterId || !projectId) {
+    // Only check for canisterId if we're not in the new flow
+    if (!onMethodSelected && (!canisterId || !projectId)) {
       navigate("/dashboard/projects");
     }
-  }, [canisterId, projectId, navigate]);
+  }, [canisterId, projectId, navigate, onMethodSelected]);
 
   useEffect(() => {
     if (!selectedMethod) {
       setHeaderCard({
         description: "Choose Deployment Method",
-        title:
-          "Select how you want to deploy your project to Internet Computer",
-        className: "deployment-header",
+        title: "Code Deployment",
+        // className: "deployment-header",
       });
     }
   }, []);
 
-  if (!canisterId || !projectId) {
+  const handleMethodSelect = (method: "github" | "upload") => {
+    setSelectedMethod(method);
+    if (onMethodSelected && method === "github") {
+      onMethodSelected();
+    }
+  };
+
+  if (!onMethodSelected && (!canisterId || !projectId)) {
     return (
       <div className="project-deployment-container">
         <div className="deployment-header">
@@ -69,18 +82,12 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
     <div className="project-deployment">
       {!selectedMethod ? (
         <>
-          {/* <HeaderCard
-            title={"Choose Deployment Method"}
-            description="Select how you want to deploy your project to Internet Computer"
-            className="deployment-header"
-          /> */}
-
           <div className="deployment-methods">
             <Tooltip
               title={
                 isGithubConnected
-                  ? ""
-                  : "Connect Github account to use this feature"
+                  ? "Use this feature to automatically build and deploy your web application. World Cloud bootstraps your repo with an auto-generated Actions workflow configuration file."
+                  : "Connect Github account to use this feature. -- Use this feature to automatically build and deploy your web application. World Cloud bootstraps your repo with an auto-generated Actions workflow configuration file."
               }
             >
               <div>
@@ -88,7 +95,7 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
                   className={`method-card ${
                     !isGithubConnected ? "disabled" : ""
                   }`}
-                  onClick={() => setSelectedMethod("github")}
+                  onClick={() => handleMethodSelect("github")}
                 >
                   <Card.Body>
                     <div className="method-icon">
@@ -103,20 +110,26 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
                 </Card>
               </div>
             </Tooltip>
-            <Card
-              className="method-card"
-              onClick={() => setSelectedMethod("upload")}
+            <Tooltip
+              title={
+                "Upload a zip file containing your static files to your web application. This will upload the files to the project's assets and serve your web application."
+              }
             >
-              <Card.Body>
-                <div className="method-icon">
-                  <FaFileArchive size={48} />
-                </div>
-                <Card.Title>Upload Build Files</Card.Title>
-                <Card.Text>
-                  Upload a ZIP file containing your built static files.
-                </Card.Text>
-              </Card.Body>
-            </Card>
+              <Card
+                className="method-card"
+                onClick={() => handleMethodSelect("upload")}
+              >
+                <Card.Body>
+                  <div className="method-icon">
+                    <FaFileArchive size={48} />
+                  </div>
+                  <Card.Title>Upload Build Files</Card.Title>
+                  <Card.Text>
+                    Upload a ZIP file containing your built static files.
+                  </Card.Text>
+                </Card.Body>
+              </Card>
+            </Tooltip>
           </div>
         </>
       ) : (
@@ -138,7 +151,9 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
           {selectedMethod === "github" ? (
             <RepoSelector />
           ) : (
-            <FileUploader project_id={BigInt(projectId)} />
+            <FileUploader
+              project_id={BigInt(projectId || projectData?.newProject?.id)}
+            />
           )}
         </div>
       )}
@@ -147,7 +162,3 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({}) => {
 };
 
 export default ProjectDeployment;
-
-/*
-
-*/

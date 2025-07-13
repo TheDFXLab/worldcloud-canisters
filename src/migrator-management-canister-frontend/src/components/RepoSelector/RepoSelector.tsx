@@ -44,7 +44,11 @@ interface RepoState {
   artifacts: ArtifactSummary[];
 }
 
-interface RepoSelectorProps {}
+interface RepoSelectorProps {
+  projectId?: string;
+  canisterId?: string | null;
+  onComplete?: () => void;
+}
 
 interface RepoSelectorState {
   selectedRepo: Repository | null;
@@ -52,12 +56,15 @@ interface RepoSelectorState {
 }
 const ITEMS_PER_PAGE = 3;
 
-const RepoSelector: React.FC<RepoSelectorProps> = () => {
+const RepoSelector: React.FC<RepoSelectorProps> = ({
+  projectId,
+  canisterId,
+  onComplete,
+}) => {
   /** Hooks */
   const { getGithubToken } = useGithub();
   const { identity } = useIdentity();
   const { actionBar, setActionBar } = useActionBar();
-  const { canisterId, projectId } = useParams();
   const { toasterData, setToasterData, setShowToaster } = useToaster();
   const navigate = useNavigate();
   const { agent } = useHttpAgent();
@@ -131,17 +138,14 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   useEffect(() => {
     if (!canisterId || !projectId) {
-      navigate("/dashboard/new");
+      // navigate("/dashboard/new");
       return;
     }
   }, [canisterId, projectId]);
 
   useEffect(() => {
     const loadRepos = async () => {
-      console.log(`Loading repositories...`);
-
       const repos = await github.listRepositories();
-      console.log(`Repositories loaded:`, repos);
       setRepos(repos);
     };
     loadRepos();
@@ -315,8 +319,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         artifact.archive_download_url
       );
 
-      console.log(`Zip blob:`, zipBlob);
-      console.log(`Zip blob:`, zipBlob.size);
       const zipFile = new File([zipBlob], "build.zip", {
         type: "application/zip",
       });
@@ -324,11 +326,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       updateStepStatus(repo, "artifact", "completed");
       updateStepStatus(repo, "deploy", "in-progress");
 
-      console.log(`Workflow run details:`, {
-        zipFile,
-        canisterId,
-        workflowRunDetails,
-      });
       // Deploy to canister
       const fileUploadApi = new FileUploadApi();
       const result = await fileUploadApi.uploadFromZip(
@@ -354,10 +351,17 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         timeout: 5000,
       });
 
-      // Navigate to canister after a short delay
-      setTimeout(() => {
-        navigate(`/dashboard/canister/${canisterId}`); // navigate to canister page
-      }, 2000);
+      // Call onComplete instead of navigating
+      if (onComplete) {
+        setTimeout(() => {
+          onComplete();
+        }, 2000);
+      } else {
+        // Fallback to navigation if no onComplete provided
+        setTimeout(() => {
+          navigate(`/dashboard/canister/${projectId}`);
+        }, 2000);
+      }
     } catch (error) {
       console.error("Deploy failed:", error);
       // Mark current step as error
@@ -567,7 +571,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         buttonText: "Deploy to Internet Computer",
         onButtonClick: () => handleDeploy(state.selectedRepo!.full_name),
         isButtonDisabled:
-          !canisterId ||
+          // !canisterId ||
           !repoStates[state.selectedRepo!.full_name]?.selectedPath,
         isHidden: hideActionBar,
       });

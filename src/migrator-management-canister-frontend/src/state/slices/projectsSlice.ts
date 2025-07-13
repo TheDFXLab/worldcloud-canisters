@@ -62,7 +62,6 @@ export const getUserProjects = createAsyncThunk(
     }, { dispatch }) => {
         const mainApi = await MainApi.create(identity, agent);
         const projects = await mainApi?.getUserProjects(page, limit);
-        console.log(`((((GOT PROEJCTS)))) all projects`, projects)
         if (!projects) {
             throw new Error('Failed to fetch projects');
         }
@@ -130,7 +129,6 @@ export const deployProject = createAsyncThunk(
         validateSubscription: () => Promise<{ status: boolean; message: string; }>;
     }, { dispatch }) => {
         if (!isFreemium) {
-            console.log(`Validating subscription`)
             const validation = await validateSubscription();
             if (!validation.status) {
                 throw new Error(validation.message);
@@ -146,10 +144,9 @@ export const deployProject = createAsyncThunk(
         }
 
         // Fetch fresh project data after deployment
-        const projects = await mainApi?.getUserProjects();
-        if (!projects) {
-            throw new Error('Failed to fetch projects after deployment');
-        }
+        const projectsResponse = await dispatch(getUserProjects({
+            identity, agent
+        })).unwrap();
 
         // Automatically refresh freemium usage after successful deployment
         if (isFreemium) {
@@ -163,7 +160,7 @@ export const deployProject = createAsyncThunk(
         return {
             canisterId: result.message as string,
             projectId: projectId.toString(),
-            updatedProjects: serializeProjects(projects)
+            updatedProjects: projectsResponse.projects
         };
     }
 );

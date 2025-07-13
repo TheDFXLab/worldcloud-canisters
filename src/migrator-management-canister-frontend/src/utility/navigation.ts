@@ -11,7 +11,7 @@ export const mapKeyToRoute = (key: string) => {
             navigateToPath = "/dashboard";
             break;
         case "publish":
-            navigateToPath = "/dashboard/new";
+            navigateToPath = "/dashboard/new-project"; // Updated to use new flow
             break;
         case "websites":
             navigateToPath = "/dashboard/websites";

@@ -49,6 +49,7 @@ import CreateProjectForm from "./components/WebsitesComponent/CreateProjectForm"
 import { ProjectProvider } from "./context/ProjectContext/ProjectContext";
 import ProjectsComponent from "./components/ProjectsComponent/ProjectsComponent";
 import { HeaderCardProvider } from "./context/HeaderCardContext/HeaderCardContext";
+import ProjectCreationFlow from "./components/ProjectCreationFlow/ProjectCreationFlow";
 const queryClient = new QueryClient();
 export interface State {
   canister_id: string;
@@ -144,6 +145,12 @@ function App() {
                                                                       path="new"
                                                                       element={
                                                                         <CreateProjectForm />
+                                                                      }
+                                                                    />
+                                                                    <Route
+                                                                      path="new-project"
+                                                                      element={
+                                                                        <ProjectCreationFlow />
                                                                       }
                                                                     />
                                                                     <Route

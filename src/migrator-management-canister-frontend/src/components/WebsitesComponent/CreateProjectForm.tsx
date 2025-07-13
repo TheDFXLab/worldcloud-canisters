@@ -28,7 +28,13 @@ const planOptions = [
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
-const CreateProjectForm: React.FC = () => {
+interface CreateProjectFormProps {
+  onProjectCreated?: (e: any, data: any) => Promise<void>;
+}
+
+const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
+  onProjectCreated,
+}) => {
   const dispatch = useAppDispatch();
   const [status, setStatus] = useState("");
   const navigate = useNavigate();
@@ -70,7 +76,6 @@ const CreateProjectForm: React.FC = () => {
     }
   };
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log(`SUbmiting..`);
     e.preventDefault();
     if (disableSubmit) {
       setToasterData({
@@ -105,14 +110,6 @@ const CreateProjectForm: React.FC = () => {
       return;
     }
 
-    console.log(`Creating project...`, {
-      projectName,
-      description,
-      tags,
-      plan: `#${plan}`,
-    });
-    // TODO: Next step in deployment flow
-
     if (!agent) {
       console.log(`HttpAgent not initialized, relog.`);
       return;
@@ -133,12 +130,16 @@ const CreateProjectForm: React.FC = () => {
         })
       ).unwrap();
 
-      // Deploy the asset canister in case of paid
-      // Allocate slot to user project in case of freemium
-      await handleDeploy(
-        BigInt(result.newProject.id),
-        "freemium" in result.newProject.plan
-      );
+      // Use the callback when used as a component
+      if (onProjectCreated) {
+        await onProjectCreated(e, result.newProject);
+      } else {
+        // Otherwise, use handle deploy function directly
+        await handleDeploy(
+          BigInt(result.newProject.id),
+          "freemium" in result.newProject.plan
+        );
+      }
     } catch (error) {
       console.error(`Failed to create project.`, error);
       setToasterData({
@@ -191,8 +192,6 @@ const CreateProjectForm: React.FC = () => {
         })
       ).unwrap();
 
-      console.log(`RESULT FROM DEPLOY PROJECT DISPAYCH`, result);
-
       const newDeployment = {
         canister_id: Principal.fromText(result.canisterId),
         status: "uninitialized" as const,
@@ -212,10 +211,8 @@ const CreateProjectForm: React.FC = () => {
       refreshDeployments();
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log(`Navigating to projects...`);
       navigate(`/dashboard/projects`);
     } catch (error: any) {
-      console.log(`ERRO HAPPNED:`, error);
       setToasterData({
         headerContent: "Error",
         toastStatus: true,
@@ -241,13 +238,26 @@ const CreateProjectForm: React.FC = () => {
   return (
     <div className="create-project-page">
       <div className="create-project-card">
-        <button className="back-btn" onClick={() => navigate(-1)}>
-          ← Back
-        </button>
-        <h2>Create New Project</h2>
+        {!onProjectCreated && (
+          <button className="back-btn" onClick={() => navigate(-1)}>
+            ← Back
+          </button>
+        )}
+        <h2>New Project</h2>
+        <div className="text-container">
+          <p>
+            Projects let you quickly build and deploy scalable web applications
+            on the Internet Computer. After creating a project, you will be
+            prompted to connect your Github account to start building and
+            deploying your web application.
+          </p>
+        </div>
+
         <form onSubmit={handleSubmit}>
           <label>
-            Project Name<span className="required">*</span>
+            <span>
+              Project Name<span className="required">*</span>
+            </span>
             <input
               type="text"
               value={projectName}
