@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./CreateProjectForm.css";
 import { useNavigate } from "react-router-dom";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
@@ -17,6 +17,8 @@ import { AppDispatch, RootState } from "../../state/store";
 import MainApi from "../../api/main";
 import { validateSubscription } from "../../state/slices/subscriptionSlice";
 import { useFreemiumLogic } from "../../hooks/useFreemiumLogic";
+import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
+import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
 
 const MAX_TAGS = 5;
 const MAX_DESC = 100;
@@ -58,6 +60,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
   const { agent } = useHttpAgent();
   const { setIsLoadingProgress, setIsEnded } = useProgress();
   const { addDeployment, refreshDeployments } = useDeployments();
+  const { setActionBar } = useActionBar();
 
   const handleAddTag = () => {
     const trimmed = tagInput.trim();
@@ -75,6 +78,20 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
       handleAddTag();
     }
   };
+
+  useEffect(() => {
+    setActionBar({
+      icon: <CreateNewFolderIcon />,
+      text: projectName
+        ? "Continue to code deployment."
+        : "Enter a project name to continue.",
+      buttonText: "Create Project",
+      onButtonClick: handleSubmit,
+      isButtonDisabled: projectName.length === 0,
+      isHidden: false,
+    });
+  }, [projectName]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (disableSubmit) {
@@ -237,101 +254,110 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
 
   return (
     <div className="create-project-page">
-      <div className="create-project-card">
+      <div className="project-header">
         {!onProjectCreated && (
           <button className="back-btn" onClick={() => navigate(-1)}>
             ← Back
           </button>
         )}
-        <h2>New Project</h2>
-        <div className="text-container">
-          <p>
-            Projects let you quickly build and deploy scalable web applications
-            on the Internet Computer. After creating a project, you will be
-            prompted to connect your Github account to start building and
-            deploying your web application.
-          </p>
+        <p>
+          Projects let you quickly build and deploy scalable web applications on
+          the Internet Computer. After creating a project, you will be prompted
+          to connect your Github account to start building and deploying your
+          web application.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div className="project-form-grid">
+          <div className="project-form-card">
+            <h3>Project Details</h3>
+            <label>
+              <span>
+                Project Name<span className="required">*</span>
+              </span>
+              <input
+                type="text"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                required
+                maxLength={40}
+                placeholder="Enter project name"
+              />
+            </label>
+            <label>
+              Tags (up to {MAX_TAGS})
+              <div className="tags-input-row">
+                {tags.map((tag) => (
+                  <span className="tag-chip" key={tag}>
+                    {tag}
+                    <button
+                      type="button"
+                      className="remove-tag"
+                      onClick={() => handleRemoveTag(tag)}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {tags.length < MAX_TAGS && (
+                  <input
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={handleTagInputKeyDown}
+                    placeholder="Add tag"
+                    maxLength={20}
+                  />
+                )}
+                <button
+                  type="button"
+                  className="add-tag-btn"
+                  onClick={handleAddTag}
+                  disabled={!tagInput.trim() || tags.length >= MAX_TAGS}
+                >
+                  Add
+                </button>
+              </div>
+            </label>
+            <label>
+              Plan
+              <select value={plan} onChange={(e) => setPlan(e.target.value)}>
+                {planOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {plan === "freemium" &&
+              subscription &&
+              Number(subscription.tier_id) === 3 && (
+                <div className="freemium-note">
+                  You are currently on the Freemium plan.{" "}
+                  <a href="/dashboard/billing">View paid plans</a>
+                </div>
+              )}
+          </div>
+
+          <div className="project-form-card">
+            <h3>Project Description</h3>
+            <label>
+              Description
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={MAX_DESC}
+                placeholder="Describe your project (max 100 chars)"
+              />
+              <span className="desc-count">
+                {description.length}/{MAX_DESC}
+              </span>
+            </label>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <label>
-            <span>
-              Project Name<span className="required">*</span>
-            </span>
-            <input
-              type="text"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              required
-              maxLength={40}
-              placeholder="Enter project name"
-            />
-          </label>
-          <label>
-            Description
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={MAX_DESC}
-              placeholder="Describe your project (max 100 chars)"
-            />
-            <span className="desc-count">
-              {description.length}/{MAX_DESC}
-            </span>
-          </label>
-          <label>
-            Tags (up to {MAX_TAGS})
-            <div className="tags-input-row">
-              {tags.map((tag) => (
-                <span className="tag-chip" key={tag}>
-                  {tag}
-                  <button
-                    type="button"
-                    className="remove-tag"
-                    onClick={() => handleRemoveTag(tag)}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              {tags.length < MAX_TAGS && (
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagInputKeyDown}
-                  placeholder="Add tag"
-                  maxLength={20}
-                />
-              )}
-              <button
-                type="button"
-                className="add-tag-btn"
-                onClick={handleAddTag}
-                disabled={!tagInput.trim() || tags.length >= MAX_TAGS}
-              >
-                Add
-              </button>
-            </div>
-          </label>
-          <label>
-            Plan
-            <select value={plan} onChange={(e) => setPlan(e.target.value)}>
-              {planOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          {plan === "freemium" &&
-            subscription &&
-            Number(subscription.tier_id) === 3 && (
-              <div className="freemium-note">
-                You are currently on the Freemium plan.{" "}
-                <a href="/dashboard/billing">View paid plans</a>
-              </div>
-            )}
+        <div className="form-actions">
           {error && <div className="form-error">{error}</div>}
           {disableSubmit && (
             <div className="form-error">
@@ -339,7 +365,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
               <a href="/dashboard/billing">Upgrade your plan</a>
             </div>
           )}
-          <button
+          {/* <button
             className="submit-btn"
             type="submit"
             disabled={false}
@@ -349,9 +375,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
             // }
           >
             Continue
-          </button>
-        </form>
-      </div>
+          </button> */}
+        </div>
+      </form>
     </div>
   );
 };

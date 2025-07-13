@@ -19,6 +19,7 @@ import { useDeployments } from "../../context/DeploymentContext/DeploymentContex
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 import { reverse_proxy_url } from "../../config/config";
 import AuthState from "../../state/AuthState";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 
 interface PackageLocation {
   path: string;
@@ -54,7 +55,7 @@ interface RepoSelectorState {
   selectedRepo: Repository | null;
   step: "select" | "configure" | "deploy";
 }
-const ITEMS_PER_PAGE = 3;
+const ITEMS_PER_PAGE = 6;
 
 const RepoSelector: React.FC<RepoSelectorProps> = ({
   projectId,
@@ -69,6 +70,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
   const navigate = useNavigate();
   const { agent } = useHttpAgent();
   const { isDispatched, setIsDispatched } = useDeployments();
+  const { setHeaderCard } = useHeaderCard();
 
   /** State */
   const [repos, setRepos] = useState<Repository[]>([]);
@@ -85,7 +87,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
 
   const [hideActionBar, setHideActionBar] = useState(false);
   const [showTitle, setShowTitle] = useState(true);
-
   // Pagingation state
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.ceil(repos.length / ITEMS_PER_PAGE);
@@ -97,6 +98,13 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
     if (state.step === "select") setShowPagination(totalPages > 1);
     // setShowPagination(totalPages > 1);
   }, [totalPages, state.step]);
+
+  useEffect(() => {
+    setHeaderCard({
+      title: "Select Repository",
+      description: "Choose a repository to deploy to Internet Computer",
+    });
+  }, []);
 
   const initialDeploymentSteps: DeploymentStep[] = [
     {
@@ -414,36 +422,33 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
     });
   };
 
-  const renderRepoGrid = () => (
-    <div className="repo-grid">
-      {currentRepos.map((repo) => (
-        <div
-          key={repo.id}
-          className={`repo-card ${
-            state.selectedRepo?.id === repo.id ? "selected" : ""
-          }`}
-          onClick={() => handleSelectRepo(repo)}
-        >
-          <div className="repo-name">{repo.name}</div>
-          <div className="repo-info">
-            <span>{repo.full_name}</span>
-            <span className="repo-visibility">{repo.visibility}</span>
-          </div>
-          <div className="repo-actions">
-            <a href={repo.html_url} target="_blank" rel="noopener noreferrer">
-              View on GitHub
-            </a>
-          </div>
-          {repoStates[repo.full_name]?.artifacts?.length > 0 && (
-            <div className="repo-artifacts">
-              <h4>Recent Builds</h4>
-              {/* ... artifacts list ... */}
-            </div>
-          )}
+  const renderRepoGrid = () =>
+    currentRepos.map((repo) => (
+      <div
+        key={repo.id}
+        className={`repo-card ${
+          state.selectedRepo?.id === repo.id ? "selected" : ""
+        }`}
+        onClick={() => handleSelectRepo(repo)}
+      >
+        <div className="repo-name">{repo.name}</div>
+        <div className="repo-info">
+          <span>{repo.full_name}</span>
+          <span className="repo-visibility">{repo.visibility}</span>
         </div>
-      ))}
-    </div>
-  );
+        <div className="repo-actions">
+          <a href={repo.html_url} target="_blank" rel="noopener noreferrer">
+            View on GitHub
+          </a>
+        </div>
+        {repoStates[repo.full_name]?.artifacts?.length > 0 && (
+          <div className="repo-artifacts">
+            <h4>Recent Builds</h4>
+            {/* ... artifacts list ... */}
+          </div>
+        )}
+      </div>
+    ));
 
   const renderConfigureStep = () => {
     if (!state.selectedRepo) {
@@ -591,19 +596,14 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
 
   return (
     <div className="repo-selector">
-      {showTitle && (
-        <div className="repo-header">
-          <h2>Select Repository</h2>
-          <p>Choose a repository to deploy to Internet Computer</p>
+      {state.step === "select" && (
+        <div className="repo-grid-container">
+          <div className="repo-grid">{renderRepoGrid()}</div>
         </div>
       )}
-
-      <div className={`repo-grid-container`}>
-        <div className="repo-grid">
-          {state.step === "select" && renderRepoGrid()}
-          {state.step === "configure" && renderConfigureStep()}
-        </div>
-      </div>
+      {state.step === "configure" && (
+        <div className="configure-container">{renderConfigureStep()}</div>
+      )}
 
       {showPagination && totalPages > 1 && (
         <div className="pagination-container">
