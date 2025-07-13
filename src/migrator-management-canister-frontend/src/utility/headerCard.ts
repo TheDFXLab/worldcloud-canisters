@@ -24,8 +24,8 @@ export const mapHeaderContent = (key: string, githubUser?: any, isAdmin: boolean
                 }`;
             break;
         case "publish":
-            headerCardData.title = "New Project";
-            headerCardData.description = `Create a project to host your website.`;
+            headerCardData.title = "Create New Project";
+            headerCardData.description = `Create and deploy your project to the Internet Computer.`;
             break;
         case "websites":
             headerCardData.title = "Your Websites";
@@ -42,6 +42,5 @@ export const mapHeaderContent = (key: string, githubUser?: any, isAdmin: boolean
             }
             break;
     }
-    console.log(`To set header card to `, headerCardData)
     return headerCardData;
 };

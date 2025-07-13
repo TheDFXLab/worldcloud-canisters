@@ -6,24 +6,25 @@
   align-items: flex-start;
   justify-content: flex-start;
   background: var(--background);
-  padding: 2.5rem 0 0 0;
+  padding: 0.1rem 0 0 0;
   overflow-y: auto;
-  margin-top: 10rem;
 }
 
 .create-project-card {
   background: var(--background-secondary);
   border-radius: 18px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  padding: 2.5rem 2.2rem 2rem 2.2rem;
+  padding: 1.5rem 2.2rem 2rem 2.2rem;
   max-width: 900px;
   width: 65vw;
   min-width: 340px;
   margin-left: 3vw;
-  margin-top: 2vw;
+  margin-top: 0rem;
   display: flex;
   flex-direction: column;
   position: relative;
+  margin: auto auto;
+  margin-top: 0.33rem;
 }
 
 .back-btn {
@@ -44,8 +45,14 @@
 .create-project-card h2 {
   margin: 0 0 1.5rem 0;
   color: var(--text-primary);
-  font-size: 1.5rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
+  text-align: left;
+}
+.create-project-card p {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
   text-align: left;
 }
 
@@ -55,6 +62,11 @@
   gap: 0.2rem;
   width: 100%;
   box-sizing: border-box;
+}
+
+.create-project-card .text-container {
+  max-width: 90%;
+  padding: 0rem 0rem;
 }
 
 .create-project-card label {

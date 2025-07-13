@@ -2,10 +2,9 @@
   height: calc(100vh - 64px);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  /* overflow-y: auto; */
   scroll-behavior: smooth;
   padding: 1rem;
-  padding-top: 0rem;
   min-height: calc(100vh - 64px);
   background-color: var(--background);
   height: 100%;

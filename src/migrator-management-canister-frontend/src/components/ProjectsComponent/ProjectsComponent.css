@@ -1,5 +1,5 @@
 .projects-container {
-  padding: 1rem;
+  /* padding: 1rem;
   max-width: 80vw;
   width: 100%;
   margin: 0 auto;
@@ -9,7 +9,7 @@
   align-items: stretch;
   height: 100vh;
   min-height: 0;
-  overflow-y: auto;
+  overflow-y: auto; */
 }
 
 .projects-grid {

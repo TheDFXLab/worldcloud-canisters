@@ -96,8 +96,6 @@ const ProjectsComponent: React.FC = () => {
   const filterRef = useRef<HTMLDivElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
 
-  const dispatch = useDispatch<AppDispatch>();
-
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
@@ -173,18 +171,13 @@ const ProjectsComponent: React.FC = () => {
 
   return (
     <div className="projects-container">
-      <div
+      {/* <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
         }}
-      >
-        {/* <HeaderCard
-          title="Your Projects"
-          description="Manage your projects and deployments"
-        /> */}
-      </div>
+      ></div> */}
       {/* Filter tags row */}
       <div style={{ position: "relative" }}>
         <div className="tags-row" ref={filterRef}>
@@ -279,7 +272,6 @@ const ProjectsComponent: React.FC = () => {
                 }}
                 onInstallCode={async (e) => {
                   try {
-                    console.log(`INSTALLING CODE>....`);
                     summon("Setting up canister...");
                     await handleInstallCode(
                       e,
@@ -293,11 +285,6 @@ const ProjectsComponent: React.FC = () => {
                   } finally {
                     destroy();
                   }
-
-                  // Refresh after installation completes
-                  // await refreshProjects();
-                  // await fetchUsage();
-                  // await refreshFreemiumUsage();
                 }}
                 onVisitWebsite={(e) =>
                   handleVisitWebsite(e, project.canister_id!)
