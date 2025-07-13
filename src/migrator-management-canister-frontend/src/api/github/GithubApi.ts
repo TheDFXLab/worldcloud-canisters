@@ -122,8 +122,9 @@ export class GithubApi {
             scope: 'repo workflow',
             state: state
         });
-
-        window.location.href = `https://github.com/login/oauth/authorize?${params}`;
+        let authUrl = `https://github.com/login/oauth/authorize?${params}`;
+        window.open(authUrl, '_blank', 'noopener,noreferrer');
+        // window.location.href = `https://github.com/login/oauth/authorize?${params}`;
     }
 
     // Replace with be
