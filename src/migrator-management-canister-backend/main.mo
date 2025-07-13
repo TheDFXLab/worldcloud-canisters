@@ -288,12 +288,11 @@ shared (deployMsg) actor class CanisterManager() = this {
     assert not Principal.isAnonymous(msg.caller);
     let project : Types.Project = project_manager.get_project_by_id(project_id);
     if (project.plan == #freemium) {
-
+      let _project : Types.Project = await _request_freemium_session(project_id, msg.caller);
       let slot = switch (shareable_canister_manager.get_canister_by_user(msg.caller)) {
         case (null) { return #err(Errors.NotFoundSlot()) };
         case (?_slot) { _slot };
       };
-
       _set_cleanup_timer(slot.duration, slot.id);
       let updated = switch (activity_manager.update_project_activity(project_id, "Canister", "Freemium session started.")) {
         case (#err(_msg)) {
@@ -305,7 +304,7 @@ shared (deployMsg) actor class CanisterManager() = this {
       };
       return #ok(
         Principal.toText(
-          switch (project.canister_id) {
+          switch (_project.canister_id) {
             case (null) {
               return #err(Errors.NotFoundCanister());
             };
