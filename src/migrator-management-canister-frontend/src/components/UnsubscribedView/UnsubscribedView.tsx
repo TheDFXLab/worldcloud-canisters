@@ -40,7 +40,6 @@ const UnsubscribedView: React.FC = () => {
   const { setToasterData, setShowToaster } = useToaster();
   const { summon, destroy } = useLoaderOverlay();
   const { usageData, isLoading: isLoadingUsageData } = useFreemiumLogic();
-  const { subscription, isLoadingSub } = useSubscriptionLogic();
 
   /** State variables */
   const { setShowLoadBar } = useLoadBar();
