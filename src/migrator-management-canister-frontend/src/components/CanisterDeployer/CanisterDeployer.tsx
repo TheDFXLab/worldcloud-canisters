@@ -36,8 +36,11 @@ function CanisterDeployer({}: CanisterDeployerProps) {
   const { setActiveTab } = useSideBar();
   const { setIsLoadingProgress, setIsEnded } = useProgress();
   const { agent } = useHttpAgent();
-  const { subscription, isLoadingSub, isLoadingTiers, validateSubscription } =
-    useSubscriptionLogic();
+  const {
+    subscription,
+    isLoading: isLoadingSub,
+    validateSubscription,
+  } = useSubscriptionLogic();
   const { summon, destroy } = useLoaderOverlay();
 
   /**State */
@@ -154,7 +157,7 @@ function CanisterDeployer({}: CanisterDeployerProps) {
     }
   };
 
-  if (isLoadingSub || isLoadingTiers) {
+  if (isLoadingSub) {
     return <LoadingView type="deployment" />;
   }
 

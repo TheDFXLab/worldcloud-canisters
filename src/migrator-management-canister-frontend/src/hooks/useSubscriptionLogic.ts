@@ -60,7 +60,6 @@ export const useSubscriptionLogic = () => {
                 dispatch(fetchTiers({ identity, agent, silent })).unwrap()
             ]);
 
-            debugger;
 
             return {
                 subscription: subscriptionResult,
@@ -255,6 +254,7 @@ export const useSubscriptionLogic = () => {
         loadSubscriptionData,
         subscribe,
         clearError: handleClearError,
-        getSubscription
+        getSubscription,
+        validateSubscription
     };
 }; 
