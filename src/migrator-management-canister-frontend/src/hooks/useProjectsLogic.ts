@@ -98,34 +98,29 @@ export const useProjectsLogic = () => {
             throw new Error("HttpAgent not set.");
         }
 
-        try {
-            const result = await dispatch(deployProject({
-                identity,
-                agent,
-                projectId: project_id,
-                isFreemium: is_freemium,
-                validateSubscription: async () => ({ status: true, message: '' }) // implement proper validation
-            })).unwrap();
+        // try {
+        const result = await dispatch(deployProject({
+            identity,
+            agent,
+            projectId: project_id,
+            isFreemium: is_freemium,
+            validateSubscription: async () => ({ status: true, message: '' }) // implement proper validation
+        })).unwrap();
 
-            fetchUsage(); // Keep this if needed
-            const updatedProject = result.updatedProjects.find(
-                (p: SerializedProject) => p.id === project_id.toString()
-            );
+        fetchUsage(); // Keep this if needed
+        const updatedProject = result.updatedProjects.find(
+            (p: SerializedProject) => p.id === project_id.toString()
+        );
 
-            if (!updatedProject) {
-                throw new Error("Failed to find updated project after deployment");
-            }
-
-            return {
-                canisterId: result.canisterId,
-                project: updatedProject
-            };
-
-        } catch (error) {
-            console.error('Failed to deploy project:', error);
-            // Handle error appropriately
-            throw error;
+        if (!updatedProject) {
+            throw new Error("Failed to find updated project after deployment");
         }
+
+        return {
+            canisterId: result.canisterId,
+            project: updatedProject
+        };
+
     }, [dispatch, navigate, fetchUsage]);
 
 

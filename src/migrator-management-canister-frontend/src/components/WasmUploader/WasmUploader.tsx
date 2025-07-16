@@ -86,11 +86,7 @@ function WasmUploader() {
       clearInterval(progressInterval);
       setUploadProgress(100);
 
-      if ("ok" in result) {
-        setStatus("success");
-      } else {
-        setStatus("error");
-      }
+      setStatus("success");
     } catch (error) {
       setStatus("error");
       console.error(error);

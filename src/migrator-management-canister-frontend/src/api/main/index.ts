@@ -1,7 +1,7 @@
 import { Principal } from "@dfinity/principal";
 import { createActor } from "../../../../declarations/migrator-management-canister-backend";
 import { ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
-import { _SERVICE, ActivityLog, DepositReceipt, GetProjectsByUserPayload, Project, ProjectPlan, Response, StoreAssetInCanisterPayload, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { _SERVICE, ActivityLog, GetProjectsByUserPayload, Project, ProjectPlan, Response, Result, StoreAssetInCanisterPayload, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
 import { DeserializedProject, DeserializedUsageLog, SerializedUsageLog, serializedUsageLog } from "../../utility/bigint";
@@ -215,6 +215,20 @@ class MainApi {
 
     }
 
+    private handleResult(result: Result) {
+        if ("ok" in result) {
+            return result.ok;
+        }
+        else if ("err" in result) {
+            throw { status: false, message: result.err };
+        }
+    }
+
+    private handleResponseError(error: string) {
+        return { status: false, message: error }
+    }
+
+
     async uploadWasm(wasmBytes: number[]) {
         try {
             if (!this.actor) {
@@ -222,11 +236,17 @@ class MainApi {
             }
             const result = await this.actor.uploadAssetCanisterWasm(
                 wasmBytes
-            );;
-            return result;
+            );
+
+            if ('ok' in result) {
+                return result.ok;
+            }
+            else {
+                throw result.err;
+            }
         } catch (error) {
             console.log(`Error uploading WASM:`, error)
-            return null;
+            throw error;
         }
     }
 
@@ -236,15 +256,15 @@ class MainApi {
                 throw new Error("Actor not initialized.");
             }
             const result = await this.actor.deployAssetCanister(project_id);
-            if ("Ok" in result || "ok" in result) {
-                return { status: true, message: Object.values(result)[0] };
+            if ('ok' in result) {
+                return result.ok;
             }
             else {
-                throw { status: false, message: "Error deploying asset canister: " + Object.values(result)[0] };
+                throw this.handleResult(result);
             }
         } catch (error) {
             console.log(`Error deploying asset canister:`, error)
-            return null;
+            throw error;
         }
     }
 
@@ -254,15 +274,16 @@ class MainApi {
                 throw new Error("Actor not initialized.");
             }
             const result = await this.actor.storeInAssetCanister(project_id, files, workflowRunDetails ? [workflowRunDetails] : []);
-            if ("Ok" in result || "ok" in result) {
-                return { status: true, message: "Stored files successfully." };
+            if ('ok' in result) {
+                return result.ok;
             }
             else {
-                throw { status: false, message: "Error storing in asset canister: " + Object.values(result)[0] };
+                throw this.handleResponseError(result.err);
             }
+
         } catch (error: any) {
             console.log(`Error storing in asset canister:`, error)
-            return { status: false, message: `Failed to upload file batch. ${error.message}` };
+            throw error;
         }
     }
 
@@ -272,16 +293,17 @@ class MainApi {
             if (!this.actor) {
                 throw new Error("Actor not initialized.");
             }
-            const depositResult: DepositReceipt = await this.actor.depositIcp();
-            if ("Ok" in depositResult) {
-                return depositResult.Ok;
+            const depositResult = await this.actor.depositIcp();
+
+            if ("ok" in depositResult) {
+                return depositResult.ok;
             }
             else {
-                throw new Error("Error depositing ICP: " + depositResult.Err);
+                throw this.handleResponseError(depositResult.err);
             }
         } catch (error) {
             console.log(`Error depositing ICP:`, error)
-            return null;
+            throw error;
         }
     }
 
@@ -299,18 +321,15 @@ class MainApi {
             }
 
             const result = await this.actor.deployAssetCanister(project_id);
-            if (!result) {
-                throw new Error("Failed to request freemium session");
+            if ('ok' in result) {
+                return result.ok;
             }
-
-            if ("Ok" in result || "ok" in result) {
-                return true;
-            } else {
-                throw new Error("Error requesting freemium session: " + Object.values(result)[0]);
+            else {
+                throw this.handleResponseError(result.err);
             }
         } catch (error) {
             console.log(`Error requesting freemium session:`, error)
-            return false;
+            throw error;
         }
     }
 
@@ -354,13 +373,12 @@ class MainApi {
                     start_cycles: slot.start_cycles,
                     status: slot.status
                 };
-            } else {
-                // If there's an error in the response, throw it
-                throw new Error("Error requesting freemium session: " + Object.values(result)[0]);
+            }
+            else {
+                throw this.handleResponseError(result.err);
             }
         } catch (error) {
             console.log(`Error requesting freemium session:`, error);
-            // Instead of returning false, throw the error to be handled by the thunk
             throw error;
         }
     }
@@ -394,26 +412,23 @@ class MainApi {
 
             const result = await this.actor.create_project(payload);
 
-            if (!result) {
-                throw new Error("Failed to create project");
+            if ('ok' in result) {
+                const currentTimeNano = BigInt(Date.now()) * BigInt(1_000_000); // Convert current time to nanoseconds
+
+                return {
+                    id: result.ok.project_id,
+                    name: project_name,
+                    description,
+                    tags,
+                    plan: projectPlan,
+                    canister_id: null,
+                    date_created: Number(currentTimeNano),
+                    date_updated: Number(currentTimeNano)
+                };
             }
-
-            if ('err' in result) {
-                throw new Error(result.err);
+            else {
+                throw this.handleResponseError(result.err);
             }
-
-            const currentTimeNano = BigInt(Date.now()) * BigInt(1_000_000); // Convert current time to nanoseconds
-
-            return {
-                id: result.ok.project_id,
-                name: project_name,
-                description,
-                tags,
-                plan: projectPlan,
-                canister_id: null,
-                date_created: Number(currentTimeNano),
-                date_updated: Number(currentTimeNano)
-            };
         } catch (error) {
             console.error(`Error creating project:`, error);
             return null;
@@ -439,11 +454,11 @@ class MainApi {
             }
 
             const result = await this.actor.upload_assets_to_project(payload);
-            if ("Ok" in result || "ok" in result) {
+            if ("ok" in result) {
                 return { status: true, message: "Stored files successfully." };
             }
             else {
-                throw { status: false, message: "Error storing in asset canister: " + Object.values(result)[0] };
+                throw this.handleResponseError(result.err);
             }
         } catch (error: any) {
             console.log(`Error storing in asset canister:`, error)
@@ -477,7 +492,7 @@ class MainApi {
 
             if ('err' in result) {
                 console.log(`ERROR IN REUSLT`)
-                throw new Error(result.err);
+                throw this.handleResponseError(result.err);
             }
 
             return result.ok.map((project: Project) => {
@@ -520,7 +535,6 @@ class MainApi {
                 throw new Error("Identity not initialized.");
             }
 
-
             const result = await this.actor.get_user_usage();
             if (!result) {
                 throw new Error("Failed to get projects");
@@ -528,14 +542,13 @@ class MainApi {
 
             if ('err' in result) {
                 console.log(`ERROR IN REUSLT`)
-                throw new Error(result.err);
+                throw this.handleResponseError(result.err);
             }
-
 
             return serializedUsageLog(result.ok);
         } catch (error) {
             console.error(`Error getting projects:`, error);
-            return null;
+            throw error;
         }
     }
 
@@ -556,16 +569,15 @@ class MainApi {
                 throw new Error("Failed to get activity logs");
             }
             console.log(`Activity lgs`, result)
-            if ('err' in result) {
-                throw new Error(result.err);
-            }
             if ('ok' in result) {
                 console.log(`retr`, result.ok[0])
                 console.log(`retr`, result.ok.map(o => { return { ...o, create_time: Number(o.create_time / BigInt(1_000_000)) } }));
 
                 return result.ok.map(o => { return { ...o, create_time: Number(o.create_time / BigInt(1_000_000)) } });
             }
-            return result as ActivityLog[];
+            else {
+                throw this.handleResponseError(result.err);
+            }
         } catch (error) {
             console.error(`Error getting activity logs:`, error);
             throw error;
