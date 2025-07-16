@@ -29,6 +29,7 @@ import { mapHeaderContent } from "../../utility/headerCard";
 import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
 import { useDeploymentLogic } from "../../hooks/useDeploymentLogic";
+import { useToaster } from "../../context/ToasterContext/ToasterContext";
 
 // Tag and sorting options
 const planMap: Record<string, string> = {
@@ -67,6 +68,7 @@ const ProjectsComponent: React.FC = () => {
   const { identity } = useIdentity();
   const { agent } = useHttpAgent();
   const { summon, destroy } = useLoaderOverlay();
+  const { setToasterData, setShowToaster } = useToaster();
   const { usageData: freemiumSlot, fetchUsage } = useFreemiumLogic();
   const {
     projects,
@@ -273,7 +275,7 @@ const ProjectsComponent: React.FC = () => {
                 onInstallCode={async (e) => {
                   try {
                     summon("Setting up canister...");
-                    await handleInstallCode(
+                    const result = await handleInstallCode(
                       e,
                       !!project.canister_id,
                       project.id,
@@ -282,7 +284,34 @@ const ProjectsComponent: React.FC = () => {
                       identity,
                       agent
                     );
-                  } catch (error) {
+
+                    if (result) {
+                      console.log(
+                        `Canister deployed successfully: ${result.canisterId}`
+                      );
+                      setToasterData({
+                        headerContent: "Success",
+                        toastStatus: true,
+                        toastData: `Attached runner: ${result.canisterId}`,
+                        textColor: "green",
+                        timeout: 3000,
+                      });
+                      setShowToaster(true);
+                    }
+                  } catch (error: any) {
+                    console.error("Failed to deploy canister:", error.message);
+                    setToasterData({
+                      headerContent: "Error",
+                      toastStatus: false,
+                      toastData: error.message || "Failed to attach runner.",
+                      textColor: "red",
+                      timeout: 5000,
+                    });
+                    setShowToaster(true);
+                    // Handle subscription-related errors
+                    if (error.message.includes("subscription")) {
+                      navigate("/dashboard/billing");
+                    }
                   } finally {
                     destroy();
                   }

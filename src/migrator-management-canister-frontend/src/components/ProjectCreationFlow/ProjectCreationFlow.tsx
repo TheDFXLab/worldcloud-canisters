@@ -12,6 +12,7 @@ import { useProjects } from "../../context/ProjectContext/ProjectContext";
 import { useProjectsLogic } from "../../hooks/useProjectsLogic";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import { useToaster } from "../../context/ToasterContext/ToasterContext";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -49,6 +50,8 @@ const ProjectCreationFlow: React.FC<ProjectCreationFlowProps> = () => {
   const { handleInstallCode, projects } = useProjectsLogic();
   const { identity } = useIdentity();
   const { agent } = useHttpAgent();
+  const { setToasterData, setShowToaster } = useToaster();
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     // Only allow moving forward if we have the necessary data
     if (newValue > activeTab && !canProceed) {
@@ -59,19 +62,32 @@ const ProjectCreationFlow: React.FC<ProjectCreationFlowProps> = () => {
 
   const handleProjectCreated = async (e: any, data: SerializedProject) => {
     setCanProceed(true);
-    const res = await handleInstallCode(
-      e,
-      false,
-      BigInt(data.id),
-      null,
-      "freemium" in data.plan,
-      identity,
-      agent
-    );
+    try {
+      const res = await handleInstallCode(
+        e,
+        false,
+        BigInt(data.id),
+        null,
+        "freemium" in data.plan,
+        identity,
+        agent
+      );
 
-    if (!res) return;
-    setProjectData(res.project);
-    setActiveTab(1); // Move to deployment method selection
+      if (!res) return;
+      setProjectData(res.project);
+      setActiveTab(1); // Move to deployment method selection
+    } catch (error: any) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: error.message || "Failed to create new project.",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      if (error.message.includes("subscription")) {
+        navigate("/dashboard/billing");
+      }
+    }
   };
 
   const handleDeploymentMethodSelected = () => {
