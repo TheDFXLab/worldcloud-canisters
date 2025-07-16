@@ -6,9 +6,10 @@
   height: calc(100vh - 64px);
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem 2rem 0 2rem;
+  padding: 0rem 2rem 0 2rem;
   position: relative;
   overflow: hidden;
+  overflow-y: auto;
   background-color: var(--background);
   width: 100%;
   height: max-content;
@@ -164,9 +165,9 @@
 /* Configure Step Styles */
 .configure-container {
   width: 100%;
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 0.5rem;
 }
 
 .deployment-configure {
@@ -175,7 +176,7 @@
 }
 
 .configure-header {
-  margin-bottom: 3rem;
+  margin-bottom: 0rem;
   text-align: center;
 }
 
@@ -193,7 +194,7 @@
 
 .configure-content {
   background: var(--background);
-  padding: 2rem;
+  padding: 0rem 2rem;
   max-width: 800px;
   margin: auto auto;
   border-radius: 12px;
@@ -210,6 +211,7 @@
   display: block;
   color: var(--text-primary);
   font-weight: 500;
+  font-size: var(--font-size-lg);
   margin-bottom: 0.75rem;
 }
 

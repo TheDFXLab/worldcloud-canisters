@@ -248,7 +248,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
         throw new Error("Please login to deploy");
       }
       if (!canisterId) {
-        throw new Error("Please select a canister");
+        throw new Error("Please request a session to deploy code to a runner.");
       }
       if (!repoStates[repo].selectedPath) {
         throw new Error("Please select a source path");
@@ -384,6 +384,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
         textColor: "red",
         timeout: 5000,
       });
+      setShowToaster(true);
     }
   };
 
@@ -474,8 +475,8 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
             </button>
           )}
 
-          <h2>Configure Deployment</h2>
-          <p>Configure deployment settings for {state.selectedRepo.name}</p>
+          {/* <h2>Configure Deployment</h2>
+          <p>Configure deployment settings for {state.selectedRepo.name}</p> */}
         </div>
 
         <div className="configure-content">
@@ -579,6 +580,10 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
           // !canisterId ||
           !repoStates[state.selectedRepo!.full_name]?.selectedPath,
         isHidden: hideActionBar,
+      });
+      setHeaderCard({
+        title: "Source Code",
+        description: "Select source branch",
       });
     }
   }, [
