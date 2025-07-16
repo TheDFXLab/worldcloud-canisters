@@ -228,26 +228,20 @@ module {
             return _slot_ids;
         };
 
-        public func is_expired_session(slot_id : Nat) : Bool {
+        public func is_expired_session(slot_id : Nat) : Types.Response<Bool> {
             let slot : Types.ShareableCanister = switch (slots.get(slot_id)) {
-                case (null) {
-                    Debug.trap("Slot not found.");
-                };
+                case (null) { return #err(Errors.NotFoundSlot()) };
                 case (?slot) {
                     if (slot.status == #occupied and (Time.now() - slot.start_timestamp >= slot.duration)) {
-                        // let slot : Types.ShareableCanister = Utility.expect(slots.get(slot_id), Errors.NotFoundSlot());
-                        // Debug.print("TIME NOW:" # Int.toText(Int.abs(Time.now())));
-                        // (Int.abs(Time.now()) - slot.start_timestamp) > RATE_LIMIT_WINDOW * 1_000_000_000;
-                        return true;
+                        return #ok(true);
                     };
-                    return false;
+                    return #ok(false);
                 };
             };
-            return true;
+            return #ok(true);
         };
 
         public func is_active_session(user : Principal) : async Bool {
-
             try {
                 let usage_log : Types.UsageLog = Utility.expect(
                     usage_logs.get(user),
@@ -302,7 +296,7 @@ module {
         //
 
         // Requesting a new freemium session
-        public func request_session(user : Principal, project_id : Nat) : async ?Types.ShareableCanister {
+        public func request_session(user : Principal, project_id : Nat) : async Types.Response<?Types.ShareableCanister> {
             assert not Principal.isAnonymous(user);
 
             let available_slot_ids : [Nat] = get_available_slots();
@@ -313,15 +307,15 @@ module {
 
             if (available_slot_ids.size() == 0) {
                 Debug.print("No slots found. Exiting...");
-                return null;
+                return #ok(null);
             };
 
             Debug.print("Starting a session...");
             try {
                 let slot : Types.ShareableCanister = start_session(available_slot_ids[0], user, project_id);
-                ?slot;
+                #ok(?slot);
             } catch (e : Error) {
-                Debug.trap(Error.message(e));
+                return #err(Error.message(e));
             };
         };
 
@@ -442,10 +436,10 @@ module {
             return slot.project_id;
         };
 
-        public func create_slot(owner : Principal, user : Principal, canister_id : Principal, project_id : ?Nat, start_cycles : Nat) : Nat {
+        public func create_slot(owner : Principal, user : Principal, canister_id : Principal, project_id : ?Nat, start_cycles : Nat) : Types.Response<Nat> {
             // Limit number of canisters createable
             if (Iter.toArray(slots.keys()).size() >= MAX_SHAREABLE_CANISTERS) {
-                Debug.trap(Errors.MaxSlotsReached());
+                return #err(Errors.MaxSlotsReached());
             };
 
             // TODO: can add canister principal  and is_wasm_installed here
@@ -465,7 +459,7 @@ module {
             slots.put(next_slot_id, new_slot_canister);
             next_slot_id += 1;
 
-            return next_slot_id - 1;
+            return #ok(next_slot_id - 1);
         };
 
         // Method for assignign new canister to a slot

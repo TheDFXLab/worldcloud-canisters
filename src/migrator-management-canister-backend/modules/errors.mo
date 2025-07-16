@@ -1,15 +1,23 @@
 /** Error Types */
 module ErrorType {
+    /** System */
+    public func NotFound(resource : Text) : Text = resource # " not found.";
+    public func NotInitialized(resource : Text) : Text = resource # " is not initialized";
+    public func NotFoundWasm() : Text = "Asset canister WASM code is not installed.";
     /** Timer */
     public func NotFoundTimer() : Text = "Timer not found";
     /** Balance */
     public func InsufficientFunds() : Text = "Insufficient ICP balance";
     public func PaymentProcessingFailure() : Text = "Payment processing failed";
     public func TreasuryNotSet() : Text = "Treasury not set";
+    public func TransferFailed() : Text = "Transfer failed.";
+    public func FailedDeposit() : Text = "Deposit failed unexpectedly.";
+
     /** Subscription */
     public func SubscriptionNotFound() : Text = "Subscription not found";
     public func SubscriptionAlreadyExists() : Text = "Already subscribed";
     public func InvalidTier() : Text = "Unidentified tier";
+    public func SubscriptionLimitReached() : Text = "You have reached the maximum number of premium projects for your subscription tier.";
 
     /** Access Control */
     public func Unauthorized() : Text = "Unauthorized";

@@ -107,23 +107,15 @@ module {
 
         public func get_subscription(caller : Principal) : async Types.Response<Types.Subscription> {
             switch (subscriptions.get(caller)) {
-                case (null) {
-                    return #err("Subscription not found");
-                };
-                case (?sub) {
-                    return #ok(sub);
-                };
+                case (null) { return #err(Errors.SubscriptionNotFound()) };
+                case (?sub) { return #ok(sub) };
             };
         };
 
         private func _get_subscription(caller : Principal) : async ?Types.Subscription {
             switch (subscriptions.get(caller)) {
-                case (null) {
-                    return null;
-                };
-                case (?sub) {
-                    return ?sub;
-                };
+                case (null) { return null };
+                case (?sub) { return ?sub };
             };
         };
 
