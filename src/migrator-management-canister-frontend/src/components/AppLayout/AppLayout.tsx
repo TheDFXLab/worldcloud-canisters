@@ -43,6 +43,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   const { activeTab, setIsMobileMenuOpen } = useSideBar();
   const { agent } = useHttpAgent();
   const { headerCard } = useHeaderCard();
+  const { toasterData, showToaster, setShowToaster } = useToaster();
 
   /** State */
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
@@ -123,6 +124,19 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   return (
     <div className="app-layout" style={{ display: "flex", height: "100vh" }}>
       <LoaderOverlay />
+      {toasterData && (
+        <Toaster
+          headerContent={toasterData.headerContent}
+          toastStatus={toasterData.toastStatus}
+          toastData={toasterData.toastData}
+          textColor={toasterData.textColor || "white"}
+          show={showToaster}
+          onHide={() => setShowToaster(false)}
+          timeout={toasterData.timeout || 3000}
+          link=""
+          overrideTextStyle=""
+        />
+      )}
 
       <Sidebar
         isSidebarCollapsed={isSidebarCollapsed}
