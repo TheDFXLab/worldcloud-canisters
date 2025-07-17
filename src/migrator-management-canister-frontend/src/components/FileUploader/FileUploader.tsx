@@ -283,7 +283,7 @@ function FileUploader({ project_id }: { project_id: bigint }) {
         undefined // since we are uploading files directly from zip
       );
 
-      if (result && result.status) {
+      if (result) {
         setUploadedSize(uploadedSize + totalSize);
         return {
           status: true,
@@ -293,7 +293,7 @@ function FileUploader({ project_id }: { project_id: bigint }) {
       } else {
         return {
           status: false,
-          message: result?.message ?? "Failed to upload file batch.",
+          message: result ?? "Failed to upload file batch.",
         };
       }
     } catch (error: any) {

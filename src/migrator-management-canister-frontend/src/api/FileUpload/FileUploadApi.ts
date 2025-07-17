@@ -149,7 +149,7 @@ class FileUploadApi {
                 workflowRunDetails
             );
 
-            if (result && result.status) {
+            if (result) {
                 return {
                     status: true,
                     message: `Upload file batch success.`,
@@ -158,7 +158,7 @@ class FileUploadApi {
             } else {
                 return {
                     status: false,
-                    message: result?.message ?? "Failed to upload file batch.",
+                    message: result ?? "Failed to upload file batch.",
                 };
             }
         } catch (error: any) {
