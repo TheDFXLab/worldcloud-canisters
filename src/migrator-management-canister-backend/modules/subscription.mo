@@ -181,8 +181,9 @@ module {
                         max_slots = tier.slots;
                         used_slots = 0;
                         canisters = [];
-                        date_created = Time.now();
-                        date_updated = Time.now();
+                        free_canisters = [];
+                        date_created = Utility.get_time_now(#milliseconds);
+                        date_updated = Utility.get_time_now(#milliseconds);
                     };
 
                     // subscription;
@@ -201,8 +202,9 @@ module {
                         max_slots = tier.slots;
                         used_slots = sub.used_slots;
                         canisters = sub.canisters;
-                        date_created = Time.now();
-                        date_updated = Time.now();
+                        free_canisters = [];
+                        date_created = Utility.get_time_now(#milliseconds);
+                        date_updated = Utility.get_time_now(#milliseconds);
                     };
 
                     await _create_subscription(caller, tier_id, subscription, payment_receiver);
@@ -221,6 +223,43 @@ module {
                     return true;
                 };
             };
+        };
+
+        // Decrements the usage count, and pushes the canister to unused array
+        public func update_sub_delete_project(caller : Principal, canister_id : Principal) : async Types.Response<()> {
+            let subscription : Types.Subscription = switch (await get_subscription(caller)) {
+                case (#err(_msg)) { return #err(_msg) };
+                case (#ok(sub)) {
+                    sub;
+                };
+            };
+
+            // Remove project canister from used array
+            let updated_used_canisters : [Principal] = Array.filter(subscription.canisters, func(c : Principal) : Bool { c == canister_id });
+
+            // Update free canisters
+            let updated_free_canisters = Array.append(subscription.free_canisters, [canister_id]);
+
+            // Decrement used slots count
+            let updated_used_slot_count : Nat = switch (subscription.used_slots == 0) {
+                case (true) { 0 };
+                case (false) { subscription.used_slots - 1 };
+            };
+
+            // Update subscription records
+            let updated_subscription : Types.Subscription = {
+                user_id = subscription.user_id;
+                tier_id = subscription.tier_id;
+                canisters = updated_used_canisters;
+                free_canisters = updated_free_canisters;
+                used_slots = updated_used_slot_count;
+                max_slots = subscription.max_slots;
+                date_created = subscription.date_created;
+                date_updated = Utility.get_time_now(#milliseconds);
+            };
+
+            subscriptions.put(caller, updated_subscription);
+            return #ok();
         };
 
         public func validate_subscription(caller : Principal) : async Bool {

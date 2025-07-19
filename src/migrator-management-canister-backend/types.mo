@@ -246,6 +246,8 @@ module {
         project_id : Nat;
         files : [StaticFile];
         workflow_run_details : ?WorkflowRunDetails;
+        current_batch : Nat;
+        total_batch_count : Nat;
     };
 
     public type WorkflowRunStatus = {
@@ -316,6 +318,7 @@ module {
         user_id : Principal;
         tier_id : Nat;
         canisters : [Principal];
+        free_canisters : [Principal];
         used_slots : Nat;
         max_slots : Nat;
         date_created : TimeLib.Time;
