@@ -64,7 +64,6 @@ const HomePage: React.FC = () => {
 
   // Set the active tab to home and header card
   useEffect(() => {
-    console.log(`SETTING HOME ACTIVE TAB`);
     setActiveTab("home");
     setActionBar(null);
     setHeaderCard({
