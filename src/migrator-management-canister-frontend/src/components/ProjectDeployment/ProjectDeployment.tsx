@@ -149,7 +149,7 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
           )}
 
           {selectedMethod === "github" ? (
-            <RepoSelector />
+            <RepoSelector projectId={projectId} canisterId={canisterId} />
           ) : (
             <FileUploader
               project_id={BigInt(projectId || projectData?.newProject?.id)}
