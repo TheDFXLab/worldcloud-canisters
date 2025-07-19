@@ -3,6 +3,7 @@
   min-height: calc(100vh - 64px);
   background-color: var(--background);
   /* overflow-y: auto; */
+  margin: 3rem auto;
 }
 
 .settings-header {
@@ -23,11 +24,12 @@
 
 .settings-grid {
   max-width: 1200px;
-  margin: 0 auto;
+  height: max-content;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
   padding: 0 1rem;
+  margin: auto auto;
 }
 
 .settings-card {
