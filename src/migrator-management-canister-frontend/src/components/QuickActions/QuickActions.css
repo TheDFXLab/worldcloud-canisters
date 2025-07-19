@@ -1,128 +1,97 @@
 .quick-actions {
-  background: var(--background-light);
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.quick-actions-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 1.5rem;
-}
-
-.quick-actions-section {
-  margin-bottom: 1.5rem;
-}
-
-.quick-actions-section:last-child {
-  margin-bottom: 0;
-}
-
-.section-title {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+  margin-bottom: 2rem;
 }
 
 .quick-actions-grid {
   display: grid;
-  grid-template-columns: repeat(var(--grid-cols, 2), 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .quick-action-item {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  padding: 1rem;
-  background: var(--background-default);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+  gap: 1rem;
+  min-width: 0;
+  height: 60px;
 }
 
 .quick-action-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  background: var(--background-hover, rgba(0, 0, 0, 0.02));
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--color-primary);
 }
 
 .quick-action-icon {
+  color: var(--color-primary);
+  font-size: 1.5rem !important;
+  flex-shrink: 0;
+}
+
+.quick-action-content {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  margin-right: 0.75rem;
-  background: var(--icon-background, rgba(0, 0, 0, 0.04));
-  color: var(--icon-color, #666);
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
 }
 
 .quick-action-title {
+  color: var(--text-secondary);
   font-size: 0.9rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quick-action-value {
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
 /* Dangerous actions styling */
 .quick-action-item.dangerous {
-  border-color: var(--danger-color, rgba(220, 38, 38, 0.1));
-  color: var(--danger-text, rgb(220, 38, 38));
+  border-color: var(--color-error);
 }
 
 .quick-action-item.dangerous .quick-action-icon {
-  background: var(--danger-background, rgba(220, 38, 38, 0.1));
-  color: var(--danger-color, rgb(220, 38, 38));
+  color: var(--color-error);
 }
 
 .quick-action-item.dangerous:hover {
-  background: var(--danger-hover, rgba(220, 38, 38, 0.05));
+  border-color: var(--color-error);
+  background: var(--background-hover);
 }
 
-.quick-action-item.dangerous .quick-action-title {
-  color: var(--danger-color, rgb(220, 38, 38));
+.section-title {
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  font-weight: 500;
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
+@media (max-width: 1200px) {
+  .quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .quick-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
   .quick-action-item {
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .quick-action-icon {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-  }
-
-  .quick-action-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .section-title {
-    border-bottom-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .quick-action-item.dangerous {
-    border-color: rgba(220, 38, 38, 0.2);
-    color: rgb(248, 113, 113);
-  }
-
-  .quick-action-item.dangerous .quick-action-icon {
-    background: rgba(220, 38, 38, 0.2);
-    color: rgb(248, 113, 113);
-  }
-
-  .quick-action-item.dangerous:hover {
-    background: rgba(220, 38, 38, 0.1);
-  }
-
-  .quick-action-item.dangerous .quick-action-title {
-    color: rgb(248, 113, 113);
+    padding: 1rem;
   }
 }
