@@ -1,8 +1,8 @@
 .home-container {
-  padding: 0rem 2rem;
+  padding: 0rem 1rem;
   /* padding-top: 0.5rem; */
   /* margin-top: 10rem; */
-
+  margin-top: -2rem;
   min-height: calc(100vh - 64px);
   background-color: var(--background);
   height: 100%;
@@ -32,6 +32,7 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
   margin-bottom: 2rem;
+  margin-top: 1rem;
 }
 
 .stat-card {
