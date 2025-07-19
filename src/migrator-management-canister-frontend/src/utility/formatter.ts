@@ -29,11 +29,9 @@ export const shortenPrincipal = (principal: string) => {
 
 export const formatDate = (timestamp: number | undefined): string => {
     if (!timestamp) return 'N/A';
-
     const date = new Date(timestamp);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
     // For timestamps less than a minute ago
     if (diffInSeconds < 60) {
         return 'just now';
@@ -53,7 +51,6 @@ export const formatDate = (timestamp: number | undefined): string => {
         const days = Math.floor(diffInSeconds / 86400);
         return `${days} day${days > 1 ? 's' : ''} ago`;
     }
-
     // For older timestamps, use the full date format
     return date.toLocaleDateString('en-US', {
         year: 'numeric',

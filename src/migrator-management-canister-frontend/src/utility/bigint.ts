@@ -165,12 +165,31 @@ export const bigIntToNumber = (value: bigint | number | undefined): number | und
     if (typeof value === 'number') return value;
     return Number(value);
 };
+type TimestampUnit = "seconds" | "milliseconds" | "microseconds" | "nanoseconds"
+export const bigIntToDate = (origin_timestamp: bigint | number | undefined, source_unit: TimestampUnit = "nanoseconds"): number | undefined => {
+    if (origin_timestamp === undefined) return undefined;
 
-export const bigIntToDate = (nanoseconds: bigint | number | undefined): number | undefined => {
-    if (nanoseconds === undefined) return undefined;
-    const value = bigIntToNumber(nanoseconds);
+    const value = bigIntToNumber(origin_timestamp);
     if (value === undefined) return undefined;
-    return Math.floor(value / 1_000_000); // Convert nanoseconds to milliseconds by dividing by 1M
+    let divisor = 1_000_000;
+    switch (source_unit) {
+        case "seconds":
+            divisor = 1 / 1_000;
+            break;
+        case "milliseconds":
+            divisor = 1;
+            break;
+        case "microseconds":
+            divisor = 1_000;
+            break;
+        case "nanoseconds":
+            divisor = 1_000_000;
+            break;
+        default:
+            break;
+    }
+    const date_timestamp = Math.floor(value / divisor);// Convert nanoseconds to milliseconds by dividing by 1M
+    return date_timestamp;
 };
 
 export const dateToNano = (date: Date): bigint => {
