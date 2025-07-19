@@ -64,9 +64,7 @@ function CanisterOptions({ deployment, show, onHide }: CanisterOptionsProps) {
           <div className="detail-row">
             <span className="label">Created:</span>
             <span className="value">
-              {new Date(
-                Number(deployment.date_created) / 1000000
-              ).toLocaleString()}
+              {new Date(Number(deployment.date_created)).toLocaleString()}
             </span>
           </div>
 

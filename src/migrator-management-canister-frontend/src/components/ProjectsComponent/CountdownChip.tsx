@@ -27,11 +27,11 @@ const CountdownChip: React.FC<CountdownChipProps> = ({
   className = "",
   onExpire,
 }) => {
-  // Convert nanoseconds to milliseconds
+  // milliseconds
   const startMs =
     typeof startTimestamp === "bigint"
-      ? Number(startTimestamp) / 1_000_000
-      : Number(startTimestamp) / 1_000_000;
+      ? Number(startTimestamp)
+      : Number(startTimestamp);
   const durationSec = Number(duration);
   const expiryMs = startMs + durationSec * 1000;
 

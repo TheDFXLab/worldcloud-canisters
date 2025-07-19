@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo } from "react";
 import "./WebsitesComponent.css";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import { useSubscription } from "../../context/SubscriptionContext/SubscriptionContext";
-import { useFreemium } from "../../context/FreemiumContext/FreemiumContext";
 import LanguageIcon from "@mui/icons-material/Language";
 import StorageIcon from "@mui/icons-material/Storage";
 import UpdateIcon from "@mui/icons-material/Update";
@@ -275,7 +274,7 @@ const WebsitesComponent: React.FC = () => {
                       <span className="detail-value">
                         {deployment?.date_updated
                           ? new Date(
-                              Number(deployment.date_updated) / 1000000
+                              Number(deployment.date_updated)
                             ).toLocaleString()
                           : "-"}
                       </span>

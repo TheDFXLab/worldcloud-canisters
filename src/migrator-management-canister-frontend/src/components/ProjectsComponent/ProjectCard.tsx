@@ -184,7 +184,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               <span className="detail-label">Last Updated</span>
               <span className="detail-value">
                 {project.date_updated
-                  ? new Date(project.date_updated / 1000000).toLocaleString()
+                  ? new Date(project.date_updated).toLocaleString()
                   : "-"}
               </span>
             </div>
@@ -195,7 +195,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               <span className="detail-label">Date Created</span>
               <span className="detail-value">
                 {project.date_created
-                  ? new Date(project.date_created / 1000000).toLocaleString()
+                  ? new Date(project.date_created).toLocaleString()
                   : "-"}
               </span>
             </div>

@@ -61,12 +61,12 @@ export const ProjectTableRow: React.FC<ProjectTableRowProps> = ({
       </td>
       <td>
         {project.date_created
-          ? new Date(project.date_created / 1000000).toLocaleString()
+          ? new Date(project.date_created).toLocaleString()
           : "-"}
       </td>
       <td>
         {project.date_updated
-          ? new Date(project.date_updated / 1000000).toLocaleString()
+          ? new Date(project.date_updated).toLocaleString()
           : "-"}
       </td>
       <td style={{ display: "flex", gap: 8 }}>

@@ -59,7 +59,7 @@ const HomePage: React.FC = () => {
     (d) => d.status === "installed"
   ).length;
   const lastDeployment = deployments[0]?.date_updated
-    ? new Date(Number(deployments[0].date_updated) / 1000000).toLocaleString()
+    ? new Date(Number(deployments[0].date_updated)).toLocaleString()
     : "No deployments yet";
 
   // Set the active tab to home and header card
@@ -201,9 +201,7 @@ const HomePage: React.FC = () => {
                     {deployment.canister_id.toText()}
                   </p>
                   <p className="activity-time">
-                    {new Date(
-                      Number(deployment.date_updated) / 1000000
-                    ).toLocaleString()}
+                    {new Date(Number(deployment.date_updated)).toLocaleString()}
                   </p>
                 </div>
                 <div className="activity-status">{deployment.status}</div>
