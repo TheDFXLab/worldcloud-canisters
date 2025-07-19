@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../state/store";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import { useCyclesLogic } from "../../hooks/useCyclesLogic";
@@ -21,6 +21,10 @@ import FolderIcon from "@mui/icons-material/Folder";
 import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { SerializedWorkflowRunDetail } from "../../utility/principal";
 import { useDeploymentLogic } from "../../hooks/useDeploymentLogic";
+import { useProjectsLogic } from "../../hooks/useProjectsLogic";
+import { useIdentity } from "../../context/IdentityContext/IdentityContext";
+import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 
 interface Project {
   id: bigint;
@@ -40,7 +44,8 @@ interface ActivityLog {
 }
 
 export const CanisterOverview: React.FC = () => {
-  const [expanded, setExpanded] = useState<string | false>("canisterInfo");
+  const dispatch = useDispatch();
+  const [expanded, setExpanded] = useState<string | false>("none");
   const { projectId } = useParams();
   const { deployments, getDeployment, getWorkflowRunHistory } =
     useDeployments();
@@ -52,6 +57,10 @@ export const CanisterOverview: React.FC = () => {
     maxCyclesExchangeable,
     isLoadingEstimateCycles,
   } = useCyclesLogic();
+  const { handleFetchActivityLogs } = useProjectsLogic();
+  const { identity } = useIdentity();
+  const { agent } = useHttpAgent();
+  const { setHeaderCard } = useHeaderCard();
 
   const [isLoading, setIsLoading] = useState(true);
   const [workflowRunHistory, setWorkflowRunHistory] = useState<
@@ -67,6 +76,19 @@ export const CanisterOverview: React.FC = () => {
     (p) => projectId && p.id.toString() === projectId
   ) as Project | undefined;
 
+  // Fetch logs when component mounts or when dependencies change
+  useEffect(() => {
+    if (projectId !== undefined && identity && agent) {
+      handleFetchActivityLogs(BigInt(projectId));
+    }
+  }, [dispatch, projectId, identity, agent]);
+
+  useEffect(() => {
+    setHeaderCard({
+      title: "Project Overview",
+    });
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!projectId) return;
@@ -75,7 +97,6 @@ export const CanisterOverview: React.FC = () => {
         setIsLoading(true);
         const runHistory = await getWorkflowRunHistory(BigInt(projectId));
         setWorkflowRunHistory(runHistory || []);
-
         if (currentProject?.canister_id) {
           const info = getDeployment(currentProject.canister_id);
           setCanisterInfo(info);
@@ -111,6 +132,48 @@ export const CanisterOverview: React.FC = () => {
   return (
     <div className="canister-overview-container">
       <div className="canister-overview-content">
+        <Accordion
+          expanded={expanded === "projectInfo"}
+          onChange={handleChange("projectInfo")}
+          className="overview-accordion"
+        >
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            className="accordion-summary"
+          >
+            <div className="accordion-header">
+              <FolderIcon className="accordion-icon" />
+              <span className="accordion-title">Project Information</span>
+            </div>
+          </AccordionSummary>
+          <AccordionDetails>
+            <ProjectInfoCard
+              project={currentProject}
+              cyclesStatus={cyclesStatus}
+            />
+          </AccordionDetails>
+        </Accordion>
+        <Accordion
+          expanded={expanded === "activity"}
+          onChange={handleChange("activity")}
+          className="overview-accordion"
+        >
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            className="accordion-summary"
+          >
+            <div className="accordion-header">
+              <TimelineIcon className="accordion-icon" />
+              <span className="accordion-title">Activity</span>
+            </div>
+          </AccordionSummary>
+          <AccordionDetails>
+            <ActivityCard
+              isLoadingActivityLogs={isLoadingActivityLogs}
+              activityLogs={formattedActivityLogs}
+            />
+          </AccordionDetails>
+        </Accordion>
         <Accordion
           expanded={expanded === "canisterInfo"}
           onChange={handleChange("canisterInfo")}
@@ -179,50 +242,6 @@ export const CanisterOverview: React.FC = () => {
             <DeploymentHistoryCard
               isLoading={isLoading}
               workflowRunHistory={workflowRunHistory}
-            />
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion
-          expanded={expanded === "activity"}
-          onChange={handleChange("activity")}
-          className="overview-accordion"
-        >
-          <AccordionSummary
-            expandIcon={<ExpandMoreIcon />}
-            className="accordion-summary"
-          >
-            <div className="accordion-header">
-              <TimelineIcon className="accordion-icon" />
-              <span className="accordion-title">Activity</span>
-            </div>
-          </AccordionSummary>
-          <AccordionDetails>
-            <ActivityCard
-              isLoadingActivityLogs={isLoadingActivityLogs}
-              activityLogs={formattedActivityLogs}
-            />
-          </AccordionDetails>
-        </Accordion>
-
-        <Accordion
-          expanded={expanded === "projectInfo"}
-          onChange={handleChange("projectInfo")}
-          className="overview-accordion"
-        >
-          <AccordionSummary
-            expandIcon={<ExpandMoreIcon />}
-            className="accordion-summary"
-          >
-            <div className="accordion-header">
-              <FolderIcon className="accordion-icon" />
-              <span className="accordion-title">Project Information</span>
-            </div>
-          </AccordionSummary>
-          <AccordionDetails>
-            <ProjectInfoCard
-              project={currentProject}
-              cyclesStatus={cyclesStatus}
             />
           </AccordionDetails>
         </Accordion>

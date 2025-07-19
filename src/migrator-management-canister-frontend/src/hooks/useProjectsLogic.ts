@@ -14,7 +14,8 @@ import {
     setViewMode,
     getUserProjects,
     setLoading,
-    deployProject
+    deployProject,
+    fetchActivityLogs
 } from '../state/slices/projectsSlice';
 import { RootState, AppDispatch } from '../state/store';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
@@ -77,6 +78,17 @@ export const useProjectsLogic = () => {
         dispatch(setViewMode(viewMode === 'card' ? 'table' : 'card'));
     }, [dispatch, viewMode]);
 
+    const handleFetchActivityLogs = useCallback((projectId: bigint) => {
+        if (identity && agent) {
+            dispatch(fetchActivityLogs({
+                identity,
+                agent,
+                projectId
+            }));
+        }
+
+    }, [dispatch, identity, agent])
+
     const handleInstallCode = useCallback(async (
         e: React.MouseEvent<HTMLButtonElement>,
         hasCanister: boolean,
@@ -87,7 +99,6 @@ export const useProjectsLogic = () => {
         agent: any
     ) => {
         e.stopPropagation();
-
         if (hasCanister) {
             navigate(`/dashboard/deploy/${canister_id}/${project_id}`);
             return;
@@ -183,5 +194,6 @@ export const useProjectsLogic = () => {
         handleVisitWebsite,
         handleProjectClick,
         refreshProjects,
+        handleFetchActivityLogs
     };
 }; 
