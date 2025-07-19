@@ -83,8 +83,8 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
   const { fetchHttpAgent, clearHttpAgent, agent } = useHttpAgent();
   const queryClient = useQueryClient();
   const dispatch = useDispatch<AppDispatch>();
+  const { setMessage, summon, destroy } = useLoaderOverlay();
 
-  const { setMessage } = useLoaderOverlay();
   const [isConnected, setIsConnected] = useState(() => {
     // Check if user was previously connected
     const stored = localStorage.getItem("connectionStatus");
@@ -198,7 +198,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
 
       // Load initial data after successful authentication
       if (_agent) {
-        await loadInitialData(_identity, _agent);
+        loadInitialData(_identity, _agent);
       }
 
       return _identity;
@@ -242,6 +242,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
     try {
       console.log(`Connecting wallet`);
       setIsLoadingIdentity(true);
+      summon("Logging in...");
       const _authClient = await AuthClient.create({
         idleOptions: {
           disableIdle: true,
@@ -304,12 +305,13 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       );
 
       const authApi = new AuthApi();
-      await authApi.signIn(identity, agent, setMessage);
+      summon("Requesting challenge message to sign...");
+      await authApi.signIn(identity, agent, summon);
       setIdentity(identity);
       setIsConnected(true);
 
       // Load initial data after successful authentication
-      await loadInitialData(identity, agent);
+      loadInitialData(identity, agent);
 
       return identity;
     } catch (error) {
@@ -317,6 +319,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       return null;
     } finally {
       setIsLoadingIdentity(false);
+      destroy();
     }
   };
 
