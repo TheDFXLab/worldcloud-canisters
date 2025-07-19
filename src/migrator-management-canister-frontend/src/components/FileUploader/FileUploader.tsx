@@ -148,7 +148,7 @@ function FileUploader({ project_id }: { project_id: bigint }) {
       let totalUploadedSize = 0;
       // 2MB limit
       if (totalSize < 2000000) {
-        const result = await storeAssetsInCanister(unzippedFiles);
+        const result = await storeAssetsInCanister(unzippedFiles, 1, 1);
         totalUploadedSize += result.uploadedSize ?? 0;
         setUploadedSize(totalUploadedSize);
       } else {
@@ -219,7 +219,11 @@ function FileUploader({ project_id }: { project_id: bigint }) {
 
           setCurrentBytes(currentBytes + totalSize);
 
-          const result = await storeAssetsInCanister(files);
+          const result = await storeAssetsInCanister(
+            files,
+            i + 1,
+            batches.length
+          );
           if (!result) {
             setStatus(`Error: Failed to store batch ${i + 1}`);
           }
@@ -247,7 +251,11 @@ function FileUploader({ project_id }: { project_id: bigint }) {
     return files.reduce((acc, file) => acc + file.content.length, 0);
   };
 
-  const storeAssetsInCanister = async (files: StaticFile[]) => {
+  const storeAssetsInCanister = async (
+    files: StaticFile[],
+    currentBatch: number,
+    totalBatchCount: number
+  ) => {
     try {
       if (!canisterId) {
         throw new Error("Canister ID is required");
@@ -280,6 +288,8 @@ function FileUploader({ project_id }: { project_id: bigint }) {
       const result = await mainApi?.storeInAssetCanister(
         project_id,
         sanitizedFiles,
+        currentBatch,
+        totalBatchCount,
         undefined // since we are uploading files directly from zip
       );
 
