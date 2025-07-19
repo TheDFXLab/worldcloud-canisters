@@ -76,6 +76,15 @@ module {
 
             return #ok("Workflow run updated");
         };
+
+        public func delete_run_history_all() {
+            workflow_run_history := HashMap.HashMap<Nat, [Types.WorkflowRunDetails]>(0, Nat.equal, Hash.hash);
+        };
+
+        public func delete_run_history(project_id : Types.ProjectId) {
+            workflow_run_history.delete(project_id);
+        };
+
         /** End private methods*/
 
         /**Start stable management */
