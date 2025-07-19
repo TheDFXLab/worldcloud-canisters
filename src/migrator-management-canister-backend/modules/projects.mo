@@ -23,9 +23,13 @@ module {
         private var next_project_id : Nat = 0;
         private var canister_table : HashMap.HashMap<Principal, Types.CanisterDeployment> = HashMap.HashMap<Principal, Types.CanisterDeployment>(0, Principal.equal, Principal.hash);
 
-        public func get_project_by_id(project_id : Nat) : Types.Project {
-            let project : Types.Project = Utility.expect(projects.get(project_id), Errors.NotFoundProject());
-            return project;
+        public func get_project_by_id(project_id : Nat) : Types.Response<Types.Project> {
+            let project : Types.Project = switch (projects.get(project_id)) {
+                case (null) { return #err(Errors.NotFoundProject()) };
+                case (?_project) { _project };
+            };
+
+            return #ok(project);
         };
 
         public func put_project(project_id : Nat, payload : Types.Project) : () {
@@ -42,7 +46,6 @@ module {
         };
 
         public func get_projects_by_user(user : Principal, payload : Types.GetProjectsByUserPayload) : async Types.Response<[Types.Project]> {
-            assert not Principal.isAnonymous(user);
             let project_ids : [Nat] = Utility.expect_else(user_to_projects.get(user), []);
             Debug.print("Project length " # Nat.toText(project_ids.size()));
             // Early return for empty projects
@@ -78,6 +81,52 @@ module {
             #ok(result_projects);
         };
 
+        public func is_freemium_session_active(project_id : Types.ProjectId) : Types.Response<Bool> {
+            let project : Types.Project = switch (projects.get(project_id)) {
+                case (null) { return #err(Errors.NotFoundProject()) };
+                case (?p) { p };
+            };
+
+            switch (project.plan) {
+                case (#paid) { return #ok(false) };
+                case (#freemium) {
+                    if (project.canister_id == null) {
+                        return #ok(false);
+                    } else {
+                        return #ok(true);
+                    };
+                };
+            };
+        };
+
+        /** Destructive Methods */
+        public func drop_projects() : Bool {
+            projects := HashMap.HashMap<Nat, Types.Project>(0, Nat.equal, Hash.hash);
+            user_to_projects := HashMap.HashMap<Principal, [Nat]>(0, Principal.equal, Principal.hash);
+            // next_project_id := 0;
+            return true;
+        };
+
+        public func drop_project(user : Principal, project_id : Nat) : Types.Response<Bool> {
+
+            let user_projects : [Nat] = switch (user_to_projects.get(user)) {
+                case (null) { return #err(Errors.NotFoundProject()) };
+                case (?projects) { projects };
+            };
+
+            var new_array : [Nat] = [];
+            for (index in Iter.range(0, user_projects.size() - 1)) {
+                let project : Types.Project = Utility.expect(projects.get(project_id), Errors.NotFoundProject());
+                if (not (project.id == project_id)) {
+                    let non_matching : [Nat] = Array.append(new_array, [project.id]);
+                };
+            };
+
+            user_to_projects.put(user, new_array);
+            projects.delete(project_id);
+            return #ok(true);
+        };
+
         public func create_project(user : Principal, payload : Types.CreateProjectPayload) : Nat {
 
             // Create the project record
@@ -89,8 +138,8 @@ module {
                 description = payload.project_description;
                 tags = payload.tags;
                 plan = payload.plan;
-                date_created = Time.now();
-                date_updated = Time.now();
+                date_created = Utility.get_time_now(#milliseconds);
+                date_updated = Utility.get_time_now(#milliseconds);
             };
 
             Debug.print("Creating new project: " # debug_show (project));
@@ -120,28 +169,6 @@ module {
 
         public func get_stable_data_canister_table() : [(Principal, Types.CanisterDeployment)] {
             Iter.toArray(canister_table.entries());
-        };
-
-        /** Destructive Methods */
-        public func drop_projects() : Bool {
-            projects := HashMap.HashMap<Nat, Types.Project>(0, Nat.equal, Hash.hash);
-            user_to_projects := HashMap.HashMap<Principal, [Nat]>(0, Principal.equal, Principal.hash);
-            next_project_id := 0;
-            return true;
-        };
-
-        public func drop_project(user : Principal, project_id : Nat) : Bool {
-            projects.delete(project_id);
-            let user_projects : [Nat] = Utility.expect(user_to_projects.get(user), Errors.NotFoundProject());
-            var new_array : [Nat] = [];
-            for (index in Iter.range(0, user_projects.size() - 1)) {
-                let project : Types.Project = Utility.expect(projects.get(project_id), Errors.NotFoundProject());
-                if (not (project.id == project_id)) {
-                    let non_matching : [Nat] = Array.append(new_array, [project.id]);
-                };
-            };
-            user_to_projects.put(user, new_array);
-            return true;
         };
 
         // Function to restore from stable storage
