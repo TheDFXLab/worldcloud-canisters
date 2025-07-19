@@ -38,13 +38,15 @@ module {
             let activity_log : Types.ActivityLog = {
                 id = 0;
                 category = "Project";
-                description = "New project created.";
+                description = "Project created.";
                 create_time = Utility.get_time_now(#nanoseconds);
             };
+            Debug.print("Activity log " # debug_show (activity_log));
 
             // Set in mapping
             let new_logs : [Types.ActivityLog] = [activity_log];
             project_activity.put(project_id, new_logs);
+
             return #ok(true);
         };
 
@@ -72,6 +74,10 @@ module {
             project_activity.put(project_id, _new_array);
             return #ok(true);
 
+        };
+
+        public func clear_all_logs() {
+            project_activity := HashMap.HashMap<Types.ProjectId, [Types.ActivityLog]>(0, Nat.equal, Hash.hash);
         };
 
         public func clear_project_activity_logs(project_id : Types.ProjectId) : Types.Response<Bool> {
@@ -121,6 +127,7 @@ module {
 
         public func load_from_stable_project_activity(stable_data : [(Types.ProjectId, [Types.ActivityLog])]) {
             project_activity := HashMap.fromIter(stable_data.vals(), stable_data.size(), Nat.equal, Hash.hash);
+            Debug.print("Loaded " # Nat.toText(project_activity.size()) # " project activity logs from stable storage");
         };
 
         /** End class */
