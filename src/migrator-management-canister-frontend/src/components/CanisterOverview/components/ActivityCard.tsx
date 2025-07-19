@@ -1,4 +1,4 @@
-import { Skeleton } from "@mui/material";
+import { Skeleton, Chip, CircularProgress } from "@mui/material";
 import NoDataIcon from "@mui/icons-material/Description";
 import FolderIcon from "@mui/icons-material/Folder";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
@@ -6,12 +6,13 @@ import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import InfoIcon from "@mui/icons-material/Info";
 import HistoryIcon from "@mui/icons-material/History";
 import { formatDate } from "../../../utility/formatter";
+import "./ActivityCard.css";
 
 interface ActivityLog {
   id: string;
   category: string;
   description: string;
-  create_time: number; // Changed from string to number
+  create_time: number;
 }
 
 interface ActivityCardProps {
@@ -36,51 +37,49 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
     }
   };
 
-  if (isLoadingActivityLogs) {
-    return (
-      <div className="activity-loading">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} variant="rectangular" height={24} width={"100%"} />
-        ))}
-      </div>
-    );
-  }
-
-  if (!activityLogs || activityLogs.length === 0) {
-    return (
-      <div className="activity-empty">
-        <NoDataIcon className="no-data-icon" />
-        <p>No activity history</p>
-        <span className="empty-hint">
-          Activity details will appear here once actions are taken
-        </span>
-      </div>
-    );
-  }
-
   return (
-    <div className="card-secondary project-details">
-      <div className="detail-card-header">
+    <div className="overview-card">
+      <div className="card-header">
         <HistoryIcon />
         <h3>Recent Activity</h3>
       </div>
-      <div className="detail-card-content">
-        <div className="activity-list">
-          {activityLogs.map((activity) => (
-            <div key={activity.id} className="activity-item">
-              <div className="activity-icon">
-                {getActivityIcon(activity.category)}
+      <div className="card-content">
+        {isLoadingActivityLogs ? (
+          <CircularProgress />
+        ) : !activityLogs || activityLogs.length === 0 ? (
+          <div className="empty-state">
+            <NoDataIcon className="no-data-icon" />
+            <p>No activity history</p>
+            <span className="empty-hint">
+              Activity details will appear here once actions are taken
+            </span>
+          </div>
+        ) : (
+          <div className="activity-list">
+            {activityLogs.map((activity) => (
+              <div key={activity.id} className="activity-item">
+                <div className="activity-content">
+                  <div className="activity-title">
+                    <Chip
+                      label={activity.category}
+                      size="small"
+                      className="category-chip"
+                    />
+                    {activity.description}
+                  </div>
+                  <div className="activity-time-container">
+                    <div className="activity-time">
+                      {new Date(activity.create_time).toLocaleString()}
+                    </div>
+                    <div className="activity-time">
+                      {formatDate(activity.create_time).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="activity-details">
-                <p className="activity-description">{activity.description}</p>
-                <p className="activity-time">
-                  {formatDate(activity.create_time)}
-                </p>
-              </div>
-              <div className="activity-category">{activity.category}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

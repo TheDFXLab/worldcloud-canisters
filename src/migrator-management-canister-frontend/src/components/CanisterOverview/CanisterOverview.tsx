@@ -23,6 +23,7 @@ import { SerializedWorkflowRunDetail } from "../../utility/principal";
 import { fromE8sStable } from "../../utility/e8s";
 import QuickActions from "../QuickActions/QuickActions";
 import { getCanisterUrl } from "../../config/config";
+import { ActivityCard } from "./components/ActivityCard";
 
 interface Project {
   id: bigint;
@@ -344,39 +345,10 @@ export const CanisterOverview: React.FC = () => {
         </div>
 
         {/* Activity History Card */}
-        <div className="overview-card">
-          <div className="card-header">
-            <HistoryIcon />
-            <h3>Recent Activity</h3>
-          </div>
-          <div className="card-content">
-            {isLoadingActivityLogs ? (
-              <CircularProgress />
-            ) : formattedActivityLogs.length > 0 ? (
-              <div className="activity-list">
-                {formattedActivityLogs.map((log) => (
-                  <div key={log.id} className="activity-item">
-                    <div className="activity-content">
-                      <div className="activity-title">
-                        <Chip
-                          label={log.category}
-                          size="small"
-                          className="category-chip"
-                        />
-                        {log.description}
-                      </div>
-                      <div className="activity-time">
-                        {new Date(log.create_time).toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state">No recent activity</div>
-            )}
-          </div>
-        </div>
+        <ActivityCard
+          isLoadingActivityLogs={isLoadingActivityLogs}
+          activityLogs={formattedActivityLogs}
+        />
 
         {/* Usage Statistics Card */}
         <div className="overview-card">
