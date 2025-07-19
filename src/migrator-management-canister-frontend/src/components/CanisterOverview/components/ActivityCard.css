@@ -1,5 +1,122 @@
+.activity-card {
+  height: fit-content;
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-card .card-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-list {
+  overflow-y: auto;
+  padding-right: 8px; /* Space for scrollbar */
+}
+
+.activity-item {
+  background: var(--background-secondary);
+  border-radius: 6px;
+  padding: 0.6rem;
+  margin-bottom: 0.45rem;
+  transition: background-color 0.2s ease;
+}
+
+.activity-item:hover {
+  background: var(--background-hover);
+}
+
+.activity-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.activity-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
 .activity-time-container {
   display: flex;
-  flex-direction: row;
   justify-content: space-between;
+  align-items: center;
+  margin-top: 0.2rem;
+}
+
+.activity-time {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.category-chip {
+  background: var(--color-primary) !important;
+  color: white !important;
+  height: 20px !important;
+  font-size: 0.75rem !important;
+}
+
+.show-more-button {
+  margin-top: 0.6rem;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+}
+
+.show-more-button:hover {
+  background: var(--background-hover);
+}
+
+.activity-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.2rem;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 1.2rem;
+}
+
+/* Custom scrollbar for activity list */
+.activity-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.activity-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.activity-list::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+  .activity-card {
+    max-height: none;
+  }
+
+  .activity-list {
+    max-height: none;
+  }
 }

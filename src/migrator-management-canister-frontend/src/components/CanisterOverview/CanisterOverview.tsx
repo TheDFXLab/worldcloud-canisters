@@ -24,6 +24,12 @@ import { fromE8sStable } from "../../utility/e8s";
 import QuickActions from "../QuickActions/QuickActions";
 import { getCanisterUrl } from "../../config/config";
 import { ActivityCard } from "./components/ActivityCard";
+import OverviewSkeleton from "./components/OverviewSkeleton";
+import { CanisterInfoCard } from "./components/CanisterInfoCard";
+import { ProjectInfoCard } from "./components/ProjectInfoCard";
+import { CyclesCard } from "./components/CyclesCard";
+import { DeploymentHistoryCard } from "./components/DeploymentHistoryCard";
+import { UsageStatisticsCard } from "./components/UsageStatisticsCard";
 
 interface Project {
   id: bigint;
@@ -141,8 +147,63 @@ export const CanisterOverview: React.FC = () => {
     }
   };
 
+  // Loading states for different sections
+  // const loadingStates = {
+  //   project: !currentProject,
+  //   canister: !currentProject || !canisterInfo,
+  //   cycles:
+  //     !currentProject ||
+  //     isLoadingCycles ||
+  //     isLoadingBalance ||
+  //     isLoadingEstimateCycles,
+  //   activity: !currentProject || isLoadingActivityLogs,
+  //   deployment: !currentProject || isLoading,
+  //   usage: !currentProject || !canisterInfo,
+  // };
+
+  const loadingStates = {
+    project: !currentProject,
+    canister: !currentProject,
+    cycles: !currentProject,
+    activity: !currentProject,
+    deployment: !currentProject,
+    usage: !currentProject,
+  };
+
+  // const loadingStates = {
+  //   project: true,
+  //   canister: true,
+  //   cycles: true,
+  //   activity: true,
+  //   deployment: true,
+  //   usage: true,
+  // };
+
+  // Check if any section is still loading
+  const isAnyLoading = Object.values(loadingStates).some((state) => state);
+
+  if (isAnyLoading) {
+    return (
+      <div className="canister-overview-container">
+        <OverviewSkeleton loadingStates={loadingStates} />
+      </div>
+    );
+  }
+
+  // if (currentProject) {
+  //   return (
+  //     <div className="canister-overview-container">
+  //       <OverviewSkeleton loadingStates={loadingStates} />
+  //     </div>
+  //   );
+  // }
+
   if (!currentProject) {
-    return <div className="empty-state">No project found</div>;
+    return (
+      <div className="canister-overview-container">
+        <div className="empty-state">No project found</div>
+      </div>
+    );
   }
 
   // Transform activity logs to match expected type
@@ -159,226 +220,32 @@ export const CanisterOverview: React.FC = () => {
       <QuickActions onActionClick={handleQuickAction} />
 
       <div className="overview-grid">
-        {/* Canister Information Card */}
-        <div className="overview-card">
-          <div className="card-header">
-            <StorageIcon />
-            <h3>Canister Information</h3>
-          </div>
-          <div className="card-content">
-            <div className="info-table">
-              <div className="info-row">
-                <div className="info-label">Canister ID</div>
-                <div className="info-value">
-                  {currentProject?.canister_id ? (
-                    <div className="copy-wrapper">
-                      {shortenPrincipal(currentProject.canister_id)}
-                      <Tooltip title={copied ? "Copied!" : "Copy to clipboard"}>
-                        <ContentCopyIcon
-                          className="copy-icon"
-                          onClick={() => handleCopy(currentProject.canister_id)}
-                        />
-                      </Tooltip>
-                    </div>
-                  ) : (
-                    "Not deployed"
-                  )}
-                </div>
-              </div>
-              <div className="info-row">
-                <div className="info-label">Status</div>
-                <div className="info-value">
-                  <div className="status-indicator">
-                    <span
-                      className={`status-dot ${
-                        canisterStatus?.status || "uninitialized"
-                      }`}
-                    />
-                    {canisterStatus?.status || "Not Initialized"}
-                  </div>
-                </div>
-              </div>
-              <div className="info-row">
-                <div className="info-label">Plan Type</div>
-                <div className="info-value">
-                  <Chip
-                    label={
-                      currentProject?.plan && "freemium" in currentProject.plan
-                        ? "Freemium"
-                        : "Paid"
-                    }
-                    color={
-                      currentProject?.plan && "freemium" in currentProject.plan
-                        ? "success"
-                        : "primary"
-                    }
-                    size="small"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <CanisterInfoCard
+          currentProject={currentProject}
+          canisterStatus={canisterStatus}
+        />
 
-        {/* Project Details Card */}
-        <div className="overview-card">
-          <div className="card-header">
-            <InfoIcon />
-            <h3>Project Details</h3>
-          </div>
-          <div className="card-content">
-            <div className="info-table">
-              <div className="info-row">
-                <div className="info-label">Project Name</div>
-                <div className="info-value">{currentProject?.name}</div>
-              </div>
-              <div className="info-row">
-                <div className="info-label">Description</div>
-                <div className="info-value">
-                  {currentProject?.description || "No description"}
-                </div>
-              </div>
-              <div className="info-row">
-                <div className="info-label">Created</div>
-                <div className="info-value">
-                  {currentProject?.date_created
-                    ? new Date(
-                        Number(currentProject.date_created)
-                      ).toLocaleString()
-                    : "N/A"}
-                </div>
-              </div>
-              <div className="info-row">
-                <div className="info-label">Tags</div>
-                <div className="info-value">
-                  <div className="tags-container">
-                    {currentProject?.tags.map((tag) => (
-                      <Chip
-                        key={tag}
-                        label={tag}
-                        size="small"
-                        className="tag-chip"
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ProjectInfoCard currentProject={currentProject} />
 
-        {/* Cycles Information */}
-        <div className="overview-card">
-          <div className="card-header">
-            <AccountBalanceWalletIcon />
-            <h3>Cycles Information</h3>
-          </div>
-          <div className="card-content">
-            <div className="info-table">
-              <div className="info-row">
-                <div className="info-label">Available Balance</div>
-                <div className="info-value">
-                  {isLoadingBalance ? (
-                    <CircularProgress size={20} />
-                  ) : (
-                    `${fromE8sStable(balance || 0n)} ICP`
-                  )}
-                </div>
-              </div>
-              <div className="info-row">
-                <div className="info-label">Current Cycles</div>
-                <div className="info-value">
-                  {isLoadingCycles ? (
-                    <CircularProgress size={20} />
-                  ) : (
-                    `${cyclesStatus?.cycles || 0} T Cycles`
-                  )}
-                </div>
-              </div>
-              <div className="info-row">
-                <div className="info-label">Max Exchangeable</div>
-                <div className="info-value">
-                  {isLoadingEstimateCycles ? (
-                    <CircularProgress size={20} />
-                  ) : (
-                    `${maxCyclesExchangeable || 0} T Cycles`
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <CyclesCard
+          isLoadingBalance={isLoadingBalance}
+          balance={balance}
+          isLoadingCycles={isLoadingCycles}
+          cyclesStatus={cyclesStatus}
+          isLoadingEstimateCycles={isLoadingEstimateCycles}
+          maxCyclesExchangeable={maxCyclesExchangeable}
+        />
 
-        {/* Deployment History */}
-        <div className="overview-card">
-          <div className="card-header">
-            <TimelineIcon />
-            <h3>Deployment History</h3>
-          </div>
-          <div className="card-content">
-            {isLoading ? (
-              <CircularProgress />
-            ) : workflowRunHistory.length > 0 ? (
-              <div className="deployment-list">
-                {workflowRunHistory.map((run) => (
-                  <div key={run.workflow_run_id} className="deployment-item">
-                    <div className="deployment-header">
-                      <span className="deployment-status">
-                        <span className={`status-dot ${run.status}`} />
-                        {run.status}
-                      </span>
-                      <span className="deployment-date">
-                        {new Date(run.date_created).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="deployment-details">
-                      <div>Size: {(run.size / 1024 / 1024).toFixed(2)} MB</div>
-                      <div>Run ID: {run.workflow_run_id}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state">No deployment history</div>
-            )}
-          </div>
-        </div>
+        <DeploymentHistoryCard
+          isLoading={isLoading}
+          workflowRunHistory={workflowRunHistory}
+        />
 
-        {/* Activity History Card */}
+        <UsageStatisticsCard canisterInfo={canisterInfo} />
         <ActivityCard
           isLoadingActivityLogs={isLoadingActivityLogs}
           activityLogs={formattedActivityLogs}
         />
-
-        {/* Usage Statistics Card */}
-        <div className="overview-card">
-          <div className="card-header">
-            <UpdateIcon />
-            <h3>Usage Statistics</h3>
-          </div>
-          <div className="card-content">
-            <div className="info-table">
-              <div className="info-row">
-                <div className="info-label">Storage Used</div>
-                <div className="info-value">
-                  {canisterInfo?.size
-                    ? `${(canisterInfo.size / 1024 / 1024).toFixed(2)} MB`
-                    : "No data"}
-                </div>
-              </div>
-              <div className="info-row">
-                <div className="info-label">Last Updated</div>
-                <div className="info-value">
-                  {canisterInfo?.date_updated
-                    ? new Date(
-                        Number(canisterInfo.date_updated)
-                      ).toLocaleString()
-                    : "No data"}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

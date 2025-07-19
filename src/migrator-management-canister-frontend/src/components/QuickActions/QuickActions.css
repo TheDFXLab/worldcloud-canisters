@@ -44,7 +44,7 @@
 
 .quick-action-title {
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -73,7 +73,7 @@
 
 .section-title {
   color: var(--text-primary);
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   margin-bottom: 1rem;
   font-weight: 500;
 }

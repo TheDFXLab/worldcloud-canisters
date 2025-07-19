@@ -1,106 +1,82 @@
-import { Tooltip } from "@mui/material";
-import InfoIcon from "@mui/icons-material/Info";
+import React, { useState } from "react";
+import { Tooltip, Chip } from "@mui/material";
+import StorageIcon from "@mui/icons-material/Storage";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import { getCanisterUrl } from "../../../config/config";
-import { formatDate } from "../../../utility/formatter";
-import { bigIntToDate } from "../../../utility/bigint";
-import { formatBytes } from "../../../utility/formatter";
+import { shortenPrincipal } from "../../../utility/formatter";
 
 interface CanisterInfoCardProps {
-  canisterInfo: any;
-  canisterId: string;
+  currentProject: any;
   canisterStatus: any;
 }
 
 export const CanisterInfoCard: React.FC<CanisterInfoCardProps> = ({
-  canisterInfo,
-  canisterId,
+  currentProject,
   canisterStatus,
 }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div className="detail-card">
-      <h3>Canister Information</h3>
-      <div className="canister-stats-container">
-        <div className="stat-item">
-          <div className="stat-label">
-            Canister ID
-            <Tooltip
-              title="Unique identifier for this canister"
-              arrow
-              placement="top"
-            >
-              <InfoIcon className="info-icon" />
-            </Tooltip>
+    <div className="overview-card">
+      <div className="card-header">
+        <StorageIcon />
+        <h3>Canister Information</h3>
+      </div>
+      <div className="card-content">
+        <div className="info-table">
+          <div className="info-row">
+            <div className="info-label">Canister ID</div>
+            <div className="info-value">
+              {currentProject?.canister_id ? (
+                <div className="copy-wrapper">
+                  {shortenPrincipal(currentProject.canister_id)}
+                  <Tooltip title={copied ? "Copied!" : "Copy to clipboard"}>
+                    <ContentCopyIcon
+                      className="copy-icon"
+                      onClick={() => handleCopy(currentProject.canister_id)}
+                    />
+                  </Tooltip>
+                </div>
+              ) : (
+                "Not deployed"
+              )}
+            </div>
           </div>
-          <div className="stat-value with-copy">
-            <a
-              href={getCanisterUrl(canisterId)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {canisterId}
-            </a>
-            <button
-              className="copy-button"
-              onClick={() => navigator.clipboard.writeText(canisterId)}
-              title="Copy to clipboard"
-            >
-              <ContentCopyIcon />
-            </button>
+          <div className="info-row">
+            <div className="info-label">Status</div>
+            <div className="info-value">
+              <div className="status-indicator">
+                <span
+                  className={`status-dot ${
+                    canisterStatus?.status || "uninitialized"
+                  }`}
+                />
+                {canisterStatus?.status || "Not Initialized"}
+              </div>
+            </div>
           </div>
-        </div>
-
-        <div className="stat-item">
-          <div className="stat-label">
-            Status
-            <Tooltip
-              title="Current operational status of the canister"
-              arrow
-              placement="top"
-            >
-              <InfoIcon className="info-icon" />
-            </Tooltip>
-          </div>
-          {canisterInfo?.status && (
-            <span className={`status-badge ${canisterStatus?.status}`}>
-              {canisterInfo?.status}
-            </span>
-          )}
-        </div>
-
-        <div className="stat-item">
-          <div className="stat-label">
-            Total Size
-            <Tooltip
-              title="Total storage space used by the canister"
-              arrow
-              placement="top"
-            >
-              <InfoIcon className="info-icon" />
-            </Tooltip>
-          </div>
-          <div className="stat-value">
-            {canisterInfo?.size
-              ? formatBytes(Number(canisterInfo.size))
-              : "N/A"}
-          </div>
-        </div>
-
-        <div className="stat-item">
-          <div className="stat-label">
-            Created On
-            <Tooltip
-              title="Date when this canister was created"
-              arrow
-              placement="top"
-            >
-              <InfoIcon className="info-icon" />
-            </Tooltip>
-          </div>
-          <div className="stat-value">
-            {canisterInfo?.date_created
-              ? formatDate(bigIntToDate(canisterInfo.date_created))
-              : "N/A"}
+          <div className="info-row">
+            <div className="info-label">Plan Type</div>
+            <div className="info-value">
+              <Chip
+                label={
+                  currentProject?.plan && "freemium" in currentProject.plan
+                    ? "Freemium"
+                    : "Paid"
+                }
+                color={
+                  currentProject?.plan && "freemium" in currentProject.plan
+                    ? "success"
+                    : "primary"
+                }
+                size="small"
+              />
+            </div>
           </div>
         </div>
       </div>

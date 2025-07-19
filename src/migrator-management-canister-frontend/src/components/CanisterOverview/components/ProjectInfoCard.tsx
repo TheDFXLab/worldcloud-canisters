@@ -1,5 +1,6 @@
-import { formatDate } from "../../../utility/formatter";
-import { bigIntToDate } from "../../../utility/bigint";
+import React from "react";
+import InfoIcon from "@mui/icons-material/Info";
+import { Chip } from "@mui/material";
 
 interface Project {
   id: bigint;
@@ -12,61 +13,53 @@ interface Project {
 }
 
 interface ProjectInfoCardProps {
-  project: Project;
-  cyclesStatus: any;
+  currentProject: Project;
 }
 
 export const ProjectInfoCard: React.FC<ProjectInfoCardProps> = ({
-  project,
-  cyclesStatus,
+  currentProject,
 }) => {
-  const getPlanDisplay = (plan: Project["plan"]) => {
-    return "freemium" in plan ? "Freemium" : "Paid";
-  };
-
   return (
-    <div className="card project-details">
-      <span className="card-title">Project Information</span>
-      <div className="content">
-        <div className="detail-row">
-          <span className="label">Name:</span>
-          <span className="value">{project.name}</span>
-        </div>
-        <div className="detail-row">
-          <span className="label">Description:</span>
-          <span className="value">{project.description}</span>
-        </div>
-
-        {project.canister_id && (
-          <div className="detail-row">
-            <span className="label">Canister ID:</span>
-            <span className="value">{project.canister_id}</span>
+    <div className="overview-card">
+      <div className="card-header">
+        <InfoIcon />
+        <h3>Project Details</h3>
+      </div>
+      <div className="card-content">
+        <div className="info-table">
+          <div className="info-row">
+            <div className="info-label">Project Name</div>
+            <div className="info-value">{currentProject?.name}</div>
           </div>
-        )}
-
-        {cyclesStatus && (
-          <div className="detail-row">
-            <span className="label">Cycles Available:</span>
-            <span className="value">{cyclesStatus.cycles.toString()}</span>
+          <div className="info-row">
+            <div className="info-label">Description</div>
+            <div className="info-value">
+              {currentProject?.description || "No description"}
+            </div>
           </div>
-        )}
-
-        <div className="detail-row">
-          <span className="label">Plan:</span>
-          <span className="value">{getPlanDisplay(project.plan)}</span>
-        </div>
-        <div className="detail-row">
-          <span className="label">Created:</span>
-          <span className="value">
-            {formatDate(bigIntToDate(project.date_created))}
-          </span>
-        </div>
-        <div className="tags">
-          {project.tags.map((tag: string, index: number) => (
-            <span key={index} className="tag">
-              {tag}
-            </span>
-          ))}
+          <div className="info-row">
+            <div className="info-label">Created</div>
+            <div className="info-value">
+              {currentProject?.date_created
+                ? new Date(Number(currentProject.date_created)).toLocaleString()
+                : "N/A"}
+            </div>
+          </div>
+          <div className="info-row">
+            <div className="info-label">Tags</div>
+            <div className="info-value">
+              <div className="tags-container">
+                {currentProject?.tags.map((tag) => (
+                  <Chip
+                    key={tag}
+                    label={tag}
+                    size="small"
+                    className="tag-chip"
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
