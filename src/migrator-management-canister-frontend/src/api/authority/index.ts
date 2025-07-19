@@ -4,9 +4,10 @@ import { HttpAgent, Identity } from "@dfinity/agent";
 import MainApi from "../main";
 import { internetIdentityConfig } from "../../config/config";
 
+type CanisterAvailabilityStatus = "running" | "stopped" | "stopping";
 export interface CanisterStatus {
-    status: string;
-    cycles: number;
+    status: CanisterAvailabilityStatus;
+    cycles: bigint;
     controllers: string[];
 }
 
@@ -37,29 +38,31 @@ class AuthorityApi {
         return controllers;
     }
 
-    /**
-     * Get the status of the canister
-     * @param canister_id 
-     * @param identity 
-     * @returns status, controllers list and cycles balance
-     */
-    async getCanisterStatus(canister_id: Principal, identity: Identity | null, agent: HttpAgent): Promise<CanisterStatus> {
-        const mainApi = await MainApi.create(identity, agent);
+    // /**
+    //  * Get the status of the canister
+    //  * @param canister_id 
+    //  * @param identity 
+    //  * @returns status, controllers list and cycles balance
+    //  */
+    // // TODO: Use thunk
+    // async getCanisterStatus(project_id: bigint, identity: Identity | null, agent: HttpAgent): Promise<CanisterStatus> {
+    //     const mainApi = await MainApi.create(identity, agent);
 
-        if (!mainApi) {
-            throw new Error("Failed to create main api");
-        }
-        const response = await mainApi.actor?.getCanisterStatus(canister_id);
-        if (!response) {
-            throw new Error("Failed to get canister status");
-        }
-        const status = {
-            status: Object.keys(response.status)[0],
-            controllers: response.settings.controllers[0]?.map((controller) => controller.toString()) || [],
-            cycles: Number(response.cycles)
-        }
-        return status;
-    }
+    //     if (!mainApi) {
+    //         throw new Error("Failed to create main api");
+    //     }
+    //     const response = await mainApi.actor?.getCanisterStatus(project_id);
+    //     if (!response) {
+    //         throw new Error("Failed to get canister status");
+    //     }
+    //     const statusType = Object.keys(response.status)[0];
+    //     const status = {
+    //         status: statusType === "#running" ? "running" : (statusType === '#stopped' ? "stopped" : "stopping") as CanisterAvailabilityStatus,
+    //         controllers: response.settings.controllers[0]?.map((controller) => controller.toString()) || [],
+    //         cycles: response.cycles
+    //     }
+    //     return status;
+    // }
 
     /**
      * Add a controller to the canister

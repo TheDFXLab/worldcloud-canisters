@@ -4,12 +4,12 @@ import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import CorporateFareIcon from "@mui/icons-material/CorporateFare";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { Tooltip } from "@mui/material";
 import { fromE8sStable } from "../../../utility/e8s";
 import { Tier } from "../../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import "../BillingPage.css";
-import { SubscriptionData } from "../../../context/SubscriptionContext/SubscriptionContext";
+import { SubscriptionData } from "../../../state/slices/subscriptionSlice";
 
 interface NonSubbedProps {
   hideButtons?: boolean;
@@ -23,6 +23,7 @@ const tierIcons = [
   <RocketLaunchIcon />,
   <WorkspacePremiumIcon />,
   <CorporateFareIcon />,
+  <AutoAwesomeIcon />,
 ];
 
 export default function NonSubbed({
@@ -42,8 +43,12 @@ export default function NonSubbed({
         </button>
       )}
       <div className="pricing-grid">
+        {/** shift freemium tier object to start of array  */}
         {tiers &&
-          tiers.map((tier) => (
+          [
+            tiers[3],
+            ...tiers.filter((tier) => parseInt(tier.id.toString()) !== 3),
+          ].map((tier) => (
             <div
               key={tier.id}
               className={`pricing-card ${
@@ -71,16 +76,36 @@ export default function NonSubbed({
               <div className="pricing-content">
                 <div className="deposit-info">
                   <div className="deposit-label">
-                    <span>Minimum Deposit</span>
-                    <Tooltip
-                      title="Minimum amount required for canister(s) creation. Amount will be reflected as cycles in the canister(s)"
-                      arrow
-                    >
-                      <InfoIcon className="info-icon" />
-                    </Tooltip>
+                    {tier?.name === "Freemium" ? (
+                      <>
+                        <span>Shared Hosting</span>
+                        <Tooltip
+                          title="Website will be hosted for a limited trial period of 4 hours. Maximum number of trials is 3 per day."
+                          arrow
+                        >
+                          <InfoIcon className="info-icon" />
+                        </Tooltip>
+                      </>
+                    ) : (
+                      <>
+                        <span>Minimum Deposit</span>
+                        <Tooltip
+                          title="Minimum amount required for canister(s) creation. Amount will be reflected as cycles in the canister(s)"
+                          arrow
+                        >
+                          <InfoIcon className="info-icon" />
+                        </Tooltip>
+                      </>
+                    )}
                   </div>
                   <span className="deposit-value">
-                    {fromE8sStable(tier.min_deposit.e8s)} ICP
+                    {tier?.name === "Freemium" ? (
+                      <>
+                        <span>Free</span>
+                      </>
+                    ) : (
+                      <>{fromE8sStable(tier.min_deposit.e8s)} ICP</>
+                    )}
                   </span>
                 </div>
                 <ul className="features">
@@ -106,7 +131,9 @@ export default function NonSubbed({
                     Number(subscription.tier_id) === Number(tier.id)
                       ? "Current Plan"
                       : fromE8sStable(tier.price.e8s) === 0
-                      ? "Get Started"
+                      ? tier.name === "Freemium"
+                        ? "Try Now"
+                        : "Get Started"
                       : "Upgrade Now"}
                   </button>
                 )}

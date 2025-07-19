@@ -5,6 +5,7 @@ import SubscriptionApi from "../../api/subscription/SubscriptionApi";
 import { useIdentity } from "../IdentityContext/IdentityContext";
 import { useQuery } from "@tanstack/react-query";
 import { sanitizeObject } from "../../utility/sanitize";
+import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 
 export interface TierListData {
   id: number;
@@ -37,13 +38,14 @@ export const PricingContext = createContext<PricingContextType | undefined>(
 export function PricingProvider({ children }: { children: ReactNode }) {
   /** Hooks */
   const { identity } = useIdentity();
+  const { agent } = useHttpAgent();
 
   /** States */
   const VERIFICATION_INTERVAL = 10 * 60 * 1000; // 10mins
 
   let queryNameTiersList = "tiersList";
   const { data: tiers = false, isLoading: isLoadingTiers } = useQuery({
-    queryKey: [queryNameTiersList],
+    queryKey: [queryNameTiersList, agent, identity],
     queryFn: async () => {
       try {
         console.log("fetching tiers");
@@ -91,14 +93,15 @@ export function PricingProvider({ children }: { children: ReactNode }) {
     staleTime: 0,
     refetchInterval: VERIFICATION_INTERVAL,
     refetchOnMount: true,
-    enabled: true,
+    enabled: !!identity && !!agent,
   });
 
   const getTiersList = async () => {
     try {
       console.log("fetching tiers");
       const subscriptionApi = new SubscriptionApi();
-      const tiers = await subscriptionApi.getTiersList(identity);
+
+      const tiers = await subscriptionApi.getTiersList(identity, agent);
       if (!tiers) {
         throw new Error("Failed to get tiers");
       }

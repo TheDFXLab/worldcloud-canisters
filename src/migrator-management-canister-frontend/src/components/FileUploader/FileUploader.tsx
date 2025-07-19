@@ -23,12 +23,13 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import HeaderCard from "../HeaderCard/HeaderCard";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 
 interface FileUploaderProps {}
 
 type CanisterType = "website" | "drive";
 
-function FileUploader() {
+function FileUploader({ project_id }: { project_id: bigint }) {
   /** Hooks */
   const { updateDeployment, refreshDeployments } = useDeployments();
   const { toasterData, setToasterData, setShowToaster } = useToaster();
@@ -39,6 +40,7 @@ function FileUploader() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setActionBar } = useActionBar();
   const { agent } = useHttpAgent();
+  const { setHeaderCard } = useHeaderCard();
 
   /** State */
   const [currentBytes, setCurrentBytes] = useState(0);
@@ -61,6 +63,14 @@ function FileUploader() {
   const [canisterType, setCanisterType] = useState<CanisterType>("website");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  useEffect(() => {
+    setHeaderCard({
+      description: `Your canister is deployed with principal ${canisterId}`,
+      title: "Upload the zip file containing your website assets.",
+      className: "deployment-header",
+    });
+  }, []);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (canisterType === "website") {
@@ -138,7 +148,7 @@ function FileUploader() {
       let totalUploadedSize = 0;
       // 2MB limit
       if (totalSize < 2000000) {
-        const result = await storeAssetsInCanister(unzippedFiles);
+        const result = await storeAssetsInCanister(unzippedFiles, 1, 1);
         totalUploadedSize += result.uploadedSize ?? 0;
         setUploadedSize(totalUploadedSize);
       } else {
@@ -209,7 +219,11 @@ function FileUploader() {
 
           setCurrentBytes(currentBytes + totalSize);
 
-          const result = await storeAssetsInCanister(files);
+          const result = await storeAssetsInCanister(
+            files,
+            i + 1,
+            batches.length
+          );
           if (!result) {
             setStatus(`Error: Failed to store batch ${i + 1}`);
           }
@@ -237,7 +251,11 @@ function FileUploader() {
     return files.reduce((acc, file) => acc + file.content.length, 0);
   };
 
-  const storeAssetsInCanister = async (files: StaticFile[]) => {
+  const storeAssetsInCanister = async (
+    files: StaticFile[],
+    currentBatch: number,
+    totalBatchCount: number
+  ) => {
     try {
       if (!canisterId) {
         throw new Error("Canister ID is required");
@@ -268,12 +286,14 @@ function FileUploader() {
 
       const mainApi = await MainApi.create(identity, agent);
       const result = await mainApi?.storeInAssetCanister(
-        Principal.fromText(canisterId),
+        project_id,
         sanitizedFiles,
+        currentBatch,
+        totalBatchCount,
         undefined // since we are uploading files directly from zip
       );
 
-      if (result && result.status) {
+      if (result) {
         setUploadedSize(uploadedSize + totalSize);
         return {
           status: true,
@@ -283,7 +303,7 @@ function FileUploader() {
       } else {
         return {
           status: false,
-          message: result?.message ?? "Failed to upload file batch.",
+          message: result ?? "Failed to upload file batch.",
         };
       }
     } catch (error: any) {
@@ -470,11 +490,11 @@ function FileUploader() {
 
   return (
     <div className="zip-uploader">
-      <HeaderCard
+      {/* <HeaderCard
         description={`Your canister is deployed with principal ${canisterId}`}
         title="Upload the zip file containing your website assets."
         className="deployment-header"
-      />
+      /> */}
       <p className="step-title">
         {canisterType === "website"
           ? "Upload the zip file containing your website assets."

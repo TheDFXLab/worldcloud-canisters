@@ -1,10 +1,20 @@
 import { Principal } from "@dfinity/principal";
 import { createActor } from "../../../../declarations/migrator-management-canister-backend";
 import { ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
-import { _SERVICE, DepositReceipt, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { _SERVICE, ActivityLog, GetProjectsByUserPayload, Project, ProjectPlan, Response, Result, StoreAssetInCanisterPayload, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
-import { HttpAgentManager } from "../../agent/http_agent";
+import { DeserializedProject, DeserializedUsageLog, SerializedUsageLog, serializedUsageLog } from "../../utility/bigint";
+// import { CanisterStatus } from "../authority";
+
+interface CreateProjectPayload {
+    project_name: string;
+    project_description: string;
+    tags: string[];
+    plan: ProjectPlan;
+}
+
+export type PlanType = "freemium" | "paid";
 
 class MainApi {
     private static instance: MainApi | null = null;
@@ -58,8 +68,8 @@ class MainApi {
     }
 
     async get_all_subscriptions() {
-        const subscriptions = await this.actor?.get_all_subscriptions();
-        return subscriptions;
+        // const subscriptions = await this.actor?.get_all_subscriptions();
+        // return subscriptions;
     }
 
     // Get identity's derived public key
@@ -126,16 +136,19 @@ class MainApi {
             return pendingDeposits;
         } catch (error) {
             console.log(`Error getting pending deposits:`, error)
-            return null;
+            // return null;
+            throw error;
         }
     }
 
     async getCreditsAvailable() {
         try {
             const credits = await this.actor?.getMyCredits();
+            if (credits === null || credits === undefined) { throw new Error(`Failed to get credits available for user.`) }
             return credits;
         } catch (error) {
-            return null;
+            // return null;
+            throw error;
         }
     }
 
@@ -154,6 +167,7 @@ class MainApi {
             }
             console.log("Getting canister deployments", this.agent);
             const deployments = await this.actor.getCanisterDeployments();
+
             return deployments;
         } catch (error) {
             console.log(`Error getting canister deployments:`, error)
@@ -161,22 +175,59 @@ class MainApi {
         }
     }
 
-    async getWorkflowHistory(canisterId: Principal) {
+    async getWorkflowHistory(project_id: bigint) {
         const runsHistory = await this.actor?.getWorkflowRunHistory(
-            canisterId
+            project_id
         );
         return runsHistory;
     }
 
-    async getCanisterStatus(canisterId: Principal) {
-        const result = await this.actor?.getCanisterStatus(canisterId);
+    async getCanisterStatus(project_id: bigint) {
+        const result = await this.actor?.getCanisterStatus(project_id);
 
         if (!result) {
             throw new Error("Failed to get canister status");
         }
 
-        return result;
+        // if ('ok' in result) {
+        //     return {
+        //         status: 'running' in result.ok.status ? "running" : 'stopped' in result.ok.status ? 'stopped' : 'stopping',
+        //         cycles: result.ok.cycles,
+        //         controllers: []
+        //     } as CanisterStatus;
+        // }
+        if ('ok' in result) {
+            return {
+                // status: 'running' in result.ok.status ? "running" : 'stopped' in result.ok.status ? 'stopped' : 'stopping',
+                status: result.ok.status,
+                cycles: result.ok.cycles,
+                settings: result.ok.settings
+            };
+        }
+        else {
+            if ('err' in result) {
+                throw new Error(result.err as string);
+            }
+            else {
+                throw new Error("Unexpected error occured.");
+            }
+        }
+
     }
+
+    private handleResult(result: Result) {
+        if ("ok" in result) {
+            return result.ok;
+        }
+        else if ("err" in result) {
+            throw { status: false, message: result.err };
+        }
+    }
+
+    private handleResponseError(error: string) {
+        return { status: false, message: error }
+    }
+
 
     async uploadWasm(wasmBytes: number[]) {
         try {
@@ -185,49 +236,66 @@ class MainApi {
             }
             const result = await this.actor.uploadAssetCanisterWasm(
                 wasmBytes
-            );;
-            return result;
+            );
+
+            if ('ok' in result) {
+                return result.ok;
+            }
+            else {
+                throw result.err;
+            }
         } catch (error) {
             console.log(`Error uploading WASM:`, error)
-            return null;
+            throw error;
         }
     }
 
-    async deployAssetCanister() {
+    async deployAssetCanister(project_id: bigint) {
         try {
             if (!this.actor) {
                 throw new Error("Actor not initialized.");
             }
-            const result = await this.actor.deployAssetCanister();
-            if ("Ok" in result || "ok" in result) {
-                return { status: true, message: Object.values(result)[0] };
+            const result = await this.actor.deployAssetCanister(project_id);
+            if ('ok' in result) {
+                return result.ok;
             }
             else {
-                throw { status: false, message: "Error deploying asset canister: " + Object.values(result)[0] };
+                throw this.handleResult(result);
             }
         } catch (error) {
             console.log(`Error deploying asset canister:`, error)
-            return null;
+            throw error;
         }
     }
 
-    async storeInAssetCanister(canisterId: Principal, files: StaticFile[], workflowRunDetails?: WorkflowRunDetails) {
+    // async storeInAssetCanister(project_id: bigint, files: StaticFile[], workflowRunDetails?: WorkflowRunDetails) {
+    //     try {
+    //         if (!this.actor) {
+    //             throw new Error("Actor not initialized.");
+    //         }
+    //         const result = await this.actor.storeInAssetCanister(project_id, files, workflowRunDetails ? [workflowRunDetails] : []);
+    //         if ('ok' in result) {
+    //             return result.ok;
+    //         }
+    //         else {
+    //             throw this.handleResponseError(result.err);
+    //         }
+
+    //     } catch (error: any) {
+    //         console.log(`Error storing in asset canister:`, error)
+    //         throw error;
+    //     }
+    // }
+
+    async storeInAssetCanister(project_id: bigint, files: StaticFile[], current_batch: number, total_batch_count: number, workflowRunDetails?: WorkflowRunDetails) {
         try {
-            if (!this.actor) {
-                throw new Error("Actor not initialized.");
-            }
-            const result = await this.actor.storeInAssetCanister(canisterId, files, workflowRunDetails ? [workflowRunDetails] : []);
-            if ("Ok" in result || "ok" in result) {
-                return { status: true, message: "Stored files successfully." };
-            }
-            else {
-                throw { status: false, message: "Error storing in asset canister: " + Object.values(result)[0] };
-            }
+            return await this.uploadAssetsToProject(project_id, files, current_batch, total_batch_count, workflowRunDetails);
         } catch (error: any) {
             console.log(`Error storing in asset canister:`, error)
-            return { status: false, message: `Failed to upload file batch. ${error.message}` };
+            throw error;
         }
     }
+
 
     // Updates the user balance in backend book after deposit to special address by user
     async deposit() {
@@ -235,19 +303,298 @@ class MainApi {
             if (!this.actor) {
                 throw new Error("Actor not initialized.");
             }
-            const depositResult: DepositReceipt = await this.actor.depositIcp();
-            if ("Ok" in depositResult) {
-                return depositResult.Ok;
+            const depositResult = await this.actor.depositIcp();
+
+            if ("ok" in depositResult) {
+                return depositResult.ok;
             }
             else {
-                throw new Error("Error depositing ICP: " + depositResult.Err);
+                throw this.handleResponseError(depositResult.err);
             }
         } catch (error) {
             console.log(`Error depositing ICP:`, error)
+            throw error;
+        }
+    }
+
+    // Request a freemium session for deployment
+    async requestFreemiumSession(project_id: bigint) {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
+
+            const result = await this.actor.deployAssetCanister(project_id);
+            if ('ok' in result) {
+                return result.ok;
+            }
+            else {
+                throw this.handleResponseError(result.err);
+            }
+        } catch (error) {
+            console.log(`Error requesting freemium session:`, error)
+            throw error;
+        }
+    }
+
+
+    // Request a freemium session for deployment
+    async getUserFreemiumUsage() {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
+
+            const result = await this.actor.get_user_slot();
+            if (!result) {
+                throw new Error("Failed to request freemium session");
+            }
+
+            if ("ok" in result) {
+                const slot = result.ok.length > 0 ? result.ok[0] : null;
+                console.log(`((((SLOT)))) slot,`, slot)
+
+                // If no slot exists, return null (this is a valid state)
+                if (!slot) {
+                    return null;
+                }
+
+                // Return the slot data in a consistent format
+                return {
+                    project_id: slot.project_id.length > 0 ? slot.project_id[0] : null,
+                    canister_id: slot.canister_id.length > 0 ? slot.canister_id[0] : null,
+                    owner: slot.owner,
+                    user: slot.user,
+                    start_timestamp: slot.start_timestamp,
+                    create_timestamp: slot.create_timestamp,
+                    duration: slot.duration,
+                    start_cycles: slot.start_cycles,
+                    status: slot.status
+                };
+            }
+            else {
+                throw this.handleResponseError(result.err);
+            }
+        } catch (error) {
+            console.log(`Error requesting freemium session:`, error);
+            throw error;
+        }
+    }
+
+    // Creates a project and deploys a canister
+    async createProject(
+        project_name: string,
+        description: string = "A standard asset canister for serving static site over HTTP.",
+        tags: string[],
+        plan: PlanType
+    ): Promise<DeserializedProject | null> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
+
+            const projectPlan: ProjectPlan = plan === "freemium" ? { freemium: null } : { paid: null };
+
+            const payload: CreateProjectPayload = {
+                project_name,
+                project_description: description,
+                tags,
+                plan: projectPlan,
+            };
+
+            const result = await this.actor.create_project(payload);
+
+            if ('ok' in result) {
+                const currentTime = BigInt(Date.now());
+
+                return {
+                    id: result.ok.project_id,
+                    name: project_name,
+                    description,
+                    tags,
+                    plan: projectPlan,
+                    canister_id: null,
+                    date_created: Number(currentTime),
+                    date_updated: Number(currentTime)
+                };
+            }
+            else {
+                throw this.handleResponseError(result.err);
+            }
+        } catch (error) {
+            console.error(`Error creating project:`, error);
             return null;
         }
     }
 
+    async uploadAssetsToProject(project_id: bigint, files: StaticFile[], current_batch: number, total_batch_count: number, workflowRunDetails?: WorkflowRunDetails) {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
+
+            const payload: StoreAssetInCanisterPayload = {
+                project_id,
+                files,
+                workflow_run_details: workflowRunDetails ? [workflowRunDetails] : [],
+                current_batch: BigInt(current_batch),
+                total_batch_count: BigInt(total_batch_count)
+            }
+
+            const result = await this.actor.upload_assets_to_project(payload);
+            if ("ok" in result) {
+                return { status: true, message: "Stored files successfully." };
+            }
+            else {
+                throw this.handleResponseError(result.err);
+            }
+        } catch (error: any) {
+            console.log(`Error storing in asset canister:`, error)
+            return { status: false, message: `Failed to upload file batch. ${error.message}` };
+        }
+    }
+
+    async getUserProjects(page?: number, limit?: number): Promise<DeserializedProject[] | null> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
+
+            const payload: GetProjectsByUserPayload = {
+                user: this.identity.getPrincipal(),
+                page: page ? [BigInt(page)] : [],
+                limit: limit ? [BigInt(limit)] : [],
+            };
+
+            const result = await this.actor.get_projects_by_user(payload);
+            console.log(`REUSLT froM get USER FEREMIUM`, result)
+            if (!result) {
+                throw new Error("Failed to get projects");
+            }
+
+            if ('err' in result) {
+                console.log(`ERROR IN REUSLT`)
+                throw this.handleResponseError(result.err);
+            }
+
+            return result.ok.map((project: Project) => {
+                const canisterId = project.canister_id && project.canister_id.length > 0 ? project.canister_id[0] : null;
+                console.log("RETURNINGINGIN", {
+                    id: project.id,
+                    name: project.name,
+                    description: project.description,
+                    tags: project.tags,
+                    plan: project.plan,
+                    canister_id: canisterId ? canisterId.toText() : null,
+                    date_created: Number(project.date_created),
+                    date_updated: Number(project.date_updated)
+                })
+                return {
+                    id: project.id,
+                    name: project.name,
+                    description: project.description,
+                    tags: project.tags,
+                    plan: project.plan,
+                    canister_id: canisterId ? canisterId.toText() : null,
+                    date_created: Number(project.date_created),
+                    date_updated: Number(project.date_updated)
+                };
+            });
+        } catch (error) {
+            console.error(`Error getting projects:`, error);
+            return null;
+        }
+    }
+    async getUserUsage(): Promise<SerializedUsageLog | null> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
+
+            const result = await this.actor.get_user_usage();
+            if (!result) {
+                throw new Error("Failed to get projects");
+            }
+
+            if ('err' in result) {
+                console.log(`ERROR IN REUSLT`)
+                throw this.handleResponseError(result.err);
+            }
+
+            return serializedUsageLog(result.ok);
+        } catch (error) {
+            console.error(`Error getting projects:`, error);
+            throw error;
+        }
+    }
+
+    async getProjectActivityLogs(projectId: bigint): Promise<any> {
+        try {
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            if (!this.idenitified) {
+                throw new Error("Actor not identified.");
+            }
+            if (!this.identity) {
+                throw new Error("Identity not initialized.");
+            }
+
+            const result = await this.actor.get_project_activity_logs(projectId);
+            if (!result) {
+                throw new Error("Failed to get activity logs");
+            }
+            console.log(`Activity lgs`, result)
+            if ('ok' in result) {
+                console.log(`retr`, result.ok[0])
+                console.log(`retr`, result.ok.map(o => { return { ...o, create_time: Number(o.create_time / BigInt(1_000_000)) } }));
+
+                return result.ok.map(o => { return { ...o, create_time: Number(o.create_time / BigInt(1_000_000)) } });
+            }
+            else {
+                throw this.handleResponseError(result.err);
+            }
+        } catch (error) {
+            console.error(`Error getting activity logs:`, error);
+            throw error;
+        }
+    }
 
 }
 

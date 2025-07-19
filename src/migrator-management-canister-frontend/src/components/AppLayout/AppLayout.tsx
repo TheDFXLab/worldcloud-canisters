@@ -19,6 +19,8 @@ import { useLedger } from "../../context/LedgerContext/LedgerContext";
 import LoaderOverlay from "../LoaderOverlay/LoaderOverlay";
 import Sidebar from "../Sidebar/Sidebar";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import HeaderCard from "../HeaderCard/HeaderCard";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 
 interface AppLayoutProps {
   state: State;
@@ -38,11 +40,17 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
     setSelectedDeployment,
   } = useDeployments();
   const { actionBar } = useActionBar();
-  const { toasterData, showToaster, setShowToaster } = useToaster();
   const { activeTab, setIsMobileMenuOpen } = useSideBar();
   const { agent } = useHttpAgent();
+  const { headerCard } = useHeaderCard();
+  const { toasterData, showToaster, setShowToaster } = useToaster();
+
   /** State */
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    window.innerWidth <= 768 ? true : false
+  );
 
   /** Functions */
   useEffect(() => {
@@ -59,7 +67,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   useEffect(() => {
     console.log(`refreshIdentity`);
 
-    refreshIdentity();
+    // refreshIdentity();
   }, [activeTab]);
 
   useEffect(() => {
@@ -109,31 +117,52 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
       />
     );
   }
+  useEffect(() => {
+    console.log(`HWEADER CARD>`, headerCard);
+  }, [headerCard]);
 
   return (
-    <div className="app-layout">
-      {/* <ThemeToggle /> */}
-      <ProgressBar />
+    <div className="app-layout" style={{ display: "flex", height: "100vh" }}>
       <LoaderOverlay />
-      {showToaster && toasterData && (
+      {toasterData && (
         <Toaster
           headerContent={toasterData.headerContent}
           toastStatus={toasterData.toastStatus}
           toastData={toasterData.toastData}
-          textColor={toasterData.textColor || "#000000"}
+          textColor={toasterData.textColor || "white"}
           show={showToaster}
           onHide={() => setShowToaster(false)}
-          timeout={toasterData.timeout ? toasterData.timeout : 3000}
+          timeout={toasterData.timeout || 3000}
           link=""
           overrideTextStyle=""
         />
       )}
 
-      <Sidebar />
-
-      <main className="main-content" onClick={() => setIsMobileMenuOpen(false)}>
-        {children}
-
+      <Sidebar
+        isSidebarCollapsed={isSidebarCollapsed}
+        setIsSidebarCollapsed={setIsSidebarCollapsed}
+        mobileControl={[isMobile, setIsMobile]}
+      />
+      <main
+        className="main-content"
+        style={{
+          flex: 1,
+          transition: "margin 0.2s",
+          marginLeft: isMobile ? 0 : isSidebarCollapsed ? 0 : 260,
+          minWidth: 0,
+        }}
+        onClick={() => setIsMobileMenuOpen(false)}
+      >
+        {headerCard && (
+          <div className="app-layout-header">
+            <HeaderCard
+              title={headerCard.title}
+              description={headerCard.description}
+              className={headerCard.className}
+            />
+          </div>
+        )}
+        <div className="app-layout-children-container">{children}</div>
         {actionBar && <ActionBar {...actionBar} />}
       </main>
     </div>

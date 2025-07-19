@@ -8,7 +8,8 @@ export const clearUserData = () => {
         'totalCredits',
         'ic-identity',
         'ic-delegation',
-
+        'freemium',
+        'projects'
     ];
 
     keysToRemove.forEach(key => localStorage.removeItem(key));

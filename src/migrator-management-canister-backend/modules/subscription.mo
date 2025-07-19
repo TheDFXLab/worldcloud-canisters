@@ -8,7 +8,8 @@ import Book "../book";
 import Nat64 "mo:base/Nat64";
 import Nat "mo:base/Nat";
 import Array "mo:base/Array";
-import ErrorType "../modules/errors";
+import Errors "../modules/errors";
+import Utility "../utils/Utility";
 
 module {
     public class SubscriptionManager(book : Book.Book, ledger : Principal) {
@@ -47,7 +48,7 @@ module {
             {
                 id = 2;
                 name = "Enterprise";
-                slots = 1;
+                slots = 25;
                 min_deposit = { e8s = 500_000_000 }; // 5 ICP
                 price = { e8s = 2_500_000_000 }; // 25 ICP
                 features = [
@@ -58,6 +59,20 @@ module {
                     "Priority Queue",
                     "Custom Branding",
                     "API Access",
+                ];
+            },
+            {
+                id = 3;
+                name = "Freemium";
+                slots = 1;
+                min_deposit = { e8s = 50_000_000 };
+                price = { e8s = 0 }; // Free tier
+                features = [
+                    "1 Canister",
+                    "Manual Deployments",
+                    "GitHub Integration",
+                    "4hrs Demo Hosting Trial",
+                    "3 Free Trials per day",
                 ];
             },
         ];
@@ -71,6 +86,20 @@ module {
             return treasury;
         };
 
+        public func get_tier_id_freemium() : Nat {
+            var i = 0;
+            let n = tiers_list.size();
+            // Use a while loop for early exit
+            while (i < n) {
+                if (tiers_list[i].name == "Freemium") {
+                    return tiers_list[i].id;
+                };
+                i += 1;
+            };
+            // If not found, throw error
+            return Utility.expect(null, Errors.NotFoundTier());
+        };
+
         // TODO: Admin function
         public func get_all_subscriptions() : async [(Principal, Types.Subscription)] {
             return Iter.toArray(subscriptions.entries());
@@ -78,27 +107,25 @@ module {
 
         public func get_subscription(caller : Principal) : async Types.Response<Types.Subscription> {
             switch (subscriptions.get(caller)) {
-                case (null) {
-                    return #err("Subscription not found");
-                };
-                case (?sub) {
-                    return #ok(sub);
-                };
+                case (null) { return #err(Errors.SubscriptionNotFound()) };
+                case (?sub) { return #ok(sub) };
             };
         };
 
         private func _get_subscription(caller : Principal) : async ?Types.Subscription {
             switch (subscriptions.get(caller)) {
-                case (null) {
-                    return null;
-                };
-                case (?sub) {
-                    return ?sub;
-                };
+                case (null) { return null };
+                case (?sub) { return ?sub };
             };
         };
 
         private func _create_subscription(caller : Principal, tier_id : Nat, subscription : Types.Subscription, payment_receiver : Principal) : async Types.Response<Types.Subscription> {
+            // Bypass payment for freemium tier
+            if (tier_id == 3) {
+                subscriptions.put(caller, subscription); // Add subscription plan for caller
+                return #ok(subscription);
+            };
+
             // Get pricing list
             let tier : Types.Tier = tiers_list[tier_id];
 
@@ -110,7 +137,7 @@ module {
 
             // Validate user has enough ICP balance
             if (deposited_icp < total_cost) {
-                return #err(ErrorType.InsufficientFunds());
+                return #err(Errors.InsufficientFunds());
             };
 
             // Deduct payment from caller's balance
@@ -121,7 +148,7 @@ module {
                 Debug.print("Sub: " # debug_show (subscription));
                 return #ok(subscription);
             } else {
-                return #err(ErrorType.PaymentProcessingFailure());
+                return #err(Errors.PaymentProcessingFailure());
             };
         };
 
@@ -129,7 +156,7 @@ module {
             // Validate treasury principal
             let payment_receiver = switch (treasury) {
                 case null {
-                    return #err(ErrorType.TreasuryNotSet());
+                    return #err(Errors.TreasuryNotSet());
                 };
                 case (?treasury) {
                     treasury;
@@ -137,7 +164,7 @@ module {
             };
 
             if (tier_id >= tiers_list.size()) {
-                return #err(ErrorType.InvalidTier());
+                return #err(Errors.InvalidTier());
             };
 
             // // Get pricing list
@@ -154,8 +181,9 @@ module {
                         max_slots = tier.slots;
                         used_slots = 0;
                         canisters = [];
-                        date_created = Time.now();
-                        date_updated = Time.now();
+                        free_canisters = [];
+                        date_created = Utility.get_time_now(#milliseconds);
+                        date_updated = Utility.get_time_now(#milliseconds);
                     };
 
                     // subscription;
@@ -165,7 +193,7 @@ module {
 
                     // Allow upgrade/downgrade only
                     if (sub.tier_id == tier_id) {
-                        return #err(ErrorType.SubscriptionAlreadyExists());
+                        return #err(Errors.SubscriptionAlreadyExists());
                     };
 
                     let subscription : Types.Subscription = {
@@ -174,8 +202,9 @@ module {
                         max_slots = tier.slots;
                         used_slots = sub.used_slots;
                         canisters = sub.canisters;
-                        date_created = Time.now();
-                        date_updated = Time.now();
+                        free_canisters = [];
+                        date_created = Utility.get_time_now(#milliseconds);
+                        date_updated = Utility.get_time_now(#milliseconds);
                     };
 
                     await _create_subscription(caller, tier_id, subscription, payment_receiver);
@@ -194,6 +223,43 @@ module {
                     return true;
                 };
             };
+        };
+
+        // Decrements the usage count, and pushes the canister to unused array
+        public func update_sub_delete_project(caller : Principal, canister_id : Principal) : async Types.Response<()> {
+            let subscription : Types.Subscription = switch (await get_subscription(caller)) {
+                case (#err(_msg)) { return #err(_msg) };
+                case (#ok(sub)) {
+                    sub;
+                };
+            };
+
+            // Remove project canister from used array
+            let updated_used_canisters : [Principal] = Array.filter(subscription.canisters, func(c : Principal) : Bool { c == canister_id });
+
+            // Update free canisters
+            let updated_free_canisters = Array.append(subscription.free_canisters, [canister_id]);
+
+            // Decrement used slots count
+            let updated_used_slot_count : Nat = switch (subscription.used_slots == 0) {
+                case (true) { 0 };
+                case (false) { subscription.used_slots - 1 };
+            };
+
+            // Update subscription records
+            let updated_subscription : Types.Subscription = {
+                user_id = subscription.user_id;
+                tier_id = subscription.tier_id;
+                canisters = updated_used_canisters;
+                free_canisters = updated_free_canisters;
+                used_slots = updated_used_slot_count;
+                max_slots = subscription.max_slots;
+                date_created = subscription.date_created;
+                date_updated = Utility.get_time_now(#milliseconds);
+            };
+
+            subscriptions.put(caller, updated_subscription);
+            return #ok();
         };
 
         public func validate_subscription(caller : Principal) : async Bool {

@@ -64,9 +64,7 @@ function CanisterOptions({ deployment, show, onHide }: CanisterOptionsProps) {
           <div className="detail-row">
             <span className="label">Created:</span>
             <span className="value">
-              {new Date(
-                Number(deployment.date_created) / 1000000
-              ).toLocaleString()}
+              {new Date(Number(deployment.date_created)).toLocaleString()}
             </span>
           </div>
 
@@ -100,12 +98,13 @@ function CanisterOptions({ deployment, show, onHide }: CanisterOptionsProps) {
           )}
         </div>
 
-        {deployment.status === "uninitialized" && (
+        {/* TODO USE IF NEEDED */}
+        {/* {deployment.status === "uninitialized" && (
           <div className="upload-section mt-4">
             <span className="label">Pending Actions:</span>
-            <FileUploader />
+            <FileUploader project_id={project_id} />
           </div>
-        )}
+        )} */}
       </Modal.Body>
     </Modal>
   );

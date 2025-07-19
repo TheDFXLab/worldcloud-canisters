@@ -15,7 +15,7 @@ export const AuthorityManager: React.FC<{}> = () => {
   const {
     status,
     isLoadingStatus,
-    refreshStatus,
+    // refreshStatus,
     handleAddController,
     handleRemoveController,
   } = useAuthority();
@@ -44,7 +44,8 @@ export const AuthorityManager: React.FC<{}> = () => {
           textColor: "green",
         });
 
-        await refreshStatus(); // Update controllers list
+        // TODO FIX THIS
+        // await refreshStatus(); // Update controllers list
       }
     } catch (error: any) {
       setShowToaster(true);
@@ -77,7 +78,8 @@ export const AuthorityManager: React.FC<{}> = () => {
           textColor: "green",
         });
 
-        await refreshStatus();
+        // TODO FIX THIS
+        // await refreshStatus();
       } else {
         setShowToaster(true);
         setToasterData({
@@ -124,6 +126,7 @@ export const AuthorityManager: React.FC<{}> = () => {
             </tr>
           </thead>
           <tbody>
+            {/* TODO: FIX THIS */}
             {status?.controllers.map((controller) => (
               <tr key={controller}>
                 <td>{controller}</td>

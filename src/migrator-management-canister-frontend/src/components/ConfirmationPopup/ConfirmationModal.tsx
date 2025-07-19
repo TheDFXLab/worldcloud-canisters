@@ -68,6 +68,7 @@ const MODAL_CONFIGS: Record<ModalType, ModalConfig> = {
 
 interface ConfirmationModalProps {
   amountState: [string, (amount: string) => void];
+  overrideEnableSubmit?: boolean;
   onHide: () => void;
   onConfirm: (amount: number) => Promise<void>;
   type?: ModalType;
@@ -76,6 +77,7 @@ interface ConfirmationModalProps {
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   amountState,
+  overrideEnableSubmit,
   onHide,
   onConfirm,
   type = "default",
@@ -135,15 +137,16 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   }, [balance, config.showEstimatedCycles]);
 
   const handleClickSubmit = async () => {
-    if (type === "cycles" && !params.canisterId) {
+    if (type === "cycles") {
       return;
     }
     setIsSubmitting(true);
     try {
       await onConfirm(parseFloat(amount));
-      if (type === "cycles") {
-        getStatus(params.canisterId as string);
-      }
+      // if (type === "cycles") {
+      //   // TODO Add project id to params if not there
+      //   getStatus(BigInt(params.projectId));
+      // }
       // getBalance();
       setShouldRefetchBalance(true);
       onHide();
@@ -298,11 +301,12 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           }}
           onClick={handleClickSubmit}
           disabled={
-            !amount ||
-            parseFloat(amount) <= 0 ||
-            isSubmitting ||
-            balance === BigInt(0) ||
-            (balance ? balance < icpToE8s(parseFloat(amount)) : false)
+            !overrideEnableSubmit &&
+            (!amount ||
+              parseFloat(amount) <= 0 ||
+              isSubmitting ||
+              balance === BigInt(0))
+            // || (balance ? balance < icpToE8s(parseFloat(amount)) : false)
           }
         >
           {isSubmitting ? (

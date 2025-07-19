@@ -107,7 +107,25 @@
 .method-card:hover::before {
   opacity: 1;
 }
+.method-card.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  background: var(--background-secondary);
+  border-color: var(--glass-border);
+  color: var(--text-secondary);
+  pointer-events: none;
+  filter: grayscale(50%);
+}
 
+.method-card.disabled:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--glass-border);
+}
+
+.method-card.disabled::before {
+  opacity: 0;
+}
 .method-icon {
   margin-bottom: 1.5rem;
   color: var(--color-primary);
@@ -134,7 +152,7 @@
 
 .deployment-content {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   padding-bottom: 2rem;
   height: calc(
     100vh - 200px

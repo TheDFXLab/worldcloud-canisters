@@ -32,6 +32,9 @@ export function HttpAgentProvider({ children }: { children: ReactNode }) {
     }
 
     if (environment === "local") {
+      if (!httpAgentManager.agent) {
+        throw new Error(`Http Agent is not initialized`);
+      }
       await httpAgentManager.agent.fetchRootKey();
     }
     setAgent(httpAgentManager.agent);
@@ -40,8 +43,8 @@ export function HttpAgentProvider({ children }: { children: ReactNode }) {
 
   const clearHttpAgent = () => {
     if (agent) {
+      setAgent(null);
     }
-    setAgent(null);
   };
 
   return (

@@ -32,6 +32,8 @@ import TruncatedTooltip from "../TruncatedTooltip/TruncatedTooltip";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { shortenPrincipal } from "../../utility/formatter";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import { useCyclesLogic } from "../../hooks/useCyclesLogic";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 
 const HomePage: React.FC = () => {
   const { deployments } = useDeployments();
@@ -39,12 +41,9 @@ const HomePage: React.FC = () => {
   const { identity } = useIdentity();
   const { setActiveTab } = useSideBar();
   const { setActionBar } = useActionBar();
-  const {
-    totalCredits,
-    isLoadingCredits,
-    getCreditsAvailable,
-    setShouldRefetchCredits,
-  } = useCycles();
+  const { setHeaderCard } = useHeaderCard();
+  const { totalCredits, isLoadingCredits } = useCycles();
+  const { fetchCredits } = useCyclesLogic();
   const { balance, transfer, setShouldRefetchBalance } = useLedger();
   const { setToasterData, setShowToaster } = useToaster();
   const { agent } = useHttpAgent();
@@ -60,14 +59,21 @@ const HomePage: React.FC = () => {
     (d) => d.status === "installed"
   ).length;
   const lastDeployment = deployments[0]?.date_updated
-    ? new Date(Number(deployments[0].date_updated) / 1000000).toLocaleString()
+    ? new Date(Number(deployments[0].date_updated)).toLocaleString()
     : "No deployments yet";
 
-  // Set the active tab to home
+  // Set the active tab to home and header card
   useEffect(() => {
+    console.log(`SETTING HOME ACTIVE TAB`);
     setActiveTab("home");
     setActionBar(null);
-  }, []);
+    setHeaderCard({
+      title: "Dashboard",
+      description: `Welcome back${
+        githubUser?.login ? `, ${githubUser.login}` : ``
+      }`,
+    });
+  }, [githubUser?.login]);
 
   const onConfirmTopUp = async () => {
     try {
@@ -115,7 +121,7 @@ const HomePage: React.FC = () => {
       });
       setShowToaster(true);
       // getCreditsAvailable();
-      setShouldRefetchCredits(true); // refresh credits
+      fetchCredits(); // refresh credits
       setShouldRefetchBalance(true);
     } catch (error) {
       console.error(`Error depositing ICP:`, error);
@@ -135,15 +141,6 @@ const HomePage: React.FC = () => {
           totalPrice: parseFloat(icpToDeposit),
           showTotalPrice: true,
         }}
-      />
-
-      <HeaderCard
-        title={"Dashboard"}
-        description={`${
-          githubUser
-            ? `Welcome back${githubUser.login ? `, ${githubUser.login}.` : `.`}`
-            : ""
-        }`}
       />
 
       {/* Quick Stats */}
@@ -204,9 +201,7 @@ const HomePage: React.FC = () => {
                     {deployment.canister_id.toText()}
                   </p>
                   <p className="activity-time">
-                    {new Date(
-                      Number(deployment.date_updated) / 1000000
-                    ).toLocaleString()}
+                    {new Date(Number(deployment.date_updated)).toLocaleString()}
                   </p>
                 </div>
                 <div className="activity-status">{deployment.status}</div>

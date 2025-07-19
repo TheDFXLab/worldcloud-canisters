@@ -1,0 +1,354 @@
+.create-project-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  background: var(--background);
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.project-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.project-form-card {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  height: fit-content;
+}
+
+.project-form-card h3 {
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.project-header {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto 2rem auto;
+}
+
+.project-header h2 {
+  color: var(--text-primary);
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.project-header p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin-left: 0.5rem;
+  max-width: 800px;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.18s;
+}
+.back-btn:hover {
+  color: var(--color-primary-dark);
+}
+
+.create-project-card h2 {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  text-align: left;
+}
+.create-project-card p {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  text-align: left;
+}
+
+.create-project-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.create-project-card .text-container {
+  max-width: 90%;
+  padding: 0rem 0rem;
+}
+
+.project-form-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+  font-size: var(--font-size-sm);
+}
+
+.project-form-card h3 {
+  font-size: var(--font-size-base);
+}
+
+.project-form-card label span {
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+}
+
+.project-form-card input[type="text"],
+.project-form-card textarea,
+.project-form-card select {
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  color: var(--text-primary);
+  width: 100%;
+  transition: all 0.2s ease;
+  font-size: var(--font-size-sm);
+}
+
+.project-form-card input[type="text"]::placeholder,
+.project-form-card textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.project-form-card input[type="text"]:focus,
+.project-form-card textarea:focus,
+.project-form-card select:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.project-form-card textarea {
+  min-height: 200px;
+  resize: vertical;
+}
+
+.desc-count {
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  align-self: flex-end;
+  margin-top: -0.5rem;
+}
+
+.tags-input-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.tags-input-row input[type="text"] {
+  flex: 1;
+  min-width: 150px;
+}
+
+.tag-chip {
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.3em 1em;
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  margin-right: 0.2em;
+}
+.remove-tag {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.1em;
+  cursor: pointer;
+  margin-left: 0.2em;
+  padding: 0 0.2em;
+  transition: color 0.18s;
+}
+.remove-tag:hover {
+  color: var(--color-error);
+}
+
+.add-tag-btn {
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-tag-btn:hover:not(:disabled) {
+  background: var(--background);
+  border-color: var(--color-primary);
+}
+
+.add-tag-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .add-tag-btn {
+    padding: 0.75rem 0.5rem;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+}
+
+.freemium-note {
+  background: var(--background);
+  color: var(--color-primary);
+  border-radius: 8px;
+  padding: 0.7em 1em;
+  font-size: var(--font-size-sm);
+  margin-top: 0.5em;
+}
+.freemium-note a {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+  margin-left: 0.5em;
+}
+
+.form-error {
+  color: var(--color-error);
+  background: var(--background);
+  border-radius: 8px;
+  padding: 0.6em 1em;
+  font-size: 0.98rem;
+  margin-bottom: 0.5em;
+  margin-top: 0.2em;
+}
+
+.submit-btn {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.7em 1.2em;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 0.8em;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.submit-btn:hover {
+  background: var(--color-primary-dark);
+}
+
+.create-project-page form {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.submit-btn {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.8em 2em;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 200px;
+}
+
+.submit-btn:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.form-error {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.project-form-card textarea {
+  min-height: 150px;
+}
+
+.project-form-card select {
+  width: 100%;
+  padding: 0.75rem;
+  padding-right: 2rem; /* Add padding for the dropdown arrow */
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  appearance: none; /* Remove default arrow */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1em;
+}
+
+.project-form-card select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-color-alpha);
+}
+
+@media (max-width: 900px) {
+  .project-form-grid {
+    grid-template-columns: 1fr;
+    margin-bottom: 1.5rem;
+  }
+
+  .project-form-card {
+    width: 100%;
+  }
+
+  .create-project-page {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .create-project-page {
+    padding: 0.5rem;
+  }
+}

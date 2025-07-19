@@ -19,6 +19,7 @@ import { useDeployments } from "../../context/DeploymentContext/DeploymentContex
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 import { reverse_proxy_url } from "../../config/config";
 import AuthState from "../../state/AuthState";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 
 interface PackageLocation {
   path: string;
@@ -44,24 +45,32 @@ interface RepoState {
   artifacts: ArtifactSummary[];
 }
 
-interface RepoSelectorProps {}
+interface RepoSelectorProps {
+  projectId?: string;
+  canisterId?: string | null;
+  onComplete?: () => void;
+}
 
 interface RepoSelectorState {
   selectedRepo: Repository | null;
   step: "select" | "configure" | "deploy";
 }
-const ITEMS_PER_PAGE = 3;
+const ITEMS_PER_PAGE = 6;
 
-const RepoSelector: React.FC<RepoSelectorProps> = () => {
+const RepoSelector: React.FC<RepoSelectorProps> = ({
+  projectId,
+  canisterId,
+  onComplete,
+}) => {
   /** Hooks */
   const { getGithubToken } = useGithub();
   const { identity } = useIdentity();
   const { actionBar, setActionBar } = useActionBar();
-  const { canisterId } = useParams();
   const { toasterData, setToasterData, setShowToaster } = useToaster();
   const navigate = useNavigate();
   const { agent } = useHttpAgent();
   const { isDispatched, setIsDispatched } = useDeployments();
+  const { setHeaderCard } = useHeaderCard();
 
   /** State */
   const [repos, setRepos] = useState<Repository[]>([]);
@@ -78,7 +87,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   const [hideActionBar, setHideActionBar] = useState(false);
   const [showTitle, setShowTitle] = useState(true);
-
   // Pagingation state
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.ceil(repos.length / ITEMS_PER_PAGE);
@@ -90,6 +98,13 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
     if (state.step === "select") setShowPagination(totalPages > 1);
     // setShowPagination(totalPages > 1);
   }, [totalPages, state.step]);
+
+  useEffect(() => {
+    setHeaderCard({
+      title: "Select Repository",
+      description: "Choose a repository to deploy to Internet Computer",
+    });
+  }, []);
 
   const initialDeploymentSteps: DeploymentStep[] = [
     {
@@ -130,18 +145,15 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
   ];
 
   useEffect(() => {
-    if (!canisterId) {
-      navigate("/dashboard/new");
+    if (!canisterId || !projectId) {
+      // navigate("/dashboard/new");
       return;
     }
-  }, [canisterId]);
+  }, [canisterId, projectId]);
 
   useEffect(() => {
     const loadRepos = async () => {
-      console.log(`Loading repositories...`);
-
       const repos = await github.listRepositories();
-      console.log(`Repositories loaded:`, repos);
       setRepos(repos);
     };
     loadRepos();
@@ -236,10 +248,13 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         throw new Error("Please login to deploy");
       }
       if (!canisterId) {
-        throw new Error("Please select a canister");
+        throw new Error("Please request a session to deploy code to a runner.");
       }
       if (!repoStates[repo].selectedPath) {
         throw new Error("Please select a source path");
+      }
+      if (!projectId) {
+        throw new Error("Project not selected.");
       }
 
       setShowToaster(true);
@@ -263,6 +278,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       }));
 
       setIsDispatched(true);
+      updateStepStatus(repo, "workflow", "in-progress");
 
       // // Update workflow step
       // const workflowContent = generateWorkflowTemplate(
@@ -312,8 +328,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         artifact.archive_download_url
       );
 
-      console.log(`Zip blob:`, zipBlob);
-      console.log(`Zip blob:`, zipBlob.size);
       const zipFile = new File([zipBlob], "build.zip", {
         type: "application/zip",
       });
@@ -321,16 +335,11 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
       updateStepStatus(repo, "artifact", "completed");
       updateStepStatus(repo, "deploy", "in-progress");
 
-      console.log(`Workflow run details:`, {
-        zipFile,
-        canisterId,
-        workflowRunDetails,
-      });
       // Deploy to canister
       const fileUploadApi = new FileUploadApi();
       const result = await fileUploadApi.uploadFromZip(
         zipFile,
-        canisterId,
+        BigInt(projectId),
         identity,
         workflowRunDetails,
         agent
@@ -351,10 +360,17 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         timeout: 5000,
       });
 
-      // Navigate to canister after a short delay
-      setTimeout(() => {
-        navigate(`/dashboard/canister/${canisterId}`); // navigate to canister page
-      }, 2000);
+      // Call onComplete instead of navigating
+      if (onComplete) {
+        setTimeout(() => {
+          onComplete();
+        }, 2000);
+      } else {
+        // Fallback to navigation if no onComplete provided
+        setTimeout(() => {
+          navigate(`/dashboard/canister/${projectId}`);
+        }, 2000);
+      }
     } catch (error) {
       console.error("Deploy failed:", error);
       // Mark current step as error
@@ -369,6 +385,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         textColor: "red",
         timeout: 5000,
       });
+      setShowToaster(true);
     }
   };
 
@@ -407,36 +424,33 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
     });
   };
 
-  const renderRepoGrid = () => (
-    <div className="repo-grid">
-      {currentRepos.map((repo) => (
-        <div
-          key={repo.id}
-          className={`repo-card ${
-            state.selectedRepo?.id === repo.id ? "selected" : ""
-          }`}
-          onClick={() => handleSelectRepo(repo)}
-        >
-          <div className="repo-name">{repo.name}</div>
-          <div className="repo-info">
-            <span>{repo.full_name}</span>
-            <span className="repo-visibility">{repo.visibility}</span>
-          </div>
-          <div className="repo-actions">
-            <a href={repo.html_url} target="_blank" rel="noopener noreferrer">
-              View on GitHub
-            </a>
-          </div>
-          {repoStates[repo.full_name]?.artifacts?.length > 0 && (
-            <div className="repo-artifacts">
-              <h4>Recent Builds</h4>
-              {/* ... artifacts list ... */}
-            </div>
-          )}
+  const renderRepoGrid = () =>
+    currentRepos.map((repo) => (
+      <div
+        key={repo.id}
+        className={`repo-card ${
+          state.selectedRepo?.id === repo.id ? "selected" : ""
+        }`}
+        onClick={() => handleSelectRepo(repo)}
+      >
+        <div className="repo-name">{repo.name}</div>
+        <div className="repo-info">
+          <span>{repo.full_name}</span>
+          <span className="repo-visibility">{repo.visibility}</span>
         </div>
-      ))}
-    </div>
-  );
+        <div className="repo-actions">
+          <a href={repo.html_url} target="_blank" rel="noopener noreferrer">
+            View on GitHub
+          </a>
+        </div>
+        {repoStates[repo.full_name]?.artifacts?.length > 0 && (
+          <div className="repo-artifacts">
+            <h4>Recent Builds</h4>
+            {/* ... artifacts list ... */}
+          </div>
+        )}
+      </div>
+    ));
 
   const renderConfigureStep = () => {
     if (!state.selectedRepo) {
@@ -462,8 +476,8 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
             </button>
           )}
 
-          <h2>Configure Deployment</h2>
-          <p>Configure deployment settings for {state.selectedRepo.name}</p>
+          {/* <h2>Configure Deployment</h2>
+          <p>Configure deployment settings for {state.selectedRepo.name}</p> */}
         </div>
 
         <div className="configure-content">
@@ -564,9 +578,13 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
         buttonText: "Deploy to Internet Computer",
         onButtonClick: () => handleDeploy(state.selectedRepo!.full_name),
         isButtonDisabled:
-          !canisterId ||
+          // !canisterId ||
           !repoStates[state.selectedRepo!.full_name]?.selectedPath,
         isHidden: hideActionBar,
+      });
+      setHeaderCard({
+        title: "Source Code",
+        description: "Select source branch",
       });
     }
   }, [
@@ -584,19 +602,14 @@ const RepoSelector: React.FC<RepoSelectorProps> = () => {
 
   return (
     <div className="repo-selector">
-      {showTitle && (
-        <div className="repo-header">
-          <h2>Select Repository</h2>
-          <p>Choose a repository to deploy to Internet Computer</p>
+      {state.step === "select" && (
+        <div className="repo-grid-container">
+          <div className="repo-grid">{renderRepoGrid()}</div>
         </div>
       )}
-
-      <div className={`repo-grid-container`}>
-        <div className="repo-grid">
-          {state.step === "select" && renderRepoGrid()}
-          {state.step === "configure" && renderConfigureStep()}
-        </div>
-      </div>
+      {state.step === "configure" && (
+        <div className="configure-container">{renderConfigureStep()}</div>
+      )}
 
       {showPagination && totalPages > 1 && (
         <div className="pagination-container">

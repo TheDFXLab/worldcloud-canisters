@@ -13,16 +13,16 @@ class SubscriptionApi {
     constructor() {
     }
 
-    async getTiersList(identity: Identity | null, agent?: HttpAgent) {
-        const _agent = agent || await HttpAgent.create({ host: http_host });
-
-        if (!_agent) {
-            throw new Error("Failed to get agent");
+    async getTiersList(identity: Identity | null, agent: HttpAgent | null) {
+        if (!agent) {
+            throw new Error("HttpAgent is not initialized.");
         }
-        const mainApi = await MainApi.create(identity, _agent);
+
+        const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) {
             throw new Error("Failed to create main api");
         }
+
         const tiers = await mainApi.actor?.get_tiers();
         if (!tiers) {
             throw new Error("Failed to get tiers");
@@ -36,11 +36,11 @@ class SubscriptionApi {
             if (!mainApi) {
                 throw new Error("Failed to create main api");
             }
-            const subscriptions = await mainApi.actor?.get_all_subscriptions();
-            if (!subscriptions) {
-                throw new Error("Failed to get all subscriptions");
-            }
-            return subscriptions;
+            // const subscriptions = await mainApi.actor?.get_all_subscriptions();
+            // if (!subscriptions) {
+            //     throw new Error("Failed to get all subscriptions");
+            // }
+            // return subscriptions;
         } catch (error) {
             console.error(error);
         }

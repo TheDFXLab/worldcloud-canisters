@@ -24,6 +24,7 @@ import UpgradeIcon from "@mui/icons-material/Upgrade";
 import NonSubbed from "./NonSubbed/NonSubbed";
 import Subbed from "./Subbed/Subbed";
 import { usePricing } from "../../context/PricingContext/PricingContext";
+import { useSubscriptionLogic } from "../../hooks/useSubscriptionLogic";
 
 const BillingPage: React.FC = () => {
   /** Hooks */
@@ -33,14 +34,15 @@ const BillingPage: React.FC = () => {
   const { setActionBar } = useActionBar();
   const { setToasterData, setShowToaster } = useToaster();
   const { summon, destroy } = useLoaderOverlay();
+
   const {
     subscription,
     // tiers,
-    isLoadingSub,
-    isLoadingTiers,
+    isLoading,
+    error,
+    loadSubscriptionData,
     subscribe,
-    getSubscription,
-  } = useSubscription();
+  } = useSubscriptionLogic();
 
   const { tiers } = usePricing();
 
@@ -55,11 +57,23 @@ const BillingPage: React.FC = () => {
     <CorporateFareIcon />,
   ];
 
-  // Set the active tab to settings
+  // Set the active tab and load initial data
   useEffect(() => {
     setActiveTab("billing");
     setActionBar(null);
   }, []);
+
+  // Handle subscription errors with retry
+  const handleRetry = async () => {
+    try {
+      summon("Retrying...");
+      await loadSubscriptionData();
+    } catch (err) {
+      // Error handling is done in loadSubscriptionData
+    } finally {
+      destroy();
+    }
+  };
 
   const handleSelectPlan = (tierId: number | null) => {
     if (!tiers || tierId === null) return;
@@ -73,31 +87,34 @@ const BillingPage: React.FC = () => {
 
   const handleSubscribe = async (tierId: number | null) => {
     if (tierId === null) {
-      setShowToaster(true);
       setToasterData({
         headerContent: "Error",
         toastStatus: false,
         toastData: "Please select a plan",
         timeout: 2000,
       });
+      setShowToaster(true);
       return;
     }
+
     try {
       summon("Processing your request...");
-
       const res = await subscribe(tierId, Number(amount));
-      if (res.status) {
-        getSubscription();
-        setToasterData({
-          headerContent: "Subscription Created",
-          toastStatus: true,
-          toastData: res.message,
-          timeout: 2000,
-        });
-        setShowToaster(true);
-      } else {
-        throw new Error(res.message);
+
+      if (!res.status) {
+        throw new Error(res.message || "Unexpected error occurred.");
       }
+
+      // Refresh data after successful subscription
+      await loadSubscriptionData(true); // silent refresh
+
+      setToasterData({
+        headerContent: "Subscription Created",
+        toastStatus: true,
+        toastData: res.message,
+        timeout: 2000,
+      });
+      setShowToaster(true);
     } catch (error: any) {
       setToasterData({
         headerContent: "Error",
@@ -106,14 +123,25 @@ const BillingPage: React.FC = () => {
         timeout: 2000,
       });
       setShowToaster(true);
-      console.log(`Error subscribing.`, error);
     } finally {
       destroy();
     }
   };
 
-  if (isLoadingSub || isLoadingTiers) {
+  // Show loading state
+  if (isLoading) {
     return <LoadingView type="billing" />;
+  }
+
+  // Show error state with retry button
+  if (error) {
+    return (
+      <div className="billing-container error-container">
+        <h3>Failed to load subscription data</h3>
+        <p>{error}</p>
+        <button onClick={handleRetry}>Retry</button>
+      </div>
+    );
   }
 
   return (
@@ -124,6 +152,9 @@ const BillingPage: React.FC = () => {
           onHide={() => setShowModal(false)}
           onConfirm={() => handleSubscribe(selectedPlanId)}
           amountState={[amount, setAmount]}
+          overrideEnableSubmit={
+            parseInt(tiers[selectedPlanId].id.toString()) === 3
+          }
           customConfig={{
             totalPrice: fromE8sStable(
               tiers[selectedPlanId].price.e8s +
@@ -140,12 +171,12 @@ const BillingPage: React.FC = () => {
         />
       )}
 
-      <div className="billing-header">
+      {/* <div className="billing-header">
         <HeaderCard
           title="Subscription & Billing"
           description="Manage your subscription and billing preferences"
         />
-      </div>
+      </div> */}
 
       <div className="billing-content">
         {showPricing || !subscription ? (

@@ -35,13 +35,6 @@ const Settings: React.FC = () => {
 
   return (
     <div className="settings-container">
-      <div className="settings-header">
-        <h2>Account Settings</h2>
-        <p className="subtitle">
-          Manage your account preferences and connections
-        </p>
-      </div>
-
       <div className="settings-grid">
         {/* Internet Identity Section */}
         <div className="settings-card">
@@ -90,6 +83,7 @@ const Settings: React.FC = () => {
                 <button
                   className="disconnect-button"
                   onClick={handleGithubDisconnect}
+                  aria-label="Connect GitHub in new tab"
                 >
                   <LogoutIcon />
                   Disconnect GitHub
