@@ -278,6 +278,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
       }));
 
       setIsDispatched(true);
+      updateStepStatus(repo, "workflow", "in-progress");
 
       // // Update workflow step
       // const workflowContent = generateWorkflowTemplate(
