@@ -268,24 +268,34 @@ class MainApi {
         }
     }
 
-    async storeInAssetCanister(project_id: bigint, files: StaticFile[], workflowRunDetails?: WorkflowRunDetails) {
-        try {
-            if (!this.actor) {
-                throw new Error("Actor not initialized.");
-            }
-            const result = await this.actor.storeInAssetCanister(project_id, files, workflowRunDetails ? [workflowRunDetails] : []);
-            if ('ok' in result) {
-                return result.ok;
-            }
-            else {
-                throw this.handleResponseError(result.err);
-            }
+    // async storeInAssetCanister(project_id: bigint, files: StaticFile[], workflowRunDetails?: WorkflowRunDetails) {
+    //     try {
+    //         if (!this.actor) {
+    //             throw new Error("Actor not initialized.");
+    //         }
+    //         const result = await this.actor.storeInAssetCanister(project_id, files, workflowRunDetails ? [workflowRunDetails] : []);
+    //         if ('ok' in result) {
+    //             return result.ok;
+    //         }
+    //         else {
+    //             throw this.handleResponseError(result.err);
+    //         }
 
+    //     } catch (error: any) {
+    //         console.log(`Error storing in asset canister:`, error)
+    //         throw error;
+    //     }
+    // }
+
+    async storeInAssetCanister(project_id: bigint, files: StaticFile[], current_batch: number, total_batch_count: number, workflowRunDetails?: WorkflowRunDetails) {
+        try {
+            return await this.uploadAssetsToProject(project_id, files, current_batch, total_batch_count, workflowRunDetails);
         } catch (error: any) {
             console.log(`Error storing in asset canister:`, error)
             throw error;
         }
     }
+
 
     // Updates the user balance in backend book after deposit to special address by user
     async deposit() {
@@ -413,7 +423,7 @@ class MainApi {
             const result = await this.actor.create_project(payload);
 
             if ('ok' in result) {
-                const currentTimeNano = BigInt(Date.now()) * BigInt(1_000_000); // Convert current time to nanoseconds
+                const currentTime = BigInt(Date.now());
 
                 return {
                     id: result.ok.project_id,
@@ -422,8 +432,8 @@ class MainApi {
                     tags,
                     plan: projectPlan,
                     canister_id: null,
-                    date_created: Number(currentTimeNano),
-                    date_updated: Number(currentTimeNano)
+                    date_created: Number(currentTime),
+                    date_updated: Number(currentTime)
                 };
             }
             else {
@@ -435,7 +445,7 @@ class MainApi {
         }
     }
 
-    async uploadAssetsToProject(project_id: number, files: StaticFile[], workflowRunDetails?: WorkflowRunDetails) {
+    async uploadAssetsToProject(project_id: bigint, files: StaticFile[], current_batch: number, total_batch_count: number, workflowRunDetails?: WorkflowRunDetails) {
         try {
             if (!this.actor) {
                 throw new Error("Actor not initialized.");
@@ -448,9 +458,11 @@ class MainApi {
             }
 
             const payload: StoreAssetInCanisterPayload = {
-                project_id: BigInt(project_id),
+                project_id,
                 files,
-                workflow_run_details: workflowRunDetails ? [workflowRunDetails] : []
+                workflow_run_details: workflowRunDetails ? [workflowRunDetails] : [],
+                current_batch: BigInt(current_batch),
+                total_batch_count: BigInt(total_batch_count)
             }
 
             const result = await this.actor.upload_assets_to_project(payload);

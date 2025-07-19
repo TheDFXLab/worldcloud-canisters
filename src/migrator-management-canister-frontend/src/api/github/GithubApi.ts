@@ -5,6 +5,7 @@ import { generateWorkflowTemplate } from "../../utility/workflowTemplate";
 import MainApi from "../main";
 import { Principal } from "@dfinity/principal";
 import AuthState from "../../state/AuthState";
+import { GithubWorkflowRunResult } from "./types";
 
 interface GithubWorkflowRunsResponse {
     workflow_runs: GithubWorkflowRunPartial[];
@@ -602,19 +603,18 @@ export class GithubApi {
             console.log(`Reponse polling for artifact:`, response);
 
             if (response.status === 200) {
-                const workflowRunResult = await response.json();
-                if (workflowRunResult.message && workflowRunResult.message.includes("No new runs")) {
+                const runResult: GithubWorkflowRunResult | any = await response.json();
+                if (runResult.message && runResult.message.includes("No new runs")) {
                     await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
                     continue;
                 }
 
-                // const data = await workflowRunResult.json();
+                const workflowRunResult = runResult as GithubWorkflowRunResult;
                 console.log(`Workflow run result:`, workflowRunResult);
 
                 if (workflowRunResult && workflowRunResult.targetArtifact) {
-
                     const workflowRunDetails: WorkflowRunDetails = {
-                        workflow_run_id: BigInt(workflowRunResult.targetArtifact.id),
+                        workflow_run_id: BigInt(workflowRunResult.run.id),
                         repo_name: repo,
                         branch: [branch],
                         status: { completed: null },

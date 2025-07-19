@@ -38,7 +38,7 @@ class FileUploadApi {
             let totalUploadedSize = 0;
             // 2MB limit
             if (totalSize < 2000000) {
-                const result = await this.storeAssetsInCanister(unzippedFiles, projectId, identity, workflowRunDetails, agent);
+                const result = await this.storeAssetsInCanister(unzippedFiles, projectId, identity, workflowRunDetails, 1, 1, agent);
                 totalUploadedSize += result.uploadedSize ?? 0;
                 // setUploadedSize(totalUploadedSize);
             } else {
@@ -107,7 +107,7 @@ class FileUploadApi {
 
                     const totalSize = this.calculateTotalSize(files);
 
-                    const result = await this.storeAssetsInCanister(files, projectId, identity, workflowRunDetails, agent);
+                    const result = await this.storeAssetsInCanister(files, projectId, identity, workflowRunDetails, i + 1, batches.length, agent);
                     if (!result) {
                         console.log(`Error: Failed to store batch ${i + 1}`);
                     }
@@ -129,7 +129,15 @@ class FileUploadApi {
         }
     };
 
-    private async storeAssetsInCanister(files: StaticFile[], projectId: bigint, identity: Identity | null, workflowRunDetails: WorkflowRunDetails, agent: HttpAgent) {
+    private async storeAssetsInCanister(
+        files: StaticFile[],
+        projectId: bigint,
+        identity: Identity | null,
+        workflowRunDetails: WorkflowRunDetails,
+        currentBatch: number,
+        totalBatchCount: number,
+        agent: HttpAgent
+    ) {
         try {
             const sanitizedFiles = files.filter(
                 (file) => !file.path.includes("MACOS")
@@ -146,7 +154,9 @@ class FileUploadApi {
             const result = await mainApi?.storeInAssetCanister(
                 projectId,
                 sanitizedFiles,
-                workflowRunDetails
+                currentBatch,
+                totalBatchCount,
+                workflowRunDetails,
             );
 
             if (result) {
