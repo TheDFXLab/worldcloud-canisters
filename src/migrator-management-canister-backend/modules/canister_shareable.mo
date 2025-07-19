@@ -18,9 +18,9 @@ import Access "access";
 module {
 
     public class ShareableCanisterManager() {
-        private let DEFAULT_DURATION = 180; // 3mins
+        private let DEFAULT_DURATION_MS = 180 * 1_000; // 3mins
         // private let DEFAULT_DURATION = 14_400; // 4 hrs
-        private let RATE_LIMIT_WINDOW = 86_400; // 1 day
+        private let RATE_LIMIT_WINDOW_MS = 86_400 * 1_000; // 1 day
         private let MAX_USES_THRESHOLD = 3; // 3 uses per day
         public var MAX_SHAREABLE_CANISTERS = 10;
         public var MIN_CYCLES_INIT_E8S = 200_000_000;
@@ -58,7 +58,7 @@ module {
                             let updated_log : Types.UsageLog = {
                                 is_active = false;
                                 usage_count = log.usage_count;
-                                last_used = Int.abs(Time.now());
+                                last_used = Int.abs(Utility.get_time_now(#milliseconds));
                                 rate_limit_window = log.rate_limit_window;
                                 max_uses_threshold = log.max_uses_threshold;
                             };
@@ -113,7 +113,7 @@ module {
                         is_active = false;
                         usage_count = 0;
                         last_used = 0;
-                        rate_limit_window = RATE_LIMIT_WINDOW;
+                        rate_limit_window = RATE_LIMIT_WINDOW_MS;
                         max_uses_threshold = MAX_USES_THRESHOLD;
                     };
                     return new_usage;
@@ -232,7 +232,7 @@ module {
             let slot : Types.ShareableCanister = switch (slots.get(slot_id)) {
                 case (null) { return #err(Errors.NotFoundSlot()) };
                 case (?slot) {
-                    if (slot.status == #occupied and (Time.now() - slot.start_timestamp >= slot.duration)) {
+                    if (slot.status == #occupied and (Utility.get_time_now(#milliseconds) - slot.start_timestamp >= slot.duration)) {
                         return #ok(true);
                     };
                     return #ok(false);
@@ -260,7 +260,7 @@ module {
                 is_active = false;
                 usage_count = 0;
                 last_used = 0;
-                rate_limit_window = RATE_LIMIT_WINDOW;
+                rate_limit_window = RATE_LIMIT_WINDOW_MS;
                 max_uses_threshold = MAX_USES_THRESHOLD;
             };
 
@@ -269,7 +269,7 @@ module {
         };
 
         private func calculate_usage_count(usage_count : Nat, last_used : Nat, increment : Bool) : Nat {
-            switch (Int.abs(Time.now()) - last_used > RATE_LIMIT_WINDOW) {
+            switch (Int.abs(Utility.get_time_now(#milliseconds)) - last_used > RATE_LIMIT_WINDOW_MS) {
                 case (false) {
                     // Reset if time window is passed
                     0;
@@ -342,22 +342,22 @@ module {
                     is_active = false;
                     usage_count = 0;
                     last_used = 0;
-                    rate_limit_window = RATE_LIMIT_WINDOW;
+                    rate_limit_window = RATE_LIMIT_WINDOW_MS;
                     max_uses_threshold = MAX_USES_THRESHOLD;
                 },
             );
             assert not usage_log.is_active; // Ensure user is not currently using a shared canister
 
             // Assert usage count only when user is within timeframe
-            if (not (Int.abs(Time.now()) - usage_log.last_used > RATE_LIMIT_WINDOW)) {
+            if (not (Int.abs(Utility.get_time_now(#milliseconds)) - usage_log.last_used > RATE_LIMIT_WINDOW_MS)) {
                 assert not (usage_log.usage_count >= usage_log.max_uses_threshold); // Ensure not over limit
             };
 
             let updated_usage_log : Types.UsageLog = {
                 is_active = true;
                 usage_count = calculate_usage_count(usage_log.usage_count, usage_log.last_used, true);
-                last_used = Int.abs(Time.now());
-                rate_limit_window = RATE_LIMIT_WINDOW;
+                last_used = Int.abs(Utility.get_time_now(#milliseconds));
+                rate_limit_window = RATE_LIMIT_WINDOW_MS;
                 max_uses_threshold = MAX_USES_THRESHOLD;
             };
 
@@ -369,7 +369,7 @@ module {
                 owner = slot.owner;
                 user = user;
                 create_timestamp = slot.create_timestamp;
-                start_timestamp = Int.abs(Time.now());
+                start_timestamp = Int.abs(Utility.get_time_now(#milliseconds));
                 duration = slot.duration;
                 start_cycles = slot.start_cycles; // set cycle balance at start of session
                 status = #occupied;
@@ -416,8 +416,8 @@ module {
                     let updated_usage_log : Types.UsageLog = {
                         is_active = false;
                         usage_count = calculate_usage_count(log.usage_count, log.last_used, false); // Only incremented when session starts
-                        last_used = Int.abs(Time.now());
-                        rate_limit_window = RATE_LIMIT_WINDOW;
+                        last_used = Int.abs(Utility.get_time_now(#milliseconds));
+                        rate_limit_window = RATE_LIMIT_WINDOW_MS;
                         max_uses_threshold = MAX_USES_THRESHOLD;
                     };
 
@@ -449,9 +449,9 @@ module {
                 canister_id = ?canister_id;
                 owner = owner;
                 user = owner;
-                create_timestamp = Int.abs(Time.now());
-                start_timestamp = Int.abs(Time.now());
-                duration = DEFAULT_DURATION;
+                create_timestamp = Int.abs(Utility.get_time_now(#milliseconds));
+                start_timestamp = Int.abs(Utility.get_time_now(#milliseconds));
+                duration = DEFAULT_DURATION_MS;
                 start_cycles = start_cycles;
                 status = #available;
             };
