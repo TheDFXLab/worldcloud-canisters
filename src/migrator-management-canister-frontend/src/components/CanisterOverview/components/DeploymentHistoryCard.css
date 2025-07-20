@@ -1,66 +1,274 @@
-.deployment-timestamps {
+.deployment-history-card {
+  height: fit-content;
+  max-height: 500px;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
 }
 
-.deployment-size {
+.deployment-history-card .card-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.deployment-history-card .activity-list {
+  overflow-y: auto;
+  padding-right: 8px; /* Space for scrollbar */
+  width: 100%;
+}
+
+.deployment-history-card .activity-item {
+  background: var(--background-secondary);
+  border-radius: 6px;
+  padding: 0.6rem;
+  margin-bottom: 0.45rem;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+}
+
+.deployment-history-card .activity-item:hover {
+  /* background: var(--background-hover); */
+}
+
+.deployment-history-card .activity-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.deployment-history-card .activity-title {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  margin-left: 1rem;
-  padding: 0.25rem 0.5rem;
-  background: var(--background-secondary);
-  border-radius: 4px;
+  justify-content: space-between;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  line-height: 1.2;
 }
 
-.storage-icon {
-  font-size: 1rem !important;
+.deployment-history-card .status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.deployment-history-card .status-text {
+  font-weight: 500;
+}
+
+.deployment-history-card .status-icon {
+  font-size: 0.875rem !important;
+}
+
+.deployment-history-card .status-icon.success {
+  color: var(--success-color);
+}
+
+.deployment-history-card .status-icon.error {
+  color: var(--error-color);
+}
+
+.deployment-history-card .status-icon.pending {
+  color: var(--warning-color);
+}
+
+.deployment-history-card .status-icon.unknown {
   color: var(--text-tertiary);
 }
 
-.deployment-primary {
+.deployment-metrics {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 0.5rem;
+  font-size: 0.75rem;
 }
 
-.detail-item code {
-  background: var(--background-secondary);
-  padding: 0.125rem 0.375rem;
-  border-radius: 4px;
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
+.deployment-repo {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--text-secondary);
+  background: var(--background-tertiary);
+  padding: 0.2rem 0rem;
+  border-radius: 12px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.MuiTooltip-tooltip {
-  background-color: var(--background) !important;
-  color: var(--text-primary) !important;
-  border: 1px solid var(--border-color) !important;
+.deployment-size {
+  background: var(--background-tertiary);
+  color: var(--text-secondary);
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.metric-icon {
   font-size: 0.75rem !important;
-  padding: 0.5rem 0.75rem !important;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
 }
 
-.MuiTooltip-arrow {
-  color: var(--background) !important;
+.activity-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
 }
 
-/* Make items with tooltips appear interactive */
-[role="tooltip"] {
-  cursor: help;
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: var(--font-size-sm);
+  margin: 0;
+  padding: 0;
 }
 
-.detail-item {
-  cursor: help;
+.detail-label {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--text-tertiary);
+  min-width: 60px;
+  font-size: var(--font-size-xs) !important;
+  text-transform: none;
+}
+
+.detail-label.lowercase {
+  text-transform: none;
+}
+
+.detail-value {
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.detail-icon {
+  font-size: 0.7rem !important;
+}
+
+.detail-row.error .detail-label,
+.detail-row.error .detail-value {
+  color: var(--error-color);
+}
+
+.deployment-history-card .activity-time-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.2rem;
+}
+
+.deployment-history-card .activity-time {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.deployment-history-card .activity-time.clickable {
+  color: var(--primary-color);
+  cursor: pointer;
+  text-decoration: underline;
   transition: all 0.2s ease;
 }
 
-.detail-item:hover {
-  opacity: 0.8;
+.deployment-history-card .activity-time.clickable:hover {
+  color: var(--primary-hover);
+  text-decoration: none;
+}
+
+.time-icon {
+  font-size: 0.7rem !important;
+}
+
+.activity-item {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.deployment-history-card .activity-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.2rem;
+}
+
+.deployment-history-card .empty-state {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 1.2rem;
+}
+
+/* Tooltip styles */
+.deployment-tooltip {
+  padding: 0.5rem;
+  max-width: 300px;
+}
+
+.tooltip-section {
+  margin-bottom: 0.3rem;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.tooltip-section:last-child {
+  margin-bottom: 0;
+}
+
+.tooltip-section.error {
+  color: var(--error-color);
+}
+
+.tooltip-section strong {
+  color: var(--text-primary);
+  margin-right: 0.5rem;
+}
+
+/* Custom scrollbar for deployment list */
+.deployment-history-card .activity-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.deployment-history-card .activity-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.deployment-history-card .activity-list::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+  .deployment-history-card {
+    max-height: none;
+  }
+
+  .deployment-history-card .activity-list {
+    max-height: none;
+  }
+
+  .deployment-metrics {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.2rem;
+  }
+
+  .deployment-repo {
+    max-width: 100px;
+  }
+
+  .detail-row {
+    font-size: 0.65rem;
+  }
+
+  .detail-label {
+    min-width: 50px;
+  }
 }
