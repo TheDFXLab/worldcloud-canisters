@@ -1,6 +1,7 @@
 import React from "react";
 import InfoIcon from "@mui/icons-material/Info";
 import { Chip } from "@mui/material";
+import { SerializedProject } from "../../../utility/bigint";
 
 interface Project {
   id: bigint;
@@ -13,7 +14,7 @@ interface Project {
 }
 
 interface ProjectInfoCardProps {
-  currentProject: Project;
+  currentProject: SerializedProject;
 }
 
 export const ProjectInfoCard: React.FC<ProjectInfoCardProps> = ({
