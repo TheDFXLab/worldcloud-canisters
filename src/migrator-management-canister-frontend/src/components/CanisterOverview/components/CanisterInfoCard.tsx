@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Tooltip, Chip } from "@mui/material";
 import StorageIcon from "@mui/icons-material/Storage";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -25,7 +25,7 @@ export const CanisterInfoCard: React.FC<CanisterInfoCardProps> = ({
     <div className="overview-card">
       <div className="card-header">
         <StorageIcon />
-        <h3>Canister Information</h3>
+        <h3>Runner Information</h3>
       </div>
       <div className="card-content">
         <div className="info-table">

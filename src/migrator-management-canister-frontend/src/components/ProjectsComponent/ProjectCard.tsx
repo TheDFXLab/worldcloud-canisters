@@ -216,30 +216,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         )}
 
         <div className="project-actions">
-          {/* {hasCanister && deploymentStatus === "uninitialized" && (
-            <span
-              className={`tag`}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                padding: "6px 16px",
-                height: "32px",
-                minWidth: "120px",
-                borderRadius: "6px",
-                backgroundColor: "var(--background-light)",
-                color: "var(--text-secondary)",
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-                lineHeight: 1,
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              Installing Website
-            </span>
-          )} */}
           {hasCanister && deploymentStatus === "installed" && (
             <button
               className="action-button primary"
@@ -270,18 +246,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             >
               <CodeIcon />
               {getActionButtonMessage().title}
-              {/* {hasCanister ? (
-                <span>
-                  {deploymentStatus === "installed" && "Update Code"}
-                  {(deploymentStatus === "uninitialized" ||
-                    deploymentStatus === "failed") &&
-                    "Deploy New Code"}
-                </span>
-              ) : "freemium" in project.plan ? (
-                "Request Freemium Session"
-              ) : (
-                "Attach Canister"
-              )} */}
             </button>
           </Tooltip>
         </div>

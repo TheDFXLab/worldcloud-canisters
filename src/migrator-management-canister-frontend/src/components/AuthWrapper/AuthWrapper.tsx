@@ -36,7 +36,6 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
         return;
       }
       setIsLoading(false);
-      debugger;
     } catch (error) {
       console.error("Login failed:", error);
     } finally {
@@ -62,7 +61,6 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
   }, [isConnected, isLoadingIdentity]);
 
   if (isLoadingIdentity && !isConnected) {
-    debugger;
     return <LoaderOverlay />;
   }
 
