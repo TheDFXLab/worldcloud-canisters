@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { CircularProgress, Chip } from "@mui/material";
+import { CircularProgress, Chip, Tooltip } from "@mui/material";
 import HistoryIcon from "@mui/icons-material/History";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import "./ActivityCard.css";
+import { formatDate } from "../../../utility/formatter";
 
 interface ActivityLog {
   id: string;
@@ -23,21 +24,6 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
 }) => {
   const [expanded, setExpanded] = useState(false);
   const MAX_VISIBLE_LOGS = 5;
-
-  const formatTimeAgo = (timestamp: number) => {
-    const now = Date.now();
-    const diff = now - timestamp;
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor(diff / (1000 * 60));
-
-    if (hours > 24) {
-      return new Date(timestamp).toLocaleDateString();
-    } else if (hours > 0) {
-      return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
-    } else {
-      return `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`;
-    }
-  };
 
   const sortedLogs = activityLogs?.sort(
     (a, b) => b.create_time - a.create_time
@@ -78,9 +64,11 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
                       <div className="activity-time">
                         {new Date(log.create_time).toLocaleString()}
                       </div>
-                      <div className="activity-time">
-                        {formatTimeAgo(log.create_time)}
-                      </div>
+                      <Tooltip title={`${new Date(log.create_time)}`}>
+                        <div className="activity-time">
+                          {formatDate(log.create_time)}
+                        </div>
+                      </Tooltip>
                     </div>
                   </div>
                 </div>

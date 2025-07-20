@@ -14,6 +14,7 @@
 
 .activity-list {
   overflow-y: auto;
+  width: 100%;
   padding-right: 8px; /* Space for scrollbar */
 }
 
@@ -53,7 +54,8 @@
 
 .activity-time {
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
 }
 
 .category-chip {
