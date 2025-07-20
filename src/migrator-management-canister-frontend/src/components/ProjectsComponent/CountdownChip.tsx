@@ -22,8 +22,8 @@ function formatTimeLeft(secondsLeft: number): string {
 }
 
 const CountdownChip: React.FC<CountdownChipProps> = ({
-  startTimestamp,
-  duration,
+  startTimestamp, // timestamp in ms
+  duration, // duration in ms
   className = "",
   onExpire,
 }) => {
@@ -32,8 +32,8 @@ const CountdownChip: React.FC<CountdownChipProps> = ({
     typeof startTimestamp === "bigint"
       ? Number(startTimestamp)
       : Number(startTimestamp);
-  const durationSec = Number(duration);
-  const expiryMs = startMs + durationSec * 1000;
+  // const durationSec = Math.floor(Number(duration) / 1000);
+  const expiryMs = startMs + Number(duration);
 
   const [timeLeft, setTimeLeft] = useState(
     Math.max(0, Math.floor((expiryMs - Date.now()) / 1000))
