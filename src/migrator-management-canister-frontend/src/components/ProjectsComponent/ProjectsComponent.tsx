@@ -30,6 +30,7 @@ import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext
 import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
 import { useDeploymentLogic } from "../../hooks/useDeploymentLogic";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
+import ProjectsSkeleton from "./ProjectsSkeleton";
 
 // Tag and sorting options
 const planMap: Record<string, string> = {
@@ -105,6 +106,10 @@ const ProjectsComponent: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    console.log(`is loading`, isLoading);
+  }, [isLoading]);
+
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
         filterRef.current &&
@@ -128,8 +133,13 @@ const ProjectsComponent: React.FC = () => {
     setHeaderCard(mapHeaderContent("projects"));
   }, []);
 
+  // If loading, show skeleton
+  if (isLoading) {
+    return <ProjectsSkeleton viewMode={viewMode} />;
+  }
+
   // If no projects at all, show the dotted silhouette card
-  if (!isLoading && (!projects || projects.length === 0)) {
+  if (!projects || projects.length === 0) {
     return (
       <div className="projects-container">
         <div className="projects-grid empty-align-left">
