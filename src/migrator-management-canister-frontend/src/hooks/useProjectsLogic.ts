@@ -51,15 +51,21 @@ export const useProjectsLogic = () => {
     // Function to refresh projects
     const refreshProjects = useCallback(async () => {
         if (identity && agent) {
-            console.log(`Now getting user project in dispatch..`)
-            await dispatch(getUserProjects({ identity, agent }));
+            console.log(`Now getting user project in dispatch..`);
+            await dispatch(getUserProjects({
+                identity,
+                agent,
+                silent: false // Explicitly set to false to show loading state
+            }));
         }
     }, [dispatch, identity, agent]);
 
-    // // Fetch projects on mount and when identity/agent changes
-    // useEffect(() => {
-    //     refreshProjects();
-    // }, [refreshProjects, identity, agent]);
+    // Fetch projects on mount and when identity/agent changes
+    useEffect(() => {
+        if (identity && agent) {
+            refreshProjects();
+        }
+    }, [refreshProjects, identity, agent]);
 
     // Deserialize projects for use in the app
     const projects = useMemo(() =>
