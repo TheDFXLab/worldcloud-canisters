@@ -2,20 +2,23 @@ import { createContext, useContext, ReactNode } from "react";
 import { Deployment } from "../../components/AppLayout/interfaces";
 import { WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { useDeploymentLogic } from "../../hooks/useDeploymentLogic";
-import { SerializedWorkflowRunDetail } from "../../utility/principal";
+import {
+  SerializedDeployment,
+  SerializedWorkflowRunDetail,
+} from "../../utility/principal";
 
 interface DeploymentsContextType {
   deployments: Deployment[];
   selectedDeployment: Deployment | null;
-  setSelectedDeployment: (deployment: Deployment | null) => void;
+  setSelectedDeployment: (deployment: SerializedDeployment | null) => void;
   isLoading: boolean;
-  refreshDeployments: () => Promise<void>;
+  refreshDeployments: (project_id: number) => Promise<void>;
   getDeployment: (canisterId: string) => Deployment | undefined;
   getWorkflowRunHistory: (
     project_id: bigint
   ) => Promise<SerializedWorkflowRunDetail[] | undefined>;
   addDeployment: (deployment: Deployment) => void;
-  updateDeployment: (canisterId: string, updates: Partial<Deployment>) => void;
+  // updateDeployment: (canisterId: string, updates: Partial<Deployment>) => void;
   isDispatched: boolean;
   setIsDispatched: (isDispatched: boolean) => void;
 }
@@ -34,7 +37,7 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
     getDeployment,
     getWorkflowRunHistory,
     addDeployment,
-    updateDeployment,
+    // updateDeployment,
     setSelectedDeployment,
     setIsDispatched,
   } = useDeploymentLogic();
@@ -48,7 +51,7 @@ export function DeploymentsProvider({ children }: { children: ReactNode }) {
     getDeployment,
     getWorkflowRunHistory,
     addDeployment,
-    updateDeployment,
+    // updateDeployment,
     isDispatched,
     setIsDispatched,
   } as DeploymentsContextType;

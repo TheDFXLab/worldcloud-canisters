@@ -31,7 +31,7 @@ type CanisterType = "website" | "drive";
 
 function FileUploader({ project_id }: { project_id: bigint }) {
   /** Hooks */
-  const { updateDeployment, refreshDeployments } = useDeployments();
+  const { refreshDeployments } = useDeployments();
   const { toasterData, setToasterData, setShowToaster } = useToaster();
   const { canisterId } = useParams();
   const { identity } = useIdentity();
@@ -234,7 +234,7 @@ function FileUploader({ project_id }: { project_id: bigint }) {
         }
       }
 
-      await refreshDeployments();
+      await refreshDeployments(Number(project_id));
       return {
         status: true,
         message: "Successfully uploaded all files to canister",

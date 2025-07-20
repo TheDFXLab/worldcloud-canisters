@@ -21,6 +21,7 @@ import Sidebar from "../Sidebar/Sidebar";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 import HeaderCard from "../HeaderCard/HeaderCard";
 import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
+import { serializeDeployment } from "../../utility/principal";
 
 interface AppLayoutProps {
   state: State;
@@ -32,13 +33,8 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   /** Hooks */
   const { refreshIdentity, identity, isLoadingIdentity } = useIdentity();
   const { getBalance } = useLedger();
-  const {
-    deployments,
-    refreshDeployments,
-    isLoading,
-    selectedDeployment,
-    setSelectedDeployment,
-  } = useDeployments();
+  const { deployments, selectedDeployment, setSelectedDeployment } =
+    useDeployments();
   const { actionBar } = useActionBar();
   const { activeTab, setIsMobileMenuOpen } = useSideBar();
   const { agent } = useHttpAgent();
@@ -70,22 +66,23 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
     // refreshIdentity();
   }, [activeTab]);
 
-  useEffect(() => {
-    if (!deployments.length) {
-      return;
-    }
-    const selectedDeploymentUpdated = deployments.find(
-      (deployment) =>
-        deployment.canister_id.toText() ===
-        selectedDeployment?.canister_id.toText()
-    );
-    if (selectedDeploymentUpdated) {
-      setSelectedDeployment(selectedDeploymentUpdated);
-      setState({
-        canister_id: selectedDeploymentUpdated.canister_id.toText(),
-      });
-    }
-  }, [deployments]);
+  // TODO: Investigate
+  // useEffect(() => {
+  //   if (!deployments.length) {
+  //     return;
+  //   }
+  //   const selectedDeploymentUpdated = deployments.find(
+  //     (deployment) =>
+  //       deployment.canister_id.toText() ===
+  //       selectedDeployment?.canister_id.toText()
+  //   );
+  //   if (selectedDeploymentUpdated) {
+  //     setSelectedDeployment(serializeDeployment(selectedDeploymentUpdated));
+  //     setState({
+  //       canister_id: selectedDeploymentUpdated.canister_id.toText(),
+  //     });
+  //   }
+  // }, [deployments]);
 
   useEffect(() => {
     const get = async () => {
@@ -97,7 +94,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   }, [deployments]);
 
   useEffect(() => {
-    refreshDeployments();
+    // refreshDeployments();
   }, []);
 
   const handleHideOptionsModal = () => {

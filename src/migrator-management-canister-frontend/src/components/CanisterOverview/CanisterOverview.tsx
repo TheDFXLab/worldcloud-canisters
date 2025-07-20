@@ -30,16 +30,10 @@ import { ProjectInfoCard } from "./components/ProjectInfoCard";
 import { CyclesCard } from "./components/CyclesCard";
 import { DeploymentHistoryCard } from "./components/DeploymentHistoryCard";
 import { UsageStatisticsCard } from "./components/UsageStatisticsCard";
-
-interface Project {
-  id: bigint;
-  name: string;
-  description: string;
-  canister_id: string;
-  plan: { freemium: null } | { paid: null };
-  date_created: bigint;
-  tags: string[];
-}
+import { useToaster } from "../../context/ToasterContext/ToasterContext";
+import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
+import { SerializedProject } from "../../utility/bigint";
+import { useFreemiumLogic } from "../../hooks/useFreemiumLogic";
 
 interface ActivityLog {
   id: string;
@@ -52,8 +46,14 @@ export const CanisterOverview: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { projectId } = useParams();
-  const { deployments, getDeployment, getWorkflowRunHistory } =
-    useDeployments();
+  const {
+    deployments,
+    selectedDeployment,
+    getDeployment,
+    getWorkflowRunHistory,
+    refreshDeployments,
+  } = useDeployments();
+  const { setToasterData, setShowToaster } = useToaster();
   const { balance, isLoadingBalance } = useLedger();
   const {
     isLoadingCycles,
@@ -73,13 +73,28 @@ export const CanisterOverview: React.FC = () => {
   >([]);
   const [canisterInfo, setCanisterInfo] = useState<any>(null);
 
+  const { summon, destroy } = useLoaderOverlay();
+  const { handleInstallCode } = useProjectsLogic();
+  const { usageData: freemiumSlot, fetchUsage } = useFreemiumLogic();
+
   const { projects, activityLogs, isLoadingActivityLogs } = useSelector(
     (state: RootState) => state.projects
   );
 
   const currentProject = projects.find(
-    (p) => projectId && p.id.toString() === projectId
-  ) as Project | undefined;
+    (p) => projectId && p.id === projectId
+  ) as SerializedProject | undefined;
+
+  // const hasFreemiumSlot = !!freemiumSlot;
+  // const isFreemium = currentProject?.plan
+  //   ? "freemium" in currentProject?.plan
+  //   : false;
+  // const hasCanister = !!currentProject?.canister_id;
+  // const showCountdown =
+  //   isFreemium &&
+  //   hasCanister &&
+  //   hasFreemiumSlot &&
+  //   freemiumSlot?.status === "occupied";
 
   useEffect(() => {
     if (projectId !== undefined && identity && agent) {
@@ -92,6 +107,14 @@ export const CanisterOverview: React.FC = () => {
       title: "Project Overview",
     });
   }, []);
+  useEffect(() => {
+    const t = async () => {
+      if (projectId !== null && projectId !== undefined && identity && agent) {
+        await refreshDeployments(Number(projectId));
+      }
+    };
+    t();
+  }, [projectId, identity, agent]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -121,18 +144,78 @@ export const CanisterOverview: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleQuickAction = (action: string) => {
+  const handleQuickAction = async (action: string) => {
+    if (!currentProject) return;
+
     switch (action) {
       case "visit":
-        if (currentProject?.canister_id) {
+        if (currentProject.canister_id) {
           window.open(getCanisterUrl(currentProject.canister_id), "_blank");
+        } else {
+          setToasterData({
+            headerContent: "Failed",
+            toastStatus: false,
+            toastData: "Runner not attached.",
+            timeout: 2000,
+          });
+          setShowToaster(true);
         }
         break;
       case "deploy":
-        if (currentProject?.canister_id) {
+        if (currentProject.canister_id) {
           navigate(
             `/dashboard/deploy/${currentProject.canister_id}/${currentProject.id}`
           );
+        } else {
+          setToasterData({
+            headerContent: "Failed",
+            toastStatus: false,
+            toastData: "Runner not attached.",
+            timeout: 2000,
+          });
+          setShowToaster(true);
+        }
+        break;
+      case "requestRunner":
+        try {
+          summon("Setting up canister...");
+          const result = await handleInstallCode(
+            new MouseEvent("click") as any,
+            !!currentProject.canister_id,
+            BigInt(currentProject.id),
+            currentProject.canister_id,
+            "freemium" in currentProject.plan,
+            identity,
+            agent
+          );
+
+          if (result) {
+            console.log(`Canister deployed successfully: ${result.canisterId}`);
+            setToasterData({
+              headerContent: "Success",
+              toastStatus: true,
+              toastData: `Attached runner: ${result.canisterId}`,
+              textColor: "green",
+              timeout: 3000,
+            });
+            setShowToaster(true);
+          }
+        } catch (error: any) {
+          console.error("Failed to deploy canister:", error.message);
+          setToasterData({
+            headerContent: "Error",
+            toastStatus: false,
+            toastData: error.message || "Failed to attach runner.",
+            textColor: "red",
+            timeout: 5000,
+          });
+          setShowToaster(true);
+          // Handle subscription-related errors
+          if (error.message.includes("subscription")) {
+            navigate("/dashboard/billing");
+          }
+        } finally {
+          destroy();
         }
         break;
       case "cycles":
@@ -217,15 +300,23 @@ export const CanisterOverview: React.FC = () => {
 
   return (
     <div className="canister-overview-container">
-      <QuickActions onActionClick={handleQuickAction} />
+      {currentProject && (
+        <QuickActions
+          onActionClick={handleQuickAction}
+          project={currentProject}
+          hasCanister={!!currentProject.canister_id}
+          isFreemium={"freemium" in (currentProject.plan || {})}
+          deploymentStatus={selectedDeployment?.status}
+        />
+      )}
 
       <div className="overview-grid">
+        <ProjectInfoCard currentProject={currentProject} />
+
         <CanisterInfoCard
           currentProject={currentProject}
-          canisterStatus={canisterStatus}
+          canisterStatus={selectedDeployment}
         />
-
-        <ProjectInfoCard currentProject={currentProject} />
 
         <CyclesCard
           isLoadingBalance={isLoadingBalance}

@@ -5,8 +5,6 @@ import {
     fetchDeployments,
     fetchWorkflowHistory,
     setSelectedDeployment,
-    addDeployment,
-    updateDeployment,
     setIsDispatched,
 } from '../state/slices/deploymentSlice';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
@@ -14,7 +12,7 @@ import { useHttpAgent } from '../context/HttpAgentContext/HttpAgentContext';
 import { useProgress } from '../context/ProgressBarContext/ProgressBarContext';
 import { Deployment } from '../components/AppLayout/interfaces';
 import { Principal } from '@dfinity/principal';
-import { deserializeDeployments, deserializeDeployment, serializeDeployment } from '../utility/principal';
+import { deserializeDeployments, deserializeDeployment, serializeDeployment, DeserializedDeployment } from '../utility/principal';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -25,7 +23,7 @@ export const useDeploymentLogic = () => {
     const { setIsLoadingProgress, setIsEnded } = useProgress();
 
     const {
-        deployments: serializedDeployments,
+        deployment: serializedDeployment,
         selectedDeployment: serializedSelectedDeployment,
         isLoading,
         error,
@@ -33,22 +31,21 @@ export const useDeploymentLogic = () => {
     } = useSelector((state: RootState) => state.deployments);
 
     // Deserialize deployments for use in the app
-    const deployments = deserializeDeployments(serializedDeployments);
+    const deployments = serializedDeployment ? [deserializeDeployment(serializedDeployment)] : [];
     const selectedDeployment = serializedSelectedDeployment ? deserializeDeployment(serializedSelectedDeployment) : null;
 
-    useEffect(() => {
-        if (identity && agent) {
-            refreshDeployments();
-        }
-    }, [identity, agent]);
+    // useEffect(() => {
+    //     if (identity && agent && projectId !== undefined) {
+    //         refreshDeployments(projectId);
+    //     }
+    // }, [identity, agent]);
 
-    const refreshDeployments = useCallback(async () => {
-        if (!identity || !agent) return;
-
+    const refreshDeployments = useCallback(async (project_id: number) => {
         try {
             setIsLoadingProgress(true);
             setIsEnded(false);
-            await dispatch(fetchDeployments({ identity, agent })).unwrap();
+
+            await dispatch(fetchDeployments({ identity, agent, project_id })).unwrap();
         } catch (error) {
             console.error('Failed to fetch deployments:', error);
         } finally {
@@ -76,15 +73,16 @@ export const useDeploymentLogic = () => {
     }, [dispatch, identity, agent]);
 
     const handleAddDeployment = useCallback((deployment: Deployment) => {
-        dispatch(addDeployment(serializeDeployment(deployment)));
+        dispatch(setSelectedDeployment(serializeDeployment(deployment)));
     }, [dispatch]);
 
-    const handleUpdateDeployment = useCallback((canisterId: string, updates: Partial<Deployment>) => {
-        dispatch(updateDeployment({ canisterId, updates }));
-    }, [dispatch]);
+    // const handleUpdateDeployment = useCallback((canisterId: string, updates: Partial<Deployment>) => {
+    //     dispatch(updateDeployment({ canisterId, updates }));
+    // }, [dispatch]);
 
-    const handleSetSelectedDeployment = useCallback((deployment: Deployment | null) => {
-        dispatch(setSelectedDeployment(deployment));
+    const handleSetSelectedDeployment = useCallback((deployment: DeserializedDeployment | null) => {
+        if (!deployment) return;
+        dispatch(setSelectedDeployment(serializeDeployment(deployment)));
     }, [dispatch]);
 
     const handleSetIsDispatched = useCallback((value: boolean) => {
@@ -101,7 +99,7 @@ export const useDeploymentLogic = () => {
         getDeployment,
         getWorkflowRunHistory,
         addDeployment: handleAddDeployment,
-        updateDeployment: handleUpdateDeployment,
+        // updateDeployment: handleUpdateDeployment,
         setSelectedDeployment: handleSetSelectedDeployment,
         setIsDispatched: handleSetIsDispatched,
     };

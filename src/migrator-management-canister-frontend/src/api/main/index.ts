@@ -152,7 +152,7 @@ class MainApi {
         }
     }
 
-    async getCanisterDeployments() {
+    async getCanisterDeployments(project_id: number) {
         try {
             console.log("Getting canister deployments", this.agent);
 
@@ -166,12 +166,16 @@ class MainApi {
                 throw new Error("Identity not initialized.");
             }
             console.log("Getting canister deployments", this.agent);
-            const deployments = await this.actor.getCanisterDeployments();
-
-            return deployments;
+            const response = await this.actor.getCanisterDeployments(BigInt(project_id));
+            if ("ok" in response) {
+                return response.ok[0];
+            }
+            else {
+                throw this.handleResponseError(response.err);
+            }
         } catch (error) {
             console.log(`Error getting canister deployments:`, error)
-            return null;
+            throw error;
         }
     }
 
@@ -184,7 +188,6 @@ class MainApi {
 
     async getCanisterStatus(project_id: bigint) {
         const result = await this.actor?.getCanisterStatus(project_id);
-
         if (!result) {
             throw new Error("Failed to get canister status");
         }
@@ -267,25 +270,6 @@ class MainApi {
             throw error;
         }
     }
-
-    // async storeInAssetCanister(project_id: bigint, files: StaticFile[], workflowRunDetails?: WorkflowRunDetails) {
-    //     try {
-    //         if (!this.actor) {
-    //             throw new Error("Actor not initialized.");
-    //         }
-    //         const result = await this.actor.storeInAssetCanister(project_id, files, workflowRunDetails ? [workflowRunDetails] : []);
-    //         if ('ok' in result) {
-    //             return result.ok;
-    //         }
-    //         else {
-    //             throw this.handleResponseError(result.err);
-    //         }
-
-    //     } catch (error: any) {
-    //         console.log(`Error storing in asset canister:`, error)
-    //         throw error;
-    //     }
-    // }
 
     async storeInAssetCanister(project_id: bigint, files: StaticFile[], current_batch: number, total_batch_count: number, workflowRunDetails?: WorkflowRunDetails) {
         try {
@@ -464,7 +448,6 @@ class MainApi {
                 current_batch: BigInt(current_batch),
                 total_batch_count: BigInt(total_batch_count)
             }
-
             const result = await this.actor.upload_assets_to_project(payload);
             if ("ok" in result) {
                 return { status: true, message: "Stored files successfully." };
