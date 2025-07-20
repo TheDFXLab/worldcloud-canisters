@@ -422,7 +422,11 @@ module {
         #microseconds;
         #milliseconds;
         #seconds;
-    }
+    };
 
-    /** End of types */
+    public type ResetSlotsResult = {
+        slot_ids : [Nat];
+        project_ids : [?Nat];
+    }
+    /** End of types */;
 };

@@ -18,7 +18,7 @@ import Access "access";
 module {
 
     public class ShareableCanisterManager() {
-        private let DEFAULT_DURATION_MS = 180 * 1_000; // 3mins
+        private let DEFAULT_DURATION_MS = 1200 * 1_000; // 20 mins
         // private let DEFAULT_DURATION = 14_400; // 4 hrs
         private let RATE_LIMIT_WINDOW_MS = 86_400 * 1_000; // 1 day
         private let MAX_USES_THRESHOLD = 3; // 3 uses per day
@@ -32,7 +32,10 @@ module {
 
         private var next_slot_id : Nat = 0;
 
-        public func reset_slots(actor_principal : Principal) {
+        public func reset_slots(actor_principal : Principal) : Types.ResetSlotsResult {
+            var reset_project_ids : [?Nat] = [];
+            var slot_ids : [Nat] = [];
+
             for ((slot_id, slot) in slots.entries()) {
                 let updated_slot : Types.ShareableCanister = {
                     id = slot.id;
@@ -41,8 +44,8 @@ module {
                     owner = slot.owner;
                     user = slot.owner;
                     start_timestamp = 0;
-                    create_timestamp = slot.create_timestamp;
-                    duration = slot.duration;
+                    create_timestamp = Int.abs(Utility.get_time_now(#milliseconds));
+                    duration = DEFAULT_DURATION_MS;
                     start_cycles = slot.start_cycles;
                     status = #available;
                 };
@@ -68,6 +71,9 @@ module {
                         };
                     };
 
+                    // Track cleaned up slot id for further project cleanup
+                    reset_project_ids := Array.append(reset_project_ids, [slot.project_id]);
+                    slot_ids := Array.append(slot_ids, [slot.id]);
                     user_to_slot.delete(slot.user);
                 };
 
@@ -75,6 +81,11 @@ module {
                 // Remove slot from used slots
                 slots.put(slot_id, updated_slot);
                 used_slots.delete(slot_id);
+            };
+
+            return {
+                project_ids = reset_project_ids;
+                slot_ids = slot_ids;
             };
         };
         /** Public facing methods  */
@@ -137,7 +148,7 @@ module {
         };
 
         public func get_canister_by_user(user : Principal) : ?Types.ShareableCanister {
-            assert not Principal.isAnonymous(user);
+            // assert not Principal.isAnonymous(user);
             let slot_id_opt : ?Nat = switch (user_to_slot.get(user)) {
                 case (null) {
                     return null;
