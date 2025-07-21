@@ -23,7 +23,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    allowedHosts: ["edf0e89f1071.ngrok-free.app"],
+    allowedHosts: ["1b059e7add7e.ngrok-free.app"],
     proxy: {
       "/api": {
         target: "http://0.0.0.0:8000",

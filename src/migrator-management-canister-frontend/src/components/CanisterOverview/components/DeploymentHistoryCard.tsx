@@ -22,10 +22,6 @@ export const DeploymentHistoryCard: React.FC<DeploymentHistoryCardProps> = ({
   isLoading,
   workflowRunHistory,
 }) => {
-  // const formatDate = (timestamp: number) => {
-  //   return new Date(timestamp).toLocaleString();
-  // };
-
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case "completed":
