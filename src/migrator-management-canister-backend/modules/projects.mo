@@ -41,8 +41,14 @@ module {
         };
 
         public func get_deployment_by_canister(canister_id : Principal) : ?Types.CanisterDeployment {
-            let deployment : Types.CanisterDeployment = Utility.expect(canister_table.get(canister_id), Errors.NotFoundCanister());
-            ?deployment;
+            switch (canister_table.get(canister_id)) {
+                case (null) {
+                    return null;
+                };
+                case (val) {
+                    return val;
+                };
+            };
         };
 
         public func get_projects_by_user(user : Principal, payload : Types.GetProjectsByUserPayload) : async Types.Response<[Types.Project]> {
@@ -74,7 +80,10 @@ module {
             for (index in Iter.range(start, end)) {
                 let project_id = project_ids[index];
                 Debug.print("Index: " # Nat.toText(index) # " project id: " # Nat.toText(project_id));
-                let project = Utility.expect(projects.get(project_id), Errors.NotFoundProject());
+                let project : Types.Project = switch (projects.get(project_id)) {
+                    case (null) { return #err(Errors.NotFoundProject()) };
+                    case (?val) { val };
+                };
                 result_projects := Array.append(result_projects, [project]);
             };
 
@@ -115,10 +124,9 @@ module {
             };
 
             var new_array : [Nat] = [];
-            for (index in Iter.range(0, user_projects.size() - 1)) {
-                let project : Types.Project = Utility.expect(projects.get(project_id), Errors.NotFoundProject());
-                if (not (project.id == project_id)) {
-                    let non_matching : [Nat] = Array.append(new_array, [project.id]);
+            for (project_id_in_array in user_projects.vals()) {
+                if (project_id_in_array != project_id) {
+                    new_array := Array.append(new_array, [project_id_in_array]);
                 };
             };
 
