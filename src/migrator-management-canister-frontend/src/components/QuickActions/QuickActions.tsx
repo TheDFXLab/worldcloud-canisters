@@ -7,10 +7,11 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import StorageIcon from "@mui/icons-material/Storage";
 import TimerIcon from "@mui/icons-material/Timer";
 import "./QuickActions.css";
-import { Tooltip } from "@mui/material";
+import { CircularProgress, Tooltip } from "@mui/material";
 import { SerializedProject } from "../../utility/bigint";
 import CountdownChip from "../ProjectsComponent/CountdownChip";
 import { useFreemiumLogic } from "../../hooks/useFreemiumLogic";
+import { useProjectsLogic } from "../../hooks/useProjectsLogic";
 
 interface QuickAction {
   title: string;
@@ -38,6 +39,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
   deploymentStatus = "uninitialized",
 }) => {
   const { usageData: freemiumSlot, fetchUsage } = useFreemiumLogic();
+  const { isLoadingClearAssets, isLoadingDeleteProject } = useProjectsLogic();
 
   const hasFreemiumSlot = !!freemiumSlot;
   const showCountdown =
@@ -92,8 +94,12 @@ const QuickActions: React.FC<QuickActionsProps> = ({
       icon: AddCircleOutlineIcon,
       description: "Top up canister cycles",
       onClick: () => onActionClick?.("cycles"),
-      disabled: !hasCanister,
-      disabledReason: noRunnerMessage,
+      disabled: !hasCanister || isFreemium,
+      disabledReason: isFreemium
+        ? "This feature is available for paid projects."
+        : !isFreemium && !hasCanister
+        ? "No runner attached."
+        : "This feature is temporarily disabled.",
     },
   ];
 
@@ -150,11 +156,42 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                   duration={freemiumSlot.duration}
                 />
               )}
+            {/* {action.isDangerous &&
+              action.title === "Clear Canister" &&
+              isLoadingClearAssets && (
+                <CircularProgress size={20} className="circular-progress" />
+              )} */}
+
+            {renderSpinner(action)}
           </div>
         </Tooltip>
       ))}
     </div>
   );
+
+  const renderSpinner = (action: QuickAction) => {
+    // Render spinner for clear canister assets button
+    if (action.title === "Clear Canister") {
+      return (
+        <>
+          {action.isDangerous && isLoadingClearAssets && (
+            <CircularProgress size={20} className="circular-progress" />
+          )}
+        </>
+      );
+    }
+
+    // Render spinner for delete project button
+    if (action.title === "Delete Project") {
+      return (
+        <>
+          {action.isDangerous && isLoadingDeleteProject && (
+            <CircularProgress size={20} className="circular-progress" />
+          )}
+        </>
+      );
+    }
+  };
 
   return (
     <div className="quick-actions">
