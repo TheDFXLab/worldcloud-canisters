@@ -15,12 +15,16 @@ import {
     getUserProjects,
     setLoading,
     deployProject,
-    fetchActivityLogs
+    fetchActivityLogs,
+    clearProjectAssets,
+    deleteProject,
+    fetchUserUsage,
 } from '../state/slices/projectsSlice';
 import { RootState, AppDispatch } from '../state/store';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
 import { useHttpAgent } from '../context/HttpAgentContext/HttpAgentContext';
 import { useFreemiumLogic } from './useFreemiumLogic';
+import { useDeploymentLogic } from './useDeploymentLogic';
 
 export const getPlanDisplayName = (plan: any): string => {
     if (typeof plan === 'object' && plan !== null) {
@@ -39,13 +43,18 @@ export const useProjectsLogic = () => {
     const { identity } = useIdentity();
     const { agent } = useHttpAgent();
     const { fetchUsage } = useFreemiumLogic();
+    const { refreshDeployments } = useDeploymentLogic();
 
     const {
         projects: serializedProjects,
         isLoading,
+        isLoadingClearAssets,
+        isLoadingDeleteProject,
+        isLoadingUsage,
         activeFilterTag,
         activeSortTag,
         viewMode,
+        userUsage
     } = useSelector((state: RootState) => state.projects);
 
     // Function to refresh projects
@@ -84,7 +93,7 @@ export const useProjectsLogic = () => {
         dispatch(setViewMode(viewMode === 'card' ? 'table' : 'card'));
     }, [dispatch, viewMode]);
 
-    const handleFetchActivityLogs = useCallback((projectId: bigint) => {
+    const handleFetchActivityLogs = useCallback(async (projectId: bigint) => {
         if (identity && agent) {
             dispatch(fetchActivityLogs({
                 identity,
@@ -93,6 +102,36 @@ export const useProjectsLogic = () => {
             }));
         }
 
+    }, [dispatch, identity, agent])
+
+    const handleClearProjectAssets = useCallback(async (projectId: number) => {
+        if (identity && agent) {
+            dispatch(clearProjectAssets({
+                identity,
+                agent,
+                projectId
+            }));
+        }
+    }, [dispatch, identity, agent])
+
+
+    const handleDeleteProject = useCallback(async (projectId: number) => {
+        if (identity && agent) {
+            dispatch(deleteProject({
+                identity,
+                agent,
+                projectId
+            }))
+        }
+    }, [dispatch, identity, agent])
+
+    const handleFetchUserUsage = useCallback(async (projectId: number) => {
+        if (identity && agent) {
+            dispatch(fetchUserUsage({
+                identity,
+                agent
+            }));
+        }
     }, [dispatch, identity, agent])
 
     const handleInstallCode = useCallback(async (
@@ -121,10 +160,11 @@ export const useProjectsLogic = () => {
             agent,
             projectId: project_id,
             isFreemium: is_freemium,
-            validateSubscription: async () => ({ status: true, message: '' }) // implement proper validation
+            validateSubscription: async () => ({ status: true, message: '' }) // TODO: implement proper validation
         })).unwrap();
 
         fetchUsage(); // Keep this if needed
+        refreshDeployments(Number(project_id));
         const updatedProject = result.updatedProjects.find(
             (p: SerializedProject) => p.id === project_id.toString()
         );
@@ -190,9 +230,13 @@ export const useProjectsLogic = () => {
     return {
         projects: sortedProjects,
         isLoading,
+        isLoadingClearAssets,
+        isLoadingDeleteProject,
+        isLoadingUsage,
         activeFilterTag,
         activeSortTag,
         viewMode,
+        userUsage,
         handleFilterChange,
         handleSortChange,
         handleViewModeChange,
@@ -200,6 +244,9 @@ export const useProjectsLogic = () => {
         handleVisitWebsite,
         handleProjectClick,
         refreshProjects,
-        handleFetchActivityLogs
+        handleFetchActivityLogs,
+        handleClearProjectAssets,
+        handleDeleteProject,
+        handleFetchUserUsage
     };
 }; 

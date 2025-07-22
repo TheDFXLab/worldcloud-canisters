@@ -30,6 +30,8 @@ export interface ProjectsState {
     isLoadingUsage: boolean;
     activityLogs: DeserializedActivityLog[];
     isLoadingActivityLogs: boolean;
+    isLoadingClearAssets: boolean;
+    isLoadingDeleteProject: boolean;
 }
 
 const initialState: ProjectsState = {
@@ -42,7 +44,9 @@ const initialState: ProjectsState = {
     userUsage: null,
     isLoadingUsage: false,
     activityLogs: [],
-    isLoadingActivityLogs: false
+    isLoadingActivityLogs: false,
+    isLoadingClearAssets: false,
+    isLoadingDeleteProject: false,
 };
 
 export const getUserProjects = createAsyncThunk(
@@ -65,7 +69,7 @@ export const getUserProjects = createAsyncThunk(
         if (!projects) {
             throw new Error('Failed to fetch projects');
         }
-
+        // debugger;
         return { projects: serializeProjects(projects), silent };
     }
 );
@@ -173,10 +177,6 @@ export const fetchUserUsage = createAsyncThunk(
             throw new Error("MainApi is not initialized.");
         }
         const result = await mainApi.getUserUsage();
-        // if ('err' in result) {
-        //     throw new Error(result.err);
-        // }
-        // return result.ok;
         return result;
     }
 );
@@ -193,6 +193,30 @@ export const fetchActivityLogs = createAsyncThunk(
         return deserializeActivityLogs(result);
     }
 );
+
+export const clearProjectAssets = createAsyncThunk(
+    'projects/clearProjectAssets',
+    async ({ identity, agent, projectId }: { identity: any, agent: any, projectId: number }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) {
+            throw new Error("MainApi is not initialized.");
+        }
+        const is_cleared = await mainApi.clearProjectAssets(projectId);
+        return is_cleared;
+    }
+)
+
+export const deleteProject = createAsyncThunk(
+    'projects/deleteProject',
+    async ({ identity, agent, projectId }: { identity: any, agent: any, projectId: number }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) {
+            throw new Error("MainApi is not initialized.");
+        }
+        const is_deleted = await mainApi.deleteProject(projectId);
+        return is_deleted;
+    }
+)
 
 export const projectsSlice = createSlice({
     name: 'projects',
@@ -283,7 +307,27 @@ export const projectsSlice = createSlice({
             .addCase(fetchActivityLogs.rejected, (state, action) => {
                 state.isLoadingActivityLogs = false;
                 state.error = action.error.message || 'Failed to fetch activity logs';
-            });
+            })
+            .addCase(clearProjectAssets.pending, (state) => {
+                state.isLoadingClearAssets = true;
+            })
+            .addCase(clearProjectAssets.fulfilled, (state, action) => {
+                state.isLoadingClearAssets = false;
+            })
+            .addCase(clearProjectAssets.rejected, (state, action) => {
+                state.isLoadingClearAssets = false;
+                state.error = action.error.message || "Failed to clear assets"
+            })
+            .addCase(deleteProject.pending, (state) => {
+                state.isLoadingDeleteProject = true;
+            })
+            .addCase(deleteProject.fulfilled, (state, action) => {
+                state.isLoadingDeleteProject = false;
+            })
+            .addCase(deleteProject.rejected, (state, action) => {
+                state.isLoadingDeleteProject = false;
+                state.error = action.error.message || "Failed to delete project"
+            })
     },
 });
 
