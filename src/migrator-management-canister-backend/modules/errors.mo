@@ -4,6 +4,8 @@ module ErrorType {
     public func NotFound(resource : Text) : Text = resource # " not found.";
     public func NotInitialized(resource : Text) : Text = resource # " is not initialized";
     public func NotFoundWasm() : Text = "Asset canister WASM code is not installed.";
+    public func NotAllowedOperation() : Text = "Operation not permitted.";
+
     /** Timer */
     public func NotFoundTimer() : Text = "Timer not found";
     /** Balance */
