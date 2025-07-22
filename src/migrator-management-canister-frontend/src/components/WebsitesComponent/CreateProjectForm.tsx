@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./CreateProjectForm.css";
 import { useNavigate } from "react-router-dom";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
@@ -10,7 +10,6 @@ import { useLoadBar } from "../../context/LoadBarContext/LoadBarContext";
 import { useProgress } from "../../context/ProgressBarContext/ProgressBarContext";
 import { Principal } from "@dfinity/principal";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
-import { useFreemium } from "../../context/FreemiumContext/FreemiumContext";
 import { useDispatch, useSelector } from "react-redux";
 import { createProject, deployProject } from "../../state/slices/projectsSlice";
 import { AppDispatch, RootState } from "../../state/store";
@@ -19,6 +18,8 @@ import { validateSubscription } from "../../state/slices/subscriptionSlice";
 import { useFreemiumLogic } from "../../hooks/useFreemiumLogic";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
+import { setSelectedDeployment } from "../../state/slices/deploymentSlice";
+import { serializeDeployment } from "../../utility/principal";
 
 const MAX_TAGS = 5;
 const MAX_DESC = 100;
@@ -46,6 +47,8 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
   const [tagInput, setTagInput] = useState("");
   const [plan, setPlan] = useState("freemium");
   const [error, setError] = useState("");
+
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Redux selectors
   const { subscription, tiers, isLoadingSub, isLoadingTiers } = useSelector(
@@ -86,7 +89,18 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         ? "Continue to code deployment."
         : "Enter a project name to continue.",
       buttonText: "Create Project",
-      onButtonClick: handleSubmit,
+      onButtonClick: () => {
+        // // Find and click the form's submit button
+        // const submitButton = document.querySelector<HTMLButtonElement>(
+        //   "#project-submit-btn"
+        // );
+        // if (submitButton) {
+        //   submitButton.click();
+        // }
+        if (formRef.current) {
+          formRef.current.requestSubmit();
+        }
+      },
       isButtonDisabled: projectName.length === 0,
       isHidden: false,
     });
@@ -135,7 +149,6 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     try {
       summon("Creating Project...");
       setShowLoadBar(true);
-
       const result = await dispatch(
         createProject({
           identity,
@@ -224,8 +237,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         textColor: "green",
       });
       setShowToaster(true);
-      addDeployment(newDeployment);
-      refreshDeployments();
+      // addDeployment(newDeployment);
+      setSelectedDeployment(serializeDeployment(newDeployment));
+      refreshDeployments(Number(projectId));
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
       navigate(`/dashboard/projects`);
@@ -268,7 +282,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         </p>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form ref={formRef} onSubmit={handleSubmit}>
         <div className="project-form-grid">
           <div className="project-form-card">
             <h3>Project Details</h3>
@@ -366,13 +380,14 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
             </div>
           )}
           {/* <button
+            id="project-submit-btn"
             className="submit-btn"
             type="submit"
-            disabled={false}
-            // {
-            //   disableSubmit ||
-            //   !projectName.trim() || description.length > MAX_DESC
-            // }
+            disabled={
+              disableSubmit ||
+              !projectName.trim() ||
+              description.length > MAX_DESC
+            }
           >
             Continue
           </button> */}
