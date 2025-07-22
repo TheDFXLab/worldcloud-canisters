@@ -37,6 +37,10 @@
   min-width: 0;
 }
 
+.quick-action-item .circular-progress {
+  color: var(--color-primary);
+}
+
 .quick-action-item:not(.disabled):hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);

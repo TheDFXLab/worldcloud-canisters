@@ -1,13 +1,72 @@
 import React from "react";
 import UpdateIcon from "@mui/icons-material/Update";
+import { DeserializedDeployment } from "../../AppLayout/interfaces";
+import { useProjectsLogic } from "../../../hooks/useProjectsLogic";
+import { formatDate } from "../../../utility/formatter";
 
 interface UsageStatisticsCardProps {
-  canisterInfo: any;
+  deployment: DeserializedDeployment | null;
+  hasCanister: boolean;
+  isFreemium: boolean;
 }
 
 export const UsageStatisticsCard: React.FC<UsageStatisticsCardProps> = ({
-  canisterInfo,
+  deployment,
+  hasCanister,
+  isFreemium,
 }) => {
+  const { isLoadingUsage, userUsage } = useProjectsLogic();
+
+  const getStatusColor = (status: boolean) => {
+    switch (status) {
+      case true:
+        return "installed";
+      case false:
+        return "installing";
+      default:
+        return "uninitialized";
+    }
+  };
+
+  const renderFreemiumRows = () => {
+    return (
+      <>
+        <div className="info-row">
+          <div className="info-label">Status:</div>
+          <div className="info-value">
+            <span
+              className={`status-dot ${getStatusColor(
+                userUsage?.is_active ? userUsage.is_active : false
+              )}`}
+            />
+            {userUsage?.is_active ? "Active" : "Inactive"}
+          </div>
+        </div>
+        <div className="info-row">
+          <div className="info-label">Used count:</div>
+          <div className="info-value">{userUsage?.usage_count}</div>
+        </div>
+        <div className="info-row">
+          <div className="info-label">Max uses:</div>
+          <div className="info-value">
+            {userUsage?.max_uses_threshold} per{" "}
+            {userUsage?.rate_limit_window
+              ? userUsage.rate_limit_window / 1000 / 60 / 60
+              : " 24"}{" "}
+            hrs
+          </div>
+        </div>
+        <div className="info-row">
+          <div className="info-label">Session duration:</div>
+          <div className="info-value">{} </div>
+        </div>
+        <div className="info-row">
+          <div className="info-label">Last Used:</div>
+          <div className="info-value">{formatDate(userUsage?.last_used)}</div>
+        </div>
+      </>
+    );
+  };
   return (
     <div className="overview-card">
       <div className="card-header">
@@ -16,19 +75,21 @@ export const UsageStatisticsCard: React.FC<UsageStatisticsCardProps> = ({
       </div>
       <div className="card-content">
         <div className="info-table">
+          {isFreemium && renderFreemiumRows()}
+
           <div className="info-row">
             <div className="info-label">Storage Used</div>
             <div className="info-value">
-              {canisterInfo?.size
-                ? `${(canisterInfo.size / 1024 / 1024).toFixed(2)} MB`
+              {deployment?.size
+                ? `${(deployment.size / 1024 / 1024).toFixed(2)} MB`
                 : "No data"}
             </div>
           </div>
           <div className="info-row">
             <div className="info-label">Last Updated</div>
             <div className="info-value">
-              {canisterInfo?.date_updated
-                ? new Date(Number(canisterInfo.date_updated)).toLocaleString()
+              {deployment?.date_updated
+                ? new Date(Number(deployment.date_updated)).toLocaleString()
                 : "No data"}
             </div>
           </div>

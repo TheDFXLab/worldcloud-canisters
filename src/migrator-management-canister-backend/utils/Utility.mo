@@ -3,6 +3,8 @@ import Types "../types";
 import Error "mo:base/Error";
 import Int "mo:base/Int";
 import Time "mo:base/Time";
+import Principal "mo:base/Principal";
+import Errors "../modules/errors";
 
 module {
     // Utility function that helps writing assertion-driven code more concisely.
@@ -107,5 +109,21 @@ module {
         };
 
         return Int.abs(Time.now() / divisor);
+    };
+
+    public func assert_not_anonymous(principal : Principal) : Types.Response<()> {
+        if (Principal.isAnonymous(principal)) {
+            return #err(Errors.Unauthorized());
+        } else {
+            return #ok();
+        };
+    };
+
+    public func is_anonymous(principal : Principal) : Bool {
+        if (Principal.isAnonymous(principal)) {
+            return true;
+        } else {
+            return false;
+        };
     };
 };

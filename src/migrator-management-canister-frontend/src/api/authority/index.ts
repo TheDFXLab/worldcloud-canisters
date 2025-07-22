@@ -34,8 +34,10 @@ class AuthorityApi {
         if (!response) {
             throw new Error("Failed to get controllers");
         }
-        const controllers = response.map((controller) => controller.toText());
-        return controllers;
+        if ('ok' in response) {
+            return response.ok.map((controller) => controller.toText());
+        }
+        throw this.handleResponseError(response.err);
     }
 
     // /**
@@ -126,15 +128,22 @@ class AuthorityApi {
         }
         const mainApi = await MainApi.create(identity, agent);
 
-        if (!mainApi) {
+        if (!mainApi || !mainApi.actor) {
             throw new Error("Failed to create main api");
         }
 
-        const response = await mainApi.actor?.getAssetList(canister_id);
+        const response = await mainApi.actor.getAssetList(canister_id);
         if (response === undefined) {
             throw new Error("Failed to get asset list");
         }
-        return response;
+        if ('ok' in response) {
+            return response.ok;
+        }
+        throw this.handleResponseError(response.err);
+    }
+
+    private handleResponseError(error: string) {
+        return { status: false, message: error };
     }
 }
 

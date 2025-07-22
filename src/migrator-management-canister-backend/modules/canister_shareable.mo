@@ -135,32 +135,30 @@ module {
             };
         };
 
-        public func get_slot_id_by_user(user : Principal) : ?Nat {
-            let slot_id : ?Nat = Utility.expect(user_to_slot.get(user), Errors.NotFoundSession());
-            switch (slot_id) {
+        public func get_slot_id_by_user(user : Principal) : Types.Response<?Nat> {
+            switch (user_to_slot.get(user)) {
                 case (null) {
-                    return null;
+                    // return #err(Errors.NotFoundSlot());
+                    return #ok(null);
                 };
                 case (?id) {
-                    return ?id;
+                    return #ok(id);
                 };
             };
         };
 
-        public func get_canister_by_user(user : Principal) : ?Types.ShareableCanister {
-            // assert not Principal.isAnonymous(user);
-            let slot_id_opt : ?Nat = switch (user_to_slot.get(user)) {
-                case (null) {
-                    return null;
-                };
-                case (?id) {
-                    id;
-                };
+        public func get_canister_by_user(user : Principal) : Types.Response<?Types.ShareableCanister> {
+            let slot_id : Nat = switch (get_slot_id_by_user(user)) {
+                case (#ok(null)) { return #ok(null) };
+                case (#ok(?id)) { id };
+                case (#err(err)) { return #err(err) };
             };
 
-            let slot_id : Nat = Utility.expect(slot_id_opt, Errors.NotFoundSlot());
-            let canister : Types.ShareableCanister = Utility.expect(slots.get(slot_id), Errors.NotFoundSharedCanister());
-            return ?canister;
+            let canister : Types.ShareableCanister = switch (slots.get(slot_id)) {
+                case (null) { return #err(Errors.NotFoundSharedCanister()) };
+                case (?_canister) { _canister };
+            };
+            return #ok(?canister);
         };
 
         public func get_next_slot_id() : Nat {
@@ -252,16 +250,20 @@ module {
             return #ok(true);
         };
 
-        public func is_active_session(user : Principal) : async Bool {
+        public func is_active_session(user : Principal) : async Types.Response<Bool> {
             try {
-                let usage_log : Types.UsageLog = Utility.expect(
-                    usage_logs.get(user),
-                    Errors.NotFoundSlot(),
-                );
-                return usage_log.is_active;
+                let usage_log : Types.UsageLog = switch (usage_logs.get(user)) {
+                    case (null) {
+                        return #err(Errors.NotFoundSlot());
+                    };
+                    case (?val) {
+                        val;
+                    };
+                };
+                return #ok(usage_log.is_active);
             } catch (error) {
                 let log : Types.UsageLog = _create_usage_log(user);
-                return log.is_active;
+                return #ok(log.is_active);
             }
 
         };
@@ -308,8 +310,6 @@ module {
 
         // Requesting a new freemium session
         public func request_session(user : Principal, project_id : Nat) : async Types.Response<?Types.ShareableCanister> {
-            assert not Principal.isAnonymous(user);
-
             let available_slot_ids : [Nat] = get_available_slots();
             Debug.print("Received available slot ids length;" # Nat.toText(available_slot_ids.size()));
             for (index in Iter.range(0, available_slot_ids.size() - 1)) {
@@ -323,7 +323,11 @@ module {
 
             Debug.print("Starting a session...");
             try {
-                let slot : Types.ShareableCanister = start_session(available_slot_ids[0], user, project_id);
+                let slot : Types.ShareableCanister = switch (start_session(available_slot_ids[0], user, project_id)) {
+                    case (#err(msg)) { return #err(msg) };
+                    case (#ok(_slot)) { _slot };
+                };
+
                 #ok(?slot);
             } catch (e : Error) {
                 return #err(Error.message(e));
@@ -332,7 +336,7 @@ module {
 
         // Ending a session
         public func terminate_session(slot_id : Nat, end_cycles : Nat) : Types.Response<?Nat> {
-            return #ok(end_session(slot_id, end_cycles));
+            return end_session(slot_id, end_cycles);
         };
 
         /** Update methods **/
@@ -343,10 +347,13 @@ module {
         //
         //
         //
-        private func start_session(slot_id : Nat, user : Principal, project_id : Nat) : Types.ShareableCanister {
+        private func start_session(slot_id : Nat, user : Principal, project_id : Nat) : Types.Response<Types.ShareableCanister> {
             // Get slot details
-            let slot : Types.ShareableCanister = Utility.expect(slots.get(slot_id), Errors.NotFoundSlot());
-            // try {
+            let slot : Types.ShareableCanister = switch (slots.get(slot_id)) {
+                case (null) { return #err(Errors.NotFoundSlot()) };
+                case (?val) { val };
+            };
+
             let usage_log : Types.UsageLog = Utility.expect_else(
                 usage_logs.get(user),
                 {
@@ -357,11 +364,17 @@ module {
                     max_uses_threshold = MAX_USES_THRESHOLD;
                 },
             );
-            assert not usage_log.is_active; // Ensure user is not currently using a shared canister
+
+            if (usage_log.is_active) {
+                return #err(Errors.ActiveSession());
+            };
 
             // Assert usage count only when user is within timeframe
             if (not (Int.abs(Utility.get_time_now(#milliseconds)) - usage_log.last_used > RATE_LIMIT_WINDOW_MS)) {
-                assert not (usage_log.usage_count >= usage_log.max_uses_threshold); // Ensure not over limit
+                // assert not (usage_log.usage_count >= usage_log.max_uses_threshold); // Ensure not over limit
+                if (usage_log.usage_count >= usage_log.max_uses_threshold) {
+                    return #err(Errors.MaxSlotsReached());
+                };
             };
 
             let updated_usage_log : Types.UsageLog = {
@@ -391,15 +404,19 @@ module {
             user_to_slot.put(user, ?slot_id);
             used_slots.put(slot_id, true);
             Debug.print("Assigned slot #" # Nat.toText(slot_id) # " to user " # Principal.toText(user));
-            return updated_slot;
+            return #ok(updated_slot);
         };
 
         // Used to terminate a serving a user's assets from a slot
         // Returns project id such that the caller can update the respective project
-        private func end_session(slot_id : Nat, end_cycles : Nat) : ?Nat {
+        private func end_session(slot_id : Nat, end_cycles : Nat) : Types.Response<?Nat> {
             Debug.print("[end_session] Ending session for slot #" # Nat.toText(slot_id));
             // Get and update slot details
-            let slot : Types.ShareableCanister = Utility.expect(slots.get(slot_id), Errors.NotFoundSlot());
+            let slot : Types.ShareableCanister = switch (slots.get(slot_id)) {
+                case (null) { return #err(Errors.NotFoundSlot()) };
+                case (?val) { val };
+            };
+
             let updated_slot : Types.ShareableCanister = {
                 id = slot.id;
                 project_id = null;
@@ -444,7 +461,7 @@ module {
             user_to_slot.delete(slot.user);
             Debug.print("[end_session] Updated slot #" # Nat.toText(slot_id) # " and usage logs for" # Principal.toText(slot.user));
 
-            return slot.project_id;
+            return #ok(slot.project_id);
         };
 
         public func create_slot(owner : Principal, user : Principal, canister_id : Principal, project_id : ?Nat, start_cycles : Nat) : Types.Response<Nat> {
@@ -481,7 +498,11 @@ module {
             };
 
             // Get current slot and update canister id
-            var slot : Types.ShareableCanister = Utility.expect(slots.get(slot_id), Errors.NotFoundSlot());
+            var slot : Types.ShareableCanister = switch (slots.get(slot_id)) {
+                case (null) { return #err(Errors.NotFoundSlot()) };
+                case (?val) { val };
+            };
+
             if (slot.status == #occupied) {
                 return #err(Errors.SlotUnavailable());
             };

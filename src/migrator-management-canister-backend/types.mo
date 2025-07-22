@@ -113,6 +113,7 @@ module {
             batch_id : Nat;
             operations : [Operation];
         }) -> async ();
+        clear : shared () -> async ();
     };
 
     public type Asset = {
@@ -427,6 +428,6 @@ module {
     public type ResetSlotsResult = {
         slot_ids : [Nat];
         project_ids : [?Nat];
-    }
-    /** End of types */;
+    };
+    /** End of types */
 };

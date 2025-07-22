@@ -110,6 +110,18 @@
   gap: 0.2rem;
 }
 
+.badge {
+  background: var(--background-tertiary);
+  color: var(--text-secondary);
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
 .metric-icon {
   font-size: 0.75rem !important;
 }
@@ -170,6 +182,10 @@
   display: flex;
   align-items: center;
   gap: 0.2rem;
+}
+.clickable {
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .deployment-history-card .activity-time.clickable {

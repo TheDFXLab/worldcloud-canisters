@@ -196,7 +196,8 @@
   background: var(--background);
   padding: 0rem 2rem;
   max-width: 800px;
-  margin: auto auto;
+  margin: 0 auto;
+  margin-top: 1rem;
   border-radius: 12px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }

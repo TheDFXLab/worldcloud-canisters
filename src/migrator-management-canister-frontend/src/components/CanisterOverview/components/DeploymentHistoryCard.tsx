@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { CircularProgress, Tooltip } from "@mui/material";
 import TimelineIcon from "@mui/icons-material/Timeline";
 import GitHubIcon from "@mui/icons-material/GitHub";
@@ -12,15 +12,18 @@ import InfoIcon from "@mui/icons-material/Info";
 import "./DeploymentHistoryCard.css";
 import { SerializedWorkflowRunDetail } from "../../../utility/principal";
 import { formatDate } from "../../../utility/formatter";
+import RepoSelector from "../../RepoSelector/RepoSelector";
 
 interface DeploymentHistoryCardProps {
   isLoading: boolean;
   workflowRunHistory: SerializedWorkflowRunDetail[];
+  onRedeploy: (run: SerializedWorkflowRunDetail) => void;
 }
 
 export const DeploymentHistoryCard: React.FC<DeploymentHistoryCardProps> = ({
   isLoading,
   workflowRunHistory,
+  onRedeploy,
 }) => {
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -69,6 +72,7 @@ export const DeploymentHistoryCard: React.FC<DeploymentHistoryCardProps> = ({
     const githubUrl = `https://github.com/${run.repo_name}/actions/runs/${run.workflow_run_id}`;
     window.open(githubUrl, "_blank", "noopener,noreferrer");
   };
+
   return (
     <div className="overview-card deployment-history-card">
       <div className="card-header">
@@ -96,10 +100,16 @@ export const DeploymentHistoryCard: React.FC<DeploymentHistoryCardProps> = ({
                       </span>
                     </div>
                     <div className="deployment-metrics">
+                      <Tooltip title={"Deploy this configuration."}>
+                        <button
+                          onClick={() => onRedeploy(run)}
+                          className="badge clickable"
+                        >
+                          Redeploy
+                        </button>
+                      </Tooltip>
                       <Tooltip title={"Total artifacts size"}>
-                        <span className="deployment-size">
-                          {formatSize(run.size)}
-                        </span>
+                        <span className="badge">{formatSize(run.size)}</span>
                       </Tooltip>
                     </div>
                   </div>

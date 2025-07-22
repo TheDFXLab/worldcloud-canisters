@@ -34,6 +34,8 @@ import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
 import { SerializedProject } from "../../utility/bigint";
 import { useFreemiumLogic } from "../../hooks/useFreemiumLogic";
+import RepoSelector from "../RepoSelector/RepoSelector";
+import { Repository } from "../../api/github/GithubApi";
 
 interface ActivityLog {
   id: string;
@@ -41,8 +43,32 @@ interface ActivityLog {
   description: string;
   create_time: number;
 }
+export interface RedeployData {
+  repo: Repository | null;
+  branchName: string;
+  path: string;
+  autoDeploy: boolean;
+}
 
 export const CanisterOverview: React.FC = () => {
+  /** START STATE */
+  const [copied, setCopied] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [workflowRunHistory, setWorkflowRunHistory] = useState<
+    SerializedWorkflowRunDetail[]
+  >([]);
+  const [canisterInfo, setCanisterInfo] = useState<any>(null);
+  const [isRedeploying, setIsRedeploying] = useState(false);
+  const [redeployData, setRedeployData] = useState<RedeployData>({
+    repo: null,
+    branchName: "",
+    path: "",
+    autoDeploy: false,
+  });
+  /** END STATE */
+
+  /** START HOOKS */
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { projectId } = useParams();
@@ -62,43 +88,35 @@ export const CanisterOverview: React.FC = () => {
     maxCyclesExchangeable,
     isLoadingEstimateCycles,
   } = useCyclesLogic();
-  const { handleFetchActivityLogs } = useProjectsLogic();
+
+  const {
+    handleFetchActivityLogs,
+    handleClearProjectAssets,
+    handleDeleteProject,
+    handleFetchUserUsage,
+  } = useProjectsLogic();
+
   const { identity } = useIdentity();
   const { agent } = useHttpAgent();
   const { setHeaderCard } = useHeaderCard();
-  const [copied, setCopied] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [workflowRunHistory, setWorkflowRunHistory] = useState<
-    SerializedWorkflowRunDetail[]
-  >([]);
-  const [canisterInfo, setCanisterInfo] = useState<any>(null);
 
   const { summon, destroy } = useLoaderOverlay();
   const { handleInstallCode } = useProjectsLogic();
-  const { usageData: freemiumSlot, fetchUsage } = useFreemiumLogic();
 
   const { projects, activityLogs, isLoadingActivityLogs } = useSelector(
     (state: RootState) => state.projects
   );
 
+  /**END HOOKS */
+
   const currentProject = projects.find(
     (p) => projectId && p.id === projectId
   ) as SerializedProject | undefined;
 
-  // const hasFreemiumSlot = !!freemiumSlot;
-  // const isFreemium = currentProject?.plan
-  //   ? "freemium" in currentProject?.plan
-  //   : false;
-  // const hasCanister = !!currentProject?.canister_id;
-  // const showCountdown =
-  //   isFreemium &&
-  //   hasCanister &&
-  //   hasFreemiumSlot &&
-  //   freemiumSlot?.status === "occupied";
-
   useEffect(() => {
     if (projectId !== undefined && identity && agent) {
       handleFetchActivityLogs(BigInt(projectId));
+      handleFetchUserUsage(parseInt(projectId));
     }
   }, [dispatch, projectId, identity, agent]);
 
@@ -223,11 +241,56 @@ export const CanisterOverview: React.FC = () => {
         break;
       case "delete":
         // Handle delete action
+        try {
+          const result = await handleDeleteProject(parseInt(currentProject.id));
+        } catch (error: any) {
+          console.error("Failed to delete project:", error.message);
+          setToasterData({
+            headerContent: "Error",
+            toastStatus: false,
+            toastData: error.message || "Failed to delete project.",
+            textColor: "red",
+            timeout: 4000,
+          });
+          setShowToaster(true);
+        }
         break;
       case "clear":
         // Handle clear action
+        try {
+          const result = await handleClearProjectAssets(
+            parseInt(currentProject.id)
+          );
+        } catch (error: any) {
+          console.error("Failed to clear assets:", error.message);
+          setToasterData({
+            headerContent: "Error",
+            toastStatus: false,
+            toastData: error.message || "Failed to clear assets.",
+            textColor: "red",
+            timeout: 4000,
+          });
+          setShowToaster(true);
+        }
         break;
     }
+  };
+
+  const handleClickRedeploy = (run: SerializedWorkflowRunDetail) => {
+    setIsRedeploying(true);
+    setRedeployData({
+      branchName: run.branch,
+      path: ".",
+      repo: {
+        id: 1,
+        name: "",
+        full_name: run.repo_name,
+        html_url: "",
+        default_branch: run.branch,
+        visibility: "",
+      },
+      autoDeploy: true,
+    });
   };
 
   // Loading states for different sections
@@ -289,6 +352,20 @@ export const CanisterOverview: React.FC = () => {
     );
   }
 
+  if (isRedeploying && currentProject.canister_id) {
+    return (
+      <RepoSelector
+        projectId={projectId}
+        canisterId={currentProject.canister_id}
+        prefilledBranch={redeployData.branchName}
+        prefilledPath={redeployData.path}
+        prefilledRepo={redeployData.repo}
+        autoDeploy={redeployData.autoDeploy}
+        onComplete={() => setIsRedeploying(false)}
+      />
+    );
+  }
+
   // Transform activity logs to match expected type
   const formattedActivityLogs: ActivityLog[] =
     activityLogs?.map((log) => ({
@@ -330,9 +407,14 @@ export const CanisterOverview: React.FC = () => {
         <DeploymentHistoryCard
           isLoading={isLoading}
           workflowRunHistory={workflowRunHistory}
+          onRedeploy={handleClickRedeploy}
         />
 
-        <UsageStatisticsCard canisterInfo={canisterInfo} />
+        <UsageStatisticsCard
+          deployment={selectedDeployment}
+          hasCanister={!!currentProject.canister_id}
+          isFreemium={"freemium" in currentProject.plan}
+        />
         <ActivityCard
           isLoadingActivityLogs={isLoadingActivityLogs}
           activityLogs={formattedActivityLogs}

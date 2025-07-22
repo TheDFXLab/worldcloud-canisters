@@ -86,18 +86,19 @@ module {
             return treasury;
         };
 
-        public func get_tier_id_freemium() : Nat {
+        public func get_tier_id_freemium() : Types.Response<Nat> {
             var i = 0;
             let n = tiers_list.size();
             // Use a while loop for early exit
             while (i < n) {
                 if (tiers_list[i].name == "Freemium") {
-                    return tiers_list[i].id;
+                    return #ok(tiers_list[i].id);
                 };
                 i += 1;
             };
             // If not found, throw error
-            return Utility.expect(null, Errors.NotFoundTier());
+            // return Utility.expect(null, Errors.NotFoundTier());
+            return #err(Errors.NotFoundTier());
         };
 
         // TODO: Admin function
