@@ -518,7 +518,7 @@ class MainApi {
             return null;
         }
     }
-    async getUserUsage(): Promise<SerializedUsageLog | null> {
+    async getUserUsage(): Promise<SerializedUsageLog> {
         try {
             if (!this.actor) {
                 throw new Error("Actor not initialized.");
@@ -548,36 +548,69 @@ class MainApi {
     }
 
     async getProjectActivityLogs(projectId: bigint): Promise<any> {
-        try {
-            if (!this.actor) {
-                throw new Error("Actor not initialized.");
-            }
-            if (!this.idenitified) {
-                throw new Error("Actor not identified.");
-            }
-            if (!this.identity) {
-                throw new Error("Identity not initialized.");
-            }
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
 
-            const result = await this.actor.get_project_activity_logs(projectId);
-            if (!result) {
-                throw new Error("Failed to get activity logs");
-            }
-            console.log(`Activity lgs`, result)
-            if ('ok' in result) {
-                console.log(`retr`, result.ok[0])
-                console.log(`retr`, result.ok.map(o => { return { ...o, create_time: Number(o.create_time / BigInt(1_000_000)) } }));
+        const result = await this.actor.get_project_activity_logs(projectId);
+        if (!result) {
+            throw new Error("Failed to get activity logs");
+        }
+        console.log(`Activity lgs`, result)
+        if ('ok' in result) {
+            console.log(`retr`, result.ok[0])
+            console.log(`retr`, result.ok.map(o => { return { ...o, create_time: Number(o.create_time / BigInt(1_000_000)) } }));
 
-                return result.ok.map(o => { return { ...o, create_time: Number(o.create_time / BigInt(1_000_000)) } });
-            }
-            else {
-                throw this.handleResponseError(result.err);
-            }
-        } catch (error) {
-            console.error(`Error getting activity logs:`, error);
-            throw error;
+            return result.ok.map(o => { return { ...o, create_time: Number(o.create_time / BigInt(1_000_000)) } });
+        }
+        else {
+            throw this.handleResponseError(result.err);
         }
     }
+
+    async clearProjectAssets(projectId: number): Promise<boolean> {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        const result = await this.actor.clear_project_assets(BigInt(projectId));
+        if ('ok' in result) {
+            return true;
+        }
+        throw this.handleResponseError(result.err);
+    }
+
+    async deleteProject(projectId: number): Promise<boolean> {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        const result = await this.actor.delete_project(BigInt(projectId));
+        if ("ok" in result) {
+            return result.ok;
+        }
+
+        throw this.handleResponseError(result.err);
+    }
+
 
 }
 
