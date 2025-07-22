@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GithubApi, Repository } from "../../api/github/GithubApi";
 import "./RepoSelector.css";
 
@@ -20,6 +20,7 @@ import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 import { reverse_proxy_url } from "../../config/config";
 import AuthState from "../../state/AuthState";
 import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
+import { RedeployData } from "../CanisterOverview/CanisterOverview";
 
 interface PackageLocation {
   path: string;
@@ -48,6 +49,11 @@ interface RepoState {
 interface RepoSelectorProps {
   projectId?: string;
   canisterId?: string | null;
+  redeployData?: RedeployData;
+  prefilledBranch?: string;
+  prefilledPath?: string;
+  prefilledRepo?: Repository | null;
+  autoDeploy?: boolean;
   onComplete?: () => void;
 }
 
@@ -60,6 +66,11 @@ const ITEMS_PER_PAGE = 6;
 const RepoSelector: React.FC<RepoSelectorProps> = ({
   projectId,
   canisterId,
+  redeployData,
+  prefilledBranch,
+  prefilledPath,
+  prefilledRepo,
+  autoDeploy,
   onComplete,
 }) => {
   /** Hooks */
@@ -79,6 +90,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
     "idle" | "deploying" | "deployed" | "failed"
   >("idle");
   const [repoStates, setRepoStates] = useState<Record<string, RepoState>>({});
+
   const github = GithubApi.getInstance();
   const [state, setState] = useState<RepoSelectorState>({
     selectedRepo: null,
@@ -93,6 +105,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const currentRepos = repos.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   const [showPagination, setShowPagination] = useState(false);
+  const hasPrefilled = useRef(false);
 
   useEffect(() => {
     if (state.step === "select") setShowPagination(totalPages > 1);
@@ -152,11 +165,60 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
   }, [canisterId, projectId]);
 
   useEffect(() => {
+    if (
+      !hasPrefilled.current &&
+      prefilledRepo &&
+      prefilledBranch &&
+      prefilledPath
+    ) {
+      hasPrefilled.current = true;
+      setState({ selectedRepo: prefilledRepo, step: "configure" });
+      setRepoStates((prev) => ({
+        ...prev,
+        [prefilledRepo.full_name]: {
+          ...(prev[prefilledRepo.full_name] || {}),
+          selectedBranch: prefilledBranch,
+          selectedPath: prefilledPath,
+          branches: prev[prefilledRepo.full_name]?.branches || [],
+          packageLocations:
+            prev[prefilledRepo.full_name]?.packageLocations || [],
+          deploymentSteps: initialDeploymentSteps,
+          currentStep: "workflow",
+          artifacts: [],
+        },
+      }));
+      // Load branches and package locations if not present
+      loadBranches(prefilledRepo.full_name).then(() => {
+        findPackageJsonLocations(prefilledRepo.full_name, prefilledBranch);
+      });
+      // TODO: Investigate issue with repoState clearing when this is called
+      if (autoDeploy) {
+        setTimeout(async () => {
+          // await handleDeploy(prefilledRepo.full_name);
+        }, 10000);
+      }
+    }
+    // eslint-disable-next-line
+  }, [prefilledRepo, prefilledBranch, prefilledPath, autoDeploy]);
+
+  useEffect(() => {
     const loadRepos = async () => {
       const repos = await github.listRepositories();
       setRepos(repos);
+      // If prefilledRepo exists, do not reset state
+      if (
+        prefilledRepo &&
+        prefilledBranch &&
+        prefilledPath &&
+        !hasPrefilled.current
+      ) {
+        // Prefill logic will handle state
+        return;
+      }
+      // setShowPagination(totalPages > 1);
     };
     loadRepos();
+    // eslint-disable-next-line
   }, []);
 
   const loadBranches = async (repo: string) => {
@@ -181,9 +243,10 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
         [repo]: {
           ...(prev[repo] || {}), // Preserve existing state if any
           branches: data,
-          selectedBranch: "",
-          selectedPath: "",
-          packageLocations: [],
+          // Only set selectedBranch if not already set
+          selectedBranch: prev[repo]?.selectedBranch || "",
+          selectedPath: prev[repo]?.selectedPath || "",
+          packageLocations: prev[repo]?.packageLocations || [],
           deploymentSteps: initialDeploymentSteps,
           currentStep: "workflow",
           artifacts: [],
@@ -219,7 +282,10 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
           [repo]: {
             ...prev[repo],
             packageLocations: locations,
-            selectedPath: locations.length === 1 ? locations[0].path : "",
+            // Only set selectedPath if not already set
+            selectedPath:
+              prev[repo]?.selectedPath ||
+              (locations.length === 1 ? locations[0].path : ""),
             deploymentSteps: initialDeploymentSteps,
             currentStep: "workflow",
             artifacts: [],
@@ -242,8 +308,13 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
     }
   };
 
+  useEffect(() => {
+    console.log(`repo`, repoStates);
+  }, [repoStates]);
+
   const handleDeploy = async (repo: string) => {
     try {
+      console.log(`repo states`, repoStates[repo]);
       if (!identity) {
         throw new Error("Please login to deploy");
       }
@@ -350,7 +421,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
       }
 
       updateStepStatus(repo, "deploy", "completed");
-
       // Show success toast
       setToasterData({
         headerContent: `Deployment complete!`,
@@ -359,7 +429,6 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
         textColor: "green",
         timeout: 5000,
       });
-
       // Call onComplete instead of navigating
       if (onComplete) {
         setTimeout(() => {
