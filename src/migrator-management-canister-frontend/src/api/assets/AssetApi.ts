@@ -29,10 +29,18 @@ class AssetApi {
 
     async getAsset(canisterId: string, key: string, identity: Identity | null, agent: HttpAgent) {
         const mainApi = await MainApi.create(identity, agent);
-        if (!mainApi) {
+        if (!mainApi || !mainApi.actor) {
             throw new Error("Failed to create main api");
         }
-        return mainApi.actor?.getCanisterAsset(Principal.fromText(canisterId), key);
+        const res = await mainApi.actor?.getCanisterAsset(Principal.fromText(canisterId), key);
+        if ('ok' in res) {
+            return res.ok;
+        }
+        throw this.handleResponseError(res.err);
+    }
+
+    private handleResponseError(error: string) {
+        return { status: false, message: error };
     }
 }
 
