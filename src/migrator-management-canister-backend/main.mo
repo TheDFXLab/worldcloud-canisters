@@ -45,7 +45,7 @@ shared (deployMsg) actor class CanisterManager() = this {
   // TODO: Get these from price oracle canister
   let ICP_PRICE : Float = 10;
   let XDR_PRICE : Float = 1.33;
-  let E8S_PER_ICP : Float = 100_000_000;
+  let E8S_PER_ICP : Nat = 100_000_000;
   let CYCLES_PER_XDR : Float = 1_000_000_000_000;
 
   let icp_fee : Nat = 10_000;
@@ -666,6 +666,20 @@ shared (deployMsg) actor class CanisterManager() = this {
       case (#ok(null)) { return #err(Errors.NotFoundSlot()) };
       case (#ok(?_slot)) { _slot };
     };
+
+    // Get canister id for validating canister cycles balance
+    let canister_id : Principal = switch (slot.canister_id) {
+      case (null) { return #err(Errors.NotFoundCanister()) };
+      case (?id) { id };
+    };
+
+    // Ensure canister has minimum required cycles balance
+    let cycles_balance = switch (await validate_canister_cycles(canister_id)) {
+      case (#err(err)) { return #err(err) };
+      case (#ok(balance)) { balance };
+    };
+
+    Debug.print("[_request_freemium_session] Cycles balance for canister " # Principal.toText(canister_id) # " -> " # Nat.toText(cycles_balance) # " Cycles.");
 
     // Update project record with new session
     let updated_project : Types.Project = {
@@ -1339,8 +1353,24 @@ shared (deployMsg) actor class CanisterManager() = this {
     return #ok("Removed permission for controller");
   };
 
-  // TODO: get icp and xdr price from api
-  public shared (msg) func getCyclesToAdd(amount_in_e8s : ?Int, caller_principal : ?Principal) : async Types.GetCyclesAvailableResult {
+  // Gets the amount of cycles convertible for given icp amount in e8s
+  // public shared (msg) func getCyclesToAdd(amount_in_e8s : Nat, caller : Principal) : async Types.Response<Nat> {
+  //   let user_credits = book.fetchUserIcpBalance(caller, ledger);
+  //   if (user_credits <= 0) {
+  //     return #ok(0);
+  //   };
+
+  //   if (amount_in_e8s > user_credits) {
+  //     return #err("Insufficient credits. Have " # Nat.toText(user_credits) # " need " # Int.toText(amount_in_e8s));
+  //   };
+
+  //   let cycles = calculateCyclesToAdd(amount_in_e8s);
+  //   return #ok(cycles);
+  // };
+
+  // If amount is not passed, user's credit balance will be used
+  // If caller is not specificed, msg.caller will be used
+  public shared (msg) func getCyclesToAdd(amount_in_e8s : ?Int, caller_principal : ?Principal) : async Types.Response<Nat> {
     let _caller = switch (caller_principal) {
       case null {
         msg.caller;
@@ -1368,38 +1398,61 @@ shared (deployMsg) actor class CanisterManager() = this {
     return #ok(cyclesToAdd);
   };
 
-  public shared (msg) func estimateCyclesToAdd(amount_in_e8s : Int) : async Float {
+  // Returns the amount of cycles expected when converting amount in e8s
+  public shared (msg) func estimateCyclesToAdd(amount_in_e8s : Int) : async Nat {
     return calculateCyclesToAdd(amount_in_e8s);
   };
 
-  private func calculateCyclesToAdd(amountInE8s : Int) : Float {
-    let icp_amount = Float.fromInt(amountInE8s) / E8S_PER_ICP;
-    let usd_value = icp_amount * ICP_PRICE;
-    let xdr_value = usd_value / XDR_PRICE;
+  // TODO: Implement price api
+  // Calculates the amount of cycles equivalent to amount in e8s based on xdr price
+  private func calculateCyclesToAdd(amountInE8s : Int) : Nat {
+    let icp_amount = Float.fromInt(amountInE8s) / Float.fromInt(E8S_PER_ICP);
+    let usd_value : Float = icp_amount * ICP_PRICE;
+    let xdr_value : Float = usd_value / XDR_PRICE;
 
-    let cyclesToAdd = xdr_value * CYCLES_PER_XDR;
+    let cyclesToAdd = Int.abs(Float.toInt(Float.floor(xdr_value * CYCLES_PER_XDR)));
     return cyclesToAdd;
   };
 
-  public shared (msg) func addCycles(canister_id : Principal, amountInIcp : Float) : async Types.Result {
+  // Used by users for estimating and adding cycles matching amount in icp
+  public shared (msg) func addCycles(project_id : Nat, amount_in_e8s : Nat) : async Types.Response<Nat> {
+    let project : Types.Project = switch (project_manager.get_project_by_id(project_id)) {
+      case (#err(err)) { return #err(err) };
+      case (#ok(val)) { val };
+    };
+
+    if (project.plan == #freemium) { return #err(Errors.NotAllowedOperation()) };
+
+    let canister_id : Principal = switch (project.canister_id) {
+      case (null) { return #err(Errors.NotFoundCanister()) };
+      case (?val) { val };
+    };
+
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     let claimable = book.fetchUserIcpBalance(msg.caller, ledger);
-    let amount_in_e8s = Float.floor(amountInIcp * E8S_PER_ICP);
-    //
-    let cyclesToAdd = await getCyclesToAdd(?Float.toInt(amount_in_e8s), ?msg.caller);
 
-    switch (cyclesToAdd) {
-      case (#err(error)) {
-        return #err(error);
+    // Estimate cycles for given amount and add cycles
+    let cyclesAdded = switch (await getCyclesToAdd(?amount_in_e8s, ?msg.caller)) {
+      case (#err(err)) {
+        return #err(err);
       };
-      case (#ok(cyclesToAdd)) {
-        ExperimentalCycles.add(Int.abs(Float.toInt(Float.floor(cyclesToAdd))));
-        await IC.deposit_cycles({ canister_id });
-
-        let _remaining = _removeCredit(msg.caller, ledger, claimable);
-        return #ok("Cycles added successfully");
+      case (#ok(cycles)) {
+        let cycles_added = await _add_cycles(canister_id, cycles);
+        cycles_added;
       };
     };
+
+    let _remaining = _removeCredit(msg.caller, ledger, claimable);
+    return #ok(cyclesAdded);
+  };
+
+  // Internal method for adding cycles from amount in cycles
+  private func _add_cycles(canister_id : Principal, amount_in_cycles : Nat) : async Nat {
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    ExperimentalCycles.add(amount_in_cycles);
+    await IC.deposit_cycles({ canister_id });
+
+    return amount_in_cycles;
   };
 
   // Function to deploy new asset canister
@@ -1453,7 +1506,7 @@ shared (deployMsg) actor class CanisterManager() = this {
 
   };
 
-  private func _convert_e8s_to_cycles(e8s : Nat64, max_slots : Nat) : Float {
+  private func _convert_e8s_to_cycles(e8s : Nat64, max_slots : Nat) : Nat {
     let deposit_per_canister = Nat64.toNat(e8s) / max_slots;
 
     let cyclesForCanister = calculateCyclesToAdd(deposit_per_canister);
@@ -1462,8 +1515,8 @@ shared (deployMsg) actor class CanisterManager() = this {
   private func _get_cycles_for_canister_init(tier_id : Nat) : Int {
     let min_deposit = subscription_manager.tiers_list[tier_id].min_deposit;
     let cyclesForCanister = _convert_e8s_to_cycles(min_deposit.e8s, subscription_manager.tiers_list[tier_id].slots);
-    Debug.print("Adding cycles for canister: " # Int.toText(Float.toInt(cyclesForCanister)));
-    return Float.toInt(cyclesForCanister);
+    Debug.print("Adding cycles for canister: " # Nat.toText(cyclesForCanister));
+    return cyclesForCanister;
   };
 
   private func _create_canister(tier_id : Nat, controller : Principal, is_freemium : Bool) : async Types.Response<Principal> {
@@ -1874,6 +1927,25 @@ shared (deployMsg) actor class CanisterManager() = this {
         canisterBatchMap.put(canister_id, (batchMap, batchChunks));
       };
     };
+  };
+
+  private func validate_canister_cycles(canister_id : Principal) : async Types.Response<Nat> {
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+    let cycles_balance : Nat = switch (await IC.canister_status({ canister_id = canister_id })) {
+      case (val) {
+        // Canister low on cycles
+        let current_balance : Nat = if (val.cycles < shareable_canister_manager.MIN_CYCLES_INIT_E8S) {
+          // Top up canister to maintain min required cycles on init
+          let amount_added = await _add_cycles(canister_id, shareable_canister_manager.MIN_CYCLES_INIT_E8S);
+          amount_added;
+        } else {
+          // Return current cycles balance
+          val.cycles;
+        };
+        current_balance;
+      };
+    };
+    return #ok(cycles_balance);
   };
 
   /** Handle canister upgrades */
