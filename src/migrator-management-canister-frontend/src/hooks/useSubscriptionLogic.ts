@@ -17,6 +17,7 @@ import { useToaster } from '../context/ToasterContext/ToasterContext';
 import { useLoaderOverlay } from '../context/LoaderOverlayContext/LoaderOverlayContext';
 import { useSideBar } from '../context/SideBarContext/SideBarContext';
 import { useActionBar } from '../context/ActionBarContext/ActionBarContext';
+import { HttpAgent } from '@dfinity/agent';
 
 // Add typed dispatch hook
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -32,10 +33,10 @@ export const useSubscriptionLogic = () => {
     const dispatch = useAppDispatch();
     const { identity } = useIdentity();
     const { agent } = useHttpAgent();
-    const { transfer, getPendingDeposits } = useLedger();
     const { totalCredits } = useCycles();
     const { setToasterData, setShowToaster } = useToaster();
     const { summon, destroy } = useLoaderOverlay();
+    const { depositIfNotEnoughCredits } = useLedger();
 
     // Single loading state for all subscription-related operations
     const [isLoading, setIsLoading] = useState(true);
@@ -177,41 +178,8 @@ export const useSubscriptionLogic = () => {
             const mainApi = await MainApi.create(identity, agent);
             if (!mainApi) throw new Error(`MainApi is not initialized.`);
             try {
-                const credits_available = await mainApi.getCreditsAvailable();
-                // Not enough credits depositted to backend
-                if (credits_available < amountInIcp) {
-                    console.log(`============================================`)
-                    console.log(`============================================`)
-                    console.log(`Available Credits is less than required amount. Available: ${credits_available.toString()}, Required: ${amountInIcp}`);
-                    console.log(`============================================`)
-                    console.log(`============================================`)
-
-                    // Check if there are any pending deposits
-                    const pending_deposits = await getPendingDeposits();
-                    if (pending_deposits < amountInIcp) {
-                        // Pay full amount 
-                        let amount_to_deposit = amountInIcp;
-
-                        // Pay remaining amount only
-                        if (pending_deposits < amountInIcp) {
-                            amount_to_deposit = amountInIcp - pending_deposits;
-                        }
-
-                        const deposit = await transfer(amount_to_deposit, backend_canister_id);
-                        if (!deposit) {
-                            throw new Error(`Failed to transfer ${amountInIcp} ICP tokens to backend canister.`);
-                        }
-                    }
-
-                    const available_balance = await mainApi.deposit();
-                    console.log(`============================================`)
-                    console.log(`============================================`)
-                    console.log(`available balance after deposit:`, available_balance);
-                    console.log(`============================================`)
-                    console.log(`============================================`)
-
-                }
-
+                // Transfer and credit tokens in backend if credits dont cover amount in icp
+                await depositIfNotEnoughCredits(amountInIcp, agent);
                 const response = await dispatch(
                     createSubscription({
                         identity,
@@ -224,7 +192,7 @@ export const useSubscriptionLogic = () => {
                     throw new Error('Failed to create subscription.');
                 }
 
-                await refreshSubscription();
+                refreshSubscription();
                 return { status: true, message: "Retrieved subscription", data: response };
             } catch (error: any) {
                 console.log(`============================================`)
