@@ -137,6 +137,7 @@ export const useCyclesLogic = () => {
         isLoadingStatus: isLoading.status,
         isLoadingCredits: isLoading.credits,
         isLoadingEstimateCycles: isLoading.estimateCycles,
+        isLoadingAddCycles: isLoading.addCycles,
         fetchCredits: fetchCredits,
         estimateCycles: handleEstimateCycles,
         getStatus: handleGetStatus,

@@ -86,6 +86,7 @@ export const CanisterOverview: React.FC = () => {
   const { balance, isLoadingBalance } = useLedger();
   const {
     isLoadingCycles,
+    isLoadingAddCycles,
     canisterStatus,
     cyclesStatus,
     maxCyclesExchangeable,
@@ -425,6 +426,7 @@ export const CanisterOverview: React.FC = () => {
         <CyclesCard
           isFreemium={"freemium" in currentProject.plan}
           isLoadingBalance={isLoadingBalance}
+          isLoadingAddCycles={isLoadingAddCycles}
           balance={balance}
           isLoadingCycles={isLoadingCycles}
           cyclesStatus={cyclesStatus}
