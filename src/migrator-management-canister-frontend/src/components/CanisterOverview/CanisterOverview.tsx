@@ -36,6 +36,8 @@ import { SerializedProject } from "../../utility/bigint";
 import { useFreemiumLogic } from "../../hooks/useFreemiumLogic";
 import RepoSelector from "../RepoSelector/RepoSelector";
 import { Repository } from "../../api/github/GithubApi";
+import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
+import { ConfirmationModal } from "../ConfirmationPopup/ConfirmationModal";
 
 interface ActivityLog {
   id: string;
@@ -57,6 +59,7 @@ export const CanisterOverview: React.FC = () => {
   const [workflowRunHistory, setWorkflowRunHistory] = useState<
     SerializedWorkflowRunDetail[]
   >([]);
+  const [cyclesAmount, setCyclesAmount] = useState("0");
   const [canisterInfo, setCanisterInfo] = useState<any>(null);
   const [isRedeploying, setIsRedeploying] = useState(false);
   const [redeployData, setRedeployData] = useState<RedeployData>({
@@ -87,6 +90,8 @@ export const CanisterOverview: React.FC = () => {
     cyclesStatus,
     maxCyclesExchangeable,
     isLoadingEstimateCycles,
+    getStatus,
+    handleAddCycles,
   } = useCyclesLogic();
 
   const {
@@ -94,6 +99,7 @@ export const CanisterOverview: React.FC = () => {
     handleClearProjectAssets,
     handleDeleteProject,
     handleFetchUserUsage,
+    handleInstallCode,
   } = useProjectsLogic();
 
   const { identity } = useIdentity();
@@ -101,7 +107,7 @@ export const CanisterOverview: React.FC = () => {
   const { setHeaderCard } = useHeaderCard();
 
   const { summon, destroy } = useLoaderOverlay();
-  const { handleInstallCode } = useProjectsLogic();
+  const { showModal, setShowModal } = useConfirmationModal();
 
   const { projects, activityLogs, isLoadingActivityLogs } = useSelector(
     (state: RootState) => state.projects
@@ -117,6 +123,7 @@ export const CanisterOverview: React.FC = () => {
     if (projectId !== undefined && identity && agent) {
       handleFetchActivityLogs(BigInt(projectId));
       handleFetchUserUsage(parseInt(projectId));
+      getStatus(parseInt(projectId));
     }
   }, [dispatch, projectId, identity, agent]);
 
@@ -129,6 +136,7 @@ export const CanisterOverview: React.FC = () => {
     const t = async () => {
       if (projectId !== null && projectId !== undefined && identity && agent) {
         await refreshDeployments(Number(projectId));
+        getStatus(parseInt(projectId));
       }
     };
     t();
@@ -237,7 +245,8 @@ export const CanisterOverview: React.FC = () => {
         }
         break;
       case "cycles":
-        // Handle cycles action
+        // Handle Cycles action
+        setShowModal(true);
         break;
       case "delete":
         // Handle delete action
@@ -377,6 +386,24 @@ export const CanisterOverview: React.FC = () => {
 
   return (
     <div className="canister-overview-container">
+      {showModal && (
+        <ConfirmationModal
+          amountState={[cyclesAmount, setCyclesAmount]}
+          onHide={() => setShowModal(false)}
+          onConfirm={async () => {
+            await handleAddCycles(
+              parseInt(currentProject.id),
+              parseFloat(cyclesAmount)
+            );
+          }}
+          type="cycles"
+          customConfig={{
+            title: "Add Cycles",
+            message: "Enter amount of cycles to top up canister.",
+          }}
+        />
+      )}
+
       {currentProject && (
         <QuickActions
           onActionClick={handleQuickAction}
@@ -396,6 +423,7 @@ export const CanisterOverview: React.FC = () => {
         />
 
         <CyclesCard
+          isFreemium={"freemium" in currentProject.plan}
           isLoadingBalance={isLoadingBalance}
           balance={balance}
           isLoadingCycles={isLoadingCycles}
