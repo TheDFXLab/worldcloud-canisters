@@ -163,8 +163,8 @@ export const useProjectsLogic = () => {
             validateSubscription: async () => ({ status: true, message: '' }) // TODO: implement proper validation
         })).unwrap();
 
-        fetchUsage(); // Keep this if needed
         refreshDeployments(Number(project_id));
+        fetchUsage();
         const updatedProject = result.updatedProjects.find(
             (p: SerializedProject) => p.id === project_id.toString()
         );
