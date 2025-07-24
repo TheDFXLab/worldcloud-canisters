@@ -285,7 +285,11 @@ module {
             switch (Int.abs(Utility.get_time_now(#milliseconds)) - last_used > RATE_LIMIT_WINDOW_MS) {
                 case (false) {
                     // Reset if time window is passed
-                    0;
+                    if (increment == true) {
+                        1;
+                    } else {
+                        0;
+                    };
                 };
                 case (true) {
                     if (increment == true) {
