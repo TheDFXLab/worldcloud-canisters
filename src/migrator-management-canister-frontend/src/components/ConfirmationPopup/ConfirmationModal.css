@@ -48,7 +48,9 @@
   align-items: center;
   gap: 0.5rem;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm) !important;
+  margin: 0 0 !important;
+  padding: 0 0 !important;
 }
 
 .zero-balance {
@@ -77,6 +79,20 @@
   font-size: 0.85rem;
   color: var(--text-tertiary);
   margin-left: 0.5rem;
+}
+
+.blink-loading {
+  animation: blinker 1.5s ease-in-out infinite;
+}
+
+@keyframes blinker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 
 .amount-input-group {
