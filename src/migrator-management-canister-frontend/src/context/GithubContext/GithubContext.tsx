@@ -29,6 +29,8 @@ interface GithubContextType {
   getGithubToken: () => string | null;
   setAccessToken: (token: string) => void;
   setGithubUser: (user: GithubUser | null) => void;
+  handleGithubConnect: () => Promise<void>;
+  handleGithubDisconnect: () => Promise<void>;
 }
 
 const GithubContext = createContext<GithubContextType | undefined>(undefined);
@@ -39,6 +41,17 @@ export function GithubProvider({ children }: GithubProviderProps) {
 
   const { identity } = useIdentity();
 
+  const handleGithubConnect = async () => {
+    const github = GithubApi.getInstance();
+    await github.authenticate();
+  };
+
+  const handleGithubDisconnect = async () => {
+    const github = GithubApi.getInstance();
+    await github.logout();
+    setGithubUser(null);
+  };
+
   const refreshGithubUser = useCallback(async () => {
     const jwt = AuthState.getInstance().getAccessToken();
     if (jwt) {
@@ -47,7 +60,6 @@ export function GithubProvider({ children }: GithubProviderProps) {
 
         const githubApi = GithubApi.getInstance();
         const data = await githubApi.getUser();
-
         if (!data) {
           return;
         }
@@ -122,6 +134,8 @@ export function GithubProvider({ children }: GithubProviderProps) {
         getGithubToken,
         setAccessToken,
         setGithubUser,
+        handleGithubConnect,
+        handleGithubDisconnect,
       }}
     >
       {children}
