@@ -8,6 +8,7 @@
   background: var(--background);
   padding: 2rem;
   overflow-y: auto;
+  z-index: 1;
 }
 
 .project-form-grid {

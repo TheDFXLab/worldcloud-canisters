@@ -135,12 +135,14 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
         onClick={() => handleClose()}
       >
         {headerCard && (
-          <div className="app-layout-header">
-            <HeaderCard
-              title={headerCard.title}
-              description={headerCard.description}
-              className={headerCard.className}
-            />
+          <div className="app-layout-header-wrapper">
+            <div className="app-layout-header">
+              <HeaderCard
+                title={headerCard.title}
+                description={headerCard.description}
+                className={headerCard.className}
+              />
+            </div>
           </div>
         )}
         <div className="app-layout-children-container">{children}</div>

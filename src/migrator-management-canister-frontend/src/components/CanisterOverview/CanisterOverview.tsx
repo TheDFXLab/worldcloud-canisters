@@ -366,15 +366,17 @@ export const CanisterOverview: React.FC = () => {
 
   if (isRedeploying && currentProject.canister_id) {
     return (
-      <RepoSelector
-        projectId={projectId}
-        canisterId={currentProject.canister_id}
-        prefilledBranch={redeployData.branchName}
-        prefilledPath={redeployData.path}
-        prefilledRepo={redeployData.repo}
-        autoDeploy={redeployData.autoDeploy}
-        onComplete={() => setIsRedeploying(false)}
-      />
+      <div className="canister-overview-container">
+        <RepoSelector
+          projectId={projectId}
+          canisterId={currentProject.canister_id}
+          prefilledBranch={redeployData.branchName}
+          prefilledPath={redeployData.path}
+          prefilledRepo={redeployData.repo}
+          autoDeploy={redeployData.autoDeploy}
+          onComplete={() => setIsRedeploying(false)}
+        />
+      </div>
     );
   }
 

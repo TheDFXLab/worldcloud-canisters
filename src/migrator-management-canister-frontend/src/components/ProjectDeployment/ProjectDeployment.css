@@ -7,7 +7,9 @@
   margin: 0 auto;
   position: relative;
   overflow: hidden;
-  padding: 2rem 0px;
+  overflow-y: auto;
+  padding-top: 2rem;
+  /* padding: 2rem 0px; */
   /* margin-top: 2rem; */
 }
 
@@ -145,6 +147,41 @@
 .method-card.disabled::before {
   opacity: 0;
 }
+
+.github-connect-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  text-align: center;
+}
+
+.github-connect-info p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.connect-github-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 500;
+  transition: color 0.2s ease;
+  padding: 0;
+  margin: 0;
+  font-size: inherit;
+}
+
+.connect-github-link:hover {
+  color: var(--color-primary-dark);
+  text-decoration: none;
+}
+
 .method-icon {
   margin-bottom: 1.5rem;
   color: var(--color-primary);
@@ -171,11 +208,10 @@
 
 .deployment-content {
   flex: 1;
-  overflow: hidden;
+  /* overflow: hidden; */
   padding-bottom: 2rem;
-  height: calc(
-    100vh - 200px
-  ); /* Adjust this value based on your header height */
+  /* height: calc(100vh - 200px); - Removed to allow natural page scrolling */
+  /* overflow-y: auto; */
 }
 
 .back-button {

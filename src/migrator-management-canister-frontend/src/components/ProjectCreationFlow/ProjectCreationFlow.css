@@ -4,7 +4,8 @@
   padding: 0 20px;
   position: relative;
   /* overflow-y: auto; */
-  margin-top: 1rem;
+  /* margin-top: 1rem; */
+  padding-top: 2rem;
   z-index: 1;
   width: 100%;
 }
