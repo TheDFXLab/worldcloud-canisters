@@ -25,6 +25,7 @@ import { useIdentity } from '../context/IdentityContext/IdentityContext';
 import { useHttpAgent } from '../context/HttpAgentContext/HttpAgentContext';
 import { useFreemiumLogic } from './useFreemiumLogic';
 import { useDeploymentLogic } from './useDeploymentLogic';
+import { useCyclesLogic } from './useCyclesLogic';
 
 export const getPlanDisplayName = (plan: any): string => {
     if (typeof plan === 'object' && plan !== null) {
@@ -44,6 +45,7 @@ export const useProjectsLogic = () => {
     const { agent } = useHttpAgent();
     const { fetchUsage } = useFreemiumLogic();
     const { refreshDeployments } = useDeploymentLogic();
+    const { getStatus } = useCyclesLogic();
 
     const {
         projects: serializedProjects,
@@ -165,6 +167,8 @@ export const useProjectsLogic = () => {
 
         refreshDeployments(Number(project_id));
         fetchUsage();
+        handleFetchUserUsage(Number(project_id));
+        getStatus(Number(project_id));
         const updatedProject = result.updatedProjects.find(
             (p: SerializedProject) => p.id === project_id.toString()
         );
