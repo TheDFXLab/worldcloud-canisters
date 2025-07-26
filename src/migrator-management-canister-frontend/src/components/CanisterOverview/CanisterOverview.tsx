@@ -38,6 +38,7 @@ import RepoSelector from "../RepoSelector/RepoSelector";
 import { Repository } from "../../api/github/GithubApi";
 import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
 import { ConfirmationModal } from "../ConfirmationPopup/ConfirmationModal";
+import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 
 interface ActivityLog {
   id: string;
@@ -84,6 +85,7 @@ export const CanisterOverview: React.FC = () => {
   } = useDeployments();
   const { setToasterData, setShowToaster } = useToaster();
   const { balance, isLoadingBalance } = useLedger();
+  const { isSidebarCollapsed } = useSideBar();
   const {
     isLoadingCycles,
     isLoadingAddCycles,
@@ -415,7 +417,11 @@ export const CanisterOverview: React.FC = () => {
         />
       )}
 
-      <div className="overview-grid">
+      <div
+        className={`overview-grid ${
+          isSidebarCollapsed ? "sidebar-collapsed" : ""
+        }`}
+      >
         <ProjectInfoCard currentProject={currentProject} />
 
         <CanisterInfoCard
@@ -423,16 +429,18 @@ export const CanisterOverview: React.FC = () => {
           canisterStatus={selectedDeployment}
         />
 
-        <CyclesCard
-          isFreemium={"freemium" in currentProject.plan}
-          isLoadingBalance={isLoadingBalance}
-          isLoadingAddCycles={isLoadingAddCycles}
-          balance={balance}
-          isLoadingCycles={isLoadingCycles}
-          cyclesStatus={cyclesStatus}
-          isLoadingEstimateCycles={isLoadingEstimateCycles}
-          maxCyclesExchangeable={maxCyclesExchangeable}
-        />
+        {currentProject.canister_id && (
+          <CyclesCard
+            isFreemium={"freemium" in currentProject.plan}
+            isLoadingBalance={isLoadingBalance}
+            isLoadingAddCycles={isLoadingAddCycles}
+            balance={balance}
+            isLoadingCycles={isLoadingCycles}
+            cyclesStatus={cyclesStatus}
+            isLoadingEstimateCycles={isLoadingEstimateCycles}
+            maxCyclesExchangeable={maxCyclesExchangeable}
+          />
+        )}
 
         <DeploymentHistoryCard
           isLoading={isLoading}

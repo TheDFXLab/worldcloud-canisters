@@ -1,5 +1,6 @@
 import React from "react";
 import "./HeaderCard.css";
+import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 
 interface HeaderCardProps {
   title: string;
@@ -14,10 +15,14 @@ const HeaderCard: React.FC<HeaderCardProps> = ({
   children,
   className = "",
 }) => {
+  const { isSidebarCollapsed } = useSideBar();
+
   return (
     <div
-      className={`header-card 
-        ${className ? className : "header-card-layout-default"}
+      className={`header-card
+        ${className ? className : "header-card-layout-default"} ${
+        isSidebarCollapsed ? "collapsed" : ""
+      }
         `}
     >
       <h2>{title}</h2>
