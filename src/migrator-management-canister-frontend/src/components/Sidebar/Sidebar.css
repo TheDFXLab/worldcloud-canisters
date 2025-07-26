@@ -135,9 +135,15 @@
 .sidebar-collapse-tab.collapsed {
   position: fixed;
   left: 0;
-  top: 2rem;
+  top: 5rem !important;
   background: var(--background-secondary);
   z-index: 2001;
+}
+
+@media (max-width: 480px) {
+  .sidebar-collapse-tab.collapsed {
+    top: 4rem !important;
+  }
 }
 
 .sidebar.collapsed {
