@@ -95,6 +95,9 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
     const navigateToPath = mapKeyToRoute(menuItem ? menuItem : "home");
     setHeaderCard(headerCardData.title.length > 0 ? headerCardData : null);
     setActiveTab(menuItem);
+    if (isMobile) {
+      handleClose();
+    }
     if (shouldNavigate) {
       console.log(`Navigating to `, navigateToPath);
       navigate(navigateToPath);

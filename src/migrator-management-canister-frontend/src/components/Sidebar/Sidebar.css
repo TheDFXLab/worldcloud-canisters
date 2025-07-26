@@ -7,7 +7,7 @@
   top: 0;
   background: var(--background-secondary);
   border-right: 1px solid var(--border-color);
-  z-index: 20;
+  z-index: 105;
   color: var(--text-primary);
 }
 
@@ -24,6 +24,7 @@
   padding: 0.5rem;
   cursor: pointer;
   transition: opacity 0.3s ease;
+  z-index: 105;
 }
 
 /* Overlay for mobile menu  */
@@ -35,7 +36,7 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.66);
-  z-index: 90;
+  z-index: 102;
 }
 
 .sidebar-nav {
@@ -109,7 +110,7 @@
 @media screen and (max-width: 640px) {
   .sidebar-overlay.show {
     display: block;
-    z-index: 1;
+    z-index: 102;
   }
 }
 
