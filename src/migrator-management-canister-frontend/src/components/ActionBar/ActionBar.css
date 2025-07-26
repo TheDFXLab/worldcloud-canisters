@@ -10,6 +10,13 @@
   width: 80%;
   user-select: none;
   margin: 0 auto;
+  transition: width 0.2s ease;
+}
+
+/* When sidebar is collapsed, expand the action bar to use more space */
+.action-bar.sidebar-collapsed {
+  width: 100%;
+  left: 0;
 }
 
 .action-bar.hidden {
@@ -25,6 +32,12 @@
   width: 100%;
   margin: 0 auto;
   user-select: none;
+}
+
+@media (max-width: 480px) {
+  .action-bar-content {
+    padding: 0.5rem 1rem;
+  }
 }
 
 .selected-repo {
@@ -79,5 +92,20 @@
   .action-bar {
     width: 100%;
     margin-left: 0;
+  }
+  .action-bar.sidebar-collapsed {
+    width: 100%;
+  }
+  .next-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    min-width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .next-button {
+    padding: 0.4rem 0.8rem;
+    font-size: var(--font-size-xs);
   }
 }

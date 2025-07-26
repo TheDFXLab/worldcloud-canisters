@@ -1,5 +1,6 @@
 import React from "react";
 import "./ActionBar.css";
+import { useSideBar } from "../../context/SideBarContext/SideBarContext";
 
 interface ActionBarProps {
   icon?: string;
@@ -29,8 +30,14 @@ const ActionBar: React.FC<ActionBarProps> = ({
   isHidden = false,
   customButton,
 }) => {
+  const { isSidebarCollapsed } = useSideBar();
+
   return (
-    <div className={`action-bar visible ${isHidden ? "hidden" : ""}`}>
+    <div
+      className={`action-bar visible ${isHidden ? "hidden" : ""} ${
+        isSidebarCollapsed ? "sidebar-collapsed" : ""
+      }`}
+    >
       <div className="action-bar-content">
         <div className="selected-repo">
           <span className="repo-icon">{icon}</span>
