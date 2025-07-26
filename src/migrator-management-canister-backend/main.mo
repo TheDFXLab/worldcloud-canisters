@@ -2177,7 +2177,7 @@ shared (deployMsg) actor class CanisterManager() = this {
     let timer_id = Timer.setTimer<system>(
       #seconds duration,
       func() : async () {
-        // This code runs after 10 seconds
+        // This code runs after the specified duration
         Debug.print("[Timer Triggered] Ending session on slot #" # Nat.toText(slot_id));
         // Clear asset canister files
         let _is_deleted = switch (canister_id) {
