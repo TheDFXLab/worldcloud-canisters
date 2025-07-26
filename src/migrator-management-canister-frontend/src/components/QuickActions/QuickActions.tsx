@@ -21,6 +21,7 @@ interface QuickAction {
   onClick?: () => void;
   disabled?: boolean;
   disabledReason?: string;
+  hide?: boolean;
 }
 
 interface QuickActionsProps {
@@ -65,6 +66,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
         : !isFreemium
         ? "Only available for freemium projects"
         : undefined,
+      hide: !isFreemium,
     },
     {
       title: "Visit Site",
@@ -124,48 +126,47 @@ const QuickActions: React.FC<QuickActionsProps> = ({
 
   const renderActionGrid = (actions: QuickAction[]) => (
     <div className="quick-actions-grid">
-      {actions.map((action, index) => (
-        <Tooltip
-          key={index}
-          title={
-            action.disabled
-              ? action.disabledReason || action.description
-              : action.description
-          }
-        >
-          <div
-            className={`quick-action-item ${
-              action.isDangerous ? "dangerous" : ""
-            } ${action.disabled ? "disabled" : ""}`}
-            onClick={
-              !action.disabled ? action.onClick : () => console.log("clcked")
-            }
-            role="button"
-            tabIndex={action.disabled ? -1 : 0}
-          >
-            <action.icon className="quick-action-icon" />
-            <div className="quick-action-content">
-              <div className="quick-action-title">{action.title}</div>
-            </div>
-            {showCountdown &&
-              freemiumSlot &&
-              index === 0 &&
-              action.isDangerous === false && (
-                <CountdownChip
-                  startTimestamp={freemiumSlot.start_timestamp}
-                  duration={freemiumSlot.duration}
-                />
-              )}
-            {/* {action.isDangerous &&
-              action.title === "Clear Canister" &&
-              isLoadingClearAssets && (
-                <CircularProgress size={20} className="circular-progress" />
-              )} */}
-
-            {renderSpinner(action)}
-          </div>
-        </Tooltip>
-      ))}
+      {actions.map(
+        (action, index) =>
+          !action.hide && (
+            <Tooltip
+              key={index}
+              title={
+                action.disabled
+                  ? action.disabledReason || action.description
+                  : action.description
+              }
+            >
+              <div
+                className={`quick-action-item ${
+                  action.isDangerous ? "dangerous" : ""
+                } ${action.disabled ? "disabled" : ""}`}
+                onClick={
+                  !action.disabled
+                    ? action.onClick
+                    : () => console.log("clcked")
+                }
+                role="button"
+                tabIndex={action.disabled ? -1 : 0}
+              >
+                <action.icon className="quick-action-icon" />
+                <div className="quick-action-content">
+                  <div className="quick-action-title">{action.title}</div>
+                </div>
+                {showCountdown &&
+                  freemiumSlot &&
+                  index === 0 &&
+                  action.isDangerous === false && (
+                    <CountdownChip
+                      startTimestamp={freemiumSlot.start_timestamp}
+                      duration={freemiumSlot.duration}
+                    />
+                  )}
+                {renderSpinner(action)}
+              </div>
+            </Tooltip>
+          )
+      )}
     </div>
   );
 

@@ -11,11 +11,11 @@ export const icpToE8s = (amountInIcp: number) => {
 }
 
 export const cyclesToTerra = (amountInTerra: number) => {
-    return amountInTerra / 1e12
+    return Number((amountInTerra / 1e12).toFixed(2));
 }
 
 export const terraToCycles = (amountInCycles: number) => {
-    return amountInCycles * 1e12
+    return (amountInCycles * 1e12).toFixed(3);
 }
 
 export const fromE8sStable = (e8s: bigint, decimals: number = 8): number => {

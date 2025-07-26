@@ -25,6 +25,7 @@ interface CyclesState {
         status: boolean;
         credits: boolean;
         estimateCycles: boolean;
+        addCycles: boolean,
     };
     error: string | null;
     lastFetchTimestamp: number | null;
@@ -43,6 +44,7 @@ const initialState: CyclesState = {
         status: false,
         credits: false,
         estimateCycles: false,
+        addCycles: false,
     },
     error: null,
     lastFetchTimestamp: null,
@@ -68,7 +70,7 @@ export const fetchCreditsAvailable = createAsyncThunk(
 
         return {
             total_credits: fromE8sStable(credits),
-            equivalent_cycles: fromE8sStable(BigInt(Math.floor(equivalentCycles)), 12),
+            equivalent_cycles: fromE8sStable(BigInt(Math.floor(Number(equivalentCycles))), 12),
         };
     }
 );
@@ -80,7 +82,7 @@ export const estimateCycles = createAsyncThunk(
         if (!cyclesApi) {
             throw new Error('Cycles API not created');
         }
-        return await cyclesApi.estimateCyclesToAdd(amountInIcp);
+        return Number(await cyclesApi.estimateCyclesToAdd(amountInIcp));
     }
 );
 
@@ -91,12 +93,23 @@ export const fetchCanisterStatus = createAsyncThunk(
         if (!mainApi) {
             throw new Error('Main API not created');
         }
-
         const result = await mainApi.getCanisterStatus(project_id);
         const serialized = serializeCanisterStatus(result);
         return serialized;
     }
 );
+
+export const addCycles = createAsyncThunk(
+    'cycles/addCycles',
+    async ({ identity, agent, project_id, amount_in_icp }: { identity: any, agent: any, project_id: number, amount_in_icp: number }) => {
+        const api = await CyclesApi.create(identity, agent);
+        if (!api) {
+            throw new Error('Cycles API not created');
+        }
+        const result = await api.addCycles(project_id, amount_in_icp);
+        return result;
+    }
+)
 
 export const cyclesSlice = createSlice({
     name: 'cycles',
@@ -131,9 +144,9 @@ export const cyclesSlice = createSlice({
             })
             .addCase(estimateCycles.fulfilled, (state, action) => {
                 state.isLoading.estimateCycles = false;
-                state.maxCyclesExchangeable = action.payload;
+                state.maxCyclesExchangeable = Number(action.payload);
                 if (state.totalCredits?.total_credits) {
-                    state.cyclesRate = action.payload / state.totalCredits.total_credits;
+                    state.cyclesRate = Number(action.payload / state.totalCredits.total_credits);
                 }
             })
             .addCase(estimateCycles.rejected, (state, action) => {
@@ -151,7 +164,16 @@ export const cyclesSlice = createSlice({
             .addCase(fetchCanisterStatus.rejected, (state, action) => {
                 state.isLoading.status = false;
                 state.error = action.error.message || 'Failed to fetch canister status';
-            });
+            })
+            .addCase(addCycles.pending, (state) => {
+                state.isLoading.addCycles = true;
+            })
+            .addCase(addCycles.fulfilled, (state, action) => {
+                state.isLoading.addCycles = true;
+            })
+            .addCase(addCycles.rejected, (state, action) => {
+                state.isLoading.addCycles = false;
+            })
     },
 });
 

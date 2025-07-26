@@ -395,6 +395,12 @@ module {
         last_used : Nat; //last time the canister was occupied by the user
         rate_limit_window : Nat; //duration of a theoretical session. used to deny occupying a shared canister when (usage_count > max_uses_threshold)
         max_uses_threshold : Nat; // maximum number of times the user is allowed to occupy the shared canister within the rate_limit_window
+        quota : Quota;
+    };
+
+    public type Quota = {
+        consumed : Nat;
+        total : Nat;
     };
 
     public type SlotToCanister = HashMap.HashMap<Nat, ShareableCanister>;

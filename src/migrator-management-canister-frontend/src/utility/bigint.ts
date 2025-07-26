@@ -54,6 +54,12 @@ export interface SerializedUsageLog {
     last_used: string; //last time the canister was occupied by the user
     rate_limit_window: string; //duration of a theoretical session. used to deny occupying a shared canister when (usage_count > max_uses_threshold)
     max_uses_threshold: string; // max
+    quota: SerializedQuota;
+}
+
+interface SerializedQuota {
+    consumed: bigint;
+    total: bigint;
 }
 
 export interface DeserializedUsageLog {
@@ -62,6 +68,12 @@ export interface DeserializedUsageLog {
     last_used: number;
     rate_limit_window: number;
     max_uses_threshold: number;
+    quota: DeserializedQuota;
+}
+
+interface DeserializedQuota {
+    consumed: number;
+    total: number;
 }
 
 export interface DeserializedActivityLog {
@@ -91,7 +103,12 @@ export const deserializeUsageLog = (usageLog: SerializedUsageLog): DeserializedU
     usage_count: Number(usageLog.usage_count),
     last_used: Number(usageLog.last_used),
     rate_limit_window: Number(usageLog.rate_limit_window),
-    max_uses_threshold: Number(usageLog.max_uses_threshold)
+    max_uses_threshold: Number(usageLog.max_uses_threshold),
+    quota: {
+        consumed: Number(usageLog.quota.consumed),
+        total: Number(usageLog.quota.total),
+    }
+
 })
 
 export const serializeProject = (project: DeserializedProject): SerializedProject => ({

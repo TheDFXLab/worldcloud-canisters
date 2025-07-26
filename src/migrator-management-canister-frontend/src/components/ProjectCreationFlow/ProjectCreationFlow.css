@@ -61,7 +61,6 @@
 }
 
 .creation-tabs .MuiTab-root.Mui-disabled::after {
-  content: "🔒";
   position: absolute;
   right: 8px;
   top: 50%;

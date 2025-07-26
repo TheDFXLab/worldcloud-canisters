@@ -69,7 +69,6 @@ export const getUserProjects = createAsyncThunk(
         if (!projects) {
             throw new Error('Failed to fetch projects');
         }
-        // debugger;
         return { projects: serializeProjects(projects), silent };
     }
 );

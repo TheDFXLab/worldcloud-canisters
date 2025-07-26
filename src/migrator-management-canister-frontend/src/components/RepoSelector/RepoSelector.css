@@ -9,10 +9,16 @@
   padding: 0rem 2rem 0 2rem;
   position: relative;
   overflow: hidden;
-  overflow-y: auto;
+  /* overflow-y: auto; */
   background-color: var(--background);
   width: 100%;
   height: max-content;
+}
+
+@media (max-width: 480px) {
+  .repo-selector {
+    padding: 0.5rem 0.5rem;
+  }
 }
 
 .repo-header {
@@ -110,6 +116,16 @@
   background: var(--color-primary-light);
 }
 
+@media (max-width: 480px) {
+  .repo-card {
+    min-width: 250px;
+  }
+
+  .repo-grid-container {
+    padding: 1rem 0rem;
+  }
+}
+
 /* Add padding to last row to prevent stretching */
 .repo-grid::after {
   content: "";
@@ -189,7 +205,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 2rem;
+  /* margin-bottom: 2rem; */
 }
 
 .configure-content {

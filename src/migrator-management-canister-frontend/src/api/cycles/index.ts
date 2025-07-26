@@ -33,23 +33,13 @@ class CyclesApi {
                 this.instance = null;
                 this.currentIdentity = identity;
             }
-
             // Return existing instance if already created
             if (this.instance) return this.instance;
-
-            // Create instance if not already created
-            // const agent = await HttpAgent.create({ identity: identity ? identity : undefined, host: http_host });
-            // const httpAgentManager = await HttpAgentManager.getInstance(identity);
-            // if (!httpAgentManager) {
-            //     return null;
-            // }
-            // const agent = httpAgentManager.agent;
 
             const actor = createActor(backend_canister_id, {
                 agent: agent
             });
             let isIdentified = false;
-
             if (identity && identity.getPrincipal().toText() !== internetIdentityConfig.loggedOutPrincipal) {
                 isIdentified = true;
             }
@@ -89,8 +79,11 @@ class CyclesApi {
     }
 
     async getCyclesToAdd(amountInIcp?: number) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
         const amountInE8s = amountInIcp ? BigInt(e8sToIcp(amountInIcp)) : null;
-        const result = await this.actor?.getCyclesToAdd(amountInE8s ? [amountInE8s] : [], []);
+        const result = await this.actor.getCyclesToAdd(amountInE8s ? [amountInE8s] : [], []);
         if (!result) {
             throw new Error("Error getting cycles to add");
         }
@@ -103,11 +96,11 @@ class CyclesApi {
     }
 
     async estimateCyclesToAdd(amountInIcp: number) {
-        const amountInE8s = BigInt(icpToE8s(amountInIcp));
-        const result = await this.actor?.estimateCyclesToAdd(amountInE8s);
-        if (!result && result !== 0) {
-            throw new Error("Error estimating cycles to add");
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
         }
+        const amountInE8s = BigInt(icpToE8s(amountInIcp));
+        const result = await this.actor.estimateCyclesToAdd(amountInE8s);
         return result;
     }
 
@@ -116,9 +109,8 @@ class CyclesApi {
      * @param canisterId 
      * @returns 
      */
-    async addCycles(canisterId: Principal, amountInIcp?: number) {
+    async addCycles(project_id: number, amountInIcp?: number) {
         try {
-
             if (!amountInIcp) {
                 throw new Error("Amount in ICP is required");
             }
@@ -128,8 +120,15 @@ class CyclesApi {
             if (!this.idenitified) {
                 throw new Error("Actor not identified");
             }
-            const result = await this.actor?.addCycles(canisterId, amountInIcp);
-            return result;
+            if (!this.actor) {
+                throw new Error("Actor not initialized.");
+            }
+            const amountInE8s = icpToE8s(amountInIcp);
+            const result = await this.actor.addCycles(BigInt(project_id), amountInE8s);
+            if ('ok' in result) {
+                return result.ok;
+            }
+            throw { status: false, message: result.err };
         } catch (error) {
             console.error("Error adding cycles:", error);
             throw error;

@@ -43,13 +43,17 @@ export const UsageStatisticsCard: React.FC<UsageStatisticsCardProps> = ({
           </div>
         </div>
         <div className="info-row">
-          <div className="info-label">Used count:</div>
+          <div className="info-label">Total usage:</div>
           <div className="info-value">{userUsage?.usage_count}</div>
+        </div>
+        <div className="info-row">
+          <div className="info-label">Current Quota:</div>
+          <div className="info-value">{userUsage?.quota.consumed}</div>
         </div>
         <div className="info-row">
           <div className="info-label">Max uses:</div>
           <div className="info-value">
-            {userUsage?.max_uses_threshold} per{" "}
+            {userUsage?.quota.total} per{" "}
             {userUsage?.rate_limit_window
               ? userUsage.rate_limit_window / 1000 / 60 / 60
               : " 24"}{" "}

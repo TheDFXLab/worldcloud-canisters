@@ -84,9 +84,11 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   customConfig = {},
 }) => {
   const { modalType, showModal, setShowModal } = useConfirmationModal();
+
   /** Hooks */
   const {
     isLoadingCycles,
+    isLoadingEstimateCycles,
     cyclesAvailable,
     cyclesRate,
     cyclesStatus,
@@ -137,17 +139,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   }, [balance, config.showEstimatedCycles]);
 
   const handleClickSubmit = async () => {
-    if (type === "cycles") {
-      return;
-    }
     setIsSubmitting(true);
     try {
       await onConfirm(parseFloat(amount));
-      // if (type === "cycles") {
-      //   // TODO Add project id to params if not there
-      //   getStatus(BigInt(params.projectId));
-      // }
-      // getBalance();
       setShouldRefetchBalance(true);
       onHide();
     } catch (error) {
@@ -207,11 +201,17 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     </span>
                     {config.showEstimatedCycles && (
                       <span className="estimated-value">
-                        ≈{" "}
-                        {fromE8sStable(
-                          BigInt(Math.floor(estimatedMax)),
-                          12
-                        ).toFixed(2)}{" "}
+                        <span
+                          className={`estimated-value ${
+                            isLoadingEstimateCycles ? "blink-loading" : ""
+                          }`}
+                        >
+                          ≈{" "}
+                          {fromE8sStable(
+                            BigInt(Math.floor(estimatedMax)),
+                            12
+                          ).toFixed(2)}
+                        </span>{" "}
                         T Cycles
                       </span>
                     )}
@@ -246,12 +246,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             <Form.Label>
               Amount (ICP)
               {config.showEstimatedCycles && amount && (
-                <span className="estimated-value">
-                  ≈{" "}
-                  {fromE8sStable(
-                    BigInt(Math.floor(estimatedOutput)),
-                    12
-                  ).toFixed(2)}{" "}
+                <span className={`estimated-value`}>
+                  <span
+                    className={`estimated-value ${
+                      isLoadingEstimateCycles ? "blink-loading" : ""
+                    }`}
+                  >
+                    ≈ {fromE8sStable(BigInt(estimatedOutput), 12).toFixed(2)}
+                  </span>{" "}
                   T Cycles
                 </span>
               )}
@@ -297,7 +299,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         <Button
           style={{
             backgroundColor: "var(--color-primary)",
-            border: "1px solid var(--color-secondary)",
+            border: "1px solid var(--color-primary)",
           }}
           onClick={handleClickSubmit}
           disabled={

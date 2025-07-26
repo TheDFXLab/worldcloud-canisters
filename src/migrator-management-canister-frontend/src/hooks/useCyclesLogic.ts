@@ -6,6 +6,7 @@ import {
     estimateCycles,
     fetchCanisterStatus,
     setCurrentCanisterId,
+    addCycles,
 } from '../state/slices/cyclesSlice';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
 import { useHttpAgent } from '../context/HttpAgentContext/HttpAgentContext';
@@ -21,7 +22,7 @@ export const useCyclesLogic = () => {
     const dispatch = useAppDispatch();
     const { identity } = useIdentity();
     const { agent } = useHttpAgent();
-    const { balance } = useLedger();
+    const { balance, depositIfNotEnoughCredits } = useLedger();
 
     const {
         cyclesAvailable,
@@ -107,6 +108,23 @@ export const useCyclesLogic = () => {
         dispatch(setCurrentCanisterId(canisterId.toText()));
     }, [dispatch]);
 
+    const handleAddCycles = useCallback(async (project_id: number, amount_in_icp: number) => {
+        if (identity && agent) {
+            await depositIfNotEnoughCredits(amount_in_icp, agent);
+            await dispatch(addCycles({
+                identity,
+                agent,
+                project_id,
+                amount_in_icp
+            }))
+            await dispatch(fetchCanisterStatus({
+                identity,
+                agent,
+                project_id: BigInt(project_id)
+            }))
+        }
+    }, [dispatch, identity, agent])
+
     return {
         cyclesAvailable,
         totalCredits,
@@ -119,9 +137,11 @@ export const useCyclesLogic = () => {
         isLoadingStatus: isLoading.status,
         isLoadingCredits: isLoading.credits,
         isLoadingEstimateCycles: isLoading.estimateCycles,
+        isLoadingAddCycles: isLoading.addCycles,
         fetchCredits: fetchCredits,
         estimateCycles: handleEstimateCycles,
         getStatus: handleGetStatus,
         setCurrentCanisterId: handleSetCurrentCanisterId,
+        handleAddCycles
     };
 }; 

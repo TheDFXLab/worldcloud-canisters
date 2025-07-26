@@ -1,6 +1,5 @@
 .header-card {
   text-align: left;
-  margin-bottom: 2rem;
   position: relative;
   top: 0;
   padding: 1.6rem;
@@ -36,6 +35,12 @@
 
   margin: auto auto;
   column-gap: 0.3rem;
+}
+
+.header-card .collapsed {
+  left: 10;
+  border: 1px solid red;
+  width: 80% !important;
 }
 
 .header-card-layout-column {

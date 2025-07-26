@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { GithubApi, Repository } from "../../api/github/GithubApi";
 import "./RepoSelector.css";
+import RepoSelectorSkeleton from "./RepoSelectorSkeleton";
 
 import { useGithub } from "../../context/GithubContext/GithubContext";
 import { generateWorkflowTemplate } from "../../utility/workflowTemplate";
@@ -531,7 +532,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
     return (
       <div className="deployment-configure">
         <div className="configure-header">
-          {isDispatched ? (
+          {/* {isDispatched ? (
             <div></div>
           ) : (
             <button
@@ -543,7 +544,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
             >
               ← Back to repositories
             </button>
-          )}
+          )} */}
 
           {/* <h2>Configure Deployment</h2>
           <p>Configure deployment settings for {state.selectedRepo.name}</p> */}
@@ -666,7 +667,13 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
   ]);
 
   if (!repos.length) {
-    return <div>Loading...</div>;
+    return (
+      <RepoSelectorSkeleton
+        cardCount={6}
+        showPagination={true}
+        showActionBar={true}
+      />
+    );
   }
 
   return (
