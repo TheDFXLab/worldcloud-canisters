@@ -13,6 +13,7 @@ import { useProjectsLogic } from "../../hooks/useProjectsLogic";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -108,27 +109,34 @@ const ProjectCreationFlow: React.FC<ProjectCreationFlowProps> = () => {
   }, []);
 
   const renderTab = (label: string, index: number, disabled: boolean) => {
-    const tab = (
+    const tab = { label, disabled };
+
+    return (
       <Tab
-        label={label}
-        disabled={disabled}
+        label={
+          tab.disabled ? (
+            <Tooltip
+              title={
+                tab.disabled ? "Complete the previous step to unlock." : ""
+              }
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                {tab.label}
+                <LockOutlinedIcon style={{ fontSize: 16, marginLeft: 4 }} />
+              </span>
+            </Tooltip>
+          ) : (
+            tab.label
+          )
+        }
+        disabled={tab.disabled}
         onClick={(e) => {
-          if (disabled) {
+          if (tab.disabled) {
             e.preventDefault();
           }
         }}
       />
     );
-
-    if (disabled) {
-      return (
-        <Tooltip title="Complete the previous step first" arrow placement="top">
-          {tab}
-        </Tooltip>
-      );
-    }
-
-    return tab;
   };
 
   return (
