@@ -38,23 +38,25 @@ export type MenuItem =
 
 interface SidebarProps {
   isSidebarCollapsed: boolean;
-  setIsSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
-  mobileControl: any;
+  setIsSidebarCollapsed: (isCollapsed: boolean) => void;
 }
 
-function Sidebar({
-  isSidebarCollapsed,
-  setIsSidebarCollapsed,
-  mobileControl,
-}: SidebarProps) {
+function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
   const { isAdmin } = useAdmin();
   const { disconnect } = useIdentity();
   const { githubUser, setGithubUser } = useGithub();
-  const { activeTab, isMobileMenuOpen, setIsMobileMenuOpen, setActiveTab } =
-    useSideBar();
+  const {
+    activeTab,
+    isMobileMenuOpen,
+    isMobile,
+    handleClose,
+    setIsMobileMenuOpen,
+    setIsMobile,
+    setActiveTab,
+  } = useSideBar();
   const { setHeaderCard } = useHeaderCard();
   const navigate = useNavigate();
-  const [isMobile, setIsMobile] = mobileControl;
+  // const [isMobile, setIsMobile] = mobileControl;
 
   useEffect(() => {
     if (isMobile) {
@@ -70,21 +72,13 @@ function Sidebar({
     return () => window.removeEventListener("resize", resize);
   }, []);
 
-  const handleTabClick = () => {
+  const handleToggleSidebar = () => {
     if (isMobile) {
-      setIsSidebarCollapsed((p) => !p);
+      setIsSidebarCollapsed(!isSidebarCollapsed);
       setIsMobileMenuOpen(!isMobileMenuOpen);
     } else {
-      setIsSidebarCollapsed((v) => !v);
+      setIsSidebarCollapsed(!isSidebarCollapsed);
     }
-    handleMenuClick(activeTab ? activeTab : "home", true);
-  };
-
-  const handleClose = () => {
-    if (isMobile) {
-      setIsMobileMenuOpen(false);
-    }
-    setIsSidebarCollapsed(true);
   };
 
   const handleMenuClick = (
@@ -118,7 +112,7 @@ function Sidebar({
         className={`sidebar-collapse-tab${
           isSidebarCollapsed ? " collapsed" : ""
         }`}
-        onClick={() => handleTabClick()}
+        onClick={() => handleToggleSidebar()}
         aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         style={{
           position: isSidebarCollapsed ? "fixed" : "absolute",
@@ -143,7 +137,9 @@ function Sidebar({
       </button>
       <div
         className={`sidebar-overlay ${isMobileMenuOpen ? "show" : ""}`}
-        onClick={() => handleClose()}
+        onClick={() => {
+          handleClose();
+        }}
       />
       <aside
         className={`sidebar${isSidebarCollapsed ? " collapsed" : ""} 

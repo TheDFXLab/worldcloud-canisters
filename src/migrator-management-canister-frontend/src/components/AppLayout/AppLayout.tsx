@@ -36,17 +36,20 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   const { deployments, selectedDeployment, setSelectedDeployment } =
     useDeployments();
   const { actionBar } = useActionBar();
-  const { activeTab, setIsMobileMenuOpen } = useSideBar();
+  const {
+    activeTab,
+    isSidebarCollapsed,
+    isMobile,
+    setIsMobileMenuOpen,
+    setIsSidebarCollapsed,
+    handleClose,
+  } = useSideBar();
   const { agent } = useHttpAgent();
   const { headerCard } = useHeaderCard();
   const { toasterData, showToaster, setShowToaster } = useToaster();
 
   /** State */
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(
-    window.innerWidth <= 768 ? true : false
-  );
 
   /** Functions */
   useEffect(() => {
@@ -65,24 +68,6 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
 
     // refreshIdentity();
   }, [activeTab]);
-
-  // TODO: Investigate
-  // useEffect(() => {
-  //   if (!deployments.length) {
-  //     return;
-  //   }
-  //   const selectedDeploymentUpdated = deployments.find(
-  //     (deployment) =>
-  //       deployment.canister_id.toText() ===
-  //       selectedDeployment?.canister_id.toText()
-  //   );
-  //   if (selectedDeploymentUpdated) {
-  //     setSelectedDeployment(serializeDeployment(selectedDeploymentUpdated));
-  //     setState({
-  //       canister_id: selectedDeploymentUpdated.canister_id.toText(),
-  //     });
-  //   }
-  // }, [deployments]);
 
   useEffect(() => {
     const get = async () => {
@@ -138,7 +123,6 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
       <Sidebar
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
-        mobileControl={[isMobile, setIsMobile]}
       />
       <main
         className="main-content"
@@ -148,7 +132,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
           marginLeft: isMobile ? 0 : isSidebarCollapsed ? 0 : 260,
           minWidth: 0,
         }}
-        onClick={() => setIsMobileMenuOpen(false)}
+        onClick={() => handleClose()}
       >
         {headerCard && (
           <div className="app-layout-header">
