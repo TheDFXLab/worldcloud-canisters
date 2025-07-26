@@ -638,6 +638,12 @@ shared (deployMsg) actor class CanisterManager() = this {
   private func _request_freemium_session(project_id : Nat, caller : Principal) : async Types.Response<Types.Project> {
     if (Utility.is_anonymous(caller)) return #err(Errors.Unauthorized());
 
+    let quota : Types.Quota = switch (shareable_canister_manager.get_quota(caller)) {
+      case (#err(err)) { return #err(err) };
+      case (#ok(val)) { val };
+    };
+
+    if (quota.consumed >= quota.total) return #err(Errors.QuotaReached(quota.total));
     // TODO: assert is registered user
 
     // Get project
@@ -1448,9 +1454,11 @@ shared (deployMsg) actor class CanisterManager() = this {
 
   // Internal method for adding cycles from amount in cycles
   private func _add_cycles(canister_id : Principal, amount_in_cycles : Nat) : async Nat {
+    Debug.print("Adding cycles..");
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     ExperimentalCycles.add(amount_in_cycles);
     await IC.deposit_cycles({ canister_id });
+    Debug.print("Cycles added: " # Nat.toText(amount_in_cycles));
 
     return amount_in_cycles;
   };
@@ -1933,18 +1941,22 @@ shared (deployMsg) actor class CanisterManager() = this {
     let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     let cycles_balance : Nat = switch (await IC.canister_status({ canister_id = canister_id })) {
       case (val) {
+        Debug.print("Cycles balance fetched : " # Nat.toText(val.cycles));
         // Canister low on cycles
         let current_balance : Nat = if (val.cycles < shareable_canister_manager.MIN_CYCLES_INIT_E8S) {
+          Debug.print("Canister cycles is less than min threshld: " # Nat.toText(val.cycles) # " min: " # Nat.toText(shareable_canister_manager.MIN_CYCLES_INIT_E8S));
           // Top up canister to maintain min required cycles on init
           let amount_added = await _add_cycles(canister_id, shareable_canister_manager.MIN_CYCLES_INIT_E8S);
           amount_added;
         } else {
+          Debug.print("Cycles balance is enough: " # Nat.toText(val.cycles));
           // Return current cycles balance
           val.cycles;
         };
         current_balance;
       };
     };
+    Debug.print("Done validation cycles..");
     return #ok(cycles_balance);
   };
 
@@ -1981,6 +1993,9 @@ shared (deployMsg) actor class CanisterManager() = this {
     stable_slots := shareable_canister_manager.get_stable_data_slots();
     stable_user_to_slot := shareable_canister_manager.get_stable_data_user_to_slot();
     stable_used_slots := shareable_canister_manager.get_stable_data_used_slots();
+
+    // Migrate usage logs to include quota structure before backing up
+    shareable_canister_manager.apply_usage_log_migration();
     stable_usage_logs := shareable_canister_manager.get_stable_data_usage_logs();
     stable_next_slot_id := shareable_canister_manager.get_stable_data_next_slot_id();
 
@@ -2079,7 +2094,7 @@ shared (deployMsg) actor class CanisterManager() = this {
         };
       };
       let now = Int.abs(Utility.get_time_now(#milliseconds));
-      let remaining_duration_s : Nat = if (now > slot.start_timestamp) {
+      let remaining_duration_s : Nat = if (now > slot.start_timestamp and slot.start_timestamp != 0) {
         (now - slot.start_timestamp) / 1_000;
       } else {
         0;
@@ -2088,6 +2103,7 @@ shared (deployMsg) actor class CanisterManager() = this {
       // let remaining_duration_s : Nat = Nat.min(remaining_duration_ns / 1_000_000_000, 4_294_967_295); // Cap at u32.MAX_VALUE
       // Only recover valid non-expired session. Force end if less than 50s is left before expiry
       if (remaining_duration_s > 50) {
+        Debug.print("Remaining duration " # Nat.toText(remaining_duration_s));
         _set_cleanup_timer(remaining_duration_s, slot_id, slot.canister_id);
         Debug.print("[RecoverTimers] Project freemium session is active. Setup cleanup timer for slot #" # Nat.toText(slot_id));
       } else {

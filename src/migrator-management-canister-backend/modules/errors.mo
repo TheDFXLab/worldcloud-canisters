@@ -1,3 +1,5 @@
+import Nat "mo:base/Nat";
+
 /** Error Types */
 module ErrorType {
     /** System */
@@ -20,6 +22,7 @@ module ErrorType {
     public func SubscriptionAlreadyExists() : Text = "Already subscribed";
     public func InvalidTier() : Text = "Unidentified tier";
     public func SubscriptionLimitReached() : Text = "You have reached the maximum number of premium projects for your subscription tier.";
+    public func QuotaReached(max : Nat) : Text = "You have reached your maximum quota of " # Nat.toText(max) # " sessions.";
 
     /** Access Control */
     public func Unauthorized() : Text = "Unauthorized";

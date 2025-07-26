@@ -64,6 +64,7 @@ module {
                                 last_used = Int.abs(Utility.get_time_now(#milliseconds));
                                 rate_limit_window = log.rate_limit_window;
                                 max_uses_threshold = log.max_uses_threshold;
+                                quota = log.quota;
                             };
 
                             usage_logs.put(slot.user, updated_log);
@@ -126,6 +127,10 @@ module {
                         last_used = 0;
                         rate_limit_window = RATE_LIMIT_WINDOW_MS;
                         max_uses_threshold = MAX_USES_THRESHOLD;
+                        quota = {
+                            consumed = 0;
+                            total = MAX_USES_THRESHOLD;
+                        };
                     };
                     return new_usage;
                 };
@@ -275,6 +280,10 @@ module {
                 last_used = 0;
                 rate_limit_window = RATE_LIMIT_WINDOW_MS;
                 max_uses_threshold = MAX_USES_THRESHOLD;
+                quota = {
+                    consumed = 0;
+                    total = MAX_USES_THRESHOLD;
+                };
             };
 
             usage_logs.put(user, log);
@@ -282,7 +291,9 @@ module {
         };
 
         private func calculate_usage_count(usage_count : Nat, last_used : Nat, increment : Bool) : Nat {
-            switch (Int.abs(Utility.get_time_now(#milliseconds)) - last_used > RATE_LIMIT_WINDOW_MS) {
+            let now : Int = Utility.get_time_now(#milliseconds);
+            if (now < last_used) return usage_count;
+            switch (Int.abs(now) - last_used > RATE_LIMIT_WINDOW_MS) {
                 case (false) {
                     // Reset if time window is passed
                     if (increment == true) {
@@ -325,6 +336,13 @@ module {
                 return #ok(null);
             };
 
+            // Ensure no current active session
+            let usage_log : Types.UsageLog = get_usage_log(user);
+
+            if (usage_log.is_active) {
+                return #err(Errors.ActiveSession());
+            };
+
             Debug.print("Starting a session...");
             try {
                 let slot : Types.ShareableCanister = switch (start_session(available_slot_ids[0], user, project_id)) {
@@ -343,6 +361,44 @@ module {
             return end_session(slot_id, end_cycles);
         };
 
+        public func get_quota(user : Principal) : Types.Response<Types.Quota> {
+            let usage_log : Types.UsageLog = switch (usage_logs.get(user)) {
+                case (null) {
+                    return #ok({
+                        consumed = 0;
+                        total = MAX_USES_THRESHOLD;
+                    });
+                };
+                case (?val) { val };
+            };
+
+            return #ok({
+                consumed = usage_log.quota.consumed;
+                total = usage_log.max_uses_threshold;
+            });
+        };
+
+        public func get_usage_log(user : Principal) : Types.UsageLog {
+            let usage_log : Types.UsageLog = switch (usage_logs.get(user)) {
+                case (null) {
+                    let new_usage : Types.UsageLog = {
+                        is_active = false;
+                        usage_count = 0;
+                        last_used = 0;
+                        rate_limit_window = RATE_LIMIT_WINDOW_MS;
+                        max_uses_threshold = MAX_USES_THRESHOLD;
+                        quota = {
+                            consumed = 0;
+                            total = MAX_USES_THRESHOLD;
+                        };
+                    };
+                    return new_usage;
+                };
+                case (?val) { val };
+            };
+
+            return usage_log;
+        };
         /** Update methods **/
         //
         //
@@ -351,6 +407,46 @@ module {
         //
         //
         //
+
+        private func increment_quota(user : Principal) : Types.Response<Types.UsageLog> {
+            let usage_log : Types.UsageLog = get_usage_log(user);
+            let now : Int = Utility.get_time_now(#milliseconds);
+
+            if (usage_log.is_active) return #err(Errors.ActiveSession());
+
+            // Ensure now is greater to prevent underflow
+            let consumed : Nat = switch (now > usage_log.last_used) {
+                case (false) {
+                    return #ok(usage_log);
+                };
+                case (true) {
+                    var _consumed = usage_log.quota.consumed;
+                    if ((now - usage_log.last_used) >= usage_log.rate_limit_window) {
+                        _consumed := 1;
+                    } else {
+                        if (usage_log.quota.consumed + 1 > usage_log.quota.total) return #err(Errors.QuotaReached(usage_log.quota.total));
+                        _consumed := _consumed + 1;
+                    };
+                    _consumed;
+                };
+            };
+
+            let updated_usage_log : Types.UsageLog = {
+                is_active = true;
+                usage_count = usage_log.usage_count + 1;
+                last_used = Int.abs(Utility.get_time_now(#milliseconds));
+                rate_limit_window = RATE_LIMIT_WINDOW_MS;
+                max_uses_threshold = MAX_USES_THRESHOLD;
+                quota = {
+                    consumed = consumed;
+                    total = usage_log.quota.total;
+                };
+            };
+            usage_logs.put(user, updated_usage_log);
+            return #ok(usage_log);
+
+        };
+
         private func start_session(slot_id : Nat, user : Principal, project_id : Nat) : Types.Response<Types.ShareableCanister> {
             // Get slot details
             let slot : Types.ShareableCanister = switch (slots.get(slot_id)) {
@@ -358,38 +454,11 @@ module {
                 case (?val) { val };
             };
 
-            let usage_log : Types.UsageLog = Utility.expect_else(
-                usage_logs.get(user),
-                {
-                    is_active = false;
-                    usage_count = 0;
-                    last_used = 0;
-                    rate_limit_window = RATE_LIMIT_WINDOW_MS;
-                    max_uses_threshold = MAX_USES_THRESHOLD;
-                },
-            );
-
-            if (usage_log.is_active) {
-                return #err(Errors.ActiveSession());
+            let usage_log : Types.UsageLog = switch (increment_quota(user)) {
+                case (#err(err)) { return #err(err) };
+                case (#ok(val)) { val };
             };
 
-            // Assert usage count only when user is within timeframe
-            if (not (Int.abs(Utility.get_time_now(#milliseconds)) - usage_log.last_used > RATE_LIMIT_WINDOW_MS)) {
-                // assert not (usage_log.usage_count >= usage_log.max_uses_threshold); // Ensure not over limit
-                if (usage_log.usage_count >= usage_log.max_uses_threshold) {
-                    return #err(Errors.MaxSlotsReached());
-                };
-            };
-
-            let updated_usage_log : Types.UsageLog = {
-                is_active = true;
-                usage_count = calculate_usage_count(usage_log.usage_count, usage_log.last_used, true);
-                last_used = Int.abs(Utility.get_time_now(#milliseconds));
-                rate_limit_window = RATE_LIMIT_WINDOW_MS;
-                max_uses_threshold = MAX_USES_THRESHOLD;
-            };
-
-            usage_logs.put(user, updated_usage_log);
             let updated_slot : Types.ShareableCanister = {
                 id = slot.id;
                 project_id = ?project_id;
@@ -451,6 +520,7 @@ module {
                         last_used = Int.abs(Utility.get_time_now(#milliseconds));
                         rate_limit_window = RATE_LIMIT_WINDOW_MS;
                         max_uses_threshold = MAX_USES_THRESHOLD;
+                        quota = log.quota;
                     };
 
                     // Put updates in mappings
@@ -527,6 +597,45 @@ module {
         };
 
         /** End private methods*/
+
+        public func migrate_usage_log_add_quota() : [(Principal, Types.UsageLog)] {
+            var migrated_array : [(Principal, Types.UsageLog)] = [];
+            for ((user, log) in usage_logs.entries()) {
+                let obj : Types.UsageLog = {
+                    is_active = log.is_active;
+                    usage_count = log.usage_count;
+                    last_used = log.last_used;
+                    rate_limit_window = log.rate_limit_window;
+                    max_uses_threshold = log.max_uses_threshold;
+                    quota = {
+                        consumed = 0;
+                        total = MAX_USES_THRESHOLD;
+                    };
+                };
+                Debug.print("migrating usage log for user: " # Principal.toText(user) # debug_show (obj));
+                migrated_array := Array.append(migrated_array, [(user, obj)]);
+            };
+            return migrated_array;
+        };
+
+        public func apply_usage_log_migration() {
+            for ((user, log) in usage_logs.entries()) {
+                Debug.print("Migrating logs for user: " # Principal.toText(user) # "...");
+                let updated_log : Types.UsageLog = {
+                    is_active = log.is_active;
+                    usage_count = log.usage_count;
+                    last_used = log.last_used;
+                    rate_limit_window = log.rate_limit_window;
+                    max_uses_threshold = log.max_uses_threshold;
+                    quota = {
+                        consumed = 0;
+                        total = MAX_USES_THRESHOLD;
+                    } : Types.Quota;
+                };
+                usage_logs.put(user, updated_log);
+                Debug.print("Migration successful for user: " # Principal.toText(user) # ". Updated log: " # debug_show (updated_log));
+            };
+        };
 
         /**Start stable management */
 
