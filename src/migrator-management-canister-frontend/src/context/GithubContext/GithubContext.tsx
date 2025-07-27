@@ -50,6 +50,8 @@ export function GithubProvider({ children }: GithubProviderProps) {
     const github = GithubApi.getInstance();
     await github.logout();
     setGithubUser(null);
+    setIsGithubConnected(false);
+    github.deleteAccessToken();
   };
 
   const refreshGithubUser = useCallback(async () => {
