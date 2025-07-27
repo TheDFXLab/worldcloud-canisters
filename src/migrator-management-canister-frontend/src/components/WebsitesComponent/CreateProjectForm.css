@@ -226,17 +226,53 @@
 }
 
 .freemium-note {
-  background: var(--background);
-  color: var(--color-primary);
+  background: var(--background-secondary);
+  border: 1px solid var(--glass-border);
   border-radius: 8px;
-  padding: 0.7em 1em;
+  padding: 1rem;
+  margin-top: 1rem;
+  color: var(--text-secondary);
   font-size: var(--font-size-sm);
-  margin-top: 0.5em;
 }
+
 .freemium-note a {
-  color: var(--color-primary-dark);
+  color: var(--color-primary);
   text-decoration: underline;
-  margin-left: 0.5em;
+  font-weight: 500;
+}
+
+.subscription-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  text-align: center;
+}
+
+.subscription-info p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.connect-subscription-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 500;
+  transition: color 0.2s ease;
+  padding: 0;
+  margin: 0;
+  font-size: inherit;
+}
+
+.connect-subscription-link:hover {
+  color: var(--color-primary-dark);
+  text-decoration: none;
 }
 
 .form-error {
