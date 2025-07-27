@@ -95,6 +95,9 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
     const navigateToPath = mapKeyToRoute(menuItem ? menuItem : "home");
     setHeaderCard(headerCardData.title.length > 0 ? headerCardData : null);
     setActiveTab(menuItem);
+    if (isMobile) {
+      handleClose();
+    }
     if (shouldNavigate) {
       console.log(`Navigating to `, navigateToPath);
       navigate(navigateToPath);
@@ -152,12 +155,12 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
             IconComponent={HomeIcon}
             onClickIcon={() => handleMenuClick("home", true)}
           />
-          <IconTextRowView
+          {/* <IconTextRowView
             className={`nav-item ${activeTab === "websites" ? "active" : ""}`}
             text="Websites"
             IconComponent={LanguageIcon}
             onClickIcon={() => handleMenuClick("websites", true)}
-          />
+          /> */}
           <IconTextRowView
             className={`nav-item ${activeTab === "projects" ? "active" : ""}`}
             text="Projects"

@@ -13,6 +13,7 @@ import HeaderCard from "../HeaderCard/HeaderCard";
 import { useDeployments } from "../../context/DeploymentContext/DeploymentContext";
 import { useGithub } from "../../context/GithubContext/GithubContext";
 import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
+import { GithubApi } from "../../api/github/GithubApi";
 
 interface ProjectDeploymentProps {
   onMethodSelected?: () => void;
@@ -29,7 +30,7 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
   const { toasterData, setToasterData, setShowToaster } = useToaster();
   const navigate = useNavigate();
   const { isDispatched, setIsDispatched } = useDeployments();
-  const { isGithubConnected } = useGithub();
+  const { isGithubConnected, handleGithubConnect } = useGithub();
   const { setHeaderCard } = useHeaderCard();
 
   /** State */
@@ -68,6 +69,10 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
     }
   };
 
+  const handleGithubConnectFlow = async () => {
+    await handleGithubConnect();
+  };
+
   if (!onMethodSelected && (!canisterId || !projectId)) {
     return (
       <div className="project-deployment-container">
@@ -90,7 +95,7 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
                   : "Connect Github account to use this feature. -- Use this feature to automatically build and deploy your web application. World Cloud bootstraps your repo with an auto-generated Actions workflow configuration file."
               }
             >
-              <div>
+              <div className="method-card-wrapper">
                 <Card
                   className={`method-card ${
                     !isGithubConnected ? "disabled" : ""
@@ -108,6 +113,21 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
                     </Card.Text>
                   </Card.Body>
                 </Card>
+                {!isGithubConnected && (
+                  <div className="github-connect-info">
+                    <p>
+                      GitHub connection required.{" "}
+                      <button
+                        className="connect-github-link"
+                        onClick={handleGithubConnectFlow}
+                      >
+                        Connect GitHub account
+                      </button>{" "}
+                      to enable this deployment method and then refresh this
+                      page.
+                    </p>
+                  </div>
+                )}
               </div>
             </Tooltip>
             <Tooltip
@@ -115,20 +135,22 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
                 "Upload a zip file containing your static files to your web application. This will upload the files to the project's assets and serve your web application."
               }
             >
-              <Card
-                className="method-card"
-                onClick={() => handleMethodSelect("upload")}
-              >
-                <Card.Body>
-                  <div className="method-icon">
-                    <FaFileArchive size={48} />
-                  </div>
-                  <Card.Title>Upload Build Files</Card.Title>
-                  <Card.Text>
-                    Upload a ZIP file containing your built static files.
-                  </Card.Text>
-                </Card.Body>
-              </Card>
+              <div className="method-card-wrapper">
+                <Card
+                  className="method-card"
+                  onClick={() => handleMethodSelect("upload")}
+                >
+                  <Card.Body>
+                    <div className="method-icon">
+                      <FaFileArchive size={48} />
+                    </div>
+                    <Card.Title>Upload Build Files</Card.Title>
+                    <Card.Text>
+                      Upload a ZIP file containing your built static files.
+                    </Card.Text>
+                  </Card.Body>
+                </Card>
+              </div>
             </Tooltip>
           </div>
         </>

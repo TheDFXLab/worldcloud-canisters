@@ -176,7 +176,7 @@ export const fetchUserUsage = createAsyncThunk(
             throw new Error("MainApi is not initialized.");
         }
         const result = await mainApi.getUserUsage();
-        return result;
+        return deserializeUsageLog(result);
     }
 );
 
@@ -290,7 +290,7 @@ export const projectsSlice = createSlice({
             })
             .addCase(fetchUserUsage.fulfilled, (state, action) => {
                 state.isLoadingUsage = false;
-                state.userUsage = action.payload ? deserializeUsageLog(action.payload) : null;
+                state.userUsage = action.payload ? action.payload : null;
             })
             .addCase(fetchUserUsage.rejected, (state, action) => {
                 state.isLoadingUsage = false;

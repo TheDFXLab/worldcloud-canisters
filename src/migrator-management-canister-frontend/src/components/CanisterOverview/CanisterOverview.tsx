@@ -69,6 +69,9 @@ export const CanisterOverview: React.FC = () => {
     path: "",
     autoDeploy: false,
   });
+  const [confirmationAction, setConfirmationAction] = useState<string | null>(
+    null
+  );
   /** END STATE */
 
   /** START HOOKS */
@@ -252,40 +255,91 @@ export const CanisterOverview: React.FC = () => {
         setShowModal(true);
         break;
       case "delete":
-        // Handle delete action
-        try {
-          const result = await handleDeleteProject(parseInt(currentProject.id));
-        } catch (error: any) {
-          console.error("Failed to delete project:", error.message);
-          setToasterData({
-            headerContent: "Error",
-            toastStatus: false,
-            toastData: error.message || "Failed to delete project.",
-            textColor: "red",
-            timeout: 4000,
-          });
-          setShowToaster(true);
-        }
+        // Show confirmation modal for delete action
+        setConfirmationAction("delete");
+        setShowModal(true);
         break;
       case "clear":
-        // Handle clear action
-        try {
-          const result = await handleClearProjectAssets(
-            parseInt(currentProject.id)
-          );
-        } catch (error: any) {
-          console.error("Failed to clear assets:", error.message);
-          setToasterData({
-            headerContent: "Error",
-            toastStatus: false,
-            toastData: error.message || "Failed to clear assets.",
-            textColor: "red",
-            timeout: 4000,
-          });
-          setShowToaster(true);
-        }
+        // Show confirmation modal for clear action
+        setConfirmationAction("clear");
+        setShowModal(true);
         break;
     }
+  };
+
+  const handleConfirmation = async (amount: number) => {
+    if (!currentProject) return;
+
+    try {
+      if (confirmationAction === "delete") {
+        await handleDeleteProject(parseInt(currentProject.id));
+        setToasterData({
+          headerContent: "Success",
+          toastStatus: true,
+          toastData: "Project deleted successfully.",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+        navigate("/dashboard/projects");
+      } else if (confirmationAction === "clear") {
+        await handleClearProjectAssets(parseInt(currentProject.id));
+        setToasterData({
+          headerContent: "Success",
+          toastStatus: true,
+          toastData: "Project assets cleared successfully.",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+      }
+    } catch (error: any) {
+      console.error(`Failed to ${confirmationAction} project:`, error.message);
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: error.message || `Failed to ${confirmationAction} project.`,
+        textColor: "red",
+        timeout: 4000,
+      });
+      setShowToaster(true);
+    } finally {
+      setConfirmationAction(null);
+    }
+  };
+
+  const getModalConfig = () => {
+    if (confirmationAction === "delete") {
+      return {
+        title: "Delete Project",
+        message: `Are you sure you want to delete the project "${currentProject?.name}"? This action cannot be undone.`,
+        confirmText: "Delete Project",
+        cancelText: "Cancel",
+        showWalletInfo: false,
+        showInputField: false,
+        showTotalPrice: false,
+      };
+    } else if (confirmationAction === "clear") {
+      return {
+        title: "Clear Project Assets",
+        message: `Are you sure you want to clear all assets from the project "${currentProject?.name}"? This will remove all deployed files but keep the project structure.`,
+        confirmText: "Clear Assets",
+        cancelText: "Cancel",
+        showWalletInfo: false,
+        showInputField: false,
+        showTotalPrice: false,
+      };
+    }
+    // Default cycles config
+    return {
+      title: "Add Cycles",
+      message: "Enter the amount of ICP to convert to cycles",
+      confirmText: "Add Cycles",
+      cancelText: "Cancel",
+      showCyclesInfo: true,
+      showWalletInfo: true,
+      showEstimatedCycles: true,
+      showInputField: true,
+      showTotalPrice: false,
+    };
   };
 
   const handleClickRedeploy = (run: SerializedWorkflowRunDetail) => {
@@ -366,15 +420,17 @@ export const CanisterOverview: React.FC = () => {
 
   if (isRedeploying && currentProject.canister_id) {
     return (
-      <RepoSelector
-        projectId={projectId}
-        canisterId={currentProject.canister_id}
-        prefilledBranch={redeployData.branchName}
-        prefilledPath={redeployData.path}
-        prefilledRepo={redeployData.repo}
-        autoDeploy={redeployData.autoDeploy}
-        onComplete={() => setIsRedeploying(false)}
-      />
+      <div className="canister-overview-container">
+        <RepoSelector
+          projectId={projectId}
+          canisterId={currentProject.canister_id}
+          prefilledBranch={redeployData.branchName}
+          prefilledPath={redeployData.path}
+          prefilledRepo={redeployData.repo}
+          autoDeploy={redeployData.autoDeploy}
+          onComplete={() => setIsRedeploying(false)}
+        />
+      </div>
     );
   }
 
@@ -392,18 +448,23 @@ export const CanisterOverview: React.FC = () => {
       {showModal && (
         <ConfirmationModal
           amountState={[cyclesAmount, setCyclesAmount]}
-          onHide={() => setShowModal(false)}
-          onConfirm={async () => {
-            await handleAddCycles(
-              parseInt(currentProject.id),
-              parseFloat(cyclesAmount)
-            );
+          overrideEnableSubmit={confirmationAction ? true : undefined}
+          onHide={() => {
+            setShowModal(false);
+            setConfirmationAction(null);
           }}
+          onConfirm={
+            confirmationAction
+              ? handleConfirmation
+              : async () => {
+                  await handleAddCycles(
+                    parseInt(currentProject.id),
+                    parseFloat(cyclesAmount)
+                  );
+                }
+          }
           type="cycles"
-          customConfig={{
-            title: "Add Cycles",
-            message: "Enter amount of cycles to top up canister.",
-          }}
+          customConfig={getModalConfig()}
         />
       )}
 

@@ -30,13 +30,15 @@ import { useConfirmationModal } from "../../context/ConfirmationModalContext/Con
 import HeaderCard from "../HeaderCard/HeaderCard";
 import TruncatedTooltip from "../TruncatedTooltip/TruncatedTooltip";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import { shortenPrincipal } from "../../utility/formatter";
+import { formatBytes, shortenPrincipal } from "../../utility/formatter";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 import { useCyclesLogic } from "../../hooks/useCyclesLogic";
 import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
+import { useProjectsLogic } from "../../hooks/useProjectsLogic";
 
 const HomePage: React.FC = () => {
   const { deployments } = useDeployments();
+  const { projects } = useProjectsLogic();
   const { githubUser } = useGithub();
   const { identity } = useIdentity();
   const { setActiveTab } = useSideBar();
@@ -54,9 +56,13 @@ const HomePage: React.FC = () => {
   const [copied, setCopied] = useState(false);
 
   // Calculate metrics
-  const totalCanisters = deployments.length;
-  const activeCanisters = deployments.filter(
-    (d) => d.status === "installed"
+  const totalCanisters = projects.length;
+  const totalSize =
+    deployments?.length > 0
+      ? deployments?.map((d) => d.size).reduce((d) => d)
+      : 0;
+  const activeCanisters = projects.filter(
+    (p) => p.canister_id !== null && p.canister_id !== undefined
   ).length;
   const lastDeployment = deployments[0]?.date_updated
     ? new Date(Number(deployments[0].date_updated)).toLocaleString()
@@ -147,7 +153,7 @@ const HomePage: React.FC = () => {
         <div className="stat-card">
           <StorageIcon />
           <div className="stat-content">
-            <h3>Total Canisters</h3>
+            <h3>Total Projects</h3>
             <p className="stat-value">{totalCanisters}</p>
           </div>
         </div>
@@ -164,7 +170,7 @@ const HomePage: React.FC = () => {
           <SpeedIcon />
           <div className="stat-content">
             <h3>Total Storage Used</h3>
-            <p className="stat-value">Coming Soon</p>
+            <p className="stat-value">{formatBytes(totalSize)}</p>
           </div>
         </div>
 
@@ -297,12 +303,12 @@ const HomePage: React.FC = () => {
                       <Spinner size="sm" />
                     ) : (
                       <div onClick={() => setShowModal(true)}>
-                        <IconTextRowView
-                          onClickIcon={() => setShowModal(true)}
-                          IconComponent={AddCircleOutlineIcon}
-                          iconColor="green"
-                          text={
-                            totalCredits ? (
+                        {totalCredits ? (
+                          <IconTextRowView
+                            onClickIcon={() => setShowModal(true)}
+                            IconComponent={AddCircleOutlineIcon}
+                            iconColor="green"
+                            text={
                               <>
                                 {`${totalCredits.total_credits} ICP`}
                                 <span className="estimated-value">
@@ -310,11 +316,13 @@ const HomePage: React.FC = () => {
                                   T Cycles
                                 </span>
                               </>
-                            ) : (
-                              <Spinner size="sm" />
-                            )
-                          }
-                        />
+                            }
+                          />
+                        ) : (
+                          <span className="estimated-value">
+                            ≈ {0} T Cycles
+                          </span>
+                        )}
                       </div>
                     )}
                   </span>

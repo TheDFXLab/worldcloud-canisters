@@ -40,7 +40,8 @@ const QuickActions: React.FC<QuickActionsProps> = ({
   deploymentStatus = "uninitialized",
 }) => {
   const { usageData: freemiumSlot, fetchUsage } = useFreemiumLogic();
-  const { isLoadingClearAssets, isLoadingDeleteProject } = useProjectsLogic();
+  const { isLoadingClearAssets, isLoadingDeleteProject, refreshProjects } =
+    useProjectsLogic();
 
   const hasFreemiumSlot = !!freemiumSlot;
   const showCountdown =
@@ -114,7 +115,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
       onClick: () => onActionClick?.("delete"),
     },
     {
-      title: "Clear Canister",
+      title: "Clear Runner",
       icon: StorageIcon,
       isDangerous: true,
       description: "Delete all assets from this project's canister",
@@ -160,6 +161,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                     <CountdownChip
                       startTimestamp={freemiumSlot.start_timestamp}
                       duration={freemiumSlot.duration}
+                      onExpire={() => refreshProjects()}
                     />
                   )}
                 {renderSpinner(action)}
@@ -172,7 +174,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
 
   const renderSpinner = (action: QuickAction) => {
     // Render spinner for clear canister assets button
-    if (action.title === "Clear Canister") {
+    if (action.title === "Clear Runner") {
       return (
         <>
           {action.isDangerous && isLoadingClearAssets && (

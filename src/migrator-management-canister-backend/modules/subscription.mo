@@ -65,7 +65,7 @@ module {
                 id = 3;
                 name = "Freemium";
                 slots = 1;
-                min_deposit = { e8s = 50_000_000 };
+                min_deposit = { e8s = 0 };
                 price = { e8s = 0 }; // Free tier
                 features = [
                     "1 Canister",
@@ -106,7 +106,7 @@ module {
             return Iter.toArray(subscriptions.entries());
         };
 
-        public func get_subscription(caller : Principal) : async Types.Response<Types.Subscription> {
+        public func get_subscription(caller : Principal) : Types.Response<Types.Subscription> {
             switch (subscriptions.get(caller)) {
                 case (null) { return #err(Errors.SubscriptionNotFound()) };
                 case (?sub) { return #ok(sub) };
@@ -216,7 +216,7 @@ module {
         };
 
         public func push_canister_id(caller : Principal, canister_id : Principal) : async Bool {
-            let subscription = await get_subscription(caller);
+            let subscription = get_subscription(caller);
             switch (subscription) {
                 case (#err(_)) { return false };
                 case (#ok(sub)) {
@@ -228,7 +228,7 @@ module {
 
         // Decrements the usage count, and pushes the canister to unused array
         public func update_sub_delete_project(caller : Principal, canister_id : Principal) : async Types.Response<()> {
-            let subscription : Types.Subscription = switch (await get_subscription(caller)) {
+            let subscription : Types.Subscription = switch (get_subscription(caller)) {
                 case (#err(_msg)) { return #err(_msg) };
                 case (#ok(sub)) {
                     sub;
@@ -264,7 +264,7 @@ module {
         };
 
         public func validate_subscription(caller : Principal) : async Bool {
-            let subscription = await get_subscription(caller);
+            let subscription = get_subscription(caller);
             switch (subscription) {
                 case (#err(_)) { return false };
                 case (#ok(sub)) {

@@ -116,7 +116,7 @@
 .canister-overview {
   position: relative;
   padding: 20px;
-  overflow-y: auto;
+  /* overflow-y: auto; */
 }
 
 .overview-header {
@@ -1917,5 +1917,105 @@
 
   .info-row {
     grid-template-columns: 80px 1fr;
+  }
+}
+
+/* Quota Progress Bar Styles */
+.quota-progress-section {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.quota-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.quota-label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.quota-count {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+}
+
+.quota-progress-container {
+  position: relative;
+}
+
+.quota-progress {
+  height: 8px !important;
+  border-radius: 4px !important;
+  background-color: var(--background-primary) !important;
+}
+
+.quota-progress .MuiLinearProgress-bar {
+  background-color: var(--color-primary) !important;
+  transition: all 0.3s ease;
+}
+
+.quota-progress.warning .MuiLinearProgress-bar {
+  background-color: var(--color-warning) !important;
+}
+
+.quota-progress.full .MuiLinearProgress-bar {
+  background-color: var(--color-error) !important;
+}
+
+.quota-warning {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: var(--color-warning);
+  color: white;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+.quota-progress.full .quota-warning {
+  background: var(--color-error);
+}
+
+.quota-reset-info {
+  margin-top: 0.5rem;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  text-align: left;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .quota-progress-section {
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+  }
+
+  .quota-header {
+    margin-bottom: 0.5rem;
+  }
+
+  .quota-label,
+  .quota-count {
+    font-size: 0.8rem;
+  }
+
+  .quota-warning {
+    font-size: 0.75rem;
+    padding: 0.4rem;
+  }
+
+  .quota-reset-info {
+    font-size: 0.7rem;
   }
 }

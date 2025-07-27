@@ -20,6 +20,7 @@ import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
 import { setSelectedDeployment } from "../../state/slices/deploymentSlice";
 import { serializeDeployment } from "../../utility/principal";
+import { useSubscriptionLogic } from "../../hooks/useSubscriptionLogic";
 
 const MAX_TAGS = 5;
 const MAX_DESC = 100;
@@ -64,6 +65,18 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
   const { setIsLoadingProgress, setIsEnded } = useProgress();
   const { addDeployment, refreshDeployments } = useDeployments();
   const { setActionBar } = useActionBar();
+  const { loadSubscriptionData } = useSubscriptionLogic();
+
+  // Check if user has freemium subscription (tier ID 3)
+  const hasFreemiumSubscription =
+    subscription && Number(subscription.tier_id) === 3;
+  const needsSubscription = !subscription || !hasFreemiumSubscription;
+
+  const handleSubscriptionFlow = () => {
+    // Open billing page in a new tab
+    const billingUrl = `${window.location.origin}/dashboard/billing`;
+    window.open(billingUrl, "_blank");
+  };
 
   const handleAddTag = () => {
     const trimmed = tagInput.trim();
@@ -170,11 +183,13 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
           "freemium" in result.newProject.plan
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Failed to create project.`, error);
       setToasterData({
         headerContent: "Error",
-        toastData: `Failed to create project. Please try again.`,
+        toastData: error.message
+          ? error.message
+          : `Failed to create project. Please try again.`,
         toastStatus: false,
         timeout: 3000,
       });
@@ -344,6 +359,20 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                 ))}
               </select>
             </label>
+            {plan === "freemium" && needsSubscription && (
+              <div className="subscription-info">
+                <p>
+                  Freemium subscription required.{" "}
+                  <button
+                    className="connect-subscription-link"
+                    onClick={handleSubscriptionFlow}
+                  >
+                    Subscribe to Freemium plan
+                  </button>{" "}
+                  to enable project creation and then refresh this page.
+                </p>
+              </div>
+            )}
             {plan === "freemium" &&
               subscription &&
               Number(subscription.tier_id) === 3 && (

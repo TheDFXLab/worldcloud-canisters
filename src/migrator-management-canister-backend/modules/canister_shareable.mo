@@ -516,7 +516,7 @@ module {
                     Debug.print("[end_session] Found and updating usage log for user " # Principal.toText(slot.user));
                     let updated_usage_log : Types.UsageLog = {
                         is_active = false;
-                        usage_count = calculate_usage_count(log.usage_count, log.last_used, false); // Only incremented when session starts
+                        usage_count = log.usage_count; // Only incremented when session starts
                         last_used = Int.abs(Utility.get_time_now(#milliseconds));
                         rate_limit_window = RATE_LIMIT_WINDOW_MS;
                         max_uses_threshold = MAX_USES_THRESHOLD;

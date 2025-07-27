@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { GithubApi, Repository } from "../../api/github/GithubApi";
 import "./RepoSelector.css";
 import RepoSelectorSkeleton from "./RepoSelectorSkeleton";
+import RepoConfiguration from "./RepoConfiguration";
 
 import { useGithub } from "../../context/GithubContext/GithubContext";
 import { generateWorkflowTemplate } from "../../utility/workflowTemplate";
@@ -550,76 +551,13 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
           <p>Configure deployment settings for {state.selectedRepo.name}</p> */}
         </div>
 
-        <div className="configure-content">
-          <div className="branch-selector">
-            <label>Branch:</label>
-            <select
-              value={repoState?.selectedBranch || ""}
-              onChange={(e) => {
-                const newBranch = e.target.value;
-                setRepoStates((prev) => ({
-                  ...prev,
-                  [state.selectedRepo!.full_name]: {
-                    ...prev[state.selectedRepo!.full_name],
-                    selectedBranch: newBranch,
-                  },
-                }));
-                if (newBranch) {
-                  findPackageJsonLocations(
-                    state.selectedRepo!.full_name,
-                    newBranch
-                  );
-                }
-              }}
-              onClick={() =>
-                !repoState?.branches.length &&
-                loadBranches(state.selectedRepo!.full_name)
-              }
-            >
-              <option value="">Select branch</option>
-              {repoState?.branches.map((branch) => (
-                <option key={branch.name} value={branch.name}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {repoState?.selectedBranch && (
-            <div className={`path-selector`}>
-              <label>Source Path:</label>
-              <select
-                value={repoState.selectedPath}
-                onChange={(e) => {
-                  setRepoStates((prev) => ({
-                    ...prev,
-                    [state.selectedRepo!.full_name]: {
-                      ...prev[state.selectedRepo!.full_name],
-                      selectedPath: e.target.value,
-                    },
-                  }));
-                }}
-              >
-                <option value="">Select source path</option>
-                {repoState.packageLocations.map((loc) => (
-                  <option key={loc.path} value={loc.path}>
-                    {loc.path}{" "}
-                    {loc.hasPackageJson ? "(package.json found)" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-
-        <div className="configure-step">
-          {repoState?.currentStep && (
-            <DeploymentProgress
-              steps={repoState.deploymentSteps}
-              currentStep={repoState.currentStep}
-            />
-          )}
-        </div>
+        <RepoConfiguration
+          repoState={repoState}
+          state={state}
+          setRepoStates={setRepoStates}
+          loadBranches={loadBranches}
+          findPackageJsonLocations={findPackageJsonLocations}
+        />
       </div>
     );
   };

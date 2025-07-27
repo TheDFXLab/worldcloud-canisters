@@ -232,6 +232,11 @@ export class GithubApi {
         localStorage.setItem('github_token', token);
     }
 
+    public deleteAccessToken() {
+        this.token = null;
+        localStorage.removeItem('github_token');
+    }
+
     async listRepositories(): Promise<Repository[]> {
         const jwt = AuthState.getInstance().getAccessToken();
         if (!jwt) {

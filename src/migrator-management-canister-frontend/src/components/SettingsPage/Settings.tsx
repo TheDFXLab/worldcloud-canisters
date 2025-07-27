@@ -15,17 +15,7 @@ const Settings: React.FC = () => {
   const { identity } = useIdentity();
   const { setActiveTab } = useSideBar();
   const { setActionBar } = useActionBar();
-
-  const handleGithubConnect = async () => {
-    const github = GithubApi.getInstance();
-    await github.authenticate();
-  };
-
-  const handleGithubDisconnect = async () => {
-    const github = GithubApi.getInstance();
-    await github.logout();
-    setGithubUser(null);
-  };
+  const { handleGithubConnect, handleGithubDisconnect } = useGithub();
 
   // Set the active tab to settings
   useEffect(() => {
