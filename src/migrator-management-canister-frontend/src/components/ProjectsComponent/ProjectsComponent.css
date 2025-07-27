@@ -579,5 +579,58 @@
 
 .action-button.primary,
 .action-button.secondary {
-  font-size: var(--font-size-xs);
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+/* Status badges for table view */
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  display: inline-block;
+}
+
+.status-badge.installed {
+  background-color: #10b981;
+  color: white;
+}
+
+.status-badge.uninitialized {
+  background-color: #f59e0b;
+  color: white;
+}
+
+.status-badge.failed {
+  background-color: #ef4444;
+  color: white;
+}
+
+.status-badge.installing {
+  background-color: #3b82f6;
+  color: white;
+}
+
+/* Disabled button state */
+.action-button.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: var(--border-color);
+}
+
+.action-button.disabled:hover {
+  transform: none;
+  box-shadow: none;
 }
