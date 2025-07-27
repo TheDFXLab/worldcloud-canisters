@@ -8,7 +8,7 @@ import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { State } from "../../App";
 import AssetApi from "../../api/assets/AssetApi";
 import MainApi from "../../api/main";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import ActionBar from "../ActionBar/ActionBar";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
@@ -47,6 +47,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   const { agent } = useHttpAgent();
   const { headerCard } = useHeaderCard();
   const { toasterData, showToaster, setShowToaster } = useToaster();
+  const location = useLocation();
 
   /** State */
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
@@ -62,6 +63,24 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
     };
     fetchWasmModule();
   }, [identity, agent]);
+
+  // Scroll to top when route changes
+  useEffect(() => {
+    const scrollToTop = () => {
+      // Scroll the main content container to top
+      const mainContent = document.querySelector(
+        ".app-layout-children-container"
+      );
+      if (mainContent) {
+        mainContent.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }
+    };
+
+    scrollToTop();
+  }, [location.pathname]);
 
   useEffect(() => {
     console.log(`refreshIdentity`);
