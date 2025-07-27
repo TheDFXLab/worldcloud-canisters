@@ -31,6 +31,8 @@ import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverl
 import { useDeploymentLogic } from "../../hooks/useDeploymentLogic";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import ProjectsSkeleton from "./ProjectsSkeleton";
+import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
+import { ConfirmationModal } from "../ConfirmationPopup/ConfirmationModal";
 
 // Tag and sorting options
 const planMap: Record<string, string> = {
@@ -84,9 +86,19 @@ const ProjectsComponent: React.FC = () => {
     handleVisitWebsite,
     handleProjectClick,
     refreshProjects,
+    handleDeleteProject,
+    handleClearProjectAssets,
   } = useProjectsLogic();
 
   const { getDeployment } = useDeploymentLogic();
+  const { showModal, setShowModal } = useConfirmationModal();
+
+  // State for confirmation modal
+  const [confirmationAction, setConfirmationAction] = useState<string | null>(
+    null
+  );
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+
   useEffect(() => {
     setActiveTab("projects");
     setActionBar(null);
@@ -132,6 +144,82 @@ const ProjectsComponent: React.FC = () => {
   useEffect(() => {
     setHeaderCard(mapHeaderContent("projects"));
   }, []);
+
+  const handleConfirmation = async (amount: number) => {
+    if (!selectedProject) return;
+
+    try {
+      if (confirmationAction === "delete") {
+        await handleDeleteProject(parseInt(selectedProject.id));
+        setToasterData({
+          headerContent: "Success",
+          toastStatus: true,
+          toastData: "Project deleted successfully.",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+        navigate("/dashboard/projects");
+      } else if (confirmationAction === "clear") {
+        await handleClearProjectAssets(parseInt(selectedProject.id));
+        setToasterData({
+          headerContent: "Success",
+          toastStatus: true,
+          toastData: "Project assets cleared successfully.",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+      }
+    } catch (error: any) {
+      console.error(`Failed to ${confirmationAction} project:`, error.message);
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: error.message || `Failed to ${confirmationAction} project.`,
+        textColor: "red",
+        timeout: 4000,
+      });
+      setShowToaster(true);
+    } finally {
+      setConfirmationAction(null);
+      setSelectedProject(null);
+    }
+  };
+
+  const getModalConfig = () => {
+    if (confirmationAction === "delete") {
+      return {
+        title: "Delete Project",
+        message: `Are you sure you want to delete the project "${selectedProject?.name}"? This action cannot be undone.`,
+        confirmText: "Delete Project",
+        cancelText: "Cancel",
+        showWalletInfo: false,
+        showInputField: false,
+        showTotalPrice: false,
+      };
+    } else if (confirmationAction === "clear") {
+      return {
+        title: "Clear Project Assets",
+        message: `Are you sure you want to clear all assets from the project "${selectedProject?.name}"? This will remove all deployed files but keep the project structure.`,
+        confirmText: "Clear Assets",
+        cancelText: "Cancel",
+        showWalletInfo: false,
+        showInputField: false,
+        showTotalPrice: false,
+      };
+    }
+    // Default cycles config (not used in this component but needed for type safety)
+    return {
+      title: "Add Cycles",
+      message: "Enter the amount of ICP to convert to cycles",
+      confirmText: "Add Cycles",
+      cancelText: "Cancel",
+      showCyclesInfo: true,
+      showWalletInfo: true,
+      showEstimatedCycles: true,
+      showInputField: true,
+      showTotalPrice: false,
+    };
+  };
 
   // If loading, show skeleton
   if (isLoading) {
@@ -183,6 +271,21 @@ const ProjectsComponent: React.FC = () => {
 
   return (
     <div className="projects-container">
+      {showModal && (
+        <ConfirmationModal
+          amountState={["0", () => {}]}
+          overrideEnableSubmit={confirmationAction ? true : undefined}
+          onHide={() => {
+            setShowModal(false);
+            setConfirmationAction(null);
+            setSelectedProject(null);
+          }}
+          onConfirm={handleConfirmation}
+          type="cycles"
+          customConfig={getModalConfig()}
+        />
+      )}
+
       {/* <div
         style={{
           display: "flex",
@@ -366,17 +469,64 @@ const ProjectsComponent: React.FC = () => {
                     key={`${project.name}-${project.date_created}`}
                     project={project}
                     freemiumSlot={freemiumSlot}
-                    onInstallCode={(e) =>
-                      handleInstallCode(
-                        e,
-                        !!project.canister_id,
-                        project.id,
-                        project.canister_id,
-                        "freemium" in project.plan,
-                        identity,
-                        agent
-                      )
+                    canisterDeployment={
+                      project.canister_id
+                        ? getDeployment(project.canister_id)
+                        : undefined
                     }
+                    onDeployNewCode={() => {
+                      navigate(
+                        `/dashboard/deploy/${project.canister_id}/${project.id}`
+                      );
+                    }}
+                    onInstallCode={async (e) => {
+                      try {
+                        summon("Setting up canister...");
+                        const result = await handleInstallCode(
+                          e,
+                          !!project.canister_id,
+                          project.id,
+                          project.canister_id,
+                          "freemium" in project.plan,
+                          identity,
+                          agent
+                        );
+
+                        if (result) {
+                          console.log(
+                            `Canister deployed successfully: ${result.canisterId}`
+                          );
+                          setToasterData({
+                            headerContent: "Success",
+                            toastStatus: true,
+                            toastData: `Attached runner: ${result.canisterId}`,
+                            textColor: "green",
+                            timeout: 3000,
+                          });
+                          setShowToaster(true);
+                        }
+                      } catch (error: any) {
+                        console.error(
+                          "Failed to deploy canister:",
+                          error.message
+                        );
+                        setToasterData({
+                          headerContent: "Error",
+                          toastStatus: false,
+                          toastData:
+                            error.message || "Failed to attach runner.",
+                          textColor: "red",
+                          timeout: 5000,
+                        });
+                        setShowToaster(true);
+                        // Handle subscription-related errors
+                        if (error.message.includes("subscription")) {
+                          navigate("/dashboard/billing");
+                        }
+                      } finally {
+                        destroy();
+                      }
+                    }}
                     onVisitWebsite={(e) =>
                       handleVisitWebsite(e, project.canister_id!)
                     }
