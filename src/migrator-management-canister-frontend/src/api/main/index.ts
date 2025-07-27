@@ -425,7 +425,7 @@ class MainApi {
             }
         } catch (error) {
             console.error(`Error creating project:`, error);
-            return null;
+            throw error;
         }
     }
 
