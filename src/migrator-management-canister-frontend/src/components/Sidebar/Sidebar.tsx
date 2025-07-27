@@ -155,12 +155,12 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
             IconComponent={HomeIcon}
             onClickIcon={() => handleMenuClick("home", true)}
           />
-          <IconTextRowView
+          {/* <IconTextRowView
             className={`nav-item ${activeTab === "websites" ? "active" : ""}`}
             text="Websites"
             IconComponent={LanguageIcon}
             onClickIcon={() => handleMenuClick("websites", true)}
-          />
+          /> */}
           <IconTextRowView
             className={`nav-item ${activeTab === "projects" ? "active" : ""}`}
             text="Projects"
