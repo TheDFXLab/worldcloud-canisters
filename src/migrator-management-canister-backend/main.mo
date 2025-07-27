@@ -417,6 +417,15 @@ shared (deployMsg) actor class CanisterManager() = this {
   public shared (msg) func create_project(payload : Types.CreateProjectPayload) : async Types.Response<Types.CreateProjectResponse> {
     if (Utility.is_anonymous(msg.caller)) return #err(Errors.Unauthorized());
 
+    let subscription : Types.Subscription = switch (subscription_manager.get_subscription(msg.caller)) {
+      case (#err(err)) {
+        if (err == "Subscription not found" and payload.plan == #freemium) return #err(Errors.FreemiumSubscriptionRequired());
+        if (err == "Subscription not found" and payload.plan == #paid) return #err(Errors.SubscriptionRequired());
+        return #err(err);
+      };
+      case (#ok(val)) { val };
+    };
+
     let project_id : Nat = project_manager.create_project(
       msg.caller,
       payload,
@@ -957,7 +966,7 @@ shared (deployMsg) actor class CanisterManager() = this {
   public shared (msg) func get_subscription() : async Types.Response<Types.Subscription> {
     Debug.print("API: Get subscription for user " # Principal.toText(msg.caller));
 
-    let sub = await subscription_manager.get_subscription(msg.caller);
+    let sub = subscription_manager.get_subscription(msg.caller);
     return sub;
   };
 
@@ -1485,7 +1494,7 @@ shared (deployMsg) actor class CanisterManager() = this {
       // Create canister and update user subscription
       Debug.print("Getting sub for user " # Principal.toText(user));
       // Validate user subscription limits
-      let user_subscription_res = await subscription_manager.get_subscription(user);
+      let user_subscription_res = subscription_manager.get_subscription(user);
       switch (user_subscription_res) {
         case (#err(error)) {
           Debug.print("Error getting sub for: " # Principal.toText(user));

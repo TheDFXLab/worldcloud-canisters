@@ -23,6 +23,8 @@ module ErrorType {
     public func InvalidTier() : Text = "Unidentified tier";
     public func SubscriptionLimitReached() : Text = "You have reached the maximum number of premium projects for your subscription tier.";
     public func QuotaReached(max : Nat) : Text = "You have reached your maximum quota of " # Nat.toText(max) # " sessions.";
+    public func SubscriptionRequired() : Text = "Premium subscription required.";
+    public func FreemiumSubscriptionRequired() : Text = "Freemium subscription required.";
 
     /** Access Control */
     public func Unauthorized() : Text = "Unauthorized";
