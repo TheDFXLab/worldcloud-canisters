@@ -13,14 +13,14 @@ ROLE=$2
 ENV=$3
 
 if [ -z "$1" ]; then
-    PRINCIPAL="dk6i4-moydz-ajdjs-ho2b3-t77s2-li5nu-fbbjg-ykhfe-ki6ny-5alu5-cae"
+    PRINCIPAL="ocwh7-4pzdk-5d553-scdx5-lm3av-dolip-g3prg-jix42-lgucz-d4cag-3qe"
 fi
 
 if [ -z "$2" ]; then
     ROLE="admin"
 fi
 
-if [-z "$3"]; then
+if [ -z "$3" ]; then
     ENV="local"
 fi
 
@@ -28,6 +28,6 @@ if [ "$2" != "super_admin" ] && [ "$2" != "admin" ]; then
     ROLE="admin"
 fi
 
-echo "Granting role $ROLE to principal $PRINCIPAL"
+echo "Granting role $ROLE to principal $PRINCIPAL in $ENV"
 
 dfx canister call migrator-management-canister-backend --network $ENV grant_role '(principal "'$PRINCIPAL'", variant { "'$ROLE'" })'
