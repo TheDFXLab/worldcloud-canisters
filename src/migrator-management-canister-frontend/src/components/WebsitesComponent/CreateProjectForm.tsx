@@ -103,18 +103,20 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         : "Enter a project name to continue.",
       buttonText: "Create Project",
       onButtonClick: () => {
-        // // Find and click the form's submit button
-        // const submitButton = document.querySelector<HTMLButtonElement>(
-        //   "#project-submit-btn"
-        // );
-        // if (submitButton) {
-        //   submitButton.click();
-        // }
         if (formRef.current) {
           formRef.current.requestSubmit();
         }
       },
-      isButtonDisabled: projectName.length === 0,
+      isButtonDisabled:
+        (plan === "freemium" && needsSubscription) || projectName.length === 0,
+      disabledReason:
+        plan === "freemium" && needsSubscription
+          ? "Please subscribe to the freemium plan."
+          : plan === "freemium" &&
+            !needsSubscription &&
+            projectName.length === 0
+          ? plan === "freemium" && projectName.length === 0
+          : "Please enter a name for your project.",
       isHidden: false,
     });
   }, [projectName]);

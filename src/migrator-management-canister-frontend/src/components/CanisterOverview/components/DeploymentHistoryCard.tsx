@@ -86,8 +86,8 @@ export const DeploymentHistoryCard: React.FC<DeploymentHistoryCardProps> = ({
           </div>
         ) : workflowRunHistory.length > 0 ? (
           <div className="activity-list">
-            {workflowRunHistory.map((run) => (
-              <div className="activity-item">
+            {workflowRunHistory.map((run, index) => (
+              <div key={index} className="activity-item">
                 <div className="activity-content">
                   <div className="activity-title">
                     <div className="status-indicator">
