@@ -1,5 +1,5 @@
 import Types "../types";
-import HashMap "mo:base/HashMap";
+import Map "mo:core/Map";
 import Principal "mo:base/Principal";
 import Debug "mo:base/Debug";
 import Time "mo:base/Time";
@@ -11,19 +11,20 @@ import Array "mo:base/Array";
 import ErrorType "../modules/errors";
 
 module {
-  public class AccessControl(deployer_principal : Principal) {
-    public var role_map : Types.RoleMap = HashMap.HashMap<Principal, Types.Role>(0, Principal.equal, Principal.hash);
+  public class AccessControl(deployer_principal : Principal, role_map_init : Types.RoleMap) {
+    public var role_map : Types.RoleMap = role_map_init;
     private var is_initialized : Bool = false;
+    private var disable_guards : Bool = false;
 
     public func init() {
       Debug.print("Initted access control.");
-      role_map.put(deployer_principal, #super_admin);
+      Map.add(role_map, Principal.compare, deployer_principal, #super_admin);
       is_initialized := true;
     };
 
     /** Assertions */
     public func assert_super_admin(caller : Principal) : Bool {
-      switch (role_map.get(caller)) {
+      switch (Map.get(role_map, Principal.compare, caller)) {
         case (null) {
           return false;
         };
@@ -35,7 +36,7 @@ module {
     };
 
     public func assert_admin(caller : Principal) : Bool {
-      switch (role_map.get(caller)) {
+      switch (Map.get(role_map, Principal.compare, caller)) {
         case (null) {
           return false;
         };
@@ -46,11 +47,12 @@ module {
     };
 
     public func is_authorized(principal : Principal) : Bool {
+      if (disable_guards) return true;
       return assert_super_admin(principal) or assert_admin(principal);
     };
 
     public func check_role(principal : Principal) : Types.Response<Types.Role> {
-      switch (role_map.get(principal)) {
+      switch (Map.get(role_map, Principal.compare, principal)) {
         case (null) {
           Debug.print("No role set for principal" # debug_show (principal));
           return #err(ErrorType.NotAnAdmin());
@@ -68,7 +70,7 @@ module {
       if (assert_super_admin(caller) == false) {
         return #err(ErrorType.Unauthorized());
       };
-      role_map.put(principal, role);
+      Map.add(role_map, Principal.compare, principal, role);
       return #ok "Role added";
     };
 
@@ -76,25 +78,23 @@ module {
       if (assert_super_admin(caller) == false) {
         return #err(ErrorType.Unauthorized());
       };
-      role_map.delete(principal);
+      ignore Map.delete(role_map, Principal.compare, principal);
       return #ok "Role removed";
     };
 
     /** Manage Stable Storage */
     // Function to get data for stable storage
-    public func getStableData() : [(Principal, Types.Role)] {
-      Iter.toArray(role_map.entries());
-    };
+    // public func getStableData() : [(Principal, Types.Role)] {
+    //   Iter.toArray(Map.entries(role_map));
+    // };
 
-    // Function to restore from stable storage
-    public func loadFromStable(stable_data : [(Principal, Types.Role)]) {
-      role_map := HashMap.fromIter<Principal, Types.Role>(
-        stable_data.vals(),
-        stable_data.size(),
-        Principal.equal,
-        Principal.hash,
-      );
-    };
+    // // Function to restore from stable storage
+    // public func loadFromStable(stable_data : [(Principal, Types.Role)]) {
+    //   role_map := Map.empty<Principal, Types.Role>();
+    //   for ((principal, role) in stable_data.vals()) {
+    //     Map.add(role_map, Principal.compare, principal, role);
+    //   };
+    // };
     /** End Stable Storage */
   };
 };

@@ -43,6 +43,7 @@ module ErrorType {
   public func ActiveSession() : Text = "Session already active";
   public func InactiveSession() : Text = "Session is not active";
   public func NotFoundSession() : Text = "Session not found";
+  public func ZeroDuration() : Text = "Duration must be non-zero";
 
   public func NoCanisterInProject() : Text = "No canister linked to project";
   public func NotFoundSharedCanister() : Text = "Deployment not found";

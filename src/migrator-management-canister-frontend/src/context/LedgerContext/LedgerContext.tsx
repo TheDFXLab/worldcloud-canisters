@@ -10,14 +10,14 @@ import LedgerApi from "../../api/ledger/LedgerApi";
 import MainApi from "../../api/main";
 import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
 import { useQuery } from "@tanstack/react-query";
-import { e8sToIcp } from "../../utility/e8s";
+import { e8sToIcp, icpToE8s } from "../../utility/e8s";
 import { HttpAgent } from "@dfinity/agent";
 import { backend_canister_id } from "../../config/config";
 
 interface LedgerContextType {
   balance: bigint | null | undefined;
   isLoadingBalance: boolean;
-  getPendingDeposits: () => Promise<number>;
+  getPendingDepositsInIcp: () => Promise<number>;
   getBalance: () => Promise<bigint | null>;
   transfer: (amount: number, to: string) => Promise<boolean>;
   setShouldRefetchBalance: (value: boolean) => void;
@@ -106,7 +106,7 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
     retry: 3, // Retry failed requests 3 times
   });
 
-  const getPendingDeposits = async () => {
+  const getPendingDepositsInIcp = async () => {
     if (!agent) {
       throw new Error("Agent not found");
     }
@@ -171,8 +171,9 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
         if (!mainApi) throw new Error(`MainApi is not initialized.`);
 
         const credits_available = await mainApi.getCreditsAvailable();
+
         // Not enough credits depositted to backend
-        if (credits_available < amountInIcp) {
+        if (credits_available < icpToE8s(amountInIcp)) {
           console.log(`============================================`);
           console.log(`============================================`);
           console.log(
@@ -181,20 +182,22 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
           console.log(`============================================`);
           console.log(`============================================`);
           // Check if there are any pending deposits
-          const pending_deposits = await getPendingDeposits();
-          if (pending_deposits < amountInIcp) {
+          const pending_deposits_in_icp = await getPendingDepositsInIcp();
+          if (pending_deposits_in_icp < amountInIcp) {
             // Pay full amount
-            let amount_to_deposit = amountInIcp;
+            let amount_to_deposit_in_icp =
+              amountInIcp - e8sToIcp(credits_available);
 
             // Pay remaining amount only
-            if (pending_deposits < amountInIcp) {
-              amount_to_deposit = amountInIcp - pending_deposits;
+            if (pending_deposits_in_icp < amount_to_deposit_in_icp) {
+              amount_to_deposit_in_icp -= pending_deposits_in_icp;
             }
 
             const deposit = await transfer(
-              amount_to_deposit,
+              amount_to_deposit_in_icp,
               backend_canister_id
             );
+
             if (!deposit) {
               throw new Error(
                 `Failed to transfer ${amountInIcp} ICP tokens to backend canister.`
@@ -228,7 +231,7 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
     <LedgerContext.Provider
       value={{
         getBalance,
-        getPendingDeposits,
+        getPendingDepositsInIcp,
         transfer,
         setShouldRefetchBalance,
         depositIfNotEnoughCredits,
