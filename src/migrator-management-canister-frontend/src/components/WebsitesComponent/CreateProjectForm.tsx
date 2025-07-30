@@ -68,11 +68,13 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
   const { loadSubscriptionData } = useSubscriptionLogic();
 
   // Check if user has freemium subscription (tier ID 3)
+  const canUseFreemium = subscription ? true : false;
   const hasFreemiumSubscription =
     subscription && Number(subscription.tier_id) === 3;
   const needsSubscription = !subscription || !hasFreemiumSubscription;
 
-  const handleSubscriptionFlow = () => {
+  const handleSubscriptionFlow = (e: any) => {
+    e.preventDefault();
     // Open billing page in a new tab
     const billingUrl = `${window.location.origin}/dashboard/billing`;
     window.open(billingUrl, "_blank");
@@ -108,18 +110,35 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         }
       },
       isButtonDisabled:
-        (plan === "freemium" && needsSubscription) || projectName.length === 0,
-      disabledReason:
-        plan === "freemium" && needsSubscription
-          ? "Please subscribe to the freemium plan."
-          : plan === "freemium" &&
-            !needsSubscription &&
-            projectName.length === 0
-          ? plan === "freemium" && projectName.length === 0
-          : "Please enter a name for your project.",
+        !subscription ||
+        (plan === "paid" && subscription.tier_id === 3) ||
+        (plan === "freemium" && !canUseFreemium) ||
+        projectName.length === 0,
+      disabledReason: getDisabledSubmitState(),
+
+      // disabledReason: !canUseFreemium
+      //   ? "Please subscribe to a plan to get started."
+      //   : plan === "freemium" && !canUseFreemium
+      //   ? "Please subscribe to the freemium plan."
+      //   : plan === "freemium" && canUseFreemium && projectName.length === 0
+      //   ? plan === "freemium" && projectName.length === 0
+      //   : "Please enter a name for your project.",
       isHidden: false,
     });
   }, [projectName]);
+
+  const getDisabledSubmitState = () => {
+    plan === "paid" && !subscription
+      ? "Please subscribe to a paid plan."
+      : plan === "freemium" && !subscription;
+
+    if (plan === "paid" && !subscription)
+      return "Please subscribe to a paid plan.";
+    if (plan === "freemium" && !subscription)
+      return "Please subscribe to a freemium plan.";
+    if (projectName.length === 0)
+      return "Please enter a name for your project.";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,6 +183,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     try {
       summon("Creating Project...");
       setShowLoadBar(true);
+      debugger;
       const result = await dispatch(
         createProject({
           identity,
