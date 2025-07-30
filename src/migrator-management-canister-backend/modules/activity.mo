@@ -3,8 +3,8 @@ import Types "../types";
 import Debug "mo:base/Debug";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
-import HashMap "mo:base/HashMap";
-import Hash "mo:base/Hash";
+import Map "mo:core/Map";
+import Order "mo:core/Order";
 import Principal "mo:base/Principal";
 import Iter "mo:base/Iter";
 import Utility "../utils/Utility";
@@ -16,122 +16,119 @@ import Error "mo:base/Error";
 import Access "access";
 module {
 
-    public class ActivityManager() {
-        private var project_activity : Types.ProjectActivity = HashMap.HashMap<Types.ProjectId, [Types.ActivityLog]>(0, Nat.equal, Hash.hash); // Project id to run history
+  public class ActivityManager(project_activity_logs_init : Types.ProjectActivityLogsMap) {
+    public var project_activity : Types.ProjectActivityLogsMap = project_activity_logs_init;
 
-        public func get_project_activity(project_id : Types.ProjectId) : Types.Response<[Types.ActivityLog]> {
-            switch (project_activity.get(project_id)) {
-                case (null) {
-                    return #err(Errors.NotFoundProject());
-                };
-                case (?_activity) {
-                    return #ok(_activity);
-                };
-            };
+    public func get_project_activity(project_id : Types.ProjectId) : Types.Response<[Types.ActivityLog]> {
+      switch (Map.get(project_activity, Nat.compare, project_id)) {
+        case (null) {
+          return #err(Errors.NotFoundProject());
         };
-
-        public func create_project_activity(project_id : Types.ProjectId) : Types.Response<Bool> {
-            let exists = _exists_log(project_id);
-            if (exists) { return #err(Errors.AlreadyCreated()) };
-
-            // Create activity log for new project
-            let activity_log : Types.ActivityLog = {
-                id = 0;
-                category = "Project";
-                description = "Project created.";
-                create_time = Utility.get_time_now(#nanoseconds);
-            };
-            Debug.print("Activity log " # debug_show (activity_log));
-
-            // Set in mapping
-            let new_logs : [Types.ActivityLog] = [activity_log];
-            project_activity.put(project_id, new_logs);
-
-            return #ok(true);
+        case (?_activity) {
+          return #ok(_activity);
         };
+      };
+    };
 
-        public func update_project_activity(
-            project_id : Types.ProjectId,
-            category : Text,
-            description : Text,
-        ) : Types.Response<Bool> {
-            // let exists = _exists_log(project_id);
-            // if (not exists) { return #err(Errors.NotFoundProject()) };
+    public func create_project_activity(project_id : Types.ProjectId) : Types.Response<Bool> {
+      let exists = _exists_log(project_id);
+      if (exists) { return #err(Errors.AlreadyCreated()) };
 
-            let logs : [Types.ActivityLog] = switch (project_activity.get(project_id)) {
-                case (null) { return #err(Errors.NotFoundProject()) };
-                case (?_logs) { _logs };
-            };
+      // Create activity log for new project
+      let activity_log : Types.ActivityLog = {
+        id = 0;
+        category = "Project";
+        description = "Project created.";
+        create_time = Utility.get_time_now(#nanoseconds);
+      };
+      Debug.print("Activity log " # debug_show (activity_log));
 
-            let updated_log : Types.ActivityLog = {
-                id = logs.size();
-                category = category;
-                description = description;
-                create_time = Utility.get_time_now(#nanoseconds);
-            };
+      // Set in mapping
+      let new_logs : [Types.ActivityLog] = [activity_log];
+      Map.add(project_activity, Nat.compare, project_id, new_logs);
 
-            let _new_array = Array.append(logs, [updated_log]);
-            project_activity.put(project_id, _new_array);
-            return #ok(true);
+      return #ok(true);
+    };
 
+    public func update_project_activity(
+      project_id : Types.ProjectId,
+      category : Text,
+      description : Text,
+    ) : Types.Response<Bool> {
+      let logs : [Types.ActivityLog] = switch (Map.get(project_activity, Nat.compare, project_id)) {
+        case (null) { return #err(Errors.NotFoundProject()) };
+        case (?_logs) { _logs };
+      };
+
+      let updated_log : Types.ActivityLog = {
+        id = logs.size();
+        category = category;
+        description = description;
+        create_time = Utility.get_time_now(#nanoseconds);
+      };
+
+      let _new_array = Array.append(logs, [updated_log]);
+      Map.add(project_activity, Nat.compare, project_id, _new_array);
+      return #ok(true);
+
+    };
+
+    public func clear_all_logs() {
+      project_activity := Map.empty<Types.ProjectId, [Types.ActivityLog]>();
+    };
+
+    public func clear_project_activity_logs(project_id : Types.ProjectId) : Types.Response<Bool> {
+      let logs = switch (Map.get(project_activity, Nat.compare, project_id)) {
+        case (null) { return #ok(true) };
+        case (?_logs) { _logs };
+      };
+
+      Map.add(project_activity, Nat.compare, project_id, []);
+      return #ok(true);
+    };
+
+    public func delete_project_activity_log(project_id : Types.ProjectId, log_id : Nat) : Types.Response<Bool> {
+      let logs : [Types.ActivityLog] = switch (Map.get(project_activity, Nat.compare, project_id)) {
+        case (null) {
+          return #err(Errors.NotFoundProject());
         };
-
-        public func clear_all_logs() {
-            project_activity := HashMap.HashMap<Types.ProjectId, [Types.ActivityLog]>(0, Nat.equal, Hash.hash);
+        case (?_logs) {
+          _logs;
         };
+      };
 
-        public func clear_project_activity_logs(project_id : Types.ProjectId) : Types.Response<Bool> {
-            let logs = switch (project_activity.get(project_id)) {
-                case (null) { return #ok(true) };
-                case (?_logs) { _logs };
-            };
+      // Remove the target log id
+      let new_array : [Types.ActivityLog] = Array.filter(logs, func(l : Types.ActivityLog) : Bool { l.id == log_id });
 
-            project_activity.put(project_id, []);
-            return #ok(true);
-        };
+      Map.add(project_activity, Nat.compare, project_id, new_array);
 
-        public func delete_project_activity_log(project_id : Types.ProjectId, log_id : Nat) : Types.Response<Bool> {
-            let logs : [Types.ActivityLog] = switch (project_activity.get(project_id)) {
-                case (null) {
-                    return #err(Errors.NotFoundProject());
-                };
-                case (?_logs) {
-                    _logs;
-                };
-            };
+      return #ok(true);
 
-            // Remove the target log id
-            let new_array : [Types.ActivityLog] = Array.filter(logs, func(l : Types.ActivityLog) : Bool { l.id == log_id });
+    };
+    /** End public methods*/
 
-            project_activity.put(project_id, new_array);
+    private func _exists_log(project_id : Types.ProjectId) : Bool {
+      let exists = switch (Map.get(project_activity, Nat.compare, project_id)) {
+        case null { false };
+        case (?activity) { true };
+      };
+    };
+    /** End private methods*/
 
-            return #ok(true);
+    /**Start stable management */
 
-        };
-        /** End public methods*/
+    // Function to get data for stable storage
+    public func get_stable_data_project_activity() : [(Types.ProjectId, [Types.ActivityLog])] {
+      Iter.toArray(Map.entries(project_activity));
+    };
 
-        private func _exists_log(project_id : Types.ProjectId) : Bool {
-            let exists = switch (project_activity.get(project_id)) {
-                case null { false };
-                case (?activity) { true };
-            };
-        };
-        /** End private methods*/
+    public func load_from_stable_project_activity(stable_data : [(Types.ProjectId, [Types.ActivityLog])]) {
+      project_activity := Map.fromIter<Types.ProjectId, [Types.ActivityLog]>(stable_data.vals(), Nat.compare);
+      Debug.print("Loaded " # Nat.toText(Map.size(project_activity)) # " project activity logs from stable storage");
+    };
 
-        /**Start stable management */
+    /** End class */
 
-        // Function to get data for stable storage
-        public func get_stable_data_project_activity() : [(Types.ProjectId, [Types.ActivityLog])] {
-            Iter.toArray(project_activity.entries());
-        };
-
-        public func load_from_stable_project_activity(stable_data : [(Types.ProjectId, [Types.ActivityLog])]) {
-            project_activity := HashMap.fromIter(stable_data.vals(), stable_data.size(), Nat.equal, Hash.hash);
-            Debug.print("Loaded " # Nat.toText(project_activity.size()) # " project activity logs from stable storage");
-        };
-
-        /** End class */
-
-    }
+  }
 
 };

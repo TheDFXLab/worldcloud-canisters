@@ -3,8 +3,7 @@ import Types "../types";
 import Debug "mo:base/Debug";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
-import HashMap "mo:base/HashMap";
-import Hash "mo:base/Hash";
+import Map "mo:core/Map";
 import Principal "mo:base/Principal";
 import Iter "mo:base/Iter";
 import Utility "../utils/Utility";
@@ -17,7 +16,7 @@ import Access "access";
 
 module {
 
-  public class ShareableCanisterManager() {
+  public class ShareableCanisterManager(slots_init : Types.SlotsMap, user_to_slot_init : Types.UserToSlotMap, used_slots_init : Types.UsedSlotsMap, usage_logs_init : Types.UsageLogsMap, next_slot_id_init : Nat, quotas_map_init : Types.QuotasMap) {
     private let DEFAULT_DURATION_MS = 1200 * 1_000; // 20 mins
     // private let DEFAULT_DURATION = 14_400; // 4 hrs
     private let RATE_LIMIT_WINDOW_MS = 86_400 * 1_000; // 1 day
@@ -26,18 +25,19 @@ module {
     public var MIN_CYCLES_INIT_E8S = 200_000_000;
     public var MIN_CYCLES_INIT = 1_000_000_000_000;
 
-    public var slots : Types.SlotToCanister = HashMap.HashMap<Nat, Types.ShareableCanister>(0, Nat.equal, Hash.hash);
-    public var user_to_slot : Types.UserToSlots = HashMap.HashMap<Principal, ?Nat>(0, Principal.equal, Principal.hash);
-    public var used_slots : Types.UsedCanisters = HashMap.HashMap<Nat, Bool>(0, Nat.equal, Hash.hash);
-    public var usage_logs : Types.UsageLogs = HashMap.HashMap<Principal, Types.UsageLog>(0, Principal.equal, Principal.hash);
+    public var slots : Types.SlotsMap = slots_init;
+    public var user_to_slot : Types.UserToSlotMap = user_to_slot_init;
+    public var used_slots : Types.UsedSlotsMap = used_slots_init;
+    public var usage_logs : Types.UsageLogsMap = usage_logs_init;
+    public var quotas : Types.QuotasMap = quotas_map_init;
 
-    private var next_slot_id : Nat = 0;
+    public var next_slot_id : Nat = next_slot_id_init;
 
     public func reset_slots(actor_principal : Principal) : Types.ResetSlotsResult {
       var reset_project_ids : [?Nat] = [];
       var slot_ids : [Nat] = [];
 
-      for ((slot_id, slot) in slots.entries()) {
+      for ((slot_id, slot) in Map.entries(slots)) {
         let updated_slot : Types.ShareableCanister = {
           id = slot.id;
           project_id = null;
@@ -59,13 +59,13 @@ module {
           // Track cleaned up slot id for further project cleanup
           reset_project_ids := Array.append(reset_project_ids, [slot.project_id]);
           slot_ids := Array.append(slot_ids, [slot.id]);
-          user_to_slot.delete(slot.user);
+          ignore Map.delete(user_to_slot, Principal.compare, slot.user);
         };
 
         // Update slot details
         // Remove slot from used slots
-        slots.put(slot_id, updated_slot);
-        used_slots.delete(slot_id);
+        Map.add(slots, Nat.compare, slot_id, updated_slot);
+        ignore Map.delete(used_slots, Nat.compare, slot_id);
       };
 
       return {
@@ -82,16 +82,21 @@ module {
     //
     //
 
+    public func reset_quotas() {
+      quotas := Map.empty<Principal, Types.Quota>();
+    };
+
     public func admin_clear_usage_logs() {
-      usage_logs := HashMap.HashMap<Principal, Types.UsageLog>(0, Principal.equal, Principal.hash);
+      usage_logs := Map.empty<Principal, Types.UsageLog>();
+      quotas := Map.empty<Principal, Types.Quota>();
     };
 
     public func get_used_slots() : [(Nat, Bool)] {
-      Iter.toArray(used_slots.entries());
+      Iter.toArray(Map.entries(used_slots));
     };
 
     public func get_canister_by_slot(slot_id : Nat) : Types.Response<Types.ShareableCanister> {
-      let slot : Types.ShareableCanister = switch (slots.get(slot_id)) {
+      let slot : Types.ShareableCanister = switch (Map.get(slots, Nat.compare, slot_id)) {
         case (null) {
           return #err(Errors.NotFoundSlot());
         };
@@ -103,7 +108,7 @@ module {
     };
 
     public func get_slot_id_by_user(user : Principal) : Types.Response<?Nat> {
-      switch (user_to_slot.get(user)) {
+      switch (Map.get(user_to_slot, Principal.compare, user)) {
         case (null) {
           // return #err(Errors.NotFoundSlot());
           return #ok(null);
@@ -121,7 +126,7 @@ module {
         case (#err(err)) { return #err(err) };
       };
 
-      let canister : Types.ShareableCanister = switch (slots.get(slot_id)) {
+      let canister : Types.ShareableCanister = switch (Map.get(slots, Nat.compare, slot_id)) {
         case (null) { return #err(Errors.NotFoundSharedCanister()) };
         case (?_canister) { _canister };
       };
@@ -133,7 +138,7 @@ module {
     };
 
     public func get_slots(limit : ?Nat, index : ?Nat) : [Types.ShareableCanister] {
-      if (slots.size() == 0) {
+      if (Map.size(slots) == 0) {
         Debug.print("NO AVAILABLE SLOTS");
         return [];
       };
@@ -146,20 +151,20 @@ module {
         };
       };
 
-      let end = if (slots.size() == 0) {
+      let end = if (Map.size(slots) == 0) {
         0;
       } else {
         switch (limit) {
           case (null) {
-            if (start + 10 > slots.size() - 1) {
-              slots.size() - 1;
+            if (start + 10 > Map.size(slots) - 1) {
+              Map.size(slots) - 1;
             } else {
               start + 10;
             };
           };
           case (?_lim) {
-            if (start + _lim > slots.size() - 1) {
-              slots.size() - 1;
+            if (start + _lim > Map.size(slots) - 1) {
+              Map.size(slots) - 1;
             } else {
               _lim;
             };
@@ -169,7 +174,7 @@ module {
       var canisters : [Types.ShareableCanister] = [];
       Debug.print("Getting slots from start index: " # Nat.toText(start) # " and end index: " #Nat.toText(end));
 
-      for ((slot_id, slot) in slots.entries()) {
+      for ((slot_id, slot) in Map.entries(slots)) {
         canisters := Array.append(canisters, [slot]);
       };
       canisters;
@@ -177,7 +182,7 @@ module {
     };
 
     public func get_used_slot_ids() : [Nat] {
-      return Iter.toArray(used_slots.keys());
+      return Iter.toArray(Map.keys(used_slots));
     };
 
     public func get_available_slots() : [Nat] {
@@ -187,7 +192,7 @@ module {
 
       Debug.print("Finding available slots...");
 
-      for ((slot_id, slot) in slots.entries()) {
+      for ((slot_id, slot) in Map.entries(slots)) {
         if (slot.status == #available) {
           switch (slot.project_id) {
             case (null) {
@@ -205,7 +210,7 @@ module {
     };
 
     public func is_expired_session(slot_id : Nat) : Types.Response<Bool> {
-      let slot : Types.ShareableCanister = switch (slots.get(slot_id)) {
+      let slot : Types.ShareableCanister = switch (Map.get(slots, Nat.compare, slot_id)) {
         case (null) { return #err(Errors.NotFoundSlot()) };
         case (?slot) {
           if (slot.status == #occupied and (Utility.get_time_now(#milliseconds) - slot.start_timestamp >= slot.duration)) {
@@ -223,19 +228,21 @@ module {
     };
 
     private func _create_usage_log(user : Principal) : Types.UsageLog {
+      let quota : Types.Quota = {
+        consumed = 0;
+        total = MAX_USES_THRESHOLD;
+      };
       let log : Types.UsageLog = {
         is_active = false;
         usage_count = 0;
         last_used = 0;
         rate_limit_window = RATE_LIMIT_WINDOW_MS;
         max_uses_threshold = MAX_USES_THRESHOLD;
-        quota = {
-          consumed = 0;
-          total = MAX_USES_THRESHOLD;
-        };
+        quota = quota;
       };
 
-      usage_logs.put(user, log);
+      Map.add(usage_logs, Principal.compare, user, log);
+      Map.add(quotas, Principal.compare, user, quota);
       return log;
     };
 
@@ -310,38 +317,48 @@ module {
       return end_session(slot_id, end_cycles, actor_principal);
     };
 
-    public func get_quota(user : Principal) : Types.Response<Types.Quota> {
-      let usage_log : Types.UsageLog = get_usage_log(user);
+    // //
+    // public func get_quota(user : Principal) : Types.Response<Types.Quota> {
+    //   let quota : Types.Quota = get_quota_by_user(user);
+    //   var usage_log : Types.UsageLog = get_usage_log(user);
 
-      Debug.print("[get_quota] Retrieved quota" # debug_show (usage_log));
+    //   Debug.print("[get_quota] Retrieved quota" # debug_show (usage_log));
 
-      return #ok({
-        consumed = usage_log.quota.consumed;
-        total = usage_log.max_uses_threshold;
-      });
-    };
+    //   return #ok(quota);
+    // };
 
-    public func get_usage_log(user : Principal) : Types.UsageLog {
-      let usage_log : Types.UsageLog = switch (usage_logs.get(user)) {
+    // Gets a user's quota, creates if it doesnt exist
+    public func get_quota(user : Principal) : Types.Quota {
+      let quota : Types.Quota = switch (Map.get(quotas, Principal.compare, user)) {
         case (null) {
-          let new_usage : Types.UsageLog = {
-            is_active = false;
-            usage_count = 0;
-            last_used = 0;
-            rate_limit_window = RATE_LIMIT_WINDOW_MS;
-            max_uses_threshold = MAX_USES_THRESHOLD;
-            quota = {
-              consumed = 0;
-              total = MAX_USES_THRESHOLD;
-            };
-          };
-          usage_logs.put(user, new_usage);
-          return new_usage;
+          let q : Types.Quota = { consumed = 0; total = MAX_USES_THRESHOLD };
+          Map.add(quotas, Principal.compare, user, q);
+          q;
         };
         case (?val) { val };
       };
+      quota;
+    };
 
-      return usage_log;
+    public func get_usage_log(user : Principal) : Types.UsageLog {
+      let quota : Types.Quota = get_quota(user);
+      let usage_log : Types.UsageLog = switch (Map.get(usage_logs, Principal.compare, user)) {
+        case (null) {
+          let new_usage : Types.UsageLog = _create_usage_log(user);
+          return new_usage;
+        };
+        case (?val) {
+          val;
+        };
+      };
+      return {
+        is_active = usage_log.is_active;
+        usage_count = usage_log.usage_count;
+        last_used = usage_log.last_used;
+        rate_limit_window = usage_log.rate_limit_window;
+        max_uses_threshold = usage_log.max_uses_threshold;
+        quota = quota;
+      };
     };
     /** Update methods **/
     //
@@ -354,6 +371,8 @@ module {
 
     private func increment_quota(user : Principal) : Types.Response<Types.UsageLog> {
       let usage_log : Types.UsageLog = get_usage_log(user);
+      let quota : Types.Quota = get_quota(user);
+
       let now : Int = Utility.get_time_now(#milliseconds);
 
       if (usage_log.is_active) return #err(Errors.ActiveSession());
@@ -364,17 +383,22 @@ module {
           return #ok(usage_log);
         };
         case (true) {
-          var _consumed = usage_log.quota.consumed;
+          var _consumed = quota.consumed;
           if ((now - usage_log.last_used) >= usage_log.rate_limit_window) {
             Debug.print("consumed = 1");
             _consumed := 1;
           } else {
-            if (usage_log.quota.consumed + 1 > usage_log.quota.total) return #err(Errors.QuotaReached(usage_log.quota.total));
+            if (quota.consumed + 1 > quota.total) return #err(Errors.QuotaReached(quota.total));
             _consumed := _consumed + 1;
             Debug.print("consumed = " # Nat.toText(_consumed));
           };
           _consumed;
         };
+      };
+
+      let updated_quota : Types.Quota = {
+        consumed = consumed;
+        total = quota.total;
       };
 
       let updated_usage_log : Types.UsageLog = {
@@ -383,19 +407,17 @@ module {
         last_used = Int.abs(Utility.get_time_now(#milliseconds));
         rate_limit_window = RATE_LIMIT_WINDOW_MS;
         max_uses_threshold = MAX_USES_THRESHOLD;
-        quota = {
-          consumed = consumed;
-          total = usage_log.quota.total;
-        };
+        quota = updated_quota;
       };
-      usage_logs.put(user, updated_usage_log);
+      Map.add(usage_logs, Principal.compare, user, updated_usage_log);
+      Map.add(quotas, Principal.compare, user, updated_quota);
       return #ok(usage_log);
 
     };
 
     private func start_session(slot_id : Nat, user : Principal, project_id : Nat) : Types.Response<Types.ShareableCanister> {
       // Get slot details
-      let slot : Types.ShareableCanister = switch (slots.get(slot_id)) {
+      let slot : Types.ShareableCanister = switch (Map.get(slots, Nat.compare, slot_id)) {
         case (null) { return #err(Errors.NotFoundSlot()) };
         case (?val) { val };
       };
@@ -419,9 +441,9 @@ module {
       };
 
       // Update slot and set user session
-      slots.put(slot_id, updated_slot);
-      user_to_slot.put(user, ?slot_id);
-      used_slots.put(slot_id, true);
+      Map.add(slots, Nat.compare, slot_id, updated_slot);
+      Map.add(user_to_slot, Principal.compare, user, ?slot_id);
+      Map.add(used_slots, Nat.compare, slot_id, true);
       Debug.print("Assigned slot #" # Nat.toText(slot_id) # " to user " # Principal.toText(user));
       return #ok(updated_slot);
     };
@@ -431,7 +453,7 @@ module {
     private func end_session(slot_id : Nat, end_cycles : Nat, actor_principal : Principal) : Types.Response<?Nat> {
       Debug.print("[end_session] Ending session for slot #" # Nat.toText(slot_id));
       // Get and update slot details
-      let slot : Types.ShareableCanister = switch (slots.get(slot_id)) {
+      let slot : Types.ShareableCanister = switch (Map.get(slots, Nat.compare, slot_id)) {
         case (null) { return #err(Errors.NotFoundSlot()) };
         case (?val) { val };
       };
@@ -462,10 +484,10 @@ module {
         quota = _usage_log.quota;
       };
 
-      usage_logs.put(slot.user, _updated_usage_log);
-      slots.put(slot_id, updated_slot);
-      used_slots.delete(slot_id);
-      user_to_slot.delete(slot.user);
+      Map.add(usage_logs, Principal.compare, slot.user, _updated_usage_log);
+      Map.add(slots, Nat.compare, slot_id, updated_slot);
+      ignore Map.delete(used_slots, Nat.compare, slot_id);
+      ignore Map.delete(user_to_slot, Principal.compare, slot.user);
       Debug.print("[end_session] Updated slot #" # Nat.toText(slot_id) # " and usage logs for" # Principal.toText(slot.user));
 
       return #ok(slot.project_id);
@@ -473,7 +495,7 @@ module {
 
     public func create_slot(owner : Principal, user : Principal, canister_id : Principal, project_id : ?Nat, start_cycles : Nat) : Types.Response<Nat> {
       // Limit number of canisters createable
-      if (Iter.toArray(slots.keys()).size() >= MAX_SHAREABLE_CANISTERS) {
+      if (Iter.toArray(Map.keys(slots)).size() >= MAX_SHAREABLE_CANISTERS) {
         return #err(Errors.MaxSlotsReached());
       };
 
@@ -491,10 +513,35 @@ module {
         status = #available;
       };
 
-      slots.put(next_slot_id, new_slot_canister);
+      Map.add(slots, Nat.compare, next_slot_id, new_slot_canister);
       next_slot_id += 1;
 
       return #ok(next_slot_id - 1);
+    };
+
+    public func set_all_slot_duration(new_duration_ms : Nat) : Types.Response<()> {
+      if (new_duration_ms <= 0) return #err(Errors.ZeroDuration());
+      for ((slot_id, slot) in Map.entries(slots)) {
+        let updated_slot : Types.ShareableCanister = {
+          id = slot.id;
+          project_id = slot.project_id;
+          canister_id = slot.canister_id;
+          owner = slot.owner;
+          user = slot.user;
+          start_timestamp = slot.start_timestamp;
+          create_timestamp = slot.create_timestamp;
+          duration = new_duration_ms;
+          start_cycles = slot.start_cycles;
+          status = slot.status;
+        };
+        let response = update_slot(slot_id, updated_slot);
+        switch (response) {
+          case (#err(err)) { return #err(err) };
+          case (#ok(_)) {};
+        };
+      };
+
+      return #ok();
     };
 
     // Method for assignign new canister to a slot
@@ -505,7 +552,7 @@ module {
       };
 
       // Get current slot and update canister id
-      var slot : Types.ShareableCanister = switch (slots.get(slot_id)) {
+      var slot : Types.ShareableCanister = switch (Map.get(slots, Nat.compare, slot_id)) {
         case (null) { return #err(Errors.NotFoundSlot()) };
         case (?val) { val };
       };
@@ -514,76 +561,65 @@ module {
         return #err(Errors.SlotUnavailable());
       };
 
-      // let updated_canister : Types.ShareableCanister = {
-      //     project_id = slot.project_id;
-      //     canister_id = ?canister_id;
-      //     owner = slot.owner;
-      //     user = slot.user;
-      //     start_timestamp = slot.start_timestamp;
-      //     create_timestamp = slot.create_timestamp;
-      //     duration = slot.duration;
-      //     start_cycles = slot.start_cycles;
-      //     status = slot.status;
-      // };
-      slots.put(slot_id, updated_slot);
+      Map.add(slots, Nat.compare, slot_id, updated_slot);
       return #ok(updated_slot);
     };
 
     /** End private methods*/
 
-    public func migrate_usage_log_add_quota() : [(Principal, Types.UsageLog)] {
-      var migrated_array : [(Principal, Types.UsageLog)] = [];
-      for ((user, log) in usage_logs.entries()) {
-        let obj : Types.UsageLog = {
-          is_active = log.is_active;
-          usage_count = log.usage_count;
-          last_used = log.last_used;
-          rate_limit_window = log.rate_limit_window;
-          max_uses_threshold = log.max_uses_threshold;
-          quota = {
-            consumed = 0;
-            total = MAX_USES_THRESHOLD;
-          };
-        };
-        Debug.print("migrating usage log for user: " # Principal.toText(user) # debug_show (obj));
-        migrated_array := Array.append(migrated_array, [(user, obj)]);
-      };
-      return migrated_array;
-    };
+    // public func migrate_usage_log_add_quota() : [(Principal, Types.UsageLog)] {
+    //   var migrated_array : [(Principal, Types.UsageLog)] = [];
+    //   for ((user, log) in Map.entries(usage_logs)) {
+    //     let obj : Types.UsageLog = {
+    //       is_active = log.is_active;
+    //       usage_count = log.usage_count;
+    //       last_used = log.last_used;
+    //       rate_limit_window = log.rate_limit_window;
+    //       max_uses_threshold = log.max_uses_threshold;
+    //       quota = {
+    //         consumed = 0;
+    //         total = MAX_USES_THRESHOLD;
+    //       };
+    //     };
+    //     Debug.print("migrating usage log for user: " # Principal.toText(user) # debug_show (obj));
+    //     migrated_array := Array.append(migrated_array, [(user, obj)]);
+    //   };
+    //   return migrated_array;
+    // };
 
-    public func apply_usage_log_migration() {
-      for ((user, log) in usage_logs.entries()) {
-        Debug.print("Migrating logs for user: " # Principal.toText(user) # "...");
-        let updated_log : Types.UsageLog = {
-          is_active = log.is_active;
-          usage_count = log.usage_count;
-          last_used = log.last_used;
-          rate_limit_window = log.rate_limit_window;
-          max_uses_threshold = log.max_uses_threshold;
-          quota = {
-            consumed = 0;
-            total = MAX_USES_THRESHOLD;
-          } : Types.Quota;
-        };
-        usage_logs.put(user, updated_log);
-        Debug.print("Migration successful for user: " # Principal.toText(user) # ". Updated log: " # debug_show (updated_log));
-      };
-    };
+    // public func apply_usage_log_migration() {
+    //   for ((user, log) in Map.entries(usage_logs)) {
+    //     Debug.print("Migrating logs for user: " # Principal.toText(user) # "...");
+    //     let updated_log : Types.UsageLog = {
+    //       is_active = log.is_active;
+    //       usage_count = log.usage_count;
+    //       last_used = log.last_used;
+    //       rate_limit_window = log.rate_limit_window;
+    //       max_uses_threshold = log.max_uses_threshold;
+    //       quota = {
+    //         consumed = 0;
+    //         total = MAX_USES_THRESHOLD;
+    //       } : Types.Quota;
+    //     };
+    //     Map.add(usage_logs, Principal.compare, user, updated_log);
+    //     Debug.print("Migration successful for user: " # Principal.toText(user) # ". Updated log: " # debug_show (updated_log));
+    //   };
+    // };
 
     /**Start stable management */
 
     // Function to get data for stable storage
     public func get_stable_data_slots() : [(Nat, Types.ShareableCanister)] {
-      Iter.toArray(slots.entries());
+      Iter.toArray(Map.entries(slots));
     };
     public func get_stable_data_user_to_slot() : [(Principal, ?Nat)] {
-      Iter.toArray(user_to_slot.entries());
+      Iter.toArray(Map.entries(user_to_slot));
     };
     public func get_stable_data_used_slots() : [(Nat, Bool)] {
-      Iter.toArray(used_slots.entries());
+      Iter.toArray(Map.entries(used_slots));
     };
     public func get_stable_data_usage_logs() : [(Principal, Types.UsageLog)] {
-      Iter.toArray(usage_logs.entries());
+      Iter.toArray(Map.entries(usage_logs));
     };
     public func get_stable_data_next_slot_id() : Nat {
       next_slot_id;
@@ -591,39 +627,31 @@ module {
 
     // Function to restore from stable storage
     public func load_from_stable_slots(stable_data : [(Nat, Types.ShareableCanister)]) {
-      slots := HashMap.fromIter<Nat, Types.ShareableCanister>(
-        stable_data.vals(),
-        stable_data.size(),
-        Nat.equal,
-        Hash.hash,
-      );
+      slots := Map.empty<Nat, Types.ShareableCanister>();
+      for ((slot_id, slot) in stable_data.vals()) {
+        Map.add(slots, Nat.compare, slot_id, slot);
+      };
     };
 
     public func load_from_stable_user_to_slot(stable_data : [(Principal, ?Nat)]) {
-      user_to_slot := HashMap.fromIter<Principal, ?Nat>(
-        stable_data.vals(),
-        stable_data.size(),
-        Principal.equal,
-        Principal.hash,
-      );
+      user_to_slot := Map.empty<Principal, ?Nat>();
+      for ((user, slot_id) in stable_data.vals()) {
+        Map.add(user_to_slot, Principal.compare, user, slot_id);
+      };
     };
 
     public func load_from_stable_used_slots(stable_data : [(Nat, Bool)]) {
-      used_slots := HashMap.fromIter<Nat, Bool>(
-        stable_data.vals(),
-        stable_data.size(),
-        Nat.equal,
-        Hash.hash,
-      );
+      used_slots := Map.empty<Nat, Bool>();
+      for ((slot_id, is_used) in stable_data.vals()) {
+        Map.add(used_slots, Nat.compare, slot_id, is_used);
+      };
     };
 
     public func load_from_stable_usage_logs(stable_data : [(Principal, Types.UsageLog)]) {
-      usage_logs := HashMap.fromIter<Principal, Types.UsageLog>(
-        stable_data.vals(),
-        stable_data.size(),
-        Principal.equal,
-        Principal.hash,
-      );
+      usage_logs := Map.empty<Principal, Types.UsageLog>();
+      for ((user, log) in stable_data.vals()) {
+        Map.add(usage_logs, Principal.compare, user, log);
+      };
     };
 
     public func load_from_stable_next_slot_id(stable_data : Nat) {
