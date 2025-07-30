@@ -14,7 +14,7 @@ module {
   public class AccessControl(deployer_principal : Principal, role_map_init : Types.RoleMap) {
     public var role_map : Types.RoleMap = role_map_init;
     private var is_initialized : Bool = false;
-    private var disable_guards : Bool = true;
+    private var disable_guards : Bool = false;
 
     public func init() {
       Debug.print("Initted access control.");
