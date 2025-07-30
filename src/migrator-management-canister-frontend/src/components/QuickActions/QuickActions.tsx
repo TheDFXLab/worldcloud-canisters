@@ -161,7 +161,10 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                     <CountdownChip
                       startTimestamp={freemiumSlot.start_timestamp}
                       duration={freemiumSlot.duration}
-                      onExpire={() => refreshProjects()}
+                      onExpire={() => {
+                        debugger;
+                        refreshProjects();
+                      }}
                     />
                   )}
                 {renderSpinner(action)}

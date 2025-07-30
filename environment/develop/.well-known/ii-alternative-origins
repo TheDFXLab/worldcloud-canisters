@@ -1,8 +1,9 @@
 {
   "alternativeOrigins": [
-    "http://br5f7-7uaaa-aaaaa-qaaca-cai.localhost:8000",
+    "http://umunu-kh777-77774-qaaca-cai.localhost:8000",
     "http://0.0.0.0:8000",
+    "http://127.0.0.1:8000",
     "http://localhost:3000",
-    "https://3f4c48d92bdb.ngrok-free.app"
+    "https://56002ee4fecd.ngrok-free.app"
   ]
 }

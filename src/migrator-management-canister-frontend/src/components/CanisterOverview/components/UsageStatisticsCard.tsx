@@ -61,7 +61,7 @@ export const UsageStatisticsCard: React.FC<UsageStatisticsCardProps> = ({
               </div>
             )}
             <div className="quota-reset-info">
-              Consumption resets every 24 hours
+              Consumption resets every 24 hours UTC
             </div>
           </div>
         </Tooltip>
