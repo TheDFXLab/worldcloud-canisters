@@ -257,10 +257,75 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
    *
    */
 
+  public shared (msg) func admin_get_activity_logs_all(payload : Types.PaginationPayload) : async Types.Response<[(Types.ProjectId, [Types.ActivityLog])]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return activity_manager.get_project_activity_all(payload);
+  };
+
+  public shared (msg) func admin_get_workflow_run_history_all(payload : Types.PaginationPayload) : async Types.Response<[(Nat, [Types.WorkflowRunDetails])]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return workflow_manager.get_workflow_history_all(payload);
+  };
+
+  public shared (msg) func admin_get_usage_logs_all(payload : Types.PaginationPayload) : async Types.Response<[(Principal, Types.UsageLog)]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return shareable_canister_manager.get_usage_logs_paginated(payload);
+  };
+
+  public shared (msg) func admin_get_user_slot_id(user : Principal) : async Types.Response<?Types.ShareableCanister> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return shareable_canister_manager.get_canister_by_user(user);
+  };
+
+  public shared (msg) func admin_get_user_projects_all(payload : Types.PaginationPayload) : async Types.Response<[(Principal, [Types.Project])]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return project_manager.get_user_projects_batch_paginated(payload);
+  };
+
+  public shared (msg) func admin_get_user_projects(user : Principal, payload : Types.PaginationPayload) : async Types.Response<[Types.Project]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    let payload_with_user = {
+      user = user;
+      limit = payload.limit;
+      page = payload.page;
+    };
+    return await project_manager.get_projects_by_user(user, payload_with_user);
+  };
+
+  public shared (msg) func admin_get_projects_all(payload : Types.PaginationPayload) : async Types.Response<[(Types.ProjectId, Types.Project)]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    return project_manager.get_all_projects_paginated(payload);
+  };
+
+  public shared (msg) func admin_get_canister_deployments_all(payload : Types.PaginationPayload) : async Types.Response<[(Principal, Types.CanisterDeployment)]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    return canisters.get_canister_deployments_all(payload);
+  };
+
   public shared (msg) func admin_set_all_slot_duration(new_duration_ms : Nat) : async Types.Response<()> {
     if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
     return shareable_canister_manager.set_all_slot_duration(new_duration_ms);
   };
+
   /// TAG: Admin
   public shared (msg) func admin_delete_usage_logs() : async () {
     if (not access_control.is_authorized(msg.caller)) return;
@@ -1248,6 +1313,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
    * START DEPLOYMENT METHODS
    *
    */
+
   public shared (msg) func getCanisterDeployments(project_id : Nat) : async Types.Response<?Types.CanisterDeployment> {
     let is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
       case (#err(_msg)) { return #err(_msg) };

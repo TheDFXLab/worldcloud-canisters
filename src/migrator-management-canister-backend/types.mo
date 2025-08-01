@@ -232,6 +232,11 @@ module {
     limit : ?Nat;
     page : ?Nat;
   };
+
+  public type PaginationPayload = {
+    limit : ?Nat;
+    page : ?Nat;
+  };
   public type CreateProjectPayload = {
     project_name : Text;
     project_description : Text;

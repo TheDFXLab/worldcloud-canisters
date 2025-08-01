@@ -209,6 +209,12 @@ module {
       return _slot_ids;
     };
 
+    public func get_usage_logs_paginated(payload : Types.PaginationPayload) : Types.Response<[(Principal, Types.UsageLog)]> {
+      let all_entries = Iter.toArray(Map.entries(usage_logs));
+      let paginated_entries = Utility.paginate(all_entries, payload);
+      return #ok(paginated_entries);
+    };
+
     public func is_expired_session(slot_id : Nat) : Types.Response<Bool> {
       let slot : Types.ShareableCanister = switch (Map.get(slots, Nat.compare, slot_id)) {
         case (null) { return #err(Errors.NotFoundSlot()) };

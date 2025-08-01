@@ -32,6 +32,17 @@ module {
       };
     };
 
+    public func get_canister_principals_all(payload : Types.PaginationPayload) : Types.Response<[Principal]> {
+      let all_principals = Iter.toArray(Map.keys(canister_table));
+      let paginated_principals = Utility.paginate(all_principals, payload);
+      return #ok(paginated_principals);
+    };
+    public func get_canister_deployments_all(payload : Types.PaginationPayload) : Types.Response<[(Principal, Types.CanisterDeployment)]> {
+      let all_entries = Iter.toArray(Map.entries(canister_table));
+      let paginated_entries = Utility.paginate(all_entries, payload);
+      return #ok(paginated_entries);
+    };
+
     public func add_canister_deployment(caller : Principal, canister_id : Principal, is_freemium : Bool) : async () {
       let deployment = {
         canister_id = canister_id;

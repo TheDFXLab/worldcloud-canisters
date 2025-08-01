@@ -30,6 +30,11 @@ module {
       };
     };
 
+    public func get_project_activity_all(payload : Types.PaginationPayload) : Types.Response<[(Types.ProjectId, [Types.ActivityLog])]> {
+      let activity : [(Types.ProjectId, [Types.ActivityLog])] = Iter.toArray(Map.entries(project_activity));
+      return #ok(Utility.paginate(activity, payload));
+    };
+
     public func create_project_activity(project_id : Types.ProjectId) : Types.Response<Bool> {
       let exists = _exists_log(project_id);
       if (exists) { return #err(Errors.AlreadyCreated()) };
