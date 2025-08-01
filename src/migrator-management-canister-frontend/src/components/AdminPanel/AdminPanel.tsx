@@ -150,19 +150,21 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
           <div className="sidebar-header">
             <h3>Navigation</h3>
           </div>
-          <nav className="sidebar-nav">
+          <nav className="admin-sidebar-nav">
             {navigationItems.map((item) => (
               <button
                 key={item.id}
-                className={`nav-item ${
+                className={`admin-nav-item ${
                   activeSection === item.id ? "active" : ""
                 }`}
                 onClick={() => setActiveSection(item.id)}
               >
-                <div className="nav-item-icon">{item.icon}</div>
-                <div className="nav-item-content">
-                  <div className="nav-item-label">{item.label}</div>
-                  <div className="nav-item-description">{item.description}</div>
+                <div className="admin-nav-item-icon">{item.icon}</div>
+                <div className="admin-nav-item-content">
+                  <div className="admin-nav-item-label">{item.label}</div>
+                  <div className="admin-nav-item-description">
+                    {item.description}
+                  </div>
                 </div>
               </button>
             ))}

@@ -164,39 +164,47 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
         }}
       />
       <aside
-        className={`sidebar${isSidebarCollapsed ? " collapsed" : ""} 
+        className={`sidebar-container${isSidebarCollapsed ? " collapsed" : ""} 
           `}
       >
         <nav className="sidebar-nav">
           <IconTextRowView
-            className={`nav-item ${activeTab === "home" ? "active" : ""}`}
+            className={`sidebar-nav-item ${
+              activeTab === "home" ? "active" : ""
+            }`}
             text="Home"
             IconComponent={HomeIcon}
             onClickIcon={() => handleMenuClick("home", true)}
           />
           {/* <IconTextRowView
-            className={`nav-item ${activeTab === "websites" ? "active" : ""}`}
+            className={`sidebar-nav-item ${activeTab === "websites" ? "active" : ""}`}
             text="Websites"
             IconComponent={LanguageIcon}
             onClickIcon={() => handleMenuClick("websites", true)}
           /> */}
           <IconTextRowView
-            className={`nav-item ${activeTab === "projects" ? "active" : ""}`}
+            className={`sidebar-nav-item ${
+              activeTab === "projects" ? "active" : ""
+            }`}
             text="Projects"
             IconComponent={MemoryIcon}
             onClickIcon={() => handleMenuClick("projects", true)}
           />
 
           <IconTextRowView
-            className={`nav-item ${activeTab === "publish" ? "active" : ""}`}
+            className={`sidebar-nav-item ${
+              activeTab === "publish" ? "active" : ""
+            }`}
             text="New"
             IconComponent={AddIcon}
             onClickIcon={() => handleMenuClick("publish", true)}
           />
-          <div className="bottom-nav-group">
+          <div className="sidebar-bottom-nav-group">
             {isAdmin && (
               <IconTextRowView
-                className={`nav-item ${activeTab === "admin" ? "active" : ""}`}
+                className={`sidebar-nav-item ${
+                  activeTab === "admin" ? "active" : ""
+                }`}
                 text="Admin"
                 IconComponent={SupervisorAccountIcon}
                 onClickIcon={() => handleMenuClick("admin", true)}
@@ -204,19 +212,23 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
             )}
 
             <IconTextRowView
-              className={`nav-item ${activeTab === "billing" ? "active" : ""}`}
+              className={`sidebar-nav-item ${
+                activeTab === "billing" ? "active" : ""
+              }`}
               text="Billing"
               IconComponent={CreditCard}
               onClickIcon={() => handleMenuClick("billing")}
             />
             <IconTextRowView
-              className={`nav-item ${activeTab === "settings" ? "active" : ""}`}
+              className={`sidebar-nav-item ${
+                activeTab === "settings" ? "active" : ""
+              }`}
               text="Settings"
               IconComponent={SettingsIcon}
               onClickIcon={() => handleMenuClick("settings")}
             />
             <IconTextRowView
-              className="nav-item logout"
+              className="sidebar-nav-item logout"
               text="Logout"
               IconComponent={LogoutIcon}
               onClickIcon={() => handleLogout()}
