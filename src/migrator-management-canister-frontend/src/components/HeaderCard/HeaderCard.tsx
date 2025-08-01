@@ -18,16 +18,19 @@ const HeaderCard: React.FC<HeaderCardProps> = ({
   const { isSidebarCollapsed } = useSideBar();
 
   return (
-    <div
-      className={`header-card
+    <div className="header-card-wrapper">
+      <div
+        className={`header-card
         ${className ? className : "header-card-layout-default"} ${
-        isSidebarCollapsed ? "collapsed" : ""
-      }
+          isSidebarCollapsed ? "collapsed" : ""
+        }
         `}
-    >
-      <h2>{title}</h2>
-      {description && <p>{description}</p>}
-      {children}
+      >
+        <h2>{title}</h2>
+        {description && <p>{description}</p>}
+        {children}
+      </div>
+      <div className="header-card-spacer"></div>
     </div>
   );
 };

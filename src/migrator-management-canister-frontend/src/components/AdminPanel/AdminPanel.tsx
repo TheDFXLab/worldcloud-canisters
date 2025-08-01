@@ -1,73 +1,193 @@
-import React, { useEffect } from "react";
-import "./AdminPanel.css";
-import WasmUploader from "../WasmUploader/WasmUploader";
-import SettingsIcon from "@mui/icons-material/Settings";
-import CodeIcon from "@mui/icons-material/Code";
-import SecurityIcon from "@mui/icons-material/Security";
+import React, { useEffect, useState } from "react";
+import { useAdminLogic } from "../../hooks/useAdminLogic";
+import { useToaster } from "../../context/ToasterContext/ToasterContext";
+import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
 import { useNavigate } from "react-router-dom";
-import { useIdentity } from "../../context/IdentityContext/IdentityContext";
-import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
-import { useAdmin } from "../../context/AdminContext/AdminContext";
+import {
+  Settings,
+  CreditCard,
+  Build,
+  Assessment,
+  Security,
+  Storage,
+} from "@mui/icons-material";
+import "./AdminPanel.css";
 
-export const AdminPanel = () => {
+// Import admin section components
+import SlotsManagement from "./sections/SlotsManagement";
+import SubscriptionsManagement from "./sections/SubscriptionsManagement";
+import CanistersManagement from "./sections/CanistersManagement";
+import ActivityLogsManagement from "./sections/ActivityLogsManagement";
+import AccessControlManagement from "./sections/AccessControlManagement";
+import SystemManagement from "./sections/SystemManagement";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
+
+type AdminSection =
+  | "slots"
+  | "subscriptions"
+  | "canisters"
+  | "activity-logs"
+  | "access-control"
+  | "system";
+
+interface AdminPanelProps {}
+
+const AdminPanel: React.FC<AdminPanelProps> = () => {
+  const [activeSection, setActiveSection] = useState<AdminSection>("slots");
+  const { error, successMessage, handleClearError, handleClearSuccessMessage } =
+    useAdminLogic();
+  const { showToaster, setShowToaster, setToasterData } = useToaster();
+  const { setShowModal } = useConfirmationModal();
+  const { setHeaderCard } = useHeaderCard();
   const navigate = useNavigate();
-  const { identity } = useIdentity();
-  const { setActionBar } = useActionBar();
-  const { isAdmin, isLoadingAdminStatus } = useAdmin();
 
-  // List of admin functions/cards
-  const adminFunctions = [
+  // Note: Admin access control should be handled at the route level
+  // This component assumes the user has admin access
+
+  // Handle error and success messages
+  React.useEffect(() => {
+    if (error) {
+      setShowToaster(true);
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: error,
+        textColor: "red",
+        timeout: 5000,
+      });
+      handleClearError();
+    }
+  }, [error, showToaster, handleClearError]);
+
+  React.useEffect(() => {
+    if (successMessage) {
+      setShowToaster(true);
+      setToasterData({
+        headerContent: "Success",
+        toastStatus: true,
+        toastData: successMessage,
+        textColor: "green",
+        timeout: 3000,
+      });
+      handleClearSuccessMessage();
+    }
+  }, [successMessage, showToaster, handleClearSuccessMessage]);
+
+  useEffect(() => {
+    setHeaderCard(null);
+  }, []);
+  const navigationItems = [
     {
-      title: "Canister WASM Management",
-      description: "Upload and manage the asset canister WASM file",
-      icon: <CodeIcon />,
-      component: <WasmUploader />,
+      id: "slots" as AdminSection,
+      label: "Slots Management",
+      icon: <Storage />,
+      description: "Manage shareable canister slots and sessions",
+    },
+    {
+      id: "subscriptions" as AdminSection,
+      label: "Subscriptions",
+      icon: <CreditCard />,
+      description: "View and manage user subscriptions",
+    },
+    {
+      id: "canisters" as AdminSection,
+      label: "Canisters",
+      icon: <Build />,
+      description: "Manage deployed asset canisters",
+    },
+    {
+      id: "activity-logs" as AdminSection,
+      label: "Activity Logs",
+      icon: <Assessment />,
+      description: "View and manage activity logs",
+    },
+    {
+      id: "access-control" as AdminSection,
+      label: "Access Control",
+      icon: <Security />,
+      description: "Manage user roles and permissions",
+    },
+    {
+      id: "system" as AdminSection,
+      label: "System",
+      icon: <Settings />,
+      description: "System-wide operations and settings",
     },
   ];
 
-  // TODO: Implement actual admin check
-  // Check if user is admin
-  // const isAdmin = true;
-
-  useEffect(() => {
-    setActionBar(null);
-  }, []);
-
-  if (!isAdmin) {
-    return (
-      <div className="admin-unauthorized">
-        <SecurityIcon className="unauthorized-icon" />
-        <h2>Unauthorized Access</h2>
-        <p>You don't have permission to access the admin panel.</p>
-        <button onClick={() => navigate("/dashboard")}>
-          Return to Dashboard
-        </button>
-      </div>
-    );
-  }
+  const renderActiveSection = () => {
+    switch (activeSection) {
+      case "slots":
+        return <SlotsManagement />;
+      case "subscriptions":
+        return <SubscriptionsManagement />;
+      case "canisters":
+        return <CanistersManagement />;
+      case "activity-logs":
+        return <ActivityLogsManagement />;
+      case "access-control":
+        return <AccessControlManagement />;
+      case "system":
+        return <SystemManagement />;
+      default:
+        return <SlotsManagement />;
+    }
+  };
 
   return (
-    <div className="admin-container">
+    <div className="admin-panel-container">
+      {/* Header */}
       <div className="admin-header">
-        <SettingsIcon className="header-icon" />
-        <h2>Admin Panel</h2>
-        <p className="subtitle">Manage system configurations and settings</p>
+        <div className="admin-header-content">
+          <h1>Admin Dashboard</h1>
+          <p>Manage system operations and monitor user activities</p>
+        </div>
       </div>
 
-      <div className="admin-content">
-        {adminFunctions.map((func, index) => (
-          <div key={index} className="admin-card">
-            <div className="card-header">
-              {func.icon}
-              <h3>{func.title}</h3>
-            </div>
-            <div className="card-description">
-              <p>{func.description}</p>
-            </div>
-            <div className="card-content">{func.component}</div>
+      <div className="admin-layout">
+        {/* Navigation Sidebar */}
+        <div className="admin-sidebar">
+          <div className="sidebar-header">
+            <h3>Navigation</h3>
           </div>
-        ))}
+          <nav className="sidebar-nav">
+            {navigationItems.map((item) => (
+              <button
+                key={item.id}
+                className={`nav-item ${
+                  activeSection === item.id ? "active" : ""
+                }`}
+                onClick={() => setActiveSection(item.id)}
+              >
+                <div className="nav-item-icon">{item.icon}</div>
+                <div className="nav-item-content">
+                  <div className="nav-item-label">{item.label}</div>
+                  <div className="nav-item-description">{item.description}</div>
+                </div>
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="admin-content">
+          <div className="content-header">
+            <h2>
+              {navigationItems.find((item) => item.id === activeSection)?.label}
+            </h2>
+            <p>
+              {
+                navigationItems.find((item) => item.id === activeSection)
+                  ?.description
+              }
+            </p>
+          </div>
+
+          <div className="content-body">{renderActiveSection()}</div>
+        </div>
       </div>
     </div>
   );
 };
+
+export default AdminPanel;

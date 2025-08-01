@@ -4,6 +4,7 @@ import subscriptionReducer from './slices/subscriptionSlice';
 import freemiumReducer from './slices/freemiumSlice';
 import deploymentReducer from './slices/deploymentSlice';
 import cyclesReducer from './slices/cyclesSlice';
+import adminReducer from './slices/adminSlice';
 
 export const store = configureStore({
     reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
         freemium: freemiumReducer,
         deployments: deploymentReducer,
         cycles: cyclesReducer,
+        admin: adminReducer,
     },
 });
 

@@ -1645,6 +1645,7 @@
 
 .canister-overview-container {
   padding: 2rem;
+  padding-top: 6rem;
   min-height: calc(100vh - 64px);
   background-color: var(--background);
   height: 100%;
@@ -1882,6 +1883,7 @@
 @media (max-width: 768px) {
   .canister-overview-container {
     padding: 1rem;
+    padding-top: 5rem;
   }
 
   .overview-grid {
@@ -1906,11 +1908,18 @@
   }
 }
 
+@media (max-width: 485px) {
+  .canister-overview-container {
+    padding: 0.5rem;
+    padding-top: 0px;
+  }
+}
+
 @media (max-width: 420px) {
   .canister-overview-container {
     padding: 0.5rem;
+    padding-top: 0px;
   }
-
   .card-content {
     padding: 1rem;
   }

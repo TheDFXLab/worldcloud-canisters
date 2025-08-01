@@ -64,9 +64,7 @@
   padding-top: 1rem;
 }
 
-.nav-item:hover {
-  background: rgba(99, 102, 241, 0.1);
-}
+/* Removed hover effect as requested */
 
 .nav-item.active {
   background: var(--primary-color) !important;

@@ -12,8 +12,9 @@ import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
+import { mapRouteToKey } from "../../utility/navigation";
 
 import "./Sidebar.css";
 import { act, useEffect, useState } from "react";
@@ -56,14 +57,26 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
   } = useSideBar();
   const { setHeaderCard } = useHeaderCard();
   const navigate = useNavigate();
+  const location = useLocation();
   // const [isMobile, setIsMobile] = mobileControl;
 
   useEffect(() => {
     if (isMobile) {
       setIsSidebarCollapsed(window.innerWidth <= 768 ? true : false);
     }
-    handleMenuClick(activeTab ? activeTab : "home", false);
-  }, []);
+    // Only set the menu if activeTab is not null and we're not already on the correct route
+    if (activeTab) {
+      handleMenuClick(activeTab, false);
+    }
+  }, [activeTab]);
+
+  // Update active tab when route changes
+  useEffect(() => {
+    const currentTab = mapRouteToKey(location.pathname) as MenuItem;
+    if (currentTab !== activeTab) {
+      setActiveTab(currentTab);
+    }
+  }, [location.pathname, activeTab, setActiveTab]);
 
   useEffect(() => {
     const resize = () =>
@@ -86,14 +99,20 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
     shouldNavigate: boolean = true
   ) => {
     console.log(`cloicked menu option`, menuItem, shouldNavigate);
-    const headerCardData: HeaderCardData = mapHeaderContent(
+    const headerCardData: HeaderCardData | null = mapHeaderContent(
       menuItem ? menuItem : "home",
       githubUser,
       isAdmin
     );
 
     const navigateToPath = mapKeyToRoute(menuItem ? menuItem : "home");
-    setHeaderCard(headerCardData.title.length > 0 ? headerCardData : null);
+    setHeaderCard(
+      headerCardData
+        ? headerCardData?.title?.length > 0
+          ? headerCardData
+          : null
+        : null
+    );
     setActiveTab(menuItem);
     if (isMobile) {
       handleClose();

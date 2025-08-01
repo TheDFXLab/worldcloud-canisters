@@ -25,3 +25,22 @@ export const mapKeyToRoute = (key: string) => {
     }
     return navigateToPath;
 }
+
+export const mapRouteToKey = (pathname: string): string => {
+    if (pathname.startsWith("/dashboard/admin")) {
+        return "admin";
+    } else if (pathname.startsWith("/dashboard/billing")) {
+        return "billing";
+    } else if (pathname.startsWith("/dashboard/settings")) {
+        return "settings";
+    } else if (pathname.startsWith("/dashboard/new-project")) {
+        return "publish";
+    } else if (pathname.startsWith("/dashboard/websites")) {
+        return "websites";
+    } else if (pathname.startsWith("/dashboard/projects")) {
+        return "projects";
+    } else if (pathname.startsWith("/dashboard")) {
+        return "home";
+    }
+    return "home";
+}
