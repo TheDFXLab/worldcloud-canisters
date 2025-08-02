@@ -4,6 +4,7 @@ import { LinearProgress, Tooltip } from "@mui/material";
 import { DeserializedDeployment } from "../../AppLayout/interfaces";
 import { useProjectsLogic } from "../../../hooks/useProjectsLogic";
 import { formatDate } from "../../../utility/formatter";
+import { useFreemiumLogic } from "../../../hooks/useFreemiumLogic";
 
 interface UsageStatisticsCardProps {
   deployment: DeserializedDeployment | null;
@@ -17,7 +18,6 @@ export const UsageStatisticsCard: React.FC<UsageStatisticsCardProps> = ({
   isFreemium,
 }) => {
   const { isLoadingUsage, userUsage } = useProjectsLogic();
-
   const getStatusColor = (status: boolean) => {
     switch (status) {
       case true:
@@ -29,11 +29,11 @@ export const UsageStatisticsCard: React.FC<UsageStatisticsCardProps> = ({
     }
   };
 
-  const renderQuotaProgressBar = () => {
-    if (!userUsage?.quota) return null;
+  const renderQuotaProgressBar = React.useMemo(() => {
+    if (!userUsage?.usage_log.quota) return null;
 
-    const consumed = userUsage.quota.consumed || 0;
-    const total = userUsage.quota.total || 1;
+    const consumed = userUsage.usage_log.quota.consumed || 0;
+    const total = userUsage.usage_log.quota.total || 1;
     const usagePercentage = Math.min((consumed / total) * 100, 100);
     const isWarning = usagePercentage > 80;
     const isFull = usagePercentage >= 100;
@@ -60,14 +60,20 @@ export const UsageStatisticsCard: React.FC<UsageStatisticsCardProps> = ({
                 {isFull ? "Quota limit reached!" : "Approaching quota limit"}
               </div>
             )}
-            <div className="quota-reset-info">
-              Consumption resets every 24 hours UTC
+            <div className="quota-reset-container">
+              <span className="quota-reset-info">
+                Consumption resets every 24 hours UTC
+              </span>{" "}
+              <span className="quota-reset-info">
+                Next Reset:{" "}
+                {new Date(userUsage.reset_time_unix * 1000).toString()}
+              </span>
             </div>
           </div>
         </Tooltip>
       </div>
     );
-  };
+  }, [userUsage, isLoadingUsage]);
 
   const renderFreemiumRows = () => {
     return (
@@ -77,24 +83,30 @@ export const UsageStatisticsCard: React.FC<UsageStatisticsCardProps> = ({
           <div className="info-value">
             <span
               className={`status-dot ${getStatusColor(
-                userUsage?.is_active ? userUsage.is_active : false
+                userUsage?.usage_log.is_active
+                  ? userUsage.usage_log.is_active
+                  : false
               )}`}
             />
-            {userUsage?.is_active ? "Active" : "Inactive"}
+            {userUsage?.usage_log.is_active ? "Active" : "Inactive"}
           </div>
         </div>
         <div className="info-row">
           <div className="info-label">Total usage:</div>
-          <div className="info-value">{userUsage?.usage_count}</div>
+          <div className="info-value">{userUsage?.usage_log.usage_count}</div>
         </div>
-        {renderQuotaProgressBar()}
+        {renderQuotaProgressBar}
         <div className="info-row">
           <div className="info-label">Session duration:</div>
           <div className="info-value">{} </div>
         </div>
         <div className="info-row">
           <div className="info-label">Last Used:</div>
-          <div className="info-value">{formatDate(userUsage?.last_used)}</div>
+          <div className="info-value">
+            {userUsage?.usage_log.last_used
+              ? formatDate(parseInt(userUsage?.usage_log.last_used))
+              : "NA"}
+          </div>
         </div>
       </>
     );
