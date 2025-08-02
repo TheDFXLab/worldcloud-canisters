@@ -1995,6 +1995,12 @@
   background: var(--color-error);
 }
 
+.quota-reset-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
 .quota-reset-info {
   margin-top: 0.5rem;
   color: var(--text-secondary);
