@@ -36,11 +36,11 @@ export const mapHeaderContent = (key: string, githubUser?: any, isAdmin: boolean
             headerCardData.description = `Manage your projects and deployments.`;
             break;
         case "admin":
-            if (isAdmin) {
-                headerCardData.title = "Admin Dashboard";
-                headerCardData.description = `Priviliged operations for viewing and configuring backend data.`;
-            }
-            break;
+            // if (isAdmin) {
+            //     headerCardData.title = "Admin Dashboard";
+            //     headerCardData.description = `Priviliged operations for viewing and configuring backend data.`;
+            // }
+            return null;
     }
     return headerCardData;
 };

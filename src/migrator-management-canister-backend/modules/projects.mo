@@ -73,6 +73,12 @@ module {
       #ok(result_projects);
     };
 
+    public func get_all_projects_paginated(payload : Types.PaginationPayload) : Types.Response<[(Types.ProjectId, Types.Project)]> {
+      let all_entries = Iter.toArray(Map.entries(projects));
+      let paginated_entries = Utility.paginate(all_entries, payload);
+      return #ok(paginated_entries);
+    };
+
     public func is_freemium_session_active(project_id : Types.ProjectId) : Types.Response<Bool> {
       let project : Types.Project = switch (Map.get(projects, Nat.compare, project_id)) {
         case (null) { return #err(Errors.NotFoundProject()) };
@@ -91,6 +97,30 @@ module {
       };
     };
 
+    public func get_user_projects_batch_paginated(payload : Types.PaginationPayload) : Types.Response<[(Principal, [Types.Project])]> {
+      let all_entries = Iter.toArray(Map.entries(user_to_projects));
+      let paginated_entries = Utility.paginate(all_entries, payload);
+
+      // Get paginated entries and fetch projects for each user
+      var result : [(Principal, [Types.Project])] = [];
+      for ((user, project_ids) in paginated_entries.vals()) {
+        var user_projects : [Types.Project] = [];
+
+        // Fetch projects for this user
+        for (project_id in project_ids.vals()) {
+          switch (Map.get(projects, Nat.compare, project_id)) {
+            case (null) { /* Skip if project not found */ };
+            case (?p) {
+              user_projects := Array.append(user_projects, [p]);
+            };
+          };
+        };
+
+        result := Array.append(result, [(user, user_projects)]);
+      };
+
+      return #ok(result);
+    };
     /** Destructive Methods */
     public func drop_projects() : Bool {
       projects := Map.empty<Nat, Types.Project>();

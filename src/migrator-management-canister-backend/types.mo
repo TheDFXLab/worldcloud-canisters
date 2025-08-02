@@ -232,6 +232,11 @@ module {
     limit : ?Nat;
     page : ?Nat;
   };
+
+  public type PaginationPayload = {
+    limit : ?Nat;
+    page : ?Nat;
+  };
   public type CreateProjectPayload = {
     project_name : Text;
     project_description : Text;
@@ -395,6 +400,11 @@ module {
     rate_limit_window : Nat; //duration of a theoretical session. used to deny occupying a shared canister when (usage_count > max_uses_threshold)
     max_uses_threshold : Nat; // maximum number of times the user is allowed to occupy the shared canister within the rate_limit_window
     quota : Quota;
+  };
+
+  public type UsageLogExtended = {
+    usage_log : UsageLog;
+    reset_time_unix : Nat;
   };
 
   public type Quota = {

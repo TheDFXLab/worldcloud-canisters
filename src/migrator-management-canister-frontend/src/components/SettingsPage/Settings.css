@@ -4,6 +4,7 @@
   background-color: var(--background);
   /* overflow-y: auto; */
   margin: 3rem auto;
+  padding-top: 5rem;
 }
 
 .settings-header {

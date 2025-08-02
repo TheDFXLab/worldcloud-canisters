@@ -5,6 +5,12 @@
   margin: 1rem 0;
 }
 
+.treasury-section {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
 .progress-timeline {
   position: relative;
 }

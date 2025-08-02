@@ -13,9 +13,9 @@ import Utility "../utils/Utility";
 import Map "mo:core/Map";
 
 module {
-  public class SubscriptionManager(book : Book.Book, ledger : Principal, subscriptionsInit : Map.Map<Principal, Types.Subscription>) {
+  public class SubscriptionManager(book : Book.Book, ledger : Principal, subscriptionsInit : Map.Map<Principal, Types.Subscription>, treasury_account_init : ?Principal) {
     private var icp_fee : Nat = 10_000;
-    private var treasury : ?Principal = null; // Receiver of payments
+    public var treasury : ?Principal = treasury_account_init; // Receiver of payments
     // public var subscriptions : Types.SubscriptionsMap = HashMap.HashMap<Principal, Types.Subscription>(0, Principal.equal, Principal.hash);
     // public var subscriptions = Map.empty<Principal, Types.Subscription>();
     public var subscriptions = subscriptionsInit;
@@ -80,9 +80,8 @@ module {
       },
     ];
 
-    public func set_treasury(new_treasury : Principal) : Bool {
+    public func set_treasury(new_treasury : Principal) : () {
       treasury := ?new_treasury;
-      return true;
     };
 
     public func get_treasury() : ?Principal {
@@ -162,13 +161,9 @@ module {
 
     public func create_subscription(caller : Principal, tier_id : Nat) : async Types.Response<Types.Subscription> {
       // Validate treasury principal
-      let payment_receiver = switch (treasury) {
-        case null {
-          return #err(Errors.TreasuryNotSet());
-        };
-        case (?treasury) {
-          treasury;
-        };
+      let payment_receiver : Principal = switch (treasury) {
+        case (null) { return #err(Errors.TreasuryNotSet()) };
+        case (?val) { val };
       };
 
       if (tier_id >= tiers_list.size()) {
@@ -210,7 +205,7 @@ module {
             max_slots = tier.slots;
             used_slots = sub.used_slots;
             canisters = sub.canisters;
-            free_canisters = [];
+            free_canisters = sub.free_canisters;
             date_created = Utility.get_time_now(#milliseconds);
             date_updated = Utility.get_time_now(#milliseconds);
           };

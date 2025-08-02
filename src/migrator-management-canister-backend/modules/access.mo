@@ -9,6 +9,7 @@ import Nat64 "mo:base/Nat64";
 import Nat "mo:base/Nat";
 import Array "mo:base/Array";
 import ErrorType "../modules/errors";
+import Utility "../utils/Utility";
 
 module {
   public class AccessControl(deployer_principal : Principal, role_map_init : Types.RoleMap) {
@@ -20,6 +21,11 @@ module {
       Debug.print("Initted access control.");
       Map.add(role_map, Principal.compare, deployer_principal, #super_admin);
       is_initialized := true;
+    };
+
+    public func get_role_users(payload : Types.PaginationPayload) : Types.Response<[(Principal, Types.Role)]> {
+      let roles : [(Principal, Types.Role)] = Iter.toArray(Map.entries(role_map));
+      return #ok(Utility.paginate(roles, payload));
     };
 
     /** Assertions */

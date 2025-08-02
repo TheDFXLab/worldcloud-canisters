@@ -1,10 +1,11 @@
 import { Principal } from "@dfinity/principal";
 import { createActor } from "../../../../declarations/migrator-management-canister-backend";
 import { ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
-import { _SERVICE, ActivityLog, GetProjectsByUserPayload, Project, ProjectPlan, Response, Result, StoreAssetInCanisterPayload, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { _SERVICE, ActivityLog, GetProjectsByUserPayload, Project, ProjectPlan, Response, Result, StoreAssetInCanisterPayload, UsageLogExtended, WorkflowRunDetails } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
-import { DeserializedProject, DeserializedUsageLog, SerializedUsageLog, serializedUsageLog } from "../../utility/bigint";
+import { DeserializedProject, DeserializedUsageLog, SerializedUsageLog, serializedUsageLog, SerializedUsageLogExtended } from "../../utility/bigint";
+import { DeserializedActivityLog, DeserializedPaginationPayload, PaginationPayload, serializePaginationPayload } from "../../serialization/admin";
 // import { CanisterStatus } from "../authority";
 
 interface CreateProjectPayload {
@@ -67,10 +68,18 @@ class MainApi {
         }
     }
 
-    async get_all_subscriptions() {
-        // const subscriptions = await this.actor?.get_all_subscriptions();
-        // return subscriptions;
+    private async validate() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
     }
+
 
     // Get identity's derived public key
     async getPublicKey() {
@@ -327,21 +336,18 @@ class MainApi {
         }
     }
 
+    async get_quota_reset_time_utc() {
+        this.validate();
+
+        return await this.actor?.get_next_quota_reset_utc();
+    }
 
     // Request a freemium session for deployment
     async getUserFreemiumUsage() {
         try {
-            if (!this.actor) {
-                throw new Error("Actor not initialized.");
-            }
-            if (!this.idenitified) {
-                throw new Error("Actor not identified.");
-            }
-            if (!this.identity) {
-                throw new Error("Identity not initialized.");
-            }
+            this.validate();
 
-            const result = await this.actor.get_user_slot();
+            const result = await this.actor?.get_user_slot();
             if (!result) {
                 throw new Error("Failed to request freemium session");
             }
@@ -355,6 +361,7 @@ class MainApi {
                     return null;
                 }
 
+
                 // Return the slot data in a consistent format
                 return {
                     project_id: slot.project_id.length > 0 ? slot.project_id[0] : null,
@@ -365,7 +372,7 @@ class MainApi {
                     create_timestamp: slot.create_timestamp,
                     duration: slot.duration,
                     start_cycles: slot.start_cycles,
-                    status: slot.status
+                    status: slot.status,
                 };
             }
             else {
@@ -518,7 +525,7 @@ class MainApi {
             return null;
         }
     }
-    async getUserUsage(): Promise<SerializedUsageLog> {
+    async getUserUsage(): Promise<UsageLogExtended> {
         try {
             if (!this.actor) {
                 throw new Error("Actor not initialized.");
@@ -540,7 +547,7 @@ class MainApi {
                 throw this.handleResponseError(result.err);
             }
 
-            return serializedUsageLog(result.ok);
+            return result.ok;
         } catch (error) {
             console.error(`Error getting projects:`, error);
             throw error;
@@ -612,6 +619,441 @@ class MainApi {
     }
 
 
+    // Admin Methods
+    async get_slots(limit?: number | null, index?: number | null) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.get_slots(limit ? [BigInt(limit)] : [], index ? [BigInt(index)] : []);
+    }
+
+    async get_available_slots(limit?: number | null, index?: number | null) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.get_available_slots(limit ? [BigInt(limit)] : [], index ? [BigInt(index)] : []);
+    }
+
+    async get_used_slots() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.get_used_slots();
+    }
+
+    async get_all_subscriptions() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.get_all_subscriptions();
+    }
+
+    async getDeployedCanisters() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.getDeployedCanisters();
+    }
+
+    async admin_get_admin_users(payload: PaginationPayload) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+        return await this.actor.admin_get_admins(serializePaginationPayload(payload));
+    }
+
+    async admin_set_all_slot_duration(newDurationMs: number) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.admin_set_all_slot_duration(BigInt(newDurationMs));
+    }
+
+    async admin_delete_usage_logs() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.admin_delete_usage_logs();
+    }
+
+    async update_slot(slotId: number, updatedSlot: any) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.update_slot(BigInt(slotId), updatedSlot);
+    }
+
+    async delete_projects() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.delete_projects();
+    }
+
+    async delete_workflow_run_history() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.delete_workflow_run_history();
+    }
+
+    async reset_project_slot(projectId: number) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.reset_project_slot(BigInt(projectId));
+    }
+
+    async reset_slots() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.reset_slots();
+    }
+
+    async purge_expired_sessions() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.purge_expired_sessions();
+    }
+
+    async delete_all_logs() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.delete_all_logs();
+    }
+
+    async grant_role(principal: string, role: any) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.grant_role(Principal.fromText(principal), role);
+    }
+
+    async revoke_role(principal: string) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.revoke_role(Principal.fromText(principal));
+    }
+
+    async check_role(principal: string) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.check_role(Principal.fromText(principal));
+    }
+
+    async uploadAssetCanisterWasm(wasm: number[]) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.uploadAssetCanisterWasm(wasm);
+    }
+
+    // New Admin API Methods
+    async admin_get_activity_logs_all(payload: DeserializedPaginationPayload) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.admin_get_activity_logs_all(payload);
+    }
+
+    async admin_get_workflow_run_history_all(payload: DeserializedPaginationPayload) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.admin_get_workflow_run_history_all(payload);
+    }
+
+    async admin_get_usage_logs_all(payload: DeserializedPaginationPayload) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.admin_get_usage_logs_all(payload);
+    }
+
+    async admin_get_user_slot_id(user: string) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.admin_get_user_slot_id(Principal.fromText(user));
+    }
+
+    async admin_get_user_projects_all(payload: DeserializedPaginationPayload) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.admin_get_user_projects_all(payload);
+    }
+
+    async admin_get_user_projects(user: string, payload: DeserializedPaginationPayload) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.admin_get_user_projects(Principal.fromText(user), payload);
+    }
+
+    async admin_get_projects_all(payload: DeserializedPaginationPayload) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.admin_get_projects_all(payload);
+    }
+
+    async admin_get_canister_deployments_all(payload: DeserializedPaginationPayload) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.admin_get_canister_deployments_all(payload);
+    }
+
+    async admin_get_book_entries_all(payload: DeserializedPaginationPayload) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.admin_get_book_entries_all(payload);
+    }
+
+    async admin_set_treasury(treasuryPrincipal: string) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+        return await this.actor.admin_set_treasury(Principal.fromText(treasuryPrincipal));
+    }
+
+    async admin_withdraw_treasury() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+        return await this.actor.admin_withdraw_treasury();
+    }
+
+    async admin_get_treasury_principal() {
+        this.validate();
+        return await this.actor?.admin_get_treasury_principal();
+    }
+    async admin_get_treasury_balance() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+        return await this.actor.admin_get_treasury_balance();
+    }
 }
 
 

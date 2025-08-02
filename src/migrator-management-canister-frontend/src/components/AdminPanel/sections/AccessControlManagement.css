@@ -1,0 +1,889 @@
+.access-control-management {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Summary Cards */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.summary-card {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.1rem 0.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  min-width: 180px;
+  width: 180px;
+  position: relative;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--color-primary);
+}
+
+.card-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+}
+
+.card-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.access-control-management .card-content {
+  min-width: 0;
+  flex: 1;
+  position: relative;
+  background: none;
+  margin: 0;
+  padding: 0.5rem 0.5rem;
+  max-width: fit-content;
+}
+
+.access-control-management .card-content h3 {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+}
+
+.card-value {
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+}
+
+/* Actions Section */
+.admin-actions-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.admin-action-card {
+  background: var(--background-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  row-gap: 0.5rem;
+}
+
+.admin-action-card h3 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.admin-action-card p {
+  margin: 0 0 1rem 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.admin-action-input {
+  display: flex;
+  flex-direction: row;
+  justify-items: flex-start;
+  align-items: flex-start;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.admin-action-input input,
+.admin-action-input select {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-secondary);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.admin-action-input input:focus,
+.admin-action-input select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.admin-action-card button {
+  padding: 0.75rem 1rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-action-input button:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.admin-action-input button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-action-buttons button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-action-buttons button.primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.admin-action-buttons button.primary:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.admin-action-buttons button.warning {
+  background: #f59e0b;
+  color: white;
+}
+
+.admin-action-buttons button.warning:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+}
+
+.admin-action-buttons button.danger {
+  background: #ef4444;
+  color: white;
+}
+
+.admin-action-buttons button.danger:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+/* Table Section */
+.admin-table-section {
+  background: var(--background-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.admin-table-section h3 {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.admin-loading {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.admin-table-container {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.admin-table th {
+  background: var(--background-secondary);
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-table tr:hover {
+  background: var(--background-hover);
+}
+
+.admin-principal-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-principal-id {
+  font-family: monospace;
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+}
+
+.admin-copy-btn {
+  padding: 0.25rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+}
+
+.admin-copy-btn:hover {
+  background: var(--background-hover);
+  color: var(--color-primary);
+}
+
+.admin-copy-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.admin-role-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.admin-role-badge.admin {
+  background: #dc2626;
+  color: white;
+}
+
+.admin-role-badge.moderator {
+  background: #f59e0b;
+  color: white;
+}
+
+.admin-role-badge.user {
+  background: #3b82f6;
+  color: white;
+}
+
+.admin-status-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.admin-status-badge.active {
+  background: #10b981;
+  color: white;
+}
+
+.admin-status-badge.blocked {
+  background: #ef4444;
+  color: white;
+}
+
+.admin-action-buttons-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-action-btn {
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+}
+
+.admin-action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-action-btn.primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.admin-action-btn.primary:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.admin-action-btn.warning {
+  background: #f59e0b;
+  color: white;
+}
+
+.admin-action-btn.warning:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+}
+
+.admin-action-btn.danger {
+  background: #ef4444;
+  color: white;
+}
+
+.admin-action-btn.danger:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+/* Pagination Styles */
+.admin-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.admin-pagination-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.admin-limit-select {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.admin-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-pagination-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-pagination-btn:hover:not(:disabled) {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.admin-pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-page-info {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.admin-no-data {
+  text-align: center;
+  color: var(--text-secondary);
+  font-style: italic;
+  padding: 2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .admin-summary-cards {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 2fr));
+  }
+
+  .admin-actions-section {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+
+  .admin-action-card {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-summary-card {
+    min-width: 140px;
+    width: 140px;
+    padding: 0.1rem 0.3rem;
+  }
+
+  .admin-card-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .access-control-management .admin-card-content {
+    padding: 0.3rem 0.3rem;
+  }
+
+  .access-control-management .admin-card-content h3 {
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-card-value {
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-actions-section {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .admin-action-card {
+    padding: 1rem;
+  }
+
+  .admin-action-card h3 {
+    font-size: var(--font-size-sm);
+  }
+
+  .admin-action-card p {
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-action-input {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .admin-action-input input,
+  .admin-action-input select {
+    padding: 0.5rem;
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-action-input button {
+    padding: 0.5rem 1rem;
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-action-buttons button {
+    padding: 0.5rem 1rem;
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-principal-container {
+    gap: 0.25rem;
+  }
+
+  .admin-copy-btn {
+    padding: 0.2rem;
+    min-width: 20px;
+    height: 20px;
+  }
+
+  .admin-copy-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .admin-table-section {
+    padding: 1rem;
+  }
+
+  .admin-table-section h3 {
+    font-size: var(--font-size-sm);
+    margin-bottom: 1rem;
+  }
+
+  .admin-table {
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.5rem 0.25rem;
+  }
+
+  .admin-table th {
+    font-size: var(--font-size-xs);
+  }
+
+  .role-badge,
+  .status-badge {
+    font-size: var(--font-size-xs);
+    padding: 0.2rem 0.4rem;
+  }
+
+  .action-btn {
+    padding: 0.2rem 0.5rem;
+    font-size: var(--font-size-xs);
+    min-width: 28px;
+    height: 28px;
+  }
+
+  .action-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .admin-summary-card {
+    min-width: 120px;
+    width: 120px;
+    padding: 0.1rem 0.2rem;
+  }
+
+  .access-control-management .admin-card-content {
+    padding: 0.2rem 0.2rem;
+  }
+
+  .admin-action-card {
+    padding: 0.75rem;
+  }
+
+  .admin-action-input input,
+  .admin-action-input select {
+    padding: 0.4rem;
+  }
+
+  .admin-action-input button {
+    padding: 0.4rem 0.75rem;
+  }
+
+  .admin-action-buttons button {
+    padding: 0.4rem 0.75rem;
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-copy-btn {
+    padding: 0.15rem;
+    min-width: 18px;
+    height: 18px;
+  }
+
+  .admin-copy-btn svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .admin-pagination {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.75rem;
+  }
+
+  .admin-pagination-info {
+    justify-content: center;
+  }
+
+  .admin-pagination-controls {
+    justify-content: center;
+  }
+
+  .admin-table-section {
+    padding: 0.75rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.4rem 0.2rem;
+  }
+
+  /* Hide less important columns on small screens */
+  .admin-table th:nth-child(4),
+  .admin-table td:nth-child(4) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .admin-summary-card {
+    min-width: 100px;
+    width: 100px;
+    padding: 0.1rem 0.2rem;
+  }
+
+  .admin-card-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .access-control-management .admin-card-content {
+    padding: 0.2rem 0.2rem;
+  }
+
+  .access-control-management .admin-card-content h3 {
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-card-value {
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-actions-section {
+    gap: 0.75rem;
+  }
+
+  .admin-action-card {
+    padding: 0.5rem;
+  }
+
+  .admin-action-card h3 {
+    font-size: var(--font-size-xs);
+    margin-bottom: 0.25rem;
+  }
+
+  .admin-action-card p {
+    font-size: var(--font-size-xs);
+    margin-bottom: 0.75rem;
+  }
+
+  .admin-action-input {
+    gap: 0.4rem;
+  }
+
+  .admin-action-input input,
+  .admin-action-input select {
+    padding: 0.3rem;
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-action-input button {
+    padding: 0.3rem 0.5rem;
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-action-buttons {
+    gap: 0.5rem;
+  }
+
+  .admin-action-buttons button {
+    padding: 0.3rem 0.5rem;
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-pagination {
+    padding: 0.5rem;
+  }
+
+  .admin-pagination-info {
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-pagination-btn {
+    padding: 0.3rem 0.5rem;
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-table-section {
+    padding: 0.5rem;
+  }
+
+  .admin-table-section h3 {
+    font-size: var(--font-size-xs);
+    margin-bottom: 0.75rem;
+  }
+
+  .admin-table {
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.3rem 0.15rem;
+  }
+
+  .admin-table th {
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-role-badge,
+  .admin-status-badge {
+    font-size: var(--font-size-xs);
+    padding: 0.15rem 0.3rem;
+  }
+
+  .admin-action-btn {
+    padding: 0.15rem 0.4rem;
+    font-size: var(--font-size-xs);
+    min-width: 24px;
+    height: 24px;
+  }
+
+  .admin-action-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Hide more columns on very small screens */
+  .admin-table th:nth-child(3),
+  .admin-table td:nth-child(3) {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .admin-summary-cards {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .admin-summary-card {
+    min-width: 100%;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .admin-action-card {
+    padding: 0.4rem;
+  }
+
+  .admin-action-input input,
+  .admin-action-input select {
+    padding: 0.25rem;
+  }
+
+  .admin-action-input button {
+    padding: 0.25rem 0.4rem;
+  }
+
+  .admin-action-buttons button {
+    padding: 0.25rem 0.4rem;
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-copy-btn {
+    padding: 0.1rem;
+    min-width: 16px;
+    height: 16px;
+  }
+
+  .admin-copy-btn svg {
+    width: 8px;
+    height: 8px;
+  }
+
+  .admin-pagination {
+    padding: 0.4rem;
+  }
+
+  .admin-pagination-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .admin-pagination-controls {
+    gap: 0.5rem;
+  }
+
+  .admin-pagination-btn {
+    padding: 0.25rem 0.4rem;
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-table-section {
+    padding: 0.4rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.25rem 0.1rem;
+  }
+
+  /* Show only essential columns on very small screens */
+  .admin-table th:nth-child(2),
+  .admin-table td:nth-child(2),
+  .admin-table th:nth-child(5),
+  .admin-table td:nth-child(5) {
+    display: none;
+  }
+}

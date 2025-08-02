@@ -6,6 +6,7 @@ import {
   useEffect,
 } from "react";
 import { MenuItem } from "../../components/Sidebar/Sidebar";
+import { mapRouteToKey } from "../../utility/navigation";
 
 interface SideBarContextType {
   showSideBar: boolean;
@@ -25,13 +26,37 @@ const SideBarContext = createContext<SideBarContextType | undefined>(undefined);
 
 export function SideBarProvider({ children }: { children: ReactNode }) {
   const [showSideBar, setShowSideBar] = useState(false);
-  const [activeTab, setActiveTab] = useState<MenuItem | null>("home");
+  const [activeTab, setActiveTab] = useState<MenuItem | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const [isMobile, setIsMobile] = useState(
     window.innerWidth <= 768 ? true : false
   );
+
+  // Detect current route and set active tab on mount and route changes
+  useEffect(() => {
+    const updateActiveTab = () => {
+      const currentPath = window.location.pathname;
+      const currentTab = mapRouteToKey(currentPath) as MenuItem;
+      setActiveTab(currentTab);
+    };
+
+    // Set initial active tab
+    updateActiveTab();
+
+    // Listen for route changes
+    const handleRouteChange = () => {
+      updateActiveTab();
+    };
+
+    // Listen for popstate (back/forward navigation)
+    window.addEventListener("popstate", handleRouteChange);
+
+    return () => {
+      window.removeEventListener("popstate", handleRouteChange);
+    };
+  }, []);
 
   useEffect(() => {
     // if (isMobile) {

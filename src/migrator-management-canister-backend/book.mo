@@ -6,6 +6,7 @@ import Nat "mo:base/Nat";
 import Map "mo:core/Map";
 import Order "mo:core/Order";
 import T "types";
+import Utility "utils/Utility";
 
 module {
   public class Book(book_init : T.BookMap) {
@@ -28,6 +29,15 @@ module {
       Map.size(book);
     };
 
+    public func get_all_entries() : T.Response<[(Principal, Map.Map<T.Token, Nat>)]> {
+      #ok(Iter.toArray(Map.entries(book)));
+    };
+
+    public func get_all_entries_paginated(payload : T.PaginationPayload) : T.Response<[(Principal, Map.Map<T.Token, Nat>)]> {
+      let all_entries = Iter.toArray(Map.entries(book));
+      let paginated_entries = Utility.paginate(all_entries, payload);
+      #ok(paginated_entries);
+    };
     public func toStable() : [(Principal, [(T.Token, Nat)])] {
       let entries = Iter.toArray(Map.entries(book));
       Array.map<(Principal, Map.Map<T.Token, Nat>), (Principal, [(T.Token, Nat)])>(

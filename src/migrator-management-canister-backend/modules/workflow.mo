@@ -31,12 +31,12 @@ module {
       return workflow_run_history_array;
     };
 
-    public func update_workflow_run(project_id : Nat, workflow_run_details : Types.WorkflowRunDetails) : async Types.Result {
-      // let is_authorized = switch (_validate_project_access(user, project_id)) {
-      //     case (#err(_msg)) { return #err(_msg) };
-      //     case (#ok(res)) { res };
-      // };
+    public func get_workflow_history_all(payload : Types.PaginationPayload) : Types.Response<[(Nat, [Types.WorkflowRunDetails])]> {
+      let history : [(Nat, [Types.WorkflowRunDetails])] = Iter.toArray(Map.entries(workflow_run_history));
+      return #ok(Utility.paginate(history, payload));
+    };
 
+    public func update_workflow_run(project_id : Nat, workflow_run_details : Types.WorkflowRunDetails) : async Types.Result {
       let workflow_run_history_array = get_workflow_history(project_id);
 
       let target_workflow_run = Array.filter(

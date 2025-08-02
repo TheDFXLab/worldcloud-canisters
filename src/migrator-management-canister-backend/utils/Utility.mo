@@ -5,6 +5,8 @@ import Int "mo:base/Int";
 import Time "mo:base/Time";
 import Principal "mo:base/Principal";
 import Errors "../modules/errors";
+import Array "mo:base/Array";
+import Iter "mo:base/Iter";
 
 module {
   // Utility function that helps writing assertion-driven code more concisely.
@@ -100,6 +102,33 @@ module {
     };
   };
 
+  // Generic pagination utility function
+  public func paginate<T>(items : [T], payload : Types.PaginationPayload) : [T] {
+    let _limit = expect_else(payload.limit, 20);
+    let _page = expect_else(payload.page, 0);
+
+    // Calculate pagination
+    let start = _page * _limit;
+    let end = if (start + _limit >= items.size()) {
+      items.size();
+    } else {
+      start + _limit;
+    };
+
+    // Return empty array if start is beyond array bounds
+    if (start >= items.size()) {
+      return [];
+    };
+
+    // Get paginated slice
+    var result : [T] = [];
+    for (i in Iter.range(start, end - 1)) {
+      result := Array.append(result, [items[i]]);
+    };
+
+    return result;
+  };
+
   public func get_time_now(format : Types.TimeFormat) : Int {
     let divisor = switch (format) {
       case (#nanoseconds) { 1 };
@@ -126,10 +155,12 @@ module {
       return false;
     };
   };
+
   public func get_quota_scheduler_seconds() : Types.QuotaSchedulerSeconds {
     let now = get_time_now(#seconds);
 
     // Calculate seconds until next midnight (UTC)
+    // let seconds_in_day : Nat = 5 * 60; // 5mins for debugging
     let seconds_in_day : Nat = 24 * 60 * 60; // 86400 seconds
     let seconds_since_midnight : Nat = Int.abs(now % seconds_in_day);
     let seconds_until_next_midnight : Nat = seconds_in_day - seconds_since_midnight;

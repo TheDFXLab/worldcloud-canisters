@@ -183,7 +183,6 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     try {
       summon("Creating Project...");
       setShowLoadBar(true);
-      debugger;
       const result = await dispatch(
         createProject({
           identity,

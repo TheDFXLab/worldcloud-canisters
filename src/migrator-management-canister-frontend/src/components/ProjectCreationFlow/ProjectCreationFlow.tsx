@@ -205,11 +205,6 @@ const ProjectCreationFlow: React.FC<ProjectCreationFlowProps> = () => {
     );
   };
 
-  useEffect(() => {
-    // debugger;
-    console.log(`Iniitalizing`);
-  }, [isInitializing]);
-
   // Show skeleton loading state while initializing from URL parameters
   if (isInitializing || isLoading) {
     return (

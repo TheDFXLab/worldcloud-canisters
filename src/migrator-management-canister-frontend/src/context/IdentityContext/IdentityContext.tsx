@@ -253,11 +253,58 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       console.log("Auth client created");
       setGlobalAuthClient(_authClient);
 
-      const popUpHeight = 0.42 * window.innerWidth;
-      const popUpWidth = 0.35 * window.innerWidth;
+      // Responsive popup dimensions for all devices
+      const getPopupDimensions = () => {
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
 
-      const left = window.innerWidth / 2 - popUpWidth / 2;
-      const top = window.innerHeight / 2 - popUpHeight / 3;
+        // Base dimensions for different screen sizes
+        let popUpWidth: number;
+        let popUpHeight: number;
+
+        if (screenWidth <= 480) {
+          // Mobile phones
+          popUpWidth = Math.min(screenWidth * 0.95, 400);
+          popUpHeight = Math.min(screenHeight * 0.8, 600);
+        } else if (screenWidth <= 768) {
+          // Tablets
+          popUpWidth = Math.min(screenWidth * 0.85, 500);
+          popUpHeight = Math.min(screenHeight * 0.75, 700);
+        } else if (screenWidth <= 1024) {
+          // Small laptops
+          popUpWidth = Math.min(screenWidth * 0.6, 600);
+          popUpHeight = Math.min(screenHeight * 0.7, 800);
+        } else {
+          // Desktop and larger screens
+          popUpWidth = Math.min(screenWidth * 0.4, 700);
+          popUpHeight = Math.min(screenHeight * 0.65, 900);
+        }
+
+        // Ensure minimum dimensions
+        popUpWidth = Math.max(popUpWidth, 320);
+        popUpHeight = Math.max(popUpHeight, 500);
+
+        // Ensure popup doesn't exceed screen boundaries
+        popUpWidth = Math.min(popUpWidth, screenWidth - 20);
+        popUpHeight = Math.min(popUpHeight, screenHeight - 20);
+
+        // Calculate position to center the popup
+        const left = Math.max(0, (screenWidth - popUpWidth) / 2);
+        const top = Math.max(0, (screenHeight - popUpHeight) / 2);
+
+        // Ensure popup is fully visible on screen
+        const finalLeft = Math.min(left, screenWidth - popUpWidth - 10);
+        const finalTop = Math.min(top, screenHeight - popUpHeight - 10);
+
+        return {
+          popUpWidth: Math.round(popUpWidth),
+          popUpHeight: Math.round(popUpHeight),
+          left: Math.round(finalLeft),
+          top: Math.round(finalTop),
+        };
+      };
+
+      const { popUpWidth, popUpHeight, left, top } = getPopupDimensions();
 
       await new Promise((resolve, reject) => {
         //safari: http://bw4dl-smaaa-aaaaa-qaacq-cai.localhost:4943/
@@ -266,7 +313,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         _authClient.login({
           derivationOrigin: frontend_canister_id_url,
           identityProvider: internetIdentityConfig.identityProvider,
-          windowOpenerFeatures: `toolbar=0,location=0,menubar=0,width=${popUpWidth},height=${popUpHeight},left=${left},top=${top}`,
+          windowOpenerFeatures: `toolbar=0,location=0,menubar=0,width=${popUpWidth},height=${popUpHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`,
 
           maxTimeToLive: BigInt(
             internetIdentityConfig.loginExpiryInHours *

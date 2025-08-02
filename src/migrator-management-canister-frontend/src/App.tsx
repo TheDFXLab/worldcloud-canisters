@@ -27,7 +27,7 @@ import WasmUploader from "./components/WasmUploader/WasmUploader";
 import CanisterDeployer from "./components/CanisterDeployer/CanisterDeployer";
 import { LoadBarProvider } from "./context/LoadBarContext/LoadBarContext";
 import { SideBarProvider } from "./context/SideBarContext/SideBarContext";
-import { AdminPanel } from "./components/AdminPanel/AdminPanel";
+import AdminPanel from "./components/AdminPanel/AdminPanel";
 import { ThemeProvider } from "./context/ThemeContext/ThemeContext";
 import { ProgressBarProvider } from "./context/ProgressBarContext/ProgressBarContext";
 import { CyclesProvider } from "./context/CyclesContext/CyclesContext";

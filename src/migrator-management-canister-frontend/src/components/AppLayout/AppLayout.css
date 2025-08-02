@@ -8,18 +8,21 @@
 }
 
 .app-layout-header-wrapper {
+  /* position: relative; */
+  /* height: auto; */
+  /* width: 100%; */
   /* margin-bottom: 6rem; */
   /* padding-bottom: 5rem; */
 }
 
 .app-layout-header {
-  position: absolute;
-  min-width: 95%;
+  /* position: absolute; */
+  /* min-width: 95%;
   top: 10px;
   height: max-content;
   padding: 0;
   z-index: 10;
-  background: transparent;
+  background: transparent; */
 }
 
 .app-layout-children-container {
@@ -34,7 +37,7 @@
   height: 100vh;
   min-height: 0;
   overflow-y: auto;
-  padding-top: 5rem;
+  /* padding-top: 5rem; */
 }
 
 @media (max-width: 480px) {

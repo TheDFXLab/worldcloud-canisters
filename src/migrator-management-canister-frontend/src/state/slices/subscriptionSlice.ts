@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { Tier, Subscription } from '../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did';
 import MainApi from '../../api/main';
-;
 
 // Frontend interfaces
 export interface FrontendTier {
@@ -222,7 +221,7 @@ export const subscriptionSlice = createSlice({
             .addCase(createSubscription.rejected, (state, action) => {
                 state.isLoadingSub = false;
                 state.error = action.error.message || 'Failed to create subscription';
-            });
+            })
     },
 });
 

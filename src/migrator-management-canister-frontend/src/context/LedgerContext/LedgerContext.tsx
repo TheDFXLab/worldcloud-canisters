@@ -158,7 +158,7 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (err: any) {
       setError(err.message);
       console.error(`error transferring icp: `, err);
-      return false;
+      throw err;
     } finally {
       setIsTransferring(false);
     }

@@ -1,5 +1,5 @@
 import { Principal } from "@dfinity/principal";
-import { CanisterDeployment, CanisterSettings, CanisterStatus, Project, UsageLog } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { CanisterDeployment, CanisterSettings, CanisterStatus, Project, UsageLog, UsageLogExtended } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { CanisterDeploymentStatus } from "./principal";
 export interface SerializedCanisterStatus {
     status: string;
@@ -47,6 +47,10 @@ export interface DeserializedProject {
     date_created: number;
     date_updated: number;
 }
+export interface SerializedUsageLogExtended {
+    usage_log: SerializedUsageLog;
+    reset_time_unix: number;
+}
 
 export interface SerializedUsageLog {
     is_active: boolean;
@@ -58,8 +62,8 @@ export interface SerializedUsageLog {
 }
 
 interface SerializedQuota {
-    consumed: bigint;
-    total: bigint;
+    consumed: number;
+    total: number;
 }
 
 export interface DeserializedUsageLog {
@@ -90,24 +94,59 @@ export interface SerializedActivityLog {
     create_time: bigint;
 }
 
-export const serializedUsageLog = (usageLog: UsageLog): SerializedUsageLog => ({
-    ...usageLog,
-    usage_count: usageLog.usage_count.toString(),
-    last_used: usageLog.last_used.toString(),
-    rate_limit_window: usageLog.rate_limit_window.toString(),
-    max_uses_threshold: usageLog.max_uses_threshold.toString()
-})
 
-export const deserializeUsageLog = (usageLog: SerializedUsageLog): DeserializedUsageLog => ({
-    ...usageLog,
-    usage_count: Number(usageLog.usage_count),
-    last_used: Number(usageLog.last_used),
-    rate_limit_window: Number(usageLog.rate_limit_window),
-    max_uses_threshold: Number(usageLog.max_uses_threshold),
-    quota: {
-        consumed: Number(usageLog.quota.consumed),
-        total: Number(usageLog.quota.total),
-    }
+export const serializedUsageLog = (usageLog: UsageLogExtended): SerializedUsageLogExtended => ({
+    usage_log: {
+        is_active: usageLog.usage_log.is_active,
+        usage_count: usageLog.usage_log.usage_count.toString(),
+        last_used: usageLog.usage_log.last_used.toString(),
+        rate_limit_window: usageLog.usage_log.rate_limit_window.toString(),
+        max_uses_threshold: usageLog.usage_log.max_uses_threshold.toString(),
+        quota: {
+            consumed: Number(usageLog.usage_log.quota.consumed),
+            total: Number(usageLog.usage_log.quota.total),
+        }
+    },
+    reset_time_unix: Number(usageLog.reset_time_unix)
+
+})
+// export const serializedUsageLog= (usageLog: UsageLog): SerializedUsageLog => ({
+
+//         ...usageLog,
+//         usage_count: usageLog.usage_count.toString(),
+//         last_used: usageLog.last_used.toString(),
+//         rate_limit_window: usageLog.rate_limit_window.toString(),
+//         max_uses_threshold: usageLog.max_uses_threshold.toString(),
+
+// })
+
+// export const deserializeUsageLog = (usageLog: SerializedUsageLog): DeserializedUsageLog => ({
+//     ...usageLog,
+//     usage_count: Number(usageLog.usage_count),
+//     last_used: Number(usageLog.last_used),
+//     rate_limit_window: Number(usageLog.rate_limit_window),
+//     max_uses_threshold: Number(usageLog.max_uses_threshold),
+//     quota: {
+//         consumed: Number(usageLog.quota.consumed),
+//         total: Number(usageLog.quota.total),
+//     },
+
+// })
+
+
+export const deserializeUsageLog = (usageLog: SerializedUsageLogExtended): UsageLogExtended => ({
+    usage_log: {
+        is_active: usageLog.usage_log.is_active,
+        usage_count: BigInt(usageLog.usage_log.usage_count),
+        last_used: BigInt(usageLog.usage_log.last_used),
+        rate_limit_window: BigInt(usageLog.usage_log.rate_limit_window),
+        max_uses_threshold: BigInt(usageLog.usage_log.max_uses_threshold),
+        quota: {
+            consumed: BigInt(usageLog.usage_log.quota.consumed),
+            total: BigInt(usageLog.usage_log.quota.total),
+        },
+    },
+    reset_time_unix: BigInt(usageLog.reset_time_unix)
 
 })
 

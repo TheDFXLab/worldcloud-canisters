@@ -127,7 +127,7 @@ const UnsubscribedView: React.FC = () => {
             <div className="card-badge">Free</div>
           </div>
 
-          <div className="card-content">
+          <div className="unsub-view card-content">
             <h3>Try Freemium</h3>
             <p className="card-description">
               Deploy your website instantly with our freemium plan. Perfect for
@@ -195,7 +195,7 @@ const UnsubscribedView: React.FC = () => {
             <div className="card-badge premium">Premium</div>
           </div>
 
-          <div className="card-content">
+          <div className="unsub-view card-content">
             <h3>Upgrade to Premium</h3>
             <p className="card-description">
               Get unlimited deployments, custom domains, and advanced features

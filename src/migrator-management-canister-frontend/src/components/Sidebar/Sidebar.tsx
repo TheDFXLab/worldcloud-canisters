@@ -12,8 +12,9 @@ import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
+import { mapRouteToKey } from "../../utility/navigation";
 
 import "./Sidebar.css";
 import { act, useEffect, useState } from "react";
@@ -56,14 +57,26 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
   } = useSideBar();
   const { setHeaderCard } = useHeaderCard();
   const navigate = useNavigate();
+  const location = useLocation();
   // const [isMobile, setIsMobile] = mobileControl;
 
   useEffect(() => {
     if (isMobile) {
       setIsSidebarCollapsed(window.innerWidth <= 768 ? true : false);
     }
-    handleMenuClick(activeTab ? activeTab : "home", false);
-  }, []);
+    // Only set the menu if activeTab is not null and we're not already on the correct route
+    if (activeTab) {
+      handleMenuClick(activeTab, false);
+    }
+  }, [activeTab]);
+
+  // Update active tab when route changes
+  useEffect(() => {
+    const currentTab = mapRouteToKey(location.pathname) as MenuItem;
+    if (currentTab !== activeTab) {
+      setActiveTab(currentTab);
+    }
+  }, [location.pathname, activeTab, setActiveTab]);
 
   useEffect(() => {
     const resize = () =>
@@ -86,14 +99,20 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
     shouldNavigate: boolean = true
   ) => {
     console.log(`cloicked menu option`, menuItem, shouldNavigate);
-    const headerCardData: HeaderCardData = mapHeaderContent(
+    const headerCardData: HeaderCardData | null = mapHeaderContent(
       menuItem ? menuItem : "home",
       githubUser,
       isAdmin
     );
 
     const navigateToPath = mapKeyToRoute(menuItem ? menuItem : "home");
-    setHeaderCard(headerCardData.title.length > 0 ? headerCardData : null);
+    setHeaderCard(
+      headerCardData
+        ? headerCardData?.title?.length > 0
+          ? headerCardData
+          : null
+        : null
+    );
     setActiveTab(menuItem);
     if (isMobile) {
       handleClose();
@@ -145,39 +164,47 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
         }}
       />
       <aside
-        className={`sidebar${isSidebarCollapsed ? " collapsed" : ""} 
+        className={`sidebar-container${isSidebarCollapsed ? " collapsed" : ""} 
           `}
       >
         <nav className="sidebar-nav">
           <IconTextRowView
-            className={`nav-item ${activeTab === "home" ? "active" : ""}`}
+            className={`sidebar-nav-item ${
+              activeTab === "home" ? "active" : ""
+            }`}
             text="Home"
             IconComponent={HomeIcon}
             onClickIcon={() => handleMenuClick("home", true)}
           />
           {/* <IconTextRowView
-            className={`nav-item ${activeTab === "websites" ? "active" : ""}`}
+            className={`sidebar-nav-item ${activeTab === "websites" ? "active" : ""}`}
             text="Websites"
             IconComponent={LanguageIcon}
             onClickIcon={() => handleMenuClick("websites", true)}
           /> */}
           <IconTextRowView
-            className={`nav-item ${activeTab === "projects" ? "active" : ""}`}
+            className={`sidebar-nav-item ${
+              activeTab === "projects" ? "active" : ""
+            }`}
             text="Projects"
             IconComponent={MemoryIcon}
             onClickIcon={() => handleMenuClick("projects", true)}
           />
 
           <IconTextRowView
-            className={`nav-item ${activeTab === "publish" ? "active" : ""}`}
+            className={`sidebar-nav-item ${
+              activeTab === "publish" ? "active" : ""
+            }`}
             text="New"
             IconComponent={AddIcon}
             onClickIcon={() => handleMenuClick("publish", true)}
           />
-          <div className="bottom-nav-group">
+          <div className="sidebar-bottom-nav-group">
             {isAdmin && (
               <IconTextRowView
-                className={`nav-item ${activeTab === "admin" ? "active" : ""}`}
+                className={`sidebar-nav-item ${
+                  activeTab === "admin" ? "active" : ""
+                }`}
                 text="Admin"
                 IconComponent={SupervisorAccountIcon}
                 onClickIcon={() => handleMenuClick("admin", true)}
@@ -185,19 +212,23 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
             )}
 
             <IconTextRowView
-              className={`nav-item ${activeTab === "billing" ? "active" : ""}`}
+              className={`sidebar-nav-item ${
+                activeTab === "billing" ? "active" : ""
+              }`}
               text="Billing"
               IconComponent={CreditCard}
               onClickIcon={() => handleMenuClick("billing")}
             />
             <IconTextRowView
-              className={`nav-item ${activeTab === "settings" ? "active" : ""}`}
+              className={`sidebar-nav-item ${
+                activeTab === "settings" ? "active" : ""
+              }`}
               text="Settings"
               IconComponent={SettingsIcon}
               onClickIcon={() => handleMenuClick("settings")}
             />
             <IconTextRowView
-              className="nav-item logout"
+              className="sidebar-nav-item logout"
               text="Logout"
               IconComponent={LogoutIcon}
               onClickIcon={() => handleLogout()}

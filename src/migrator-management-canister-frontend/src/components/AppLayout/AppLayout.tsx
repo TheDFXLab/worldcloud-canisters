@@ -164,6 +164,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
             </div>
           </div>
         )}
+
         <div className="app-layout-children-container">{children}</div>
         {actionBar && <ActionBar {...actionBar} />}
       </main>
