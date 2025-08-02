@@ -39,7 +39,7 @@ import Access "modules/access";
 // TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
 // TODO: Handle stable variables (if needed)
 // TODO: Remove unneeded if else in `storeInAssetCanister` for handling files larger than ±2MB (since its handled by frontend)
-(with migration)
+// (with migration)
 shared (deployMsg) persistent actor class CanisterManager() = this {
   transient let IC_MANAGEMENT_CANISTER = "aaaaa-aa"; // Production
   transient let ledger : Principal = Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai");
@@ -278,6 +278,10 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     // Calculate treasury subaccount
     let treasury_account = Account.accountIdentifier(Principal.fromActor(this), Account.principalToSubaccount(treasury_principal));
     return #ok(treasury_account);
+  };
+
+  public shared (msg) func is_admin() : async Types.Response<Bool> {
+    return #ok(access_control.is_authorized(msg.caller));
   };
 
   public shared (msg) func admin_get_treasury_principal() : async Types.Response<Principal> {
@@ -568,7 +572,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   /// TAG: Admin
   public shared (msg) func reset_slots() : async Types.Response<()> {
     if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
-
+    Debug.print("Is authroized...");
     let res : Types.ResetSlotsResult = shareable_canister_manager.reset_slots(Principal.fromActor(this));
 
     for (id in res.project_ids.vals()) {
@@ -1220,7 +1224,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   /// TAG: Admin
   public shared (msg) func check_role(principal : Principal) : async Types.Response<Types.Role> {
-    if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
+    // if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
     return access_control.check_role(principal);
   };
 
