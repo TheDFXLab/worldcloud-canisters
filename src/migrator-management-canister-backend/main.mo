@@ -79,7 +79,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   private stable var _subscriptions = Map.empty<Principal, Types.Subscription>();
   private stable var stable_role_map : Types.RoleMap = Map.empty<Principal, Types.Role>();
   private stable var stable_book : Types.BookMap = Map.empty<Principal, Map.Map<Types.Token, Nat>>();
-  private stable var stable_subscriptions : Types.UserSubscriptionsMap = Map.empty<Principal, Types.Subscription>();
+  private stable var stable_subscriptions : Types.UserSubscriptionsMap = Map.empty<Principal, Types.Subscription>(); // unused
   private stable var stable_workflow_run_history : Types.WorkflowRunHistoryMap = Map.empty<Nat, [Types.WorkflowRunDetails]>();
   private stable var stable_user_canisters : Types.UserCanistersMap = Map.empty<Principal, [Principal]>();
   private stable var stable_slot_id_active_timer : [Nat] = [];
@@ -91,7 +91,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   private stable var TREASURY_ACCOUNT : ?Principal = null;
   private transient var QUOTA_CLEAR_DURATION_SECONDS : Nat = 24 * 60 * 60;
   private transient var QUOTA_CLEAR_DURATION_SECONDS_DEV : Nat = 10 * 60;
-  // private transient var TREASURY_ACCOUNT : ?Principal = null;
+
   /** Classes Instances */
   private transient var book : Book.Book = Book.Book(stable_book);
   private transient let project_manager = ProjectManager.ProjectManager(stable_projects, stable_user_to_projects, stable_next_project_id);
@@ -105,14 +105,12 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   /** Transient Storage */
   private transient var chunks = HashMap.HashMap<Text, Blob>(0, Text.equal, Text.hash);
-  // private transient var canisterBatchMap : Types.CanisterBatchMap = HashMap.HashMap<Principal, (Types.BatchMap, Types.BatchChunks)>(0, Principal.equal, Principal.hash);
   private transient var pending_cycles : HashMap.HashMap<Principal, Nat> = HashMap.HashMap<Principal, Nat>(0, Principal.equal, Principal.hash);
   private transient var assets = HashMap.HashMap<Types.AssetId, Types.Asset>(0, Text.equal, Text.hash); //Store asset metadata
 
   /** Initialization*/
   private func init<system>() {
     access_control.init();
-    // let _is_set_treasury = subscription_manager.set_treasury(Principal.fromActor(this));
     init_quota_timer<system>();
   };
 
