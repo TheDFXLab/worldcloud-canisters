@@ -797,8 +797,9 @@ class MainApi {
         if (!this.identity) {
             throw new Error("Identity not initialized.");
         }
-
-        return await this.actor.reset_slots();
+        let is = await this.actor.reset_slots();
+        debugger;
+        return is;
     }
 
     async purge_expired_sessions() {
@@ -855,6 +856,20 @@ class MainApi {
         }
 
         return await this.actor.revoke_role(Principal.fromText(principal));
+    }
+
+    async is_admin() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+
+        return await this.actor.is_admin();
     }
 
     async check_role(principal: string) {

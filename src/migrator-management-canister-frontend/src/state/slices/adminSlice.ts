@@ -93,6 +93,10 @@ export interface AdminState {
     isLoading: boolean;
     error: string | null;
     successMessage: string | null;
+
+    // current user role
+    currentUserRole: SerializedRole | null,
+    isLoadingCurrentUserRole: boolean,
 }
 
 
@@ -130,6 +134,8 @@ const initialState: AdminState = {
     admins: [],
     treasuryPrincipal: null,
     isLoadingTreasury: false,
+    currentUserRole: null,
+    isLoadingCurrentUserRole: false,
 
 };
 
@@ -309,10 +315,12 @@ export const resetSlots = createAsyncThunk(
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
         const response = await api.reset_slots();
+        debugger;
         if ('ok' in response) {
             return response.ok;
         }
-        throw new Error('Failed to reset slots');
+        debugger;
+        throw new Error(response.err);
     }
 );
 
@@ -404,6 +412,28 @@ export const revokeRole = createAsyncThunk(
     }
 );
 
+export const isAdmin = createAsyncThunk(
+    'admin/isAdmin',
+    async ({
+        identity,
+        agent,
+        principal
+    }: {
+        identity: any;
+        agent: any;
+        principal: string
+    }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.is_admin();
+        debugger;
+        if ('ok' in response) {
+            return response.ok;
+        }
+        debugger;
+        throw new Error('Failed to check role');
+    }
+);
 export const checkRole = createAsyncThunk(
     'admin/checkRole',
     async ({
@@ -418,9 +448,11 @@ export const checkRole = createAsyncThunk(
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
         const response = await api.check_role(principal);
+        debugger;
         if ('ok' in response) {
-            return response.ok;
+            return serializeAdminRole(response.ok);
         }
+        debugger;
         throw new Error('Failed to check role');
     }
 );
@@ -989,16 +1021,33 @@ const adminSlice = createSlice({
         // Check Role
         builder
             .addCase(checkRole.pending, (state) => {
-                state.isLoadingAccessControl = true;
+                state.isLoadingCurrentUserRole = true;
                 state.error = null;
             })
             .addCase(checkRole.fulfilled, (state, action) => {
-                state.isLoadingAccessControl = false;
-                // Handle role check result
+                state.isLoadingCurrentUserRole = false;
+                state.currentUserRole = action.payload;
             })
             .addCase(checkRole.rejected, (state, action) => {
-                state.isLoadingAccessControl = false;
+                state.isLoadingCurrentUserRole = false;
+                state.currentUserRole = null;
                 state.error = action.error.message || 'Failed to check role';
+            });
+
+        // Is Admin
+        builder
+            .addCase(isAdmin.pending, (state) => {
+                state.isLoadingCurrentUserRole = true;
+                state.error = null;
+            })
+            .addCase(isAdmin.fulfilled, (state, action) => {
+                state.isLoadingCurrentUserRole = false;
+                state.currentUserRole = action.payload ? "admin" : null;
+            })
+            .addCase(isAdmin.rejected, (state, action) => {
+                state.isLoadingCurrentUserRole = false;
+                state.currentUserRole = null;
+                state.error = action.error.message || 'Failed to check admin status';
             });
 
         // Upload Asset Canister WASM
