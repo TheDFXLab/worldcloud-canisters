@@ -32,6 +32,7 @@ module {
     public var quotas : Types.QuotasMap = quotas_map_init;
 
     public var next_slot_id : Nat = next_slot_id_init;
+    public var next_quota_reset_s : Nat = 0;
 
     public func reset_slots(actor_principal : Principal) : Types.ResetSlotsResult {
       var reset_project_ids : [?Nat] = [];
@@ -479,6 +480,7 @@ module {
 
       Debug.print("[end_session] Updated slot: " # debug_show (updated_slot) # Principal.toText(slot.user));
 
+      let quota : Types.Quota = get_quota(slot.user);
       // Get and update usage log for user
       let _usage_log : Types.UsageLog = get_usage_log(slot.user);
       let _updated_usage_log : Types.UsageLog = {
@@ -487,7 +489,7 @@ module {
         last_used = Int.abs(Utility.get_time_now(#milliseconds));
         rate_limit_window = _usage_log.rate_limit_window;
         max_uses_threshold = _usage_log.max_uses_threshold;
-        quota = _usage_log.quota;
+        quota = quota;
       };
 
       Map.add(usage_logs, Principal.compare, slot.user, _updated_usage_log);
