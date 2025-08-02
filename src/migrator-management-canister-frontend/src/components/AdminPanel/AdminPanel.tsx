@@ -3,6 +3,7 @@ import { useAdminLogic } from "../../hooks/useAdminLogic";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
 import {
   Settings,
   CreditCard,
@@ -37,11 +38,19 @@ interface AdminPanelProps {}
 
 const AdminPanel: React.FC<AdminPanelProps> = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { error, successMessage, handleClearError, handleClearSuccessMessage } =
-    useAdminLogic();
+  const {
+    error,
+    successMessage,
+    handleClearError,
+    handleClearSuccessMessage,
+    currentUserRole,
+    isLoadingCurrentUserRole,
+    checkCurrentUserRole,
+  } = useAdminLogic();
   const { showToaster, setShowToaster, setToasterData } = useToaster();
   const { setShowModal } = useConfirmationModal();
   const { setHeaderCard } = useHeaderCard();
+  const { summon, destroy } = useLoaderOverlay();
   const navigate = useNavigate();
 
   // Get the active section from URL params or default to "slots"
@@ -80,6 +89,31 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
       setActiveSection(newSection);
     }
   }, [searchParams, activeSection]);
+
+  // Check user's admin role on mount
+  useEffect(() => {
+    const checkAdminAccess = async () => {
+      try {
+        summon("Checking admin access...");
+        await checkCurrentUserRole();
+      } catch (error) {
+        console.error("Failed to check admin access:", error);
+        // Redirect to main page if not admin
+        navigate("/");
+      } finally {
+        destroy();
+      }
+    };
+
+    checkAdminAccess();
+  }, [checkCurrentUserRole, summon, destroy, navigate]);
+
+  // Redirect if user is not admin
+  useEffect(() => {
+    if (!isLoadingCurrentUserRole && currentUserRole === null) {
+      navigate("/");
+    }
+  }, [currentUserRole, isLoadingCurrentUserRole, navigate]);
 
   // Initialize URL with default section if no section is specified
   useEffect(() => {
@@ -188,6 +222,11 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
         return <SlotsManagement />;
     }
   };
+
+  // Don't render admin panel if still loading or user is not admin
+  if (isLoadingCurrentUserRole || currentUserRole === null) {
+    return null;
+  }
 
   return (
     <div className="admin-panel-container">

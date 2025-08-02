@@ -87,7 +87,9 @@ const SlotsManagement: React.FC = () => {
 
   const handleResetAllSlots = async () => {
     try {
+      debugger;
       await handleResetSlots();
+      debugger;
       setToasterData({
         headerContent: "Success",
         toastStatus: true,
@@ -96,12 +98,13 @@ const SlotsManagement: React.FC = () => {
         timeout: 3000,
       });
       setShowToaster(true);
-    } catch (error) {
+    } catch (error: any) {
+      debugger;
       console.error("Failed to reset slots:", error);
       setToasterData({
         headerContent: "Error",
         toastStatus: false,
-        toastData: "Failed to reset slots",
+        toastData: error.message ? error.message : "Failed to reset slots",
         textColor: "red",
         timeout: 3000,
       });

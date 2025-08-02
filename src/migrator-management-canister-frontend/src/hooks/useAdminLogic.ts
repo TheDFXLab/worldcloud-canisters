@@ -19,6 +19,7 @@ import {
     grantRole,
     revokeRole,
     checkRole,
+    isAdmin,
     uploadAssetCanisterWasm,
     fetchActivityLogsAll,
     fetchWorkflowRunHistoryAll,
@@ -75,6 +76,8 @@ export const useAdminLogic = () => {
         userSlot,
         isLoadingUserSlot,
         isLoadingAccessControl,
+        currentUserRole,
+        isLoadingCurrentUserRole,
         bookEntries,
         isLoadingBookEntries,
         isLoading,
@@ -211,6 +214,14 @@ export const useAdminLogic = () => {
         }
     }, [dispatch, identity, agent]);
 
+    // Check current user's role
+    const checkCurrentUserRole = useCallback(async () => {
+        if (identity && agent) {
+            const principal = identity.getPrincipal().toText();
+            await dispatch(isAdmin({ identity, agent, principal }));
+        }
+    }, [dispatch, identity, agent]);
+
     // Upload asset canister WASM
     const handleUploadAssetCanisterWasm = useCallback(async (wasm: number[]) => {
         if (identity && agent) {
@@ -343,6 +354,7 @@ export const useAdminLogic = () => {
     return {
         // Data
         admins,
+        currentUserRole,
         slots,
         availableSlots,
         usedSlots,
@@ -371,6 +383,7 @@ export const useAdminLogic = () => {
         isLoadingCanisterDeployments,
         isLoadingUserSlot,
         isLoadingAccessControl,
+        isLoadingCurrentUserRole,
         isLoadingBookEntries,
         isLoading,
         isLoadingTreasury,
@@ -409,6 +422,7 @@ export const useAdminLogic = () => {
         handleGrantRole,
         handleRevokeRole,
         handleCheckRole,
+        checkCurrentUserRole,
         handleUploadAssetCanisterWasm,
         handleClearError,
         handleClearSuccessMessage,
