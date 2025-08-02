@@ -1,0 +1,158 @@
+/* Admin Confirmation Modal Styles */
+.admin-confirmation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.admin-confirmation-modal {
+  background: var(--background-primary);
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+}
+
+.admin-confirmation-header {
+  margin-bottom: 1rem;
+}
+
+.admin-confirmation-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.admin-confirmation-body {
+  margin-bottom: 2rem;
+}
+
+.admin-confirmation-body p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+}
+
+.admin-confirmation-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.admin-confirmation-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: var(--font-size-sm);
+}
+
+.admin-confirmation-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-confirmation-btn-cancel {
+  background: var(--background-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.admin-confirmation-btn-cancel:hover:not(:disabled) {
+  background: var(--background-hover);
+}
+
+.admin-confirmation-btn-confirm {
+  color: white;
+}
+
+.admin-confirmation-btn-confirm.admin-confirmation-btn-danger {
+  background: #ef4444;
+}
+
+.admin-confirmation-btn-confirm.admin-confirmation-btn-danger:hover:not(
+    :disabled
+  ) {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.admin-confirmation-btn-confirm.admin-confirmation-btn-warning {
+  background: #f59e0b;
+}
+
+.admin-confirmation-btn-confirm.admin-confirmation-btn-warning:hover:not(
+    :disabled
+  ) {
+  background: #d97706;
+  transform: translateY(-1px);
+}
+
+.admin-confirmation-btn-confirm.admin-confirmation-btn-primary {
+  background: var(--color-primary);
+}
+
+.admin-confirmation-btn-confirm.admin-confirmation-btn-primary:hover:not(
+    :disabled
+  ) {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+/* Responsive adjustments for confirmation modal */
+@media (max-width: 768px) {
+  .admin-confirmation-modal {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+
+  .admin-confirmation-header h3 {
+    font-size: var(--font-size-base);
+  }
+
+  .admin-confirmation-body p {
+    font-size: var(--font-size-sm);
+  }
+
+  .admin-confirmation-actions {
+    flex-direction: column;
+  }
+
+  .admin-confirmation-btn {
+    padding: 0.5rem 1rem;
+    font-size: var(--font-size-sm);
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-confirmation-modal {
+    padding: 1rem;
+    margin: 0.5rem;
+  }
+
+  .admin-confirmation-header h3 {
+    font-size: var(--font-size-sm);
+  }
+
+  .admin-confirmation-body p {
+    font-size: var(--font-size-xs);
+  }
+
+  .admin-confirmation-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: var(--font-size-xs);
+  }
+}

@@ -1,0 +1,111 @@
+.project-creation-flow {
+  max-width: 1200px;
+  /* margin: 10rem auto 0; */
+  padding: 0 20px;
+  position: relative;
+  /* overflow-y: auto; */
+  /* margin-top: 1rem; */
+  padding-top: 6rem;
+  z-index: 1;
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .project-creation-flow {
+    max-width: 1200px;
+    padding: 0 2px;
+    margin-top: 2rem;
+  }
+}
+.creation-tabs-container {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.creation-tabs {
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: visible;
+}
+
+.creation-tabs .MuiTabs-root {
+  min-height: 48px;
+  background: var(--background-secondary);
+  border-radius: 8px;
+}
+
+.creation-tabs .MuiTab-root {
+  color: var(--text-primary) !important;
+  opacity: 1 !important;
+  font-weight: 500;
+  text-transform: none;
+  min-height: 48px;
+  transition: all 0.2s ease-in-out;
+  padding: 12px 24px;
+  position: relative;
+}
+
+.creation-tabs .MuiTab-root.Mui-selected {
+  color: var(--color-primary) !important;
+  font-weight: 600;
+}
+
+.creation-tabs .MuiTab-root.Mui-disabled {
+  opacity: 0.7 !important;
+  color: var(--text-secondary) !important;
+  cursor: not-allowed;
+  pointer-events: all !important;
+}
+
+.creation-tabs .MuiTab-root.Mui-disabled::after {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+}
+
+.creation-tabs .MuiTabs-indicator {
+  background-color: var(--color-primary);
+  height: 3px;
+  border-radius: 3px;
+}
+
+.tab-content {
+  position: relative;
+  z-index: 1;
+  margin-top: 4px;
+  background: var(--background-secondary);
+  border-radius: 12px;
+  padding: 4px;
+  /* border: 1px solid var(--border-color); */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .creation-tabs,
+[data-theme="dark"] .creation-tabs .MuiTabs-root {
+  background: var(--background-secondary-dark);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .creation-tabs .MuiTab-root {
+  color: var(--text-primary-dark) !important;
+}
+
+[data-theme="dark"] .creation-tabs .MuiTab-root.Mui-selected {
+  color: var(--color-primary) !important;
+}
+
+[data-theme="dark"] .creation-tabs .MuiTab-root.Mui-disabled {
+  color: var(--text-secondary-dark) !important;
+}
+
+[data-theme="dark"] .tab-content {
+  background: var(--background-secondary-dark);
+  border-color: var(--border-color-dark);
+}

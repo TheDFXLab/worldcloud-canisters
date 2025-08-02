@@ -8,7 +8,7 @@ import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { State } from "../../App";
 import AssetApi from "../../api/assets/AssetApi";
 import MainApi from "../../api/main";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import ActionBar from "../ActionBar/ActionBar";
 import { useActionBar } from "../../context/ActionBarContext/ActionBarContext";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
@@ -19,6 +19,9 @@ import { useLedger } from "../../context/LedgerContext/LedgerContext";
 import LoaderOverlay from "../LoaderOverlay/LoaderOverlay";
 import Sidebar from "../Sidebar/Sidebar";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import HeaderCard from "../HeaderCard/HeaderCard";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
+import { serializeDeployment } from "../../utility/principal";
 
 interface AppLayoutProps {
   state: State;
@@ -30,17 +33,22 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   /** Hooks */
   const { refreshIdentity, identity, isLoadingIdentity } = useIdentity();
   const { getBalance } = useLedger();
-  const {
-    deployments,
-    refreshDeployments,
-    isLoading,
-    selectedDeployment,
-    setSelectedDeployment,
-  } = useDeployments();
+  const { deployments, selectedDeployment, setSelectedDeployment } =
+    useDeployments();
   const { actionBar } = useActionBar();
-  const { toasterData, showToaster, setShowToaster } = useToaster();
-  const { activeTab, setIsMobileMenuOpen } = useSideBar();
+  const {
+    activeTab,
+    isSidebarCollapsed,
+    isMobile,
+    setIsMobileMenuOpen,
+    setIsSidebarCollapsed,
+    handleClose,
+  } = useSideBar();
   const { agent } = useHttpAgent();
+  const { headerCard } = useHeaderCard();
+  const { toasterData, showToaster, setShowToaster } = useToaster();
+  const location = useLocation();
+
   /** State */
   const [showOptionsModal, setShowOptionsModal] = useState<boolean>(false);
 
@@ -56,28 +64,29 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
     fetchWasmModule();
   }, [identity, agent]);
 
+  // Scroll to top when route changes
+  useEffect(() => {
+    const scrollToTop = () => {
+      // Scroll the main content container to top
+      const mainContent = document.querySelector(
+        ".app-layout-children-container"
+      );
+      if (mainContent) {
+        mainContent.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }
+    };
+
+    scrollToTop();
+  }, [location.pathname]);
+
   useEffect(() => {
     console.log(`refreshIdentity`);
 
-    refreshIdentity();
+    // refreshIdentity();
   }, [activeTab]);
-
-  useEffect(() => {
-    if (!deployments.length) {
-      return;
-    }
-    const selectedDeploymentUpdated = deployments.find(
-      (deployment) =>
-        deployment.canister_id.toText() ===
-        selectedDeployment?.canister_id.toText()
-    );
-    if (selectedDeploymentUpdated) {
-      setSelectedDeployment(selectedDeploymentUpdated);
-      setState({
-        canister_id: selectedDeploymentUpdated.canister_id.toText(),
-      });
-    }
-  }, [deployments]);
 
   useEffect(() => {
     const get = async () => {
@@ -89,7 +98,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   }, [deployments]);
 
   useEffect(() => {
-    refreshDeployments();
+    // refreshDeployments();
   }, []);
 
   const handleHideOptionsModal = () => {
@@ -109,31 +118,54 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
       />
     );
   }
+  useEffect(() => {
+    console.log(`HWEADER CARD>`, headerCard);
+  }, [headerCard]);
 
   return (
-    <div className="app-layout">
-      {/* <ThemeToggle /> */}
-      <ProgressBar />
+    <div className="app-layout" style={{ display: "flex", height: "100vh" }}>
       <LoaderOverlay />
-      {showToaster && toasterData && (
+      {toasterData && (
         <Toaster
           headerContent={toasterData.headerContent}
           toastStatus={toasterData.toastStatus}
           toastData={toasterData.toastData}
-          textColor={toasterData.textColor || "#000000"}
+          textColor={toasterData.textColor || "white"}
           show={showToaster}
           onHide={() => setShowToaster(false)}
-          timeout={toasterData.timeout ? toasterData.timeout : 3000}
+          timeout={toasterData.timeout || 3000}
           link=""
           overrideTextStyle=""
         />
       )}
 
-      <Sidebar />
+      <Sidebar
+        isSidebarCollapsed={isSidebarCollapsed}
+        setIsSidebarCollapsed={setIsSidebarCollapsed}
+      />
+      <main
+        className="main-content"
+        style={{
+          flex: 1,
+          transition: "margin 0.2s",
+          marginLeft: isMobile ? 0 : isSidebarCollapsed ? 0 : 260,
+          minWidth: 0,
+        }}
+        onClick={() => handleClose()}
+      >
+        {headerCard && (
+          <div className="app-layout-header-wrapper">
+            <div className="app-layout-header">
+              <HeaderCard
+                title={headerCard.title}
+                description={headerCard.description}
+                className={headerCard.className}
+              />
+            </div>
+          </div>
+        )}
 
-      <main className="main-content" onClick={() => setIsMobileMenuOpen(false)}>
-        {children}
-
+        <div className="app-layout-children-container">{children}</div>
         {actionBar && <ActionBar {...actionBar} />}
       </main>
     </div>

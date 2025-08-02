@@ -1,0 +1,329 @@
+.repo-configuration-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  padding-bottom: 6rem; /* Add bottom padding to prevent content from being hidden behind action bar */
+}
+
+/* Header Section */
+.config-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(
+    135deg,
+    var(--glass-bg) 0%,
+    var(--background-secondary) 100%
+  );
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.header-content h2 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.header-content p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+.header-icon {
+  color: var(--color-primary);
+  font-size: 2rem;
+}
+
+/* Layout */
+.config-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Main Configuration Section */
+.config-main-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.config-card {
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.config-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--color-primary);
+}
+
+.card-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.card-header h3 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.card-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Configuration Fields */
+.config-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.field-header label {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.info-icon {
+  color: var(--text-secondary);
+  font-size: 1rem !important;
+  cursor: help;
+  transition: color 0.2s ease;
+}
+
+.info-icon:hover {
+  color: var(--color-primary);
+}
+
+.config-select {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-primary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.config-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.field-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.hint-icon {
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.header-icon-small {
+  font-size: 1.1rem !important;
+  margin-right: 0.5rem;
+  color: var(--color-primary);
+  vertical-align: middle;
+}
+
+/* Progress Container */
+.progress-container {
+  margin-top: 1rem;
+}
+
+/* Sidebar */
+.config-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.info-card {
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.info-card-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.info-card-header h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Tip Items */
+.tip-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--background-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.tip-icon {
+  color: var(--color-primary);
+  font-size: 1.25rem !important;
+  flex-shrink: 0;
+}
+
+.tip-content h5 {
+  margin: 0 0 0.25rem 0;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.tip-content p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* Process Steps */
+.process-step {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--background-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.step-content h5 {
+  margin: 0 0 0.25rem 0;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.step-content p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .config-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .config-sidebar {
+    order: -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .repo-configuration-container {
+    padding: 1rem;
+  }
+
+  .config-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .header-icon {
+    font-size: 1.5rem;
+  }
+
+  .config-card {
+    padding: 1rem;
+  }
+
+  .info-card {
+    padding: 1rem;
+  }
+
+  .tip-item,
+  .process-step {
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .repo-configuration-container {
+    padding: 0.5rem;
+  }
+
+  .config-header {
+    padding: 1rem;
+  }
+
+  .header-content h2 {
+    font-size: 1.5rem;
+  }
+
+  .card-header h3 {
+    font-size: 1.1rem;
+  }
+}

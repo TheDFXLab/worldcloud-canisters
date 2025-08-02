@@ -68,6 +68,7 @@ const MODAL_CONFIGS: Record<ModalType, ModalConfig> = {
 
 interface ConfirmationModalProps {
   amountState: [string, (amount: string) => void];
+  overrideEnableSubmit?: boolean;
   onHide: () => void;
   onConfirm: (amount: number) => Promise<void>;
   type?: ModalType;
@@ -76,15 +77,18 @@ interface ConfirmationModalProps {
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   amountState,
+  overrideEnableSubmit,
   onHide,
   onConfirm,
   type = "default",
   customConfig = {},
 }) => {
   const { modalType, showModal, setShowModal } = useConfirmationModal();
+
   /** Hooks */
   const {
     isLoadingCycles,
+    isLoadingEstimateCycles,
     cyclesAvailable,
     cyclesRate,
     cyclesStatus,
@@ -135,16 +139,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   }, [balance, config.showEstimatedCycles]);
 
   const handleClickSubmit = async () => {
-    if (type === "cycles" && !params.canisterId) {
-      return;
-    }
     setIsSubmitting(true);
     try {
       await onConfirm(parseFloat(amount));
-      if (type === "cycles") {
-        getStatus(params.canisterId as string);
-      }
-      // getBalance();
       setShouldRefetchBalance(true);
       onHide();
     } catch (error) {
@@ -204,11 +201,17 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     </span>
                     {config.showEstimatedCycles && (
                       <span className="estimated-value">
-                        ≈{" "}
-                        {fromE8sStable(
-                          BigInt(Math.floor(estimatedMax)),
-                          12
-                        ).toFixed(2)}{" "}
+                        <span
+                          className={`estimated-value ${
+                            isLoadingEstimateCycles ? "blink-loading" : ""
+                          }`}
+                        >
+                          ≈{" "}
+                          {fromE8sStable(
+                            BigInt(Math.floor(estimatedMax)),
+                            12
+                          ).toFixed(2)}
+                        </span>{" "}
                         T Cycles
                       </span>
                     )}
@@ -243,12 +246,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             <Form.Label>
               Amount (ICP)
               {config.showEstimatedCycles && amount && (
-                <span className="estimated-value">
-                  ≈{" "}
-                  {fromE8sStable(
-                    BigInt(Math.floor(estimatedOutput)),
-                    12
-                  ).toFixed(2)}{" "}
+                <span className={`estimated-value`}>
+                  <span
+                    className={`estimated-value ${
+                      isLoadingEstimateCycles ? "blink-loading" : ""
+                    }`}
+                  >
+                    ≈ {fromE8sStable(BigInt(estimatedOutput), 12).toFixed(2)}
+                  </span>{" "}
                   T Cycles
                 </span>
               )}
@@ -294,15 +299,16 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         <Button
           style={{
             backgroundColor: "var(--color-primary)",
-            border: "1px solid var(--color-secondary)",
+            border: "1px solid var(--color-primary)",
           }}
           onClick={handleClickSubmit}
           disabled={
-            !amount ||
-            parseFloat(amount) <= 0 ||
-            isSubmitting ||
-            balance === BigInt(0) ||
-            (balance ? balance < icpToE8s(parseFloat(amount)) : false)
+            !overrideEnableSubmit &&
+            (!amount ||
+              parseFloat(amount) <= 0 ||
+              isSubmitting ||
+              balance === BigInt(0))
+            // || (balance ? balance < icpToE8s(parseFloat(amount)) : false)
           }
         >
           {isSubmitting ? (

@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   ReactNode,
+  useCallback,
 } from "react";
 
 import { Principal } from "@dfinity/principal";
@@ -20,6 +21,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { isLoggedOutPrincipal } from "../../utility/identity";
 import AuthApi from "../../api/auth/AuthApi";
 import { useLoaderOverlay } from "../LoaderOverlayContext/LoaderOverlayContext";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../../state/store";
+import { getUserProjects } from "../../state/slices/projectsSlice";
+import { fetchFreemiumUsage } from "../../state/slices/freemiumSlice";
+import {
+  fetchSubscription,
+  fetchTiers,
+} from "../../state/slices/subscriptionSlice";
 
 interface IdentityProviderProps {
   children: ReactNode;
@@ -30,7 +39,7 @@ interface IdentityContextType {
   identity: Identity | null;
   isLoadingIdentity: boolean;
   refreshIdentity: () => Promise<Identity | null>;
-  connectWallet: (canisterId: Principal) => Promise<Identity | null>;
+  connectWallet: (principal?: Principal) => Promise<Identity | null>;
   disconnect: () => Promise<boolean>;
 }
 
@@ -73,8 +82,9 @@ const getGlobalAuthClient = async () => {
 export function IdentityProvider({ children }: IdentityProviderProps) {
   const { fetchHttpAgent, clearHttpAgent, agent } = useHttpAgent();
   const queryClient = useQueryClient();
+  const dispatch = useDispatch<AppDispatch>();
+  const { setMessage, summon, destroy } = useLoaderOverlay();
 
-  const { setMessage } = useLoaderOverlay();
   const [isConnected, setIsConnected] = useState(() => {
     // Check if user was previously connected
     const stored = localStorage.getItem("connectionStatus");
@@ -92,6 +102,43 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [isLoadingIdentity, setIsLoadingIdentity] = useState(true);
   const [authClient, setAuthClient] = useState<AuthClient | null>(null);
+
+  // Function to load initial data after authentication
+  const loadInitialData = useCallback(
+    async (_identity: Identity, _agent: any) => {
+      try {
+        console.log(`(((LOADING INITIAL DATA)))`);
+        // Load projects
+        await dispatch(
+          getUserProjects({ identity: _identity, agent: _agent, silent: true })
+        );
+        console.log(`DISPATCHING FETCH FREMIUM USAGE`);
+        // Load freemium usage
+        await dispatch(
+          fetchFreemiumUsage({
+            identity: _identity,
+            agent: _agent,
+            silent: true,
+          })
+        );
+
+        // Load subscription data
+        await dispatch(
+          fetchSubscription({
+            identity: _identity,
+            agent: _agent,
+            silent: true,
+          })
+        );
+        await dispatch(
+          fetchTiers({ identity: _identity, agent: _agent, silent: true })
+        );
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+      }
+    },
+    [dispatch]
+  );
 
   async function getIdentity() {
     try {
@@ -135,7 +182,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         return null;
       }
 
-      await fetchHttpAgent(_identity);
+      const _agent = await fetchHttpAgent(_identity);
       setIdentity(_identity);
       setIsConnected(true);
 
@@ -148,6 +195,11 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
           principal: _identity.getPrincipal().toText(),
         })
       );
+
+      // Load initial data after successful authentication
+      if (_agent) {
+        loadInitialData(_identity, _agent);
+      }
 
       return _identity;
     } catch (error) {
@@ -178,7 +230,6 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
 
       // Clear all stored data
       clearUserData();
-      clearHttpAgent();
 
       return true;
     } catch (error) {
@@ -191,6 +242,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
     try {
       console.log(`Connecting wallet`);
       setIsLoadingIdentity(true);
+      summon("Logging in...");
       const _authClient = await AuthClient.create({
         idleOptions: {
           disableIdle: true,
@@ -201,11 +253,58 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       console.log("Auth client created");
       setGlobalAuthClient(_authClient);
 
-      const popUpHeight = 0.42 * window.innerWidth;
-      const popUpWidth = 0.35 * window.innerWidth;
+      // Responsive popup dimensions for all devices
+      const getPopupDimensions = () => {
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
 
-      const left = window.innerWidth / 2 - popUpWidth / 2;
-      const top = window.innerHeight / 2 - popUpHeight / 3;
+        // Base dimensions for different screen sizes
+        let popUpWidth: number;
+        let popUpHeight: number;
+
+        if (screenWidth <= 480) {
+          // Mobile phones
+          popUpWidth = Math.min(screenWidth * 0.95, 400);
+          popUpHeight = Math.min(screenHeight * 0.8, 600);
+        } else if (screenWidth <= 768) {
+          // Tablets
+          popUpWidth = Math.min(screenWidth * 0.85, 500);
+          popUpHeight = Math.min(screenHeight * 0.75, 700);
+        } else if (screenWidth <= 1024) {
+          // Small laptops
+          popUpWidth = Math.min(screenWidth * 0.6, 600);
+          popUpHeight = Math.min(screenHeight * 0.7, 800);
+        } else {
+          // Desktop and larger screens
+          popUpWidth = Math.min(screenWidth * 0.4, 700);
+          popUpHeight = Math.min(screenHeight * 0.65, 900);
+        }
+
+        // Ensure minimum dimensions
+        popUpWidth = Math.max(popUpWidth, 320);
+        popUpHeight = Math.max(popUpHeight, 500);
+
+        // Ensure popup doesn't exceed screen boundaries
+        popUpWidth = Math.min(popUpWidth, screenWidth - 20);
+        popUpHeight = Math.min(popUpHeight, screenHeight - 20);
+
+        // Calculate position to center the popup
+        const left = Math.max(0, (screenWidth - popUpWidth) / 2);
+        const top = Math.max(0, (screenHeight - popUpHeight) / 2);
+
+        // Ensure popup is fully visible on screen
+        const finalLeft = Math.min(left, screenWidth - popUpWidth - 10);
+        const finalTop = Math.min(top, screenHeight - popUpHeight - 10);
+
+        return {
+          popUpWidth: Math.round(popUpWidth),
+          popUpHeight: Math.round(popUpHeight),
+          left: Math.round(finalLeft),
+          top: Math.round(finalTop),
+        };
+      };
+
+      const { popUpWidth, popUpHeight, left, top } = getPopupDimensions();
 
       await new Promise((resolve, reject) => {
         //safari: http://bw4dl-smaaa-aaaaa-qaacq-cai.localhost:4943/
@@ -214,7 +313,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         _authClient.login({
           derivationOrigin: frontend_canister_id_url,
           identityProvider: internetIdentityConfig.identityProvider,
-          windowOpenerFeatures: `toolbar=0,location=0,menubar=0,width=${popUpWidth},height=${popUpHeight},left=${left},top=${top}`,
+          windowOpenerFeatures: `toolbar=0,location=0,menubar=0,width=${popUpWidth},height=${popUpHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`,
 
           maxTimeToLive: BigInt(
             internetIdentityConfig.loginExpiryInHours *
@@ -253,15 +352,21 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       );
 
       const authApi = new AuthApi();
-      await authApi.signIn(identity, agent, setMessage);
+      summon("Requesting challenge message to sign...");
+      await authApi.signIn(identity, agent, summon);
       setIdentity(identity);
       setIsConnected(true);
+
+      // Load initial data after successful authentication
+      loadInitialData(identity, agent);
+
       return identity;
     } catch (error) {
       console.error("Error during wallet connection:", error);
       return null;
     } finally {
       setIsLoadingIdentity(false);
+      destroy();
     }
   };
 

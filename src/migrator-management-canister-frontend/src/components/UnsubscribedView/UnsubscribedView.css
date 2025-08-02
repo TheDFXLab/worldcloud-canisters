@@ -51,3 +51,414 @@
   font-size: 2rem;
   color: var(--color-primary);
 }
+
+/* UnsubscribedView Container */
+.unsubscribed-container {
+  padding: 2rem;
+  padding-top: 0.5rem;
+  min-height: calc(100vh - 64px);
+  background-color: var(--background);
+  height: 100%;
+  overflow-y: auto;
+}
+
+.unsubscribed-header {
+  margin-bottom: 2rem;
+}
+
+/* Main Action Cards Grid */
+.action-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+/* Action Card Base Styles */
+.action-card {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 2rem;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.action-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: var(--color-primary);
+}
+
+/* Card Header */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.card-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.freemium-icon {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.subscription-icon {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+.card-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-badge:not(.premium) {
+  background: var(--color-success);
+  color: white;
+}
+
+.card-badge.premium {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+/* Card Content */
+.unsub-view .card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.unsub-view .card-content h3 {
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  text-align: left;
+}
+
+.unsub-view .card-content .card-description {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0;
+  text-align: left;
+}
+
+/* Feature Lists */
+.freemium-features,
+.subscription-features {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.feature-icon {
+  color: var(--color-success);
+  font-size: 1.1rem !important;
+  flex-shrink: 0;
+}
+
+/* Usage Info */
+.usage-info {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.usage-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.usage-icon {
+  color: var(--color-primary);
+  font-size: 1rem !important;
+}
+
+/* Pricing Preview */
+.pricing-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.price-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price-label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.price-value {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* Card Actions */
+.card-actions {
+  margin-top: 1.5rem;
+}
+
+.primary-action-btn,
+.secondary-action-btn {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+
+.primary-action-btn {
+  background: var(--color-primary);
+  color: white;
+}
+
+.primary-action-btn:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  transform: translateY(-2px);
+}
+
+.primary-action-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.secondary-action-btn {
+  background: transparent;
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+}
+
+.secondary-action-btn:hover {
+  background: var(--color-primary);
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* Benefits Section */
+.benefits-section {
+  margin-bottom: 3rem;
+}
+
+.benefits-section h3 {
+  color: var(--text-primary);
+  font-size: 1.75rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.benefit-card {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.benefit-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--color-primary);
+}
+
+.benefit-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  background: var(--background-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  color: var(--color-primary);
+  font-size: 1.5rem;
+}
+
+.benefit-card h4 {
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+}
+
+.benefit-card p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Help Section */
+.help-section {
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 2rem;
+}
+
+.help-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.help-text h4 {
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+}
+
+.help-text p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.help-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.help-btn {
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.help-btn:hover {
+  background: var(--background);
+  color: var(--text-primary);
+  border-color: var(--color-primary);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .unsubscribed-container {
+    padding: 1rem;
+  }
+
+  .action-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .action-card {
+    padding: 1.5rem;
+  }
+
+  .benefits-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .help-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .help-actions {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .action-card {
+    padding: 1rem;
+  }
+
+  .card-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .usage-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .help-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .help-btn {
+    justify-content: center;
+  }
+}

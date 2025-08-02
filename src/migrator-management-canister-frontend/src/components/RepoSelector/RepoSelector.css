@@ -1,14 +1,24 @@
 .repo-selector {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 64px);
+  justify-content: flex-start;
+  align-items: flex-start;
+  /* height: calc(100vh - 64px); - Removed to allow natural page scrolling */
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem 2rem 0 2rem;
+  padding: 0rem 2rem 0 2rem;
   position: relative;
   overflow: hidden;
+  /* overflow-y: auto; */
   background-color: var(--background);
   width: 100%;
+  height: max-content;
+}
+
+@media (max-width: 480px) {
+  .repo-selector {
+    padding: 0.5rem 0.5rem;
+  }
 }
 
 .repo-header {
@@ -18,40 +28,50 @@
 
 .repo-header h2 {
   color: var(--text-primary);
-  font-size: 2rem;
+  font-size: var(--font-size-2lg);
+  text-align: left;
   margin-bottom: 0.5rem;
 }
 
 .repo-header p {
   color: var(--text-secondary);
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
+  text-align: left;
 }
 
 .repo-grid-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 1rem;
   width: 100%;
+  max-width: 100vw;
+  margin: 0 auto;
+  padding: 1rem 2rem;
+  /* overflow-y: auto; - Removed to allow natural page scrolling */
 }
 
 .repo-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
-  padding-bottom: 1rem;
-  justify-content: center;
+  padding-bottom: 0.5rem;
+  width: 100%;
+  max-width: 100vw;
+  margin: 0 auto;
+  /* overflow-y: auto; */
 }
 
 /* Add responsive breakpoints */
 @media (max-width: 1200px) {
-  .repo-grid {
-    grid-template-columns: repeat(2, 350px);
+  .repo-grid-container {
+    padding: 0 1.5rem;
   }
 }
 
 @media (max-width: 768px) {
+  .repo-grid-container {
+    padding: 0 1rem;
+  }
+
   .repo-grid {
-    grid-template-columns: 350px;
+    grid-template-columns: 1fr;
   }
 }
 
@@ -69,9 +89,11 @@
 }
 
 .repo-card {
-  width: 350px; /* Fixed width for each card */
-  flex-shrink: 0; /* Prevent cards from shrinking */
-  margin-top: 0.5rem;
+  width: 100%;
+  min-width: 300px;
+  max-width: 350px;
+  height: 180px;
+  margin: 0 auto;
   background: var(--background);
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -79,6 +101,9 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .repo-card:hover {
@@ -92,6 +117,16 @@
   background: var(--color-primary-light);
 }
 
+@media (max-width: 480px) {
+  .repo-card {
+    min-width: 250px;
+  }
+
+  .repo-grid-container {
+    padding: 1rem 0rem;
+  }
+}
+
 /* Add padding to last row to prevent stretching */
 .repo-grid::after {
   content: "";
@@ -100,7 +135,7 @@
 }
 
 .repo-name {
-  font-size: 1.25rem;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 0.75rem;
@@ -112,7 +147,7 @@
   justify-content: space-between;
   margin-bottom: 1rem;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .repo-visibility {
@@ -125,7 +160,7 @@
 }
 
 .repo-actions {
-  margin-top: 1.5rem;
+  margin-top: 0.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border-color);
 }
@@ -145,14 +180,20 @@
 }
 
 /* Configure Step Styles */
+.configure-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 0.5rem;
+}
+
 .deployment-configure {
   width: 100%;
   margin: 0 auto;
-  padding: 0 1rem;
 }
 
 .configure-header {
-  margin-bottom: 3rem;
+  margin-bottom: 0rem;
   text-align: center;
 }
 
@@ -165,14 +206,15 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 2rem;
+  /* margin-bottom: 2rem; */
 }
 
 .configure-content {
   background: var(--background);
-  padding: 2rem;
+  padding: 0rem 2rem;
   max-width: 800px;
-  margin: auto auto;
+  margin: 0 auto;
+  margin-top: 1rem;
   border-radius: 12px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
@@ -187,6 +229,7 @@
   display: block;
   color: var(--text-primary);
   font-weight: 500;
+  font-size: var(--font-size-lg);
   margin-bottom: 0.75rem;
 }
 

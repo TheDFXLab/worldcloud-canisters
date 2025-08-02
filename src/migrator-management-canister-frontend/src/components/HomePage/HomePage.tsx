@@ -30,21 +30,22 @@ import { useConfirmationModal } from "../../context/ConfirmationModalContext/Con
 import HeaderCard from "../HeaderCard/HeaderCard";
 import TruncatedTooltip from "../TruncatedTooltip/TruncatedTooltip";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import { shortenPrincipal } from "../../utility/formatter";
+import { formatBytes, shortenPrincipal } from "../../utility/formatter";
 import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
+import { useCyclesLogic } from "../../hooks/useCyclesLogic";
+import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
+import { useProjectsLogic } from "../../hooks/useProjectsLogic";
 
 const HomePage: React.FC = () => {
   const { deployments } = useDeployments();
+  const { projects } = useProjectsLogic();
   const { githubUser } = useGithub();
   const { identity } = useIdentity();
   const { setActiveTab } = useSideBar();
   const { setActionBar } = useActionBar();
-  const {
-    totalCredits,
-    isLoadingCredits,
-    getCreditsAvailable,
-    setShouldRefetchCredits,
-  } = useCycles();
+  const { setHeaderCard } = useHeaderCard();
+  const { totalCredits, isLoadingCredits } = useCycles();
+  const { fetchCredits } = useCyclesLogic();
   const { balance, transfer, setShouldRefetchBalance } = useLedger();
   const { setToasterData, setShowToaster } = useToaster();
   const { agent } = useHttpAgent();
@@ -55,19 +56,29 @@ const HomePage: React.FC = () => {
   const [copied, setCopied] = useState(false);
 
   // Calculate metrics
-  const totalCanisters = deployments.length;
-  const activeCanisters = deployments.filter(
-    (d) => d.status === "installed"
+  const totalCanisters = projects.length;
+  const totalSize =
+    deployments?.length > 0
+      ? deployments?.map((d) => d.size).reduce((d) => d)
+      : 0;
+  const activeCanisters = projects.filter(
+    (p) => p.canister_id !== null && p.canister_id !== undefined
   ).length;
   const lastDeployment = deployments[0]?.date_updated
-    ? new Date(Number(deployments[0].date_updated) / 1000000).toLocaleString()
+    ? new Date(Number(deployments[0].date_updated)).toLocaleString()
     : "No deployments yet";
 
-  // Set the active tab to home
+  // Set the active tab to home and header card
   useEffect(() => {
     setActiveTab("home");
     setActionBar(null);
-  }, []);
+    setHeaderCard({
+      title: "Dashboard",
+      description: `Welcome back${
+        githubUser?.login ? `, ${githubUser.login}` : ``
+      }`,
+    });
+  }, [githubUser?.login]);
 
   const onConfirmTopUp = async () => {
     try {
@@ -115,7 +126,7 @@ const HomePage: React.FC = () => {
       });
       setShowToaster(true);
       // getCreditsAvailable();
-      setShouldRefetchCredits(true); // refresh credits
+      fetchCredits(); // refresh credits
       setShouldRefetchBalance(true);
     } catch (error) {
       console.error(`Error depositing ICP:`, error);
@@ -137,21 +148,12 @@ const HomePage: React.FC = () => {
         }}
       />
 
-      <HeaderCard
-        title={"Dashboard"}
-        description={`${
-          githubUser
-            ? `Welcome back${githubUser.login ? `, ${githubUser.login}.` : `.`}`
-            : ""
-        }`}
-      />
-
       {/* Quick Stats */}
       <div className="stats-grid">
         <div className="stat-card">
           <StorageIcon />
           <div className="stat-content">
-            <h3>Total Canisters</h3>
+            <h3>Total Projects</h3>
             <p className="stat-value">{totalCanisters}</p>
           </div>
         </div>
@@ -168,7 +170,7 @@ const HomePage: React.FC = () => {
           <SpeedIcon />
           <div className="stat-content">
             <h3>Total Storage Used</h3>
-            <p className="stat-value">Coming Soon</p>
+            <p className="stat-value">{formatBytes(totalSize)}</p>
           </div>
         </div>
 
@@ -204,9 +206,7 @@ const HomePage: React.FC = () => {
                     {deployment.canister_id.toText()}
                   </p>
                   <p className="activity-time">
-                    {new Date(
-                      Number(deployment.date_updated) / 1000000
-                    ).toLocaleString()}
+                    {new Date(Number(deployment.date_updated)).toLocaleString()}
                   </p>
                 </div>
                 <div className="activity-status">{deployment.status}</div>
@@ -303,12 +303,12 @@ const HomePage: React.FC = () => {
                       <Spinner size="sm" />
                     ) : (
                       <div onClick={() => setShowModal(true)}>
-                        <IconTextRowView
-                          onClickIcon={() => setShowModal(true)}
-                          IconComponent={AddCircleOutlineIcon}
-                          iconColor="green"
-                          text={
-                            totalCredits ? (
+                        {totalCredits ? (
+                          <IconTextRowView
+                            onClickIcon={() => setShowModal(true)}
+                            IconComponent={AddCircleOutlineIcon}
+                            iconColor="green"
+                            text={
                               <>
                                 {`${totalCredits.total_credits} ICP`}
                                 <span className="estimated-value">
@@ -316,11 +316,13 @@ const HomePage: React.FC = () => {
                                   T Cycles
                                 </span>
                               </>
-                            ) : (
-                              <Spinner size="sm" />
-                            )
-                          }
-                        />
+                            }
+                          />
+                        ) : (
+                          <span className="estimated-value">
+                            ≈ {0} T Cycles
+                          </span>
+                        )}
                       </div>
                     )}
                   </span>

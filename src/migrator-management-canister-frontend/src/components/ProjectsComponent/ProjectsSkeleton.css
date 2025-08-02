@@ -1,0 +1,193 @@
+.skeleton-projects-container {
+  margin-top: 6rem;
+}
+
+/* Filter and Sort Tags */
+.skeleton-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.skeleton-tags-row.sort-row {
+  margin-bottom: 2rem;
+}
+
+.filter-icon-illustration {
+  display: flex;
+  align-items: center;
+  margin-right: 0.5rem;
+  color: var(--text-secondary);
+}
+
+/* Project Cards */
+.skeleton-projects-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 0.5rem;
+  align-items: center;
+}
+
+.skeleton-project-card {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  margin-top: 0.2rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 1rem;
+  min-height: 320px;
+  height: max-content;
+}
+
+.skeleton-project-card-content {
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.skeleton-project-main-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.skeleton-project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.skeleton-project-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.skeleton-project-title-row svg {
+  color: var(--color-primary);
+  font-size: 1.5rem;
+}
+
+.skeleton-project-details-row {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.skeleton-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1 1 180px;
+}
+
+.skeleton-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.skeleton-project-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.skeleton-project-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: auto;
+  min-height: 48px;
+}
+
+/* Table View */
+.skeleton-projects-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 1.5rem;
+}
+
+.skeleton-projects-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--background-primary);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.skeleton-projects-table th,
+.skeleton-projects-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--font-size-sm);
+  vertical-align: middle;
+}
+
+.skeleton-projects-table th {
+  background: var(--background-secondary);
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.skeleton-projects-table tr {
+  height: 56px;
+}
+
+/* Responsive Design */
+@media (max-width: 1000px) {
+  .skeleton-project-card {
+    min-height: 420px;
+  }
+}
+
+@media (max-width: 768px) {
+  .skeleton-projects-container {
+    padding: 0.1rem;
+  }
+
+  .skeleton-projects-grid {
+    gap: 1rem;
+    padding: 0;
+  }
+
+  .skeleton-project-card {
+    max-width: 100%;
+  }
+
+  .skeleton-project-details-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .skeleton-detail-item {
+    flex: unset;
+  }
+
+  .skeleton-tags-row {
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 440px) {
+  .skeleton-tags-row {
+    gap: 0.5rem;
+  }
+}

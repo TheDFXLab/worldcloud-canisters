@@ -7,9 +7,16 @@
   box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1),
     0 -2px 4px -1px rgba(0, 0, 0, 0.06);
   z-index: 10;
-  width: 100%;
+  width: 80%;
   user-select: none;
   margin: 0 auto;
+  transition: width 0.2s ease;
+}
+
+/* When sidebar is collapsed, expand the action bar to use more space */
+.action-bar.sidebar-collapsed {
+  width: 100%;
+  left: 0;
 }
 
 .action-bar.hidden {
@@ -27,6 +34,12 @@
   user-select: none;
 }
 
+@media (max-width: 480px) {
+  .action-bar-content {
+    padding: 0.5rem 1rem;
+  }
+}
+
 .selected-repo {
   display: flex;
   align-items: center;
@@ -40,7 +53,15 @@
 }
 
 .repo-icon {
-  font-size: 1.1rem;
+  font-size: var(--font-size-xs);
+  margin: 0;
+  padding: 0;
+}
+
+.action-bar-text {
+  font-size: var(--font-size-sm);
+  margin: 0;
+  padding: 0;
 }
 
 .next-button {
@@ -71,5 +92,20 @@
   .action-bar {
     width: 100%;
     margin-left: 0;
+  }
+  .action-bar.sidebar-collapsed {
+    width: 100%;
+  }
+  .next-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    min-width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .next-button {
+    padding: 0.4rem 0.8rem;
+    font-size: var(--font-size-xs);
   }
 }

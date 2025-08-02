@@ -1,4 +1,8 @@
 import { createContext, useContext, useState, ReactNode } from "react";
+import { useProjectsLogic } from "../../hooks/useProjectsLogic";
+import { useSubscriptionLogic } from "../../hooks/useSubscriptionLogic";
+import { useDeploymentLogic } from "../../hooks/useDeploymentLogic";
+import { useCyclesLogic } from "../../hooks/useCyclesLogic";
 
 interface LoadBarContextType {
   showLoadBar: boolean;
@@ -10,6 +14,16 @@ interface LoadBarContextType {
 const LoadBarContext = createContext<LoadBarContextType | undefined>(undefined);
 
 export function LoadBarProvider({ children }: { children: ReactNode }) {
+  // const { isLoading: isLoadingProjects } = useProjectsLogic();
+  // const { isLoadingSub, isLoadingTiers } = useSubscriptionLogic();
+  // const { isLoading: isLoadingDeployments } = useDeploymentLogic();
+  // const {
+  //   isLoadingCredits,
+  //   isLoadingCycles,
+  //   isLoadingStatus,
+  //   isLoadingEstimateCycles,
+  // } = useCyclesLogic();
+
   const [showLoadBar, setShowLoadBar] = useState(false);
   const [completeLoadBar, setCompleteLoadBar] = useState(false);
 

@@ -15,17 +15,7 @@ const Settings: React.FC = () => {
   const { identity } = useIdentity();
   const { setActiveTab } = useSideBar();
   const { setActionBar } = useActionBar();
-
-  const handleGithubConnect = async () => {
-    const github = GithubApi.getInstance();
-    await github.authenticate();
-  };
-
-  const handleGithubDisconnect = async () => {
-    const github = GithubApi.getInstance();
-    await github.logout();
-    setGithubUser(null);
-  };
+  const { handleGithubConnect, handleGithubDisconnect } = useGithub();
 
   // Set the active tab to settings
   useEffect(() => {
@@ -35,13 +25,6 @@ const Settings: React.FC = () => {
 
   return (
     <div className="settings-container">
-      <div className="settings-header">
-        <h2>Account Settings</h2>
-        <p className="subtitle">
-          Manage your account preferences and connections
-        </p>
-      </div>
-
       <div className="settings-grid">
         {/* Internet Identity Section */}
         <div className="settings-card">
@@ -90,6 +73,7 @@ const Settings: React.FC = () => {
                 <button
                   className="disconnect-button"
                   onClick={handleGithubDisconnect}
+                  aria-label="Connect GitHub in new tab"
                 >
                   <LogoutIcon />
                   Disconnect GitHub

@@ -1,0 +1,177 @@
+.system-management {
+  padding: 20px;
+}
+
+.system-management-section-header {
+  margin-bottom: 30px;
+}
+
+.system-management-section-header h3 {
+  margin: 0 0 10px 0;
+  color: var(--text-primary);
+}
+
+.system-management-section-header p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.system-management-operations {
+  margin-bottom: 40px;
+}
+
+.system-management-operations h4 {
+  margin: 0 0 20px 0;
+  color: var(--text-primary);
+}
+
+.system-management-operations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.system-management-operation-card {
+  background: var(--background-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.system-management-operation-card h5 {
+  margin: 0 0 10px 0;
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.system-management-operation-card p {
+  margin: 0 0 15px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.system-management-operation-stats {
+  margin-bottom: 15px;
+}
+
+.system-management-operation-stats span {
+  background: var(--background-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.system-management-operation-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.system-management-danger-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.system-management-danger-button:hover {
+  background: #c82333;
+}
+
+.system-management-danger-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.system-management-warning-button {
+  background: #ffc107;
+  color: #212529;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.system-management-warning-button:hover {
+  background: #e0a800;
+}
+
+.system-management-statistics {
+  margin-bottom: 40px;
+}
+
+.system-management-statistics h4 {
+  margin: 0 0 20px 0;
+  color: var(--text-primary);
+}
+
+.system-management-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.system-management-stat-card {
+  background: var(--background-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.system-management-stat-card h5 {
+  margin: 0 0 15px 0;
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.system-management-stat-content p {
+  margin: 0 0 15px 0;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.system-management-log-item,
+.system-management-workflow-item,
+.system-management-project-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 14px;
+}
+
+.system-management-log-item:last-child,
+.system-management-workflow-item:last-child,
+.system-management-project-item:last-child {
+  border-bottom: none;
+}
+
+.system-management-log-item span:first-child,
+.system-management-workflow-item span:first-child,
+.system-management-project-item span:first-child {
+  color: var(--text-secondary);
+  font-family: monospace;
+}
+
+.system-management-log-item span:last-child,
+.system-management-workflow-item span:last-child,
+.system-management-project-item span:last-child {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.system-management-loading {
+  text-align: center;
+  color: var(--text-secondary);
+  font-style: italic;
+}

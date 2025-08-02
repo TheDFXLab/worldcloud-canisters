@@ -25,7 +25,6 @@ export const internet_identity_canister_id = process.env.CANISTER_ID_INTERNET_ID
 export const frontend_canister_id_url = environment === "local" ? `http://${frontend_canister_id}.${replica_host}:${replica_port}` : `https://${frontend_canister_id}.icp0.io/`;
 export const ledger_canister_id_url = environment === "local" ? `http://${icp_ledger_canister_id}.${replica_host}:${replica_port}` : `https://${icp_ledger_canister_id}.icp0.io/`;
 export const internet_identity_canister_id_url = environment === "local" ? `http://${internet_identity_canister_id}.${replica_host}:${replica_port}` : `https://identity.ic0.app`;
-
 const _dev_env = {
     github_client_id: "Ov23li8TWtkI36y5Mzr5"
 }
@@ -40,7 +39,7 @@ export const internetIdentityConfig = {
 export const githubClientId = environment == "ic" ? process.env.REACT_APP_GITHUB_CLIENT_ID || "" : _dev_env.github_client_id;
 export const githubClientSecret = process.env.REACT_APP_GITHUB_CLIENT_SECRET || ""; // TODO: Remove this
 
-export const ngrok_tunnel = "https://e8ae976f3bfa.ngrok.app";
+export const ngrok_tunnel = "https://8064bf3a256f.ngrok-free.app";
 export const reverse_proxy_url = environment === "ic" ? process.env.REACT_APP_REVERSE_PROXY_REMOTE_URL : "http://localhost:8080";
 // export const reverse_proxy_url = process.env.REACT_APP_REVERSE_PROXY_REMOTE_URL || "";
 export const frontend_url = environment === "ic" ? `https://${frontend_canister_id}.icp0.io` : ngrok_tunnel;

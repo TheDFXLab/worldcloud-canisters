@@ -7,7 +7,10 @@
   margin: 0 auto;
   position: relative;
   overflow: hidden;
-  padding: 5px 0px;
+  overflow-y: auto;
+  padding-top: 7rem;
+  /* padding: 2rem 0px; */
+  /* margin-top: 2rem; */
 }
 
 .deployment-header {
@@ -69,6 +72,7 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 0 2rem;
+  min-height: max-content; /* Ensure container has enough height for message */
 }
 
 .method-card {
@@ -81,6 +85,32 @@
   border-radius: 12px;
   position: relative;
   overflow: hidden;
+  min-height: 280px; /* Minimum height instead of fixed */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.method-card-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.method-card-wrapper .github-connect-info {
+  position: relative; /* Change from absolute to relative */
+  margin-top: 1rem; /* Add margin instead of absolute positioning */
+  padding: 1rem;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  text-align: center;
+  z-index: 10;
+}
+
+/* Only add extra height when GitHub message is present */
+.method-card-wrapper:has(.github-connect-info) {
+  min-height: 360px; /* Account for card + message height */
 }
 
 .method-card::before {
@@ -88,7 +118,7 @@
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
+  width: 100%;
   height: 4px;
   background: linear-gradient(
     90deg,
@@ -108,6 +138,60 @@
   opacity: 1;
 }
 
+.method-card.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  background: var(--background-secondary);
+  border-color: var(--glass-border);
+  color: var(--text-secondary);
+  pointer-events: none;
+  filter: grayscale(50%);
+}
+
+.method-card.disabled:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--glass-border);
+}
+
+.method-card.disabled::before {
+  opacity: 0;
+}
+
+.github-connect-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  text-align: center;
+}
+
+.github-connect-info p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.connect-github-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 500;
+  transition: color 0.2s ease;
+  padding: 0;
+  margin: 0;
+  font-size: inherit;
+}
+
+.connect-github-link:hover {
+  color: var(--color-primary-dark);
+  text-decoration: none;
+}
+
 .method-icon {
   margin-bottom: 1.5rem;
   color: var(--color-primary);
@@ -120,7 +204,7 @@
 }
 
 .method-card .card-title {
-  font-size: 1.4rem;
+  font-size: var(--font-size-lg);
   margin-bottom: 1rem;
   color: var(--text-primary);
   font-weight: 600;
@@ -128,17 +212,16 @@
 
 .method-card .card-text {
   color: var(--text-secondary);
-  font-size: 1rem;
+  font-size: var(--font-size-base);
   line-height: 1.6;
 }
 
 .deployment-content {
   flex: 1;
-  overflow-y: auto;
+  /* overflow: hidden; */
   padding-bottom: 2rem;
-  height: calc(
-    100vh - 200px
-  ); /* Adjust this value based on your header height */
+  /* height: calc(100vh - 200px); - Removed to allow natural page scrolling */
+  /* overflow-y: auto; */
 }
 
 .back-button {
@@ -155,12 +238,30 @@
   color: var(--text-primary);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1000px) {
   .project-deployment {
-    padding: 1rem;
+    overflow-y: auto;
   }
+  .deployment-methods {
+    max-width: 500px;
+  }
+}
 
+@media (max-width: 768px) {
   .deployment-content {
     height: calc(100vh - 150px); /* Adjust for mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .project-deployment {
+    padding: 1.5rem 0rem;
+  }
+
+  .deployment-methods {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 2fr));
+    gap: 0.5rem;
+    max-width: 100vw;
+    padding: 0rem 0rem;
   }
 }
