@@ -10,6 +10,7 @@
   height: 100vh;
   min-height: 0;
   overflow-y: auto; */
+  padding-top: 6rem;
 }
 
 .projects-grid {
@@ -401,7 +402,7 @@
 /* Responsive design */
 @media (max-width: 768px) {
   .projects-container {
-    padding: 0.1rem;
+    /* padding: 0.1rem; */
   }
 
   .projects-grid {
@@ -632,4 +633,11 @@
 .action-button.disabled:hover {
   transform: none;
   box-shadow: none;
+}
+
+/* Responsive design */
+@media (max-width: 450px) {
+  .projects-container {
+    padding-top: 1rem;
+  }
 }

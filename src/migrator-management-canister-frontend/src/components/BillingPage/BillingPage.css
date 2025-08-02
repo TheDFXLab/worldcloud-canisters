@@ -4,10 +4,16 @@
   flex-direction: column;
   /* overflow-y: auto; */
   scroll-behavior: smooth;
-  padding: 1rem;
+  padding-top: 7rem;
   min-height: calc(100vh - 64px);
   background-color: var(--background);
   height: 100%;
+}
+
+@media (max-width: 480px) {
+  .billing-container {
+    padding-top: 2rem;
+  }
 }
 
 .billing-header {
