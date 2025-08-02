@@ -160,6 +160,7 @@ module {
     let now = get_time_now(#seconds);
 
     // Calculate seconds until next midnight (UTC)
+    // let seconds_in_day : Nat = 5 * 60; // 5mins for debugging
     let seconds_in_day : Nat = 24 * 60 * 60; // 86400 seconds
     let seconds_since_midnight : Nat = Int.abs(now % seconds_in_day);
     let seconds_until_next_midnight : Nat = seconds_in_day - seconds_since_midnight;

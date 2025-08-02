@@ -402,6 +402,11 @@ module {
     quota : Quota;
   };
 
+  public type UsageLogExtended = {
+    usage_log : UsageLog;
+    reset_time_unix : Nat;
+  };
+
   public type Quota = {
     consumed : Nat;
     total : Nat;
