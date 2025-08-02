@@ -51,7 +51,6 @@ module {
     };
 
     public func is_authorized(principal : Principal) : Bool {
-      if (disable_guards) return true;
       return assert_super_admin(principal) or assert_admin(principal);
     };
 

@@ -39,7 +39,7 @@ import Access "modules/access";
 // TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
 // TODO: Handle stable variables (if needed)
 // TODO: Remove unneeded if else in `storeInAssetCanister` for handling files larger than ±2MB (since its handled by frontend)
-(with migration)
+// (with migration)
 shared (deployMsg) persistent actor class CanisterManager() = this {
   transient let IC_MANAGEMENT_CANISTER = "aaaaa-aa"; // Production
   transient let ledger : Principal = Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai");
