@@ -2,7 +2,8 @@
   "canisters": {
     "migrator-management-canister-backend": {
       "main": "src/migrator-management-canister-backend/main.mo",
-      "type": "motoko"
+      "type": "motoko",
+      "args": "--enhanced-orthogonal-persistence"
     },
     "migrator-management-canister-frontend": {
       "dependencies": [
@@ -42,13 +43,13 @@
   },
   "networks": {
     "local": {
-      "bind": "0.0.0.0:8000"
+      "bind": "127.0.0.1:8000"
     }
   },
   "defaults": {
     "build": {
       "args": "",
-      "packtool": ""
+      "packtool": "mops sources"
     }
   },
   "output_env_file": ".env",
