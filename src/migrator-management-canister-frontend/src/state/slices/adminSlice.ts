@@ -3,7 +3,8 @@ import MainApi from '../../api/main';
 import { backend_canister_id } from '../../config/config';
 import { Principal } from '@dfinity/principal';
 import { Subscription } from '../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did';
-import { SerializedSubscription, serializeSlot, serializeSubscription } from '../../serialization/subscription';
+import { SerializedSubscription, serializePrincipal, serializeSlot, serializeSubscription } from '../../serialization/subscription';
+import { handleBackendResponse, handleError } from '../../utility/errorHandler';
 import {
     SerializedActivityLog,
     SerializedWorkflowRunDetails,
@@ -19,8 +20,15 @@ import {
     serializeCanisterDeploymentsPair,
     serializeProjectsIdPair,
     serializeShareableCanister,
-    serializeProject
+    serializeProject,
+    serializePaginationPayload,
+    SerializedRole,
+    serializeAdminRole,
+    serializeAdminRolePairs,
+    SerializedBookEntry,
+    serializeBookEntries,
 } from '../../serialization/admin';
+import { SerializedUsageLogExtended } from '../../utility/bigint';
 
 // Types
 export interface AdminState {
@@ -47,7 +55,7 @@ export interface AdminState {
     isLoadingWorkflowHistory: boolean;
 
     // Usage Logs
-    usageLogs: [string, SerializedUsageLog][];
+    usageLogs: [string, SerializedUsageLogExtended][];
     isLoadingUsageLogs: boolean;
 
     // User Projects
@@ -67,7 +75,19 @@ export interface AdminState {
     isLoadingUserSlot: boolean;
 
     // Access Control
+    admins: [string, SerializedRole][];
     isLoadingAccessControl: boolean;
+
+    // Book Entries
+    bookEntries: SerializedBookEntry[];
+    isLoadingBookEntries: boolean;
+
+    // Treasury Balance
+    treasuryBalance: number | null;
+    isLoadingTreasuryBalance: boolean;
+
+    treasuryPrincipal: string | null;
+    isLoadingTreasury: boolean;
 
     // General Admin State
     isLoading: boolean;
@@ -100,9 +120,17 @@ const initialState: AdminState = {
     userSlot: null,
     isLoadingUserSlot: false,
     isLoadingAccessControl: false,
+    bookEntries: [],
+    isLoadingBookEntries: false,
+    treasuryBalance: null,
+    isLoadingTreasuryBalance: false,
     isLoading: false,
     error: null,
     successMessage: null,
+    admins: [],
+    treasuryPrincipal: null,
+    isLoadingTreasury: false,
+
 };
 
 // Async thunks
@@ -311,6 +339,27 @@ export const deleteAllLogs = createAsyncThunk(
     }
 );
 
+export const getAdmins = createAsyncThunk(
+    'admin/getAdmins',
+    async ({
+        identity,
+        agent,
+        payload
+    }: {
+        identity: any;
+        agent: any;
+        payload: PaginationPayload;
+    }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_get_admin_users(payload);
+        if ('ok' in response) {
+            return response.ok.map(r => serializeAdminRolePairs(r));
+        }
+        throw new Error('Failed to get admins.');
+    }
+);
+
 export const grantRole = createAsyncThunk(
     'admin/grantRole',
     async ({
@@ -411,7 +460,7 @@ export const fetchActivityLogsAll = createAsyncThunk(
     }) => {
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
-        const response = await api.admin_get_activity_logs_all(payload);
+        const response = await api.admin_get_activity_logs_all(serializePaginationPayload(payload));
         if ('ok' in response) {
             return response.ok.map(serializeActivityLogsPair);
         }
@@ -432,7 +481,7 @@ export const fetchWorkflowRunHistoryAll = createAsyncThunk(
     }) => {
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
-        const response = await api.admin_get_workflow_run_history_all(payload);
+        const response = await api.admin_get_workflow_run_history_all(serializePaginationPayload(payload));
         if ('ok' in response) {
             return response.ok.map(serializeWorkflowRunDetailsPair);
         }
@@ -453,7 +502,7 @@ export const fetchUsageLogsAll = createAsyncThunk(
     }) => {
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
-        const response = await api.admin_get_usage_logs_all(payload);
+        const response = await api.admin_get_usage_logs_all(serializePaginationPayload(payload));
         if ('ok' in response) {
             return response.ok.map(serializeUsageLogsPair);
         }
@@ -495,7 +544,7 @@ export const fetchUserProjectsAll = createAsyncThunk(
     }) => {
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
-        const response = await api.admin_get_user_projects_all(payload);
+        const response = await api.admin_get_user_projects_all(serializePaginationPayload(payload));
         if ('ok' in response) {
             return response.ok.map(serializeProjectsPair);
         }
@@ -518,7 +567,7 @@ export const fetchUserProjects = createAsyncThunk(
     }) => {
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
-        const response = await api.admin_get_user_projects(user, payload);
+        const response = await api.admin_get_user_projects(user, serializePaginationPayload(payload));
         if ('ok' in response) {
             return response.ok.map(serializeProject);
         }
@@ -539,7 +588,7 @@ export const fetchProjectsAll = createAsyncThunk(
     }) => {
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
-        const response = await api.admin_get_projects_all(payload);
+        const response = await api.admin_get_projects_all(serializePaginationPayload(payload));
         if ('ok' in response) {
             return response.ok.map(serializeProjectsIdPair);
         }
@@ -560,13 +609,123 @@ export const fetchCanisterDeploymentsAll = createAsyncThunk(
     }) => {
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
-        const response = await api.admin_get_canister_deployments_all(payload);
+        const response = await api.admin_get_canister_deployments_all(serializePaginationPayload(payload));
         if ('ok' in response) {
             return response.ok.map(serializeCanisterDeploymentsPair);
         }
         throw new Error('Failed to fetch canister deployments');
     }
 );
+
+export const fetchBookEntriesAll = createAsyncThunk(
+    'admin/fetchBookEntriesAll',
+    async ({
+        identity,
+        agent,
+        payload
+    }: {
+        identity: any;
+        agent: any;
+        payload: PaginationPayload;
+    }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_get_book_entries_all(serializePaginationPayload(payload));
+        if ('ok' in response) {
+            return serializeBookEntries(response.ok);
+        }
+        throw new Error('Failed to fetch book entries');
+    }
+);
+
+export const fetchTreasuryBalance = createAsyncThunk(
+    'admin/fetchTreasuryBalance',
+    async ({ identity, agent }: { identity: any; agent: any }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_get_treasury_balance();
+        if ('ok' in response) {
+            return Number(response.ok);
+        }
+        throw new Error('Failed to fetch treasury balance');
+    }
+);
+
+
+export const setTreasury = createAsyncThunk(
+    'subscription/setTreasury',
+    async ({
+        identity,
+        agent,
+        treasuryPrincipal,
+    }: {
+        identity: any;
+        agent: any;
+        treasuryPrincipal: string;
+    }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) {
+            throw new Error('Failed to create API instance');
+        }
+
+        const result = await mainApi.admin_set_treasury(treasuryPrincipal);
+        if (!result) {
+            throw new Error('Failed to set treasury');
+        }
+
+        // Use the new error handling utility
+        handleBackendResponse(result);
+        return treasuryPrincipal;
+    }
+);
+
+export const withdrawTreasury = createAsyncThunk(
+    'subscription/withdrawTreasury',
+    async ({
+        identity,
+        agent,
+    }: {
+        identity: any;
+        agent: any;
+    }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) {
+            throw new Error('Failed to create API instance');
+        }
+
+        const result = await mainApi.admin_withdraw_treasury();
+        if (!result) {
+            throw new Error('Failed to withdraw from treasury');
+        }
+
+        // Use the new error handling utility
+        return handleBackendResponse(result);
+    }
+);
+export const getTreasury = createAsyncThunk(
+    'subscription/getTreasury',
+    async ({
+        identity,
+        agent,
+    }: {
+        identity: any;
+        agent: any;
+    }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) {
+            throw new Error('Failed to create API instance');
+        }
+        const response = await mainApi.admin_get_treasury_principal();
+
+        if (!response) {
+            throw new Error("Failed to get treasury principal.");
+        }
+        // Use the new error handling utility
+        const result = handleBackendResponse(response);
+        return serializePrincipal(result);
+    }
+);
+
 
 // Slice
 const adminSlice = createSlice({
@@ -977,6 +1136,85 @@ const adminSlice = createSlice({
                 state.isLoadingCanisterDeployments = false;
                 state.error = action.error.message || 'Failed to fetch canister deployments';
             });
+        builder
+            .addCase(getAdmins.pending, (state) => {
+                state.isLoadingAccessControl = true;
+            })
+            .addCase(getAdmins.fulfilled, (state, action) => {
+                state.isLoadingAccessControl = false;
+                state.admins = action.payload;
+            })
+            .addCase(getAdmins.rejected, (state, action) => {
+                state.isLoadingAccessControl = false;
+                state.error = action.error.message || "Failed to get admins.";
+            });
+
+        // Fetch Book Entries All
+        builder
+            .addCase(fetchBookEntriesAll.pending, (state) => {
+                state.isLoadingBookEntries = true;
+                state.error = null;
+            })
+            .addCase(fetchBookEntriesAll.fulfilled, (state, action) => {
+                state.isLoadingBookEntries = false;
+                state.bookEntries = action.payload;
+            })
+            .addCase(fetchBookEntriesAll.rejected, (state, action) => {
+                state.isLoadingBookEntries = false;
+                state.error = action.error.message || 'Failed to fetch book entries';
+            });
+
+        // Fetch Treasury Balance
+        builder
+            .addCase(fetchTreasuryBalance.pending, (state) => {
+                state.isLoadingTreasuryBalance = true;
+                state.error = null;
+            })
+            .addCase(fetchTreasuryBalance.fulfilled, (state, action) => {
+                state.isLoadingTreasuryBalance = false;
+                state.treasuryBalance = Number(action.payload);
+            })
+            .addCase(fetchTreasuryBalance.rejected, (state, action) => {
+                state.isLoadingTreasuryBalance = false;
+                state.error = action.error.message || 'Failed to fetch treasury balance';
+            });
+
+        builder  // Set treasury
+            .addCase(setTreasury.pending, (state) => {
+                state.isLoadingTreasury = true;
+                state.error = null;
+            })
+            .addCase(setTreasury.fulfilled, (state, action) => {
+                state.isLoadingTreasury = false;
+                state.treasuryPrincipal = action.payload;
+            })
+            .addCase(setTreasury.rejected, (state, action) => {
+                state.isLoadingTreasury = false;
+                state.error = handleError(action.error);
+            })
+            // Withdraw treasury
+            .addCase(withdrawTreasury.pending, (state) => {
+                state.isLoadingTreasury = true;
+                state.error = null;
+            })
+            .addCase(withdrawTreasury.fulfilled, (state) => {
+                state.isLoadingTreasury = false;
+            })
+            .addCase(withdrawTreasury.rejected, (state, action) => {
+                state.isLoadingTreasury = false;
+                state.error = handleError(action.error);
+            })
+            .addCase(getTreasury.pending, (state) => {
+                state.isLoadingTreasury = true;
+            })
+            .addCase(getTreasury.fulfilled, (state, action) => {
+                state.isLoadingTreasury = false;
+                state.treasuryPrincipal = action.payload;
+            })
+            .addCase(getTreasury.rejected, (state, action) => {
+                state.isLoadingTreasury = false;
+                state.error = handleError(action.error);
+            })
     },
 });
 

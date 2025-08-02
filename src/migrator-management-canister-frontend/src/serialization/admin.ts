@@ -1,21 +1,22 @@
 import { Principal } from "@dfinity/principal";
+import { ProjectPlan, Role, UsageLogExtended } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { SerializedUsageLogExtended } from "../utility/bigint";
 
 // Activity Log Types
 export interface SerializedActivityLog {
     id: number;
-    project_id: number;
-    action: string;
-    details: string;
+    category: string;
+    description: string;
     create_time: number;
 }
 
 export interface DeserializedActivityLog {
     id: bigint;
-    project_id: bigint;
-    action: string;
-    details: string;
+    category: string;
+    description: string;
     create_time: bigint;
 }
+export type SerializedCanisterDeploymentStatus = "installed" | "installing" | "uninitialized" | "failed";
 
 // Workflow Run Details Types
 export interface SerializedWorkflowRunDetails {
@@ -65,6 +66,8 @@ export interface DeserializedUsageLog {
     };
 }
 
+export type SerializedProjectPlan = "freemium" | "paid";
+
 // Project Types
 export interface SerializedProject {
     id: number;
@@ -73,7 +76,7 @@ export interface SerializedProject {
     name: string;
     description: string;
     tags: string[];
-    plan: any;
+    plan: SerializedProjectPlan;
     date_created: number;
     date_updated: number;
 }
@@ -85,7 +88,7 @@ export interface DeserializedProject {
     name: string;
     description: string;
     tags: string[];
-    plan: any;
+    plan: ProjectPlan;
     date_created: bigint;
     date_updated: bigint;
 }
@@ -134,19 +137,25 @@ export interface DeserializedShareableCanister {
     status: any;
 }
 
+export type SerializedRole = "super_admin" | "admin";
+
 // Pagination Types
 export interface PaginationPayload {
     limit?: number;
     page?: number;
 }
 
+export interface DeserializedPaginationPayload {
+    limit: [bigint];
+    page: [bigint];
+}
+
 // Serialization Functions
 export const serializeActivityLog = (activityLog: any): SerializedActivityLog => {
     return {
         id: Number(activityLog.id),
-        project_id: Number(activityLog.project_id),
-        action: activityLog.action,
-        details: activityLog.details,
+        category: activityLog.category,
+        description: activityLog.description,
         create_time: Number(activityLog.create_time),
     };
 };
@@ -164,20 +173,27 @@ export const serializeWorkflowRunDetails = (workflowRun: any): SerializedWorkflo
     };
 };
 
-export const serializeUsageLog = (usageLog: any): SerializedUsageLog => {
+export const serializeUsageLog = (usageLog: UsageLogExtended): SerializedUsageLogExtended => {
     return {
-        is_active: usageLog.is_active,
-        usage_count: Number(usageLog.usage_count),
-        last_used: Number(usageLog.last_used),
-        rate_limit_window: Number(usageLog.rate_limit_window),
-        max_uses_threshold: Number(usageLog.max_uses_threshold),
-        quota: {
-            consumed: Number(usageLog.quota.consumed),
-            total: Number(usageLog.quota.total),
+        usage_log: {
+            is_active: usageLog.usage_log.is_active,
+            usage_count: usageLog.usage_log.usage_count.toString(),
+            last_used: usageLog.usage_log.last_used.toString(),
+            rate_limit_window: usageLog.usage_log.rate_limit_window.toString(),
+            max_uses_threshold: usageLog.usage_log.max_uses_threshold.toString(),
+            quota: {
+                consumed: Number(usageLog.usage_log.quota.consumed),
+                total: Number(usageLog.usage_log.quota.total),
+            },
         },
+        reset_time_unix: Number(usageLog.reset_time_unix)
     };
 };
-
+const serializeProjectPlan = (plan: ProjectPlan): SerializedProjectPlan => {
+    if ("freemium" in plan) return "freemium";
+    if ("paid" in plan) return "paid";
+    return "freemium";
+}
 export const serializeProject = (project: any): SerializedProject => {
     return {
         id: Number(project.id),
@@ -188,17 +204,24 @@ export const serializeProject = (project: any): SerializedProject => {
         name: project.name,
         description: project.description,
         tags: project.tags,
-        plan: project.plan,
+        plan: serializeProjectPlan(project.plan),
         date_created: Number(project.date_created),
         date_updated: Number(project.date_updated),
     };
 };
+export const serializeCanisterDeploymentStatus = (status: any): SerializedCanisterDeploymentStatus => {
+    if ("uninitialized" in status) return "uninitialized";
+    if ("installed" in status) return "installed";
+    if ("installing" in status) return "installing";
+    if ("failed" in status) return "failed";
+    return "failed";
+}
 
 export const serializeCanisterDeployment = (deployment: any): SerializedCanisterDeployment => {
     return {
         canister_id: typeof deployment.canister_id === 'string' ?
             deployment.canister_id : deployment.canister_id.toString(),
-        status: deployment.status,
+        status: serializeCanisterDeploymentStatus(deployment.status),
         size: Number(deployment.size),
         date_created: Number(deployment.date_created),
         date_updated: Number(deployment.date_updated),
@@ -231,7 +254,7 @@ export const serializeWorkflowRunDetailsArray = (workflowRuns: any[]): Serialize
     return workflowRuns.map(serializeWorkflowRunDetails);
 };
 
-export const serializeUsageLogs = (usageLogs: any[]): SerializedUsageLog[] => {
+export const serializeUsageLogs = (usageLogs: any[]): SerializedUsageLogExtended[] => {
     return usageLogs.map(serializeUsageLog);
 };
 
@@ -258,7 +281,7 @@ export const serializeWorkflowRunDetailsPair = (pair: [any, any[]]): [number, Se
     return [Number(projectId), serializeWorkflowRunDetailsArray(workflowRuns)];
 };
 
-export const serializeUsageLogsPair = (pair: [any, any]): [string, SerializedUsageLog] => {
+export const serializeUsageLogsPair = (pair: [any, any]): [string, SerializedUsageLogExtended] => {
     const [principal, usageLog] = pair;
     const serializedPrincipal = typeof principal === 'string' ? principal : principal.toString();
     return [serializedPrincipal, serializeUsageLog(usageLog)];
@@ -287,4 +310,52 @@ export const serializePaginationPayload = (payload: PaginationPayload): any => {
         limit: payload.limit ? [BigInt(payload.limit)] : [],
         page: payload.page ? [BigInt(payload.page)] : [],
     };
-}; 
+};
+
+export const deserializePaginationPayload = (payload: DeserializedPaginationPayload): any => {
+    return {
+        limit: payload.limit && payload?.limit.length > 0 ? Number(payload.limit) : 20,
+        page: payload.page && payload?.page.length > 0 ? Number(payload.page) : 0,
+    };
+};
+
+export const serializeAdminRolePairs = (pair: [Principal, Role]): [string, SerializedRole] => {
+    const [principal, deployment] = pair;
+    const serializedPrincipal = typeof principal === 'string' ? principal : principal.toString();
+    return [serializedPrincipal, serializeAdminRole(deployment)];
+};
+export const serializeAdminRole = (role: Role): SerializedRole => {
+    if ("super_admin" in role) return "super_admin";
+    if ("admin" in role) return "admin";
+    return "admin";
+}
+
+// Book Entries Types
+export interface SerializedBookEntry {
+    principal: string;
+    balances: { [token: string]: number };
+}
+
+export interface DeserializedBookEntry {
+    principal: Principal;
+    balances: [Principal, bigint][];
+}
+
+export const serializeBookEntry = (entry: [Principal, [Principal, bigint][]]): SerializedBookEntry => {
+    const [principal, balances] = entry;
+    const serializedBalances: { [token: string]: number } = {};
+
+    // Convert array of [token, amount] pairs to object
+    balances.forEach(([token, amount]) => {
+        serializedBalances[token.toString()] = Number(amount);
+    });
+
+    return {
+        principal: principal.toString(),
+        balances: serializedBalances
+    };
+};
+
+export const serializeBookEntries = (entries: [Principal, [Principal, bigint][]][]): SerializedBookEntry[] => {
+    return entries.map(entry => serializeBookEntry(entry));
+};

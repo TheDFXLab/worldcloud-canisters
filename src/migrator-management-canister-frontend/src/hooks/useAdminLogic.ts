@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
+    getAdmins,
     fetchSlots,
     fetchAvailableSlots,
     fetchUsedSlots,
@@ -27,12 +28,17 @@ import {
     fetchUserProjects,
     fetchProjectsAll,
     fetchCanisterDeploymentsAll,
+    fetchBookEntriesAll,
     clearError,
     clearSuccessMessage,
+    getTreasury,
+    withdrawTreasury,
+    setTreasury,
 } from '../state/slices/adminSlice';
 import { RootState, AppDispatch } from '../state/store';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
 import { useHttpAgent } from '../context/HttpAgentContext/HttpAgentContext';
+import { PaginationPayload } from '../serialization/admin';
 
 // Add typed dispatch hook
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -43,6 +49,9 @@ export const useAdminLogic = () => {
     const { agent } = useHttpAgent();
 
     const {
+        treasuryBalance,
+        treasuryPrincipal,
+        admins,
         slots,
         availableSlots,
         usedSlots,
@@ -66,9 +75,12 @@ export const useAdminLogic = () => {
         userSlot,
         isLoadingUserSlot,
         isLoadingAccessControl,
+        bookEntries,
+        isLoadingBookEntries,
         isLoading,
+        isLoadingTreasury,
         error,
-        successMessage
+        successMessage,
     } = useSelector((state: RootState) => state.admin);
 
     // Fetch slots
@@ -173,6 +185,11 @@ export const useAdminLogic = () => {
         }
     }, [dispatch, identity, agent]);
 
+    const handleGetAdmins = useCallback(async (payload: PaginationPayload) => {
+        if (identity && agent) {
+            await dispatch(getAdmins({ identity, agent, payload }));
+        }
+    }, [dispatch, identity, agent])
     // Grant role
     const handleGrantRole = useCallback(async (principal: string, role: any) => {
         if (identity && agent) {
@@ -257,6 +274,13 @@ export const useAdminLogic = () => {
         }
     }, [dispatch, identity, agent]);
 
+    // Fetch book entries all
+    const refreshBookEntriesAll = useCallback(async (payload: any) => {
+        if (identity && agent) {
+            await dispatch(fetchBookEntriesAll({ identity, agent, payload }));
+        }
+    }, [dispatch, identity, agent]);
+
     // Clear error
     const handleClearError = useCallback(() => {
         dispatch(clearError());
@@ -266,6 +290,44 @@ export const useAdminLogic = () => {
     const handleClearSuccessMessage = useCallback(() => {
         dispatch(clearSuccessMessage());
     }, [dispatch]);
+
+
+    const handleGetTreasuryPrincipal = useCallback(() => {
+        if (identity && agent) {
+            dispatch(getTreasury({ identity, agent }))
+        }
+    }, [dispatch])
+
+    // Treasury methods
+    const handleSetTreasury = useCallback(async (treasuryPrincipal: string) => {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(setTreasury({ identity, agent, treasuryPrincipal })).unwrap();
+            return { status: true, message: 'Treasury set successfully' };
+        } catch (error: any) {
+            return {
+                status: false,
+                message: error.message || 'Failed to set treasury',
+            };
+        }
+    }, [dispatch, identity, agent]);
+
+    const handleWithdrawTreasury = useCallback(async () => {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            const result = await dispatch(withdrawTreasury({ identity, agent })).unwrap();
+            return { status: true, message: `Withdrew ${result} e8s from treasury`, amount: result };
+        } catch (error: any) {
+            return {
+                status: false,
+                message: error.message || 'Failed to withdraw from treasury',
+            };
+        }
+    }, [dispatch, identity, agent]);
 
     // Fetch initial data on mount
     useEffect(() => {
@@ -280,6 +342,7 @@ export const useAdminLogic = () => {
 
     return {
         // Data
+        admins,
         slots,
         availableSlots,
         usedSlots,
@@ -292,6 +355,9 @@ export const useAdminLogic = () => {
         allProjects,
         canisterDeployments,
         userSlot,
+        bookEntries,
+        treasuryPrincipal,
+        treasuryBalance,
 
         // Loading states
         isLoadingSlots,
@@ -305,11 +371,15 @@ export const useAdminLogic = () => {
         isLoadingCanisterDeployments,
         isLoadingUserSlot,
         isLoadingAccessControl,
+        isLoadingBookEntries,
         isLoading,
+        isLoadingTreasury,
 
         // Messages
         error,
         successMessage,
+
+
 
         // Actions
         refreshSlots,
@@ -325,6 +395,7 @@ export const useAdminLogic = () => {
         refreshUserProjects,
         refreshProjectsAll,
         refreshCanisterDeploymentsAll,
+        refreshBookEntriesAll,
         handleSetAllSlotDuration,
         handleDeleteUsageLogs,
         handleUpdateSlot,
@@ -334,11 +405,17 @@ export const useAdminLogic = () => {
         handleResetSlots,
         handlePurgeExpiredSessions,
         handleDeleteAllLogs,
+        handleGetAdmins,
         handleGrantRole,
         handleRevokeRole,
         handleCheckRole,
         handleUploadAssetCanisterWasm,
         handleClearError,
         handleClearSuccessMessage,
+
+        // Treasury
+        handleGetTreasuryPrincipal,
+        setTreasury: handleSetTreasury,
+        withdrawTreasury: handleWithdrawTreasury,
     };
 }; 
