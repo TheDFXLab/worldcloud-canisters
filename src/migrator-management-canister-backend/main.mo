@@ -88,8 +88,10 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   private stable var stable_quotas : Types.QuotasMap = Map.empty<Principal, Types.Quota>();
   private stable var stable_system_timers : Types.TimersMap = Map.empty<Nat, Nat>();
   private stable var stable_quota_timer_id : Nat = 0;
+  private stable var TREASURY_ACCOUNT : ?Principal = null;
   private transient var QUOTA_CLEAR_DURATION_SECONDS : Nat = 24 * 60 * 60;
-
+  private transient var QUOTA_CLEAR_DURATION_SECONDS_DEV : Nat = 10 * 60;
+  // private transient var TREASURY_ACCOUNT : ?Principal = null;
   /** Classes Instances */
   private transient var book : Book.Book = Book.Book(stable_book);
   private transient let project_manager = ProjectManager.ProjectManager(stable_projects, stable_user_to_projects, stable_next_project_id);
@@ -98,7 +100,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   private transient let shareable_canister_manager = CanisterShareable.ShareableCanisterManager(stable_slots, stable_user_to_slot, stable_used_slots, stable_usage_logs, stable_next_slot_id, stable_quotas);
   private transient let workflow_manager = WorkflowManager.WorkflowManager(stable_workflow_run_history);
   private transient let activity_manager = ActivityManager.ActivityManager(stable_project_activity_logs);
-  private transient let subscription_manager = SubscriptionManager.SubscriptionManager(book, ledger, _subscriptions);
+  private transient let subscription_manager = SubscriptionManager.SubscriptionManager(book, ledger, _subscriptions, TREASURY_ACCOUNT);
   private transient let canisters = Canisters.Canisters(stable_canister_table, stable_user_canisters, stable_deployed_canisters);
 
   /** Transient Storage */
@@ -110,15 +112,20 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   /** Initialization*/
   private func init<system>() {
     access_control.init();
-    let _is_set_treasury = subscription_manager.set_treasury(Principal.fromActor(this));
+    // let _is_set_treasury = subscription_manager.set_treasury(Principal.fromActor(this));
     init_quota_timer<system>();
   };
 
   private func init_quota_timer<system>() {
     let id : Nat = Map.size(stable_system_timers);
-
     let schedule : Types.QuotaSchedulerSeconds = Utility.get_quota_scheduler_seconds();
+    let now : Nat = Int.abs(Utility.get_time_now(#seconds));
     Debug.print("[init_quota_timer] " # Nat.toText(schedule.seconds_until_next_midnight) # " seconds till midnight. " # Nat.toText(schedule.seconds_since_midnight) # " seconds since midnight.");
+    Debug.print("[init_quota_timer] triggers at::: " # Nat.toText(schedule.seconds_until_next_midnight + now));
+
+    // Set the next quota reset utc time
+    shareable_canister_manager.next_quota_reset_s := now + schedule.seconds_until_next_midnight;
+
     // Set initial timer to run at next midnight
     let initial_timer_id = Timer.setTimer<system>(
       #seconds(schedule.seconds_until_next_midnight),
@@ -130,8 +137,10 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
         // Set up recurring timer for every 24 hours after this
         let recurring_timer_id = Timer.recurringTimer<system>(
           #seconds(QUOTA_CLEAR_DURATION_SECONDS), // 24 hours in seconds
+          // #seconds(QUOTA_CLEAR_DURATION_SECONDS_DEV), // 24 hours in seconds
           func() : async () {
             shareable_canister_manager.reset_quotas();
+            shareable_canister_manager.next_quota_reset_s := Int.abs(Utility.get_time_now(#seconds)) + QUOTA_CLEAR_DURATION_SECONDS_DEV;
             Debug.print("Quotas cleared!");
           },
         );
@@ -158,6 +167,9 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
    * START SLOTS METHODS (Shareable canisters)
    *
    */
+  public shared (msg) func get_next_quota_reset_utc() : async Nat {
+    return shareable_canister_manager.next_quota_reset_s;
+  };
 
   public shared (msg) func get_next_project_id() : async Nat {
     return stable_next_project_id;
@@ -169,11 +181,15 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     await project_manager.get_projects_by_user(payload.user, payload);
   };
 
-  public shared (msg) func get_user_usage() : async Types.Response<Types.UsageLog> {
+  public shared (msg) func get_user_usage() : async Types.Response<Types.UsageLogExtended> {
     if (Utility.is_anonymous(msg.caller)) return #err(Errors.Unauthorized());
-    let response = shareable_canister_manager.get_usage_log(msg.caller);
-    stable_usage_logs := shareable_canister_manager.usage_logs;
-    return #ok(response);
+    let usage_log : Types.UsageLog = shareable_canister_manager.get_usage_log(msg.caller);
+
+    // stable_usage_logs := shareable_canister_manager.usage_logs; // update stable storage
+    return #ok({
+      usage_log = usage_log;
+      reset_time_unix = shareable_canister_manager.next_quota_reset_s;
+    });
   };
 
   /** Shareable Canisters */
@@ -256,6 +272,51 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
    * START ADMIN METHODS
    *
    */
+  private func get_treasury_account() : Types.Response<Types.AccountIdentifier> {
+    let treasury_principal = switch (TREASURY_ACCOUNT) {
+      case (null) { return #err(Errors.TreasuryNotSet()) };
+      case (?val) { val };
+    };
+    // Calculate treasury subaccount
+    let treasury_account = Account.accountIdentifier(Principal.fromActor(this), Account.principalToSubaccount(treasury_principal));
+    return #ok(treasury_account);
+  };
+
+  public shared (msg) func admin_get_treasury_principal() : async Types.Response<Principal> {
+    let principal : Principal = switch (TREASURY_ACCOUNT) {
+      case (null) { return #err(Errors.TreasuryNotSet()) };
+      case (?val) { val };
+    };
+    Debug.print("Treasury prin" # debug_show (TREASURY_ACCOUNT));
+    return #ok(principal);
+  };
+
+  public shared (msg) func admin_set_treasury(principal : Principal) : async Types.Response<()> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    subscription_manager.set_treasury(principal);
+    TREASURY_ACCOUNT := ?principal;
+    return #ok();
+  };
+
+  public shared (msg) func admin_get_treasury_balance() : async Types.Response<Nat> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    let treasury_account : Types.AccountIdentifier = switch (get_treasury_account()) {
+      case (#err(err)) { return #err(err) };
+      case (#ok(val)) { val };
+    };
+
+    // Check ledger for treasury balance
+    let balance = await Ledger.account_balance({
+      account = treasury_account;
+    });
+    return #ok(Nat64.toNat(balance.e8s));
+  };
 
   public shared (msg) func admin_get_activity_logs_all(payload : Types.PaginationPayload) : async Types.Response<[(Types.ProjectId, [Types.ActivityLog])]> {
     if (not access_control.is_authorized(msg.caller)) {
@@ -305,6 +366,13 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return await project_manager.get_projects_by_user(user, payload_with_user);
   };
 
+  public shared (msg) func admin_get_admins(payload : Types.PaginationPayload) : async Types.Response<[(Principal, Types.Role)]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return access_control.get_role_users(payload);
+  };
+
   public shared (msg) func admin_get_projects_all(payload : Types.PaginationPayload) : async Types.Response<[(Types.ProjectId, Types.Project)]> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
@@ -319,6 +387,29 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     };
 
     return canisters.get_canister_deployments_all(payload);
+  };
+
+  public shared (msg) func admin_get_book_entries_all(payload : Types.PaginationPayload) : async Types.Response<[(Principal, [(Types.Token, Nat)])]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    let book_entries = book.get_all_entries_paginated(payload);
+    switch (book_entries) {
+      case (#err(err)) { return #err(err) };
+      case (#ok(entries)) {
+        // Convert Map to stable array format
+        let stable_entries = Array.map<(Principal, Map.Map<Types.Token, Nat>), (Principal, [(Types.Token, Nat)])>(
+          entries,
+          func(entry) {
+            let (principal, balances_map) = entry;
+            let balances_array = Iter.toArray(Map.entries(balances_map));
+            (principal, balances_array);
+          },
+        );
+        return #ok(stable_entries);
+      };
+    };
   };
 
   public shared (msg) func admin_set_all_slot_duration(new_duration_ms : Nat) : async Types.Response<()> {
@@ -1159,9 +1250,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   // Create a subscription for the caller
   public shared (msg) func create_subscription(tier_id : Nat) : async Types.Response<Types.Subscription> {
     if (Utility.is_anonymous(msg.caller)) return #err(Errors.Unauthorized());
-    let response = await subscription_manager.create_subscription(msg.caller, tier_id);
-    // stable_subscriptions := subscription_manager.subscriptions; // update stable storage
-    return response;
+    return await subscription_manager.create_subscription(msg.caller, tier_id);
   };
 
   public func get_tiers() : async [Types.Tier] {
@@ -1429,23 +1518,79 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     // Transfer to default subaccount of this canister
     let result = await deposit(msg.caller, Nat64.toNat(balance.e8s));
     switch result {
-      case (#Ok(available)) {
+      case (#ok(available)) {
         Debug.print("Deposit result: " # Nat.toText(available));
         return #ok(available);
       };
-      case (#Err(error)) {
+      case (#err(err)) {
         Debug.print("Deposit error: ");
-        if (error == #BalanceLow) return #err(Errors.InsufficientFunds());
-        if (error == #TransferFailure) return #err(Errors.TransferFailed());
-        return #err(Errors.FailedDeposit());
+        return #err(err);
+      };
+    };
+  };
+
+  public shared (msg) func admin_withdraw_treasury() : async Types.Response<Nat> {
+    if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
+    let balance_e8s : Nat = switch (await admin_get_treasury_balance()) {
+      case (#err(err)) { return #err(err) };
+      case (#ok(val)) { val };
+    };
+    Debug.print("Admin: balance: " # debug_show (balance_e8s));
+
+    let treasury_principal : Principal = switch (TREASURY_ACCOUNT) {
+      case (null) { return #err(Errors.TreasuryNotSet()) };
+      case (?val) { val };
+    };
+
+    let treasury_account : Types.AccountIdentifier = switch (get_treasury_account()) {
+      case (#err(err)) { return #err(err) };
+      case (#ok(val)) { val };
+    };
+
+    // Transfer from treasury subaccount to default subaccount of this canister
+    let icp_receipt = if ((balance_e8s) > icp_fee) {
+      await Ledger.transfer({
+        memo : Nat64 = 0;
+        from_subaccount = ?Account.principalToSubaccount(treasury_principal);
+        to = Account.accountIdentifier(treasury_principal, Account.defaultSubaccount());
+        amount = { e8s = Nat64.fromNat(balance_e8s - icp_fee) };
+        fee = { e8s = Nat64.fromNat(icp_fee) };
+        created_at_time = ?{
+          timestamp_nanos = Nat64.fromNat(Int.abs(Utility.get_time_now(#nanoseconds)));
+        };
+      });
+
+    } else {
+      return #err(Errors.InsufficientFunds());
+    };
+
+    switch icp_receipt {
+      case (#Err _) {
+        return #err(Errors.TransferFailed());
+      };
+      case (#Ok _) {
+        let amount_transferred = {
+          e8s : Nat = balance_e8s - icp_fee;
+        };
+        Debug.print("Transferred from treasury " # Nat.toText(amount_transferred.e8s) # " e8s");
+
+        // Update internal bookkeeping
+        let new_balance = _removeCredit(treasury_principal, ledger, amount_transferred.e8s);
+        Debug.print("New Treasury Balance: " # Nat.toText(new_balance) # " e8s");
+        return #ok(balance_e8s);
       };
     };
   };
 
   // Transfers a user's ICP deposit from their respective subaccount to the default subaccount of this canister
-  private func deposit(from : Principal, balance : Nat) : async Types.DepositReceipt {
+  private func deposit(from : Principal, balance : Nat) : async Types.Response<Nat> {
+    let treasury_principal : Principal = switch (TREASURY_ACCOUNT) {
+      case (null) { return #err(Errors.TreasuryNotSet()) };
+      case (?val) { val };
+    };
     let subAcc = Account.principalToSubaccount(from);
-    let destination_deposit_identifier : Types.AccountIdentifier = Account.accountIdentifier(Principal.fromActor(this), Account.defaultSubaccount());
+    let destination_deposit_identifier : Types.AccountIdentifier = Account.accountIdentifier(Principal.fromActor(this), Account.principalToSubaccount(treasury_principal));
+    // let destination_deposit_identifier : Types.AccountIdentifier = Account.accountIdentifier(Principal.fromActor(this), Account.defaultSubaccount());
 
     // Transfer to default subaccount of this canister
     let icp_receipt = if ((balance) > icp_fee) {
@@ -1461,12 +1606,12 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       });
 
     } else {
-      return #Err(#BalanceLow);
+      return #err(Errors.InsufficientFunds());
     };
 
     switch icp_receipt {
-      case (#Err _) {
-        return #Err(#TransferFailure);
+      case (#err _) {
+        return #err(Errors.TransferFailed());
       };
       case _ {};
     };
@@ -1475,7 +1620,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     // Keep track of deposited ICP
     _addCredit(from, ledger, available.e8s);
 
-    return #Ok(available.e8s);
+    return #ok(available.e8s);
   };
 
   // Increase deposited amount for `to` principal
@@ -1935,6 +2080,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   // Dangling
   private func _recover_timers<system>() : () {
+    Debug.print("Timers available : " # Nat.toText(Map.size(timers)));
     for ((slot_id, timer_id) in Map.entries(timers)) {
       Debug.print("[_recover_timers] Slot #" # Nat.toText(slot_id) # " recovering timer");
       let slot : Types.ShareableCanister = switch (shareable_canister_manager.get_canister_by_slot(slot_id)) {
@@ -1960,6 +2106,10 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
         Debug.print("[RecoverTimers] Project freemium session is active. Setup cleanup timer for slot #" # Nat.toText(slot_id));
       } else {
         let _project_id = _end_freemium_session(slot_id, slot.user);
+        _delete_timer(slot_id);
+        Debug.print("Timers available : " # Nat.toText(Map.size(timers)));
+
+        // cleanup_session(slot_id, slot.canister_id);
         Debug.print("[RecoverTimers] Project freemium session expired. Terminated session for slot #" # Nat.toText(slot_id));
       };
     };
@@ -1972,6 +2122,43 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       case (val) { #ok(val) };
     };
 
+  };
+
+  // Delete slot id to timer id reference from `timers` mapping
+  // Pop out slot id from array of slot ids with active timers
+  private func _delete_timer(slot_id : Nat) {
+    // let _res = switch (timers.get(slot_id)) {
+    let _res = switch (Map.get(timers, Nat.compare, slot_id)) {
+      case (null) {
+        Debug.print("[_delete_timer] No timer found for slot #" # Nat.toText(slot_id));
+        0;
+      };
+      case (?_timer_id) {
+        // timers.delete(_timer_id);
+        Debug.print("[_delete_timer] deleting timerid:::: " # Nat.toText(_timer_id) # " for Slot id # " # Nat.toText(slot_id));
+        let r = Map.delete(timers, Nat.compare, slot_id); // Use slot_id as key, not timer_id
+        Debug.print("Map Remove result is removed?: " # debug_show (r));
+        0;
+      };
+    };
+
+    let new_active_slot_timers : [Nat] = Array.filter(stable_slot_id_active_timer, func(slot : Nat) : Bool { slot != slot_id });
+
+    Debug.print("Removed " # Int.toText(Int.abs(new_active_slot_timers.size() - stable_slot_id_active_timer.size())));
+    stable_slot_id_active_timer := new_active_slot_timers;
+  };
+
+  private func _set_cleanup_timer<system>(duration : Nat, slot_id : Nat, canister_id : ?Principal) : () {
+    let timer_id = Timer.setTimer<system>(
+      #seconds duration,
+      func() : async () {
+        await cleanup_session(slot_id, canister_id);
+      },
+    );
+
+    Debug.print("[Timer] Created timer with id: " # Nat.toText(timer_id) # ". Triggers @ " # Int.toText(Int.abs(Utility.get_time_now(#seconds) + duration)) # " s UNIX Time.");
+    // timers.put(slot_id, timer_id);
+    Map.add(timers, Nat.compare, slot_id, timer_id);
   };
 
   private func _clear_asset_canister(canister_id : Principal) : async Types.Response<()> {
@@ -2008,78 +2195,47 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return #ok();
   };
 
-  // Delete slot id to timer id reference from `timers` mapping
-  // Pop out slot id from array of slot ids with active timers
-  private func _delete_timer(slot_id : Nat) {
-    // let _res = switch (timers.get(slot_id)) {
-    let _res = switch (Map.get(timers, Nat.compare, slot_id)) {
-      case (null) {
-        0;
-      };
-      case (?_timer_id) {
-        // timers.delete(_timer_id);
-        ignore Map.delete(timers, Nat.compare, _timer_id);
-        0;
+  private func cleanup_session(slot_id : Nat, canister_id : ?Principal) : async () {
+    // This code runs after the specified duration
+    Debug.print("[Timer Triggered] Ending session on slot #" # Nat.toText(slot_id));
+    // Clear asset canister files
+    let _is_deleted = switch (canister_id) {
+      case (null) { true };
+      case (?val) {
+        let is_cleared = switch (await _clear_asset_canister(val)) {
+          case (#err(err)) {
+            Debug.print("Error occured during asset clearing: " # err);
+            false;
+          };
+          case (#ok(_val)) {
+            Debug.print("Cleared asset canister.");
+            true;
+          };
+        };
+        is_cleared;
       };
     };
 
-    let new_active_slot_timers : [Nat] = Array.filter(stable_slot_id_active_timer, func(slot : Nat) : Bool { slot != slot_id });
-
-    Debug.print("Removed " # Int.toText(Int.abs(new_active_slot_timers.size() - stable_slot_id_active_timer.size())));
-    stable_slot_id_active_timer := new_active_slot_timers;
-  };
-
-  // private func _create_timer <system> (duration: Nat, slot_id: Nat, canister_id)
-  private func _set_cleanup_timer<system>(duration : Nat, slot_id : Nat, canister_id : ?Principal) : () {
-    let timer_id = Timer.setTimer<system>(
-      #seconds duration,
-      func() : async () {
-        // This code runs after the specified duration
-        Debug.print("[Timer Triggered] Ending session on slot #" # Nat.toText(slot_id));
-        // Clear asset canister files
-        let _is_deleted = switch (canister_id) {
-          case (null) { true };
-          case (?val) {
-            let is_cleared = switch (await _clear_asset_canister(val)) {
-              case (#err(err)) {
-                Debug.print("Error occured during asset clearing: " # err);
-                false;
-              };
-              case (#ok(_val)) {
-                Debug.print("Cleared asset canister.");
-                true;
-              };
-            };
-            is_cleared;
+    switch (shareable_canister_manager.get_canister_by_slot(slot_id)) {
+      case (#err(err)) { Debug.print("Not found slot.") };
+      case (#ok(val)) {
+        let res = _end_freemium_session(slot_id, val.user);
+        switch (res) {
+          case (#err(error)) {
+            Debug.print("Failed to stop session on slot #" # Nat.toText(slot_id) # " error: " # error);
+          };
+          case (#ok(?project_id)) {
+            Debug.print("Stopped session running on slot #" # Nat.toText(slot_id) # " for project id:: " # Nat.toText(project_id) # " @ " # Int.toText(Int.abs(Utility.get_time_now(#milliseconds))));
+            _delete_timer(slot_id);
+          };
+          case (#ok(null)) {
+            Debug.print("Stopped session running on slot # " #Nat.toText(slot_id) # " Project id not set.");
+            _delete_timer(slot_id);
           };
         };
+      };
+    };
 
-        switch (shareable_canister_manager.get_canister_by_slot(slot_id)) {
-          case (#err(err)) { Debug.print("Not found slot.") };
-          case (#ok(val)) {
-            let res = _end_freemium_session(slot_id, val.user);
-            switch (res) {
-              case (#err(error)) {
-                Debug.print("Failed to stop session on slot #" # Nat.toText(slot_id) # " error: " # error);
-              };
-              case (#ok(?project_id)) {
-                Debug.print("Stopped session running on slot #" # Nat.toText(slot_id) # " for project id:: " # Nat.toText(project_id) # " @ " # Int.toText(Int.abs(Utility.get_time_now(#milliseconds))));
-                _delete_timer(slot_id);
-              };
-              case (#ok(null)) {
-                Debug.print("Stopped session running on slot # " #Nat.toText(slot_id) # " Project id not set.");
-                _delete_timer(slot_id);
-              };
-            };
-          };
-        };
-
-      },
-    );
-
-    Debug.print("[Timer] Created timer with id: " # Nat.toText(timer_id) # ". Triggers @ " # Int.toText(Int.abs(Utility.get_time_now(#seconds) + duration)) # " s UNIX Time.");
-    // timers.put(slot_id, timer_id);
-    Map.add(timers, Nat.compare, slot_id, timer_id);
   };
 
   /** End Actor */
