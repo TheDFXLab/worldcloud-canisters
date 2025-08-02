@@ -46,7 +46,6 @@ module {
         description = "Project created.";
         create_time = Utility.get_time_now(#nanoseconds);
       };
-      Debug.print("Activity log " # debug_show (activity_log));
 
       // Set in mapping
       let new_logs : [Types.ActivityLog] = [activity_log];
@@ -129,7 +128,6 @@ module {
 
     public func load_from_stable_project_activity(stable_data : [(Types.ProjectId, [Types.ActivityLog])]) {
       project_activity := Map.fromIter<Types.ProjectId, [Types.ActivityLog]>(stable_data.vals(), Nat.compare);
-      Debug.print("Loaded " # Nat.toText(Map.size(project_activity)) # " project activity logs from stable storage");
     };
 
     /** End class */

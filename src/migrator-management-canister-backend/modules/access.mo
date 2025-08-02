@@ -18,7 +18,6 @@ module {
     private var disable_guards : Bool = false;
 
     public func init() {
-      Debug.print("Initted access control.");
       Map.add(role_map, Principal.compare, deployer_principal, #super_admin);
       is_initialized := true;
     };
@@ -35,7 +34,6 @@ module {
           return false;
         };
         case (?role) {
-          Debug.print("Validating.." # debug_show (role));
           return role == #super_admin;
         };
       };
@@ -60,12 +58,10 @@ module {
     public func check_role(principal : Principal) : Types.Response<Types.Role> {
       switch (Map.get(role_map, Principal.compare, principal)) {
         case (null) {
-          Debug.print("No role set for principal" # debug_show (principal));
           return #err(ErrorType.NotAnAdmin());
 
         };
         case (?role) {
-          Debug.print("Checking role" # debug_show (role));
           return #ok(role);
         };
       };
@@ -88,19 +84,5 @@ module {
       return #ok "Role removed";
     };
 
-    /** Manage Stable Storage */
-    // Function to get data for stable storage
-    // public func getStableData() : [(Principal, Types.Role)] {
-    //   Iter.toArray(Map.entries(role_map));
-    // };
-
-    // // Function to restore from stable storage
-    // public func loadFromStable(stable_data : [(Principal, Types.Role)]) {
-    //   role_map := Map.empty<Principal, Types.Role>();
-    //   for ((principal, role) in stable_data.vals()) {
-    //     Map.add(role_map, Principal.compare, principal, role);
-    //   };
-    // };
-    /** End Stable Storage */
   };
 };

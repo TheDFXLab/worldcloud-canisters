@@ -151,8 +151,6 @@ module {
       if (success) {
         // subscriptions.put(caller, subscription); // Add subscription plan for caller
         Map.add(subscriptions, Principal.compare, caller, subscription);
-        Debug.print("Added subscription for caller : " # Principal.toText(caller));
-        Debug.print("Sub: " # debug_show (subscription));
         return #ok(subscription);
       } else {
         return #err(Errors.PaymentProcessingFailure());
@@ -177,7 +175,6 @@ module {
       let get_subscription_response = await _get_subscription(caller);
       let create_response = switch (get_subscription_response) {
         case (null) {
-          Debug.print("Error getting subscription: ");
           let subscription : Types.Subscription = {
             user_id = caller;
             tier_id = tier_id;
@@ -283,24 +280,6 @@ module {
         };
       };
     };
-
-    /** Stable Storage */
-
-    // Function to get data for stable storage
-    // public func getStableData() : [(Principal, Types.Subscription)] {
-    //   Iter.toArray(subscriptions.entries());
-    // };
-
-    // // Function to restore from stable storage
-    // public func loadFromStable(stable_data : [(Principal, Types.Subscription)]) {
-    //   subscriptions := HashMap.fromIter<Principal, Types.Subscription>(
-    //     stable_data.vals(),
-    //     stable_data.size(),
-    //     Principal.equal,
-    //     Principal.hash,
-    //   );
-    // };
-    /** End Stable Storage */
 
   };
 };

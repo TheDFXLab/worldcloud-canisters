@@ -95,21 +95,6 @@ module {
 
     /** End private methods*/
 
-    /**Start stable management */
-
-    // Function to get data for stable storage
-    // public func get_stable_data_workflow_run_history() : [(Nat, [Types.WorkflowRunDetails])] {
-    // //   Iter.toArray(workflow_run_history.entries());
-    //   Iter.toArray(workflow_run_history.entries());
-    // };
-
-    // public func load_from_stable_workflow_run_history(stable_data : [(Nat, [Types.WorkflowRunDetails])]) {
-    //   workflow_run_history := HashMap.fromIter(stable_data.vals(), stable_data.size(), Nat.equal, Hash.hash);
-    //   Debug.print("Postupgrade: Restored workflow run history: " # Nat.toText(workflow_run_history.size()));
-    // };
-
-    /** End class */
-
   }
 
 };

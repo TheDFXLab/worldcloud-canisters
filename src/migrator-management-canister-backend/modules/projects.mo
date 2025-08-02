@@ -36,13 +36,11 @@ module {
 
     public func get_projects_by_user(user : Principal, payload : Types.GetProjectsByUserPayload) : async Types.Response<[Types.Project]> {
       let project_ids : [Nat] = Utility.expect_else(Map.get(user_to_projects, Principal.compare, user), []);
-      Debug.print("Project length " # Nat.toText(project_ids.size()));
       // Early return for empty projects
       if (project_ids.size() == 0) return #ok([]);
 
       let _limit = Utility.expect_else(payload.limit, 20);
       var _page = Utility.expect_else(payload.page, 0);
-      Debug.print("Limit page " # Nat.toText(_limit) # " " # Nat.toText(_page));
 
       // Paginate data
       var start = _page * _limit;
@@ -52,8 +50,6 @@ module {
         start + _limit; // Don't go beyond array bounds
       };
 
-      Debug.print("Start " # Nat.toText(start) # " end " # Nat.toText(end));
-
       // If start is beyond array bounds, return empty array
       if (start >= project_ids.size()) {
         return #ok([]);
@@ -62,7 +58,6 @@ module {
       var result_projects : [Types.Project] = [];
       for (index in Iter.range(start, end)) {
         let project_id = project_ids[index];
-        Debug.print("Index: " # Nat.toText(index) # " project id: " # Nat.toText(project_id));
         let project : Types.Project = switch (Map.get(projects, Nat.compare, project_id)) {
           case (null) { return #err(Errors.NotFoundProject()) };
           case (?val) { val };
@@ -161,7 +156,6 @@ module {
         date_updated = Utility.get_time_now(#milliseconds);
       };
 
-      Debug.print("Creating new project: " # debug_show (project));
       // Store the records
       Map.add(projects, Nat.compare, next_project_id, project);
       let existing_projects : [Nat] = Utility.expect_else(Map.get(user_to_projects, Principal.compare, user), []);

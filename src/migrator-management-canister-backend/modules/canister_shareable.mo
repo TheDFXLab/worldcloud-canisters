@@ -140,7 +140,6 @@ module {
 
     public func get_slots(limit : ?Nat, index : ?Nat) : [Types.ShareableCanister] {
       if (Map.size(slots) == 0) {
-        Debug.print("NO AVAILABLE SLOTS");
         return [];
       };
       let start = switch (index) {
@@ -173,7 +172,6 @@ module {
         };
       };
       var canisters : [Types.ShareableCanister] = [];
-      Debug.print("Getting slots from start index: " # Nat.toText(start) # " and end index: " #Nat.toText(end));
 
       for ((slot_id, slot) in Map.entries(slots)) {
         canisters := Array.append(canisters, [slot]);
@@ -191,22 +189,16 @@ module {
 
       var _slot_ids : [Nat] = [];
 
-      Debug.print("Finding available slots...");
-
       for ((slot_id, slot) in Map.entries(slots)) {
         if (slot.status == #available) {
           switch (slot.project_id) {
             case (null) {
-              Debug.print("Slot #" # Nat.toText(slot_id) # " is available.");
               _slot_ids := Array.append(_slot_ids, [slot_id]);
             };
-            case (?id) {
-              Debug.print("Not found slot #" # Nat.toText(slot_id));
-            };
+            case (?id) {};
           };
         };
       };
-      Debug.print("Returning slot ids array size: " # Nat.toText(_slot_ids.size()));
       return _slot_ids;
     };
 
@@ -289,13 +281,8 @@ module {
     // Requesting a new freemium session
     public func request_session(user : Principal, project_id : Nat) : async Types.Response<?Types.ShareableCanister> {
       let available_slot_ids : [Nat] = get_available_slots();
-      Debug.print("Received available slot ids length;" # Nat.toText(available_slot_ids.size()));
-      for (index in Iter.range(0, available_slot_ids.size() - 1)) {
-        Debug.print("Debugging: Slot #" # Nat.toText(available_slot_ids[index]) # " is available");
-      };
 
       if (available_slot_ids.size() == 0) {
-        Debug.print("No slots found. Exiting...");
         return #ok(null);
       };
 
@@ -306,7 +293,6 @@ module {
         return #err(Errors.ActiveSession());
       };
 
-      Debug.print("Starting a session...");
       try {
         let slot : Types.ShareableCanister = switch (start_session(available_slot_ids[0], user, project_id)) {
           case (#err(msg)) { return #err(msg) };
@@ -323,16 +309,6 @@ module {
     public func terminate_session(slot_id : Nat, end_cycles : Nat, actor_principal : Principal) : Types.Response<?Nat> {
       return end_session(slot_id, end_cycles, actor_principal);
     };
-
-    // //
-    // public func get_quota(user : Principal) : Types.Response<Types.Quota> {
-    //   let quota : Types.Quota = get_quota_by_user(user);
-    //   var usage_log : Types.UsageLog = get_usage_log(user);
-
-    //   Debug.print("[get_quota] Retrieved quota" # debug_show (usage_log));
-
-    //   return #ok(quota);
-    // };
 
     // Gets a user's quota, creates if it doesnt exist
     public func get_quota(user : Principal) : Types.Quota {
@@ -392,12 +368,10 @@ module {
         case (true) {
           var _consumed = quota.consumed;
           if ((now - usage_log.last_used) >= usage_log.rate_limit_window) {
-            Debug.print("consumed = 1");
             _consumed := 1;
           } else {
             if (quota.consumed + 1 > quota.total) return #err(Errors.QuotaReached(quota.total));
             _consumed := _consumed + 1;
-            Debug.print("consumed = " # Nat.toText(_consumed));
           };
           _consumed;
         };
@@ -451,14 +425,12 @@ module {
       Map.add(slots, Nat.compare, slot_id, updated_slot);
       Map.add(user_to_slot, Principal.compare, user, ?slot_id);
       Map.add(used_slots, Nat.compare, slot_id, true);
-      Debug.print("Assigned slot #" # Nat.toText(slot_id) # " to user " # Principal.toText(user));
       return #ok(updated_slot);
     };
 
     // Used to terminate a serving a user's assets from a slot
     // Returns project id such that the caller can update the respective project
     private func end_session(slot_id : Nat, end_cycles : Nat, actor_principal : Principal) : Types.Response<?Nat> {
-      Debug.print("[end_session] Ending session for slot #" # Nat.toText(slot_id));
       // Get and update slot details
       let slot : Types.ShareableCanister = switch (Map.get(slots, Nat.compare, slot_id)) {
         case (null) { return #err(Errors.NotFoundSlot()) };
@@ -478,8 +450,6 @@ module {
         status = #available;
       };
 
-      Debug.print("[end_session] Updated slot: " # debug_show (updated_slot) # Principal.toText(slot.user));
-
       let quota : Types.Quota = get_quota(slot.user);
       // Get and update usage log for user
       let _usage_log : Types.UsageLog = get_usage_log(slot.user);
@@ -496,7 +466,6 @@ module {
       Map.add(slots, Nat.compare, slot_id, updated_slot);
       ignore Map.delete(used_slots, Nat.compare, slot_id);
       ignore Map.delete(user_to_slot, Principal.compare, slot.user);
-      Debug.print("[end_session] Updated slot #" # Nat.toText(slot_id) # " and usage logs for" # Principal.toText(slot.user));
 
       return #ok(slot.project_id);
     };
@@ -575,45 +544,6 @@ module {
 
     /** End private methods*/
 
-    // public func migrate_usage_log_add_quota() : [(Principal, Types.UsageLog)] {
-    //   var migrated_array : [(Principal, Types.UsageLog)] = [];
-    //   for ((user, log) in Map.entries(usage_logs)) {
-    //     let obj : Types.UsageLog = {
-    //       is_active = log.is_active;
-    //       usage_count = log.usage_count;
-    //       last_used = log.last_used;
-    //       rate_limit_window = log.rate_limit_window;
-    //       max_uses_threshold = log.max_uses_threshold;
-    //       quota = {
-    //         consumed = 0;
-    //         total = MAX_USES_THRESHOLD;
-    //       };
-    //     };
-    //     Debug.print("migrating usage log for user: " # Principal.toText(user) # debug_show (obj));
-    //     migrated_array := Array.append(migrated_array, [(user, obj)]);
-    //   };
-    //   return migrated_array;
-    // };
-
-    // public func apply_usage_log_migration() {
-    //   for ((user, log) in Map.entries(usage_logs)) {
-    //     Debug.print("Migrating logs for user: " # Principal.toText(user) # "...");
-    //     let updated_log : Types.UsageLog = {
-    //       is_active = log.is_active;
-    //       usage_count = log.usage_count;
-    //       last_used = log.last_used;
-    //       rate_limit_window = log.rate_limit_window;
-    //       max_uses_threshold = log.max_uses_threshold;
-    //       quota = {
-    //         consumed = 0;
-    //         total = MAX_USES_THRESHOLD;
-    //       } : Types.Quota;
-    //     };
-    //     Map.add(usage_logs, Principal.compare, user, updated_log);
-    //     Debug.print("Migration successful for user: " # Principal.toText(user) # ". Updated log: " # debug_show (updated_log));
-    //   };
-    // };
-
     /**Start stable management */
 
     // Function to get data for stable storage
@@ -671,50 +601,3 @@ module {
   }
 
 };
-
-// Time-shareable asset canister for freemium plans
-// User flow:
-//
-// [user request deploy website] --backend--> [is_free plan selected?] --yes--> [available shared canisters?] --yes--> [deploy to asset canister and set scheduler]
-// [user request deploy website] --backend--> [is_free plan selected?] --yes--> [available shared canisters?] --no--> [deploy new shareable canister and upload wasm for asset canister]
-// [user request deploy website] --backend--> [is_free plan selected?] --no--> [verify subscription limits] -->[deploy new personal canister and upload wasm for asset canister]
-//
-// Shareable canister flow:
-// Uploading to existing shared canister
-// [request for new deployment] --> [available shared canisters?] --YES--> [upload new files] --> [record start time] --> [share link to canister]
-//
-// Creating and uploading to a new canister
-// [request for new deployment] --> [available shared canisters?] --NO--> [create a new shared canister] --> [upload wasm code] --> [upload files] --> [record start time] -->[share link to canister]
-//
-// Types:
-//
-// Notes:
-// Rate limit freemium users per day. e.g Max allowed free canister usage per day = 3
-//
-// ShareableCanister
-// owner: Principal -- controller of the canister
-// user: Principal -- current user of the canister
-// create_timestamp: Nat -- time user occupied the canister
-// duration: Nat -- total time allowed for a single user to occupy a canister
-// start_cycles: Nat -- total cycles available at create_timestamp
-//
-// ShareableCanisterStatistics
-// total_cycles_consumed: Nat -- total amount of cycles consumed since genesis of canister
-// create_time: Nat -- time the canister was created
-// usage_count: Nat -- total times the canister was occupied
-//
-// UserShareSession
-// slot_id: Nat -- slot id currently used by the user
-// usage_count: Nat -- amount of times the canister was occupied by the user since last used. Resets to 0 when (now - last_used > rate_limit_window)
-// last_used: Nat -- last time the canister was occupied by the user
-// rate_limit_window: Nat -- duration of a theoretical session. used to deny occupying a shared canister when (usage_count > max_uses_threshold)
-// max_uses_threshold: Nat -- maximum number of times the user is allowed to occupy the shared canister within the rate_limit_window
-//
-// Mappings:
-// slots (slot_id : number => ShareableCanister) -- used to map a shared canister to a slot id
-// user_to_slot (principal => UserShareSession) --- used to prevent abuse of freemium features
-// used_slots (slot_id => boolean) -- used to deduce available canisters for usage by a user
-//
-// Variables:
-// next_slot_id : number -- used to assign the next slot id to be created
-//

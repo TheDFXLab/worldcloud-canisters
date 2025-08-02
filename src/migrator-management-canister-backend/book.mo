@@ -59,26 +59,14 @@ module {
       };
     };
 
-    // For development only.
-    public func print_balances() {
-      for ((x, y) in Map.entries(book)) {
-        Debug.print(debug_show ("PRINCIPAL: ", x));
-        for ((key : T.Token, value : Nat) in Map.entries(y)) {
-          Debug.print(debug_show ("Balance: Token: ", key, " amount: ", value));
-        };
-      };
-    };
-
     public func getUsersCumulativeBalance(canisterPrincipal : Principal, token : T.Token) : Nat {
       var cumulativeUserBalance = 0;
       for ((x, y) in Map.entries(book)) {
-        Debug.print(debug_show ("PRINCIPAL: ", x));
         if (x != canisterPrincipal) {
           for ((key : T.Token, value : Nat) in Map.entries(y)) {
             if (key == token) {
               cumulativeUserBalance += value;
             };
-            Debug.print(debug_show ("Balance: Token: ", key, " amount: ", value));
           };
         };
 
@@ -136,14 +124,11 @@ module {
               };
             };
             case (null) {
-              // Debug.print("User " # Principal.toText(user) # " has no balance of token " # Principal.toText(token));
               null;
             };
           };
         };
         case (null) {
-          // user didn't exist
-          // Debug.print("User " # Principal.toText(user) # " doesn't exist in book, cannot remove tokens.");
           null;
         };
       };

@@ -98,20 +98,16 @@ module {
       let batchMap = canisterBatchMap.get(canister_id);
       switch (batchMap) {
         case null {
-          Debug.print("Batch map does not exist");
           return (false, 0);
         };
         case (?(batchMap, _)) {
           let actual_batch_id = batchMap.get(file_batch_id);
-          Debug.print("Getting batch id for batch " # Nat.toText(file_batch_id));
 
           switch (actual_batch_id) {
             case null {
-              Debug.print("Batch ID does not exist");
               return (false, 0);
             };
             case (?actual_batch_id) {
-              Debug.print("Batch ID exists: " # Nat.toText(actual_batch_id));
               return (true, actual_batch_id);
             };
           };
@@ -144,9 +140,7 @@ module {
     public func update_deployment_size(canister_id : Principal, new_file_size : Nat) {
       let deployment = get_deployment_by_canister(canister_id);
       switch (deployment) {
-        case null {
-          Debug.print("Canister deployment not found");
-        };
+        case null {};
         case (?deployment) {
           let updated_deployment = {
             canister_id = deployment.canister_id;
@@ -164,7 +158,6 @@ module {
     public func update_deployment_status(canister_id : Principal, status : Types.CanisterDeploymentStatus) {
       let deployment = switch (get_deployment_by_canister(canister_id)) {
         case (null) {
-          Debug.print("Canister deployment not found, creating new record..");
           let new_deployment : Types.CanisterDeployment = {
             canister_id = canister_id;
             status = status;
@@ -175,7 +168,6 @@ module {
           new_deployment;
         };
         case (?d) {
-          Debug.print("Canister deployment found");
           let updated_deployment = {
             canister_id = canister_id;
             status = status;
@@ -201,10 +193,6 @@ module {
 
       // Update canister deployment size
       update_deployment_size(canister_id, file.content.size());
-
-      Debug.print("Creating chunk for batch id " # Nat.toText(batch_id) # "with chunk id " # Nat.toText(chunk.chunk_id));
-
-      Debug.print("Uploaded chunk ID: " # Nat.toText(chunk.chunk_id));
     };
 
     public func clear_batch_map(canister_id : Principal) {
@@ -226,7 +214,6 @@ module {
 
                 // Create a new batch for this chunked file
                 if (file.chunk_id == 0) {
-                  Debug.print("[Canister " # Principal.toText(canister_id) # "] Processing chunked file: " # file.path);
 
                   // Create a new batch for this chunked file and save the batch id in the batch map
                   let batch = await asset_canister.create_batch();
@@ -235,7 +222,6 @@ module {
 
                 let (exists, batch_id) = get_batch_id(canister_id, file.batch_id);
                 if (exists == false) {
-                  Debug.print("[Canister id: " # Principal.toText(canister_id) # "] Batch ID does not exist");
                   throw Error.reject("[Canister id:  " # Principal.toText(canister_id) # "] Batch ID does not exist");
                 };
 
@@ -244,7 +230,6 @@ module {
                 if (file.is_last_chunk) {
 
                   let chunk_ids = get_chunk_ids_for_canister(canister_id, batch_id);
-                  Debug.print("[Canister " # Principal.toText(canister_id) # "] Commiting chunk IDs: " # Text.join(", ", Iter.map<Nat, Text>(Array.vals(chunk_ids), func(id) = Nat.toText(id))));
 
                   try {
                     await asset_canister.commit_batch({
@@ -266,10 +251,8 @@ module {
                         },
                       ];
                     });
-                    Debug.print("[Canister " # Principal.toText(canister_id) # "] Committed batch " # Nat.toText(file.batch_id));
                     clear_batch_map(canister_id); // TODO: Verify
                   } catch (error) {
-                    Debug.print("[Canister " # Principal.toText(canister_id) # "] Failed to commit batch: " # Error.message(error));
                     throw Error.reject("[Canister " # Principal.toText(canister_id) # "] Failed to commit batch: " # Error.message(error));
                   };
                 }
@@ -296,10 +279,8 @@ module {
 
                   // Update canister deployment size
                   update_deployment_size(canister_id, contentSize);
-                  Debug.print("[Canister " # Principal.toText(canister_id) # "] Stored file at " # file.path # " with size " # Nat.toText(contentSize) # " bytes");
 
                 } catch (error) {
-                  Debug.print("[Canister " # Principal.toText(canister_id) # "] Failed to upload file: " # Error.message(error));
                   throw error;
                 };
               };
