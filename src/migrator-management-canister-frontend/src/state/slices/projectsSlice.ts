@@ -13,11 +13,13 @@ import {
     DeserializedUsageLog,
     DeserializedActivityLog,
     SerializedActivityLog,
-    deserializeActivityLogs
+    deserializeActivityLogs,
+    SerializedUsageLogExtended
 } from '../../utility/bigint';
 import { fetchFreemiumUsage } from './freemiumSlice';
+import { serializeUsageLog } from '../../serialization/admin';
 
-export type UsageLog = DeserializedUsageLog;
+export type UsageLog = SerializedUsageLogExtended;
 
 export interface ProjectsState {
     projects: SerializedProject[];
@@ -176,7 +178,7 @@ export const fetchUserUsage = createAsyncThunk(
             throw new Error("MainApi is not initialized.");
         }
         const result = await mainApi.getUserUsage();
-        return deserializeUsageLog(result);
+        return serializeUsageLog(result);
     }
 );
 
