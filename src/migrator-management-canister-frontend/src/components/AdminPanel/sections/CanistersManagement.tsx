@@ -12,6 +12,7 @@ import {
   Visibility,
 } from "@mui/icons-material";
 import "./CanistersManagement.css";
+import { formatBytes } from "../../../utility/formatter";
 
 const CanistersManagement: React.FC = () => {
   const {
@@ -114,7 +115,7 @@ const CanistersManagement: React.FC = () => {
           </div>
           <div className="admin-card-content">
             <h3>Total Size</h3>
-            <p className="admin-card-value">{totalSize} MB</p>
+            <p className="admin-card-value">{formatBytes(totalSize)} MB</p>
           </div>
         </div>
       </div>
@@ -192,7 +193,7 @@ const CanistersManagement: React.FC = () => {
                         {deployment.status}
                       </span>
                     </td>
-                    <td>{deployment.size}</td>
+                    <td>{formatBytes(deployment.size)}</td>
                     <td>
                       {new Date(deployment.date_created).toLocaleDateString()}
                     </td>

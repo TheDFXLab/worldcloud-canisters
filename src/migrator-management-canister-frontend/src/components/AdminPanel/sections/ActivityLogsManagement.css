@@ -11,7 +11,7 @@
 
 .activity-logs-section-header h3 {
   margin: 0;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .activity-logs-header-actions {
@@ -54,14 +54,16 @@
 
 .activity-logs-pagination-info label {
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .activity-logs-pagination-info select {
   padding: 4px 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 14px;
+  background: var(--background-primary);
+  color: var(--text-primary);
 }
 
 .activity-logs-loading-container {
@@ -70,8 +72,8 @@
 }
 
 .activity-logs-loading-spinner {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3498db;
+  border: 3px solid var(--background-secondary);
+  border-top: 3px solid var(--primary-color);
   border-radius: 50%;
   width: 30px;
   height: 30px;
@@ -95,7 +97,7 @@
 .activity-logs-empty-state {
   text-align: center;
   padding: 40px;
-  color: #666;
+  color: var(--text-secondary);
   font-style: italic;
 }
 
@@ -106,16 +108,16 @@
 }
 
 .activity-logs-project-group {
-  background: #fff;
-  border: 1px solid #e0e0e0;
+  background: var(--background-primary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .activity-logs-project-group h4 {
   margin: 0 0 15px 0;
-  color: #333;
+  color: var(--text-primary);
   font-size: 16px;
 }
 
@@ -126,8 +128,8 @@
 }
 
 .activity-log-item {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 15px;
 }
@@ -160,12 +162,12 @@
 }
 
 .activity-log-time {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
 .activity-log-details {
-  color: #333;
+  color: var(--text-primary);
   font-size: 14px;
   line-height: 1.4;
 }
@@ -204,6 +206,6 @@
 
 .activity-logs-page-info {
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
   font-weight: 500;
 }

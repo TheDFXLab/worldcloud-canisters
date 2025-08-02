@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAdminLogic } from "../../hooks/useAdminLogic";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Settings,
   CreditCard,
@@ -10,6 +10,7 @@ import {
   Assessment,
   Security,
   Storage,
+  AccountBalance,
 } from "@mui/icons-material";
 import "./AdminPanel.css";
 
@@ -20,6 +21,7 @@ import CanistersManagement from "./sections/CanistersManagement";
 import ActivityLogsManagement from "./sections/ActivityLogsManagement";
 import AccessControlManagement from "./sections/AccessControlManagement";
 import SystemManagement from "./sections/SystemManagement";
+import BookManagement from "./sections/BookManagement";
 import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 
 type AdminSection =
@@ -28,18 +30,63 @@ type AdminSection =
   | "canisters"
   | "activity-logs"
   | "access-control"
-  | "system";
+  | "system"
+  | "book";
 
 interface AdminPanelProps {}
 
 const AdminPanel: React.FC<AdminPanelProps> = () => {
-  const [activeSection, setActiveSection] = useState<AdminSection>("slots");
+  const [searchParams, setSearchParams] = useSearchParams();
   const { error, successMessage, handleClearError, handleClearSuccessMessage } =
     useAdminLogic();
   const { showToaster, setShowToaster, setToasterData } = useToaster();
   const { setShowModal } = useConfirmationModal();
   const { setHeaderCard } = useHeaderCard();
   const navigate = useNavigate();
+
+  // Get the active section from URL params or default to "slots"
+  const getActiveSectionFromURL = (): AdminSection => {
+    const sectionParam = searchParams.get("section");
+    const validSections: AdminSection[] = [
+      "slots",
+      "subscriptions",
+      "canisters",
+      "activity-logs",
+      "access-control",
+      "system",
+      "book",
+    ];
+
+    if (sectionParam && validSections.includes(sectionParam as AdminSection)) {
+      return sectionParam as AdminSection;
+    }
+    return "slots";
+  };
+
+  const [activeSection, setActiveSection] = useState<AdminSection>(
+    getActiveSectionFromURL()
+  );
+
+  // Handle section change and update URL
+  const handleSectionChange = (section: AdminSection) => {
+    setActiveSection(section);
+    setSearchParams({ section });
+  };
+
+  // Update active section when URL params change (e.g., on browser back/forward)
+  useEffect(() => {
+    const newSection = getActiveSectionFromURL();
+    if (newSection !== activeSection) {
+      setActiveSection(newSection);
+    }
+  }, [searchParams, activeSection]);
+
+  // Initialize URL with default section if no section is specified
+  useEffect(() => {
+    if (!searchParams.get("section")) {
+      setSearchParams({ section: "slots" });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Note: Admin access control should be handled at the route level
   // This component assumes the user has admin access
@@ -113,6 +160,12 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
       icon: <Settings />,
       description: "System-wide operations and settings",
     },
+    {
+      id: "book" as AdminSection,
+      label: "Book Management",
+      icon: <AccountBalance />,
+      description: "Manage user balances and token deposits",
+    },
   ];
 
   const renderActiveSection = () => {
@@ -129,6 +182,8 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
         return <AccessControlManagement />;
       case "system":
         return <SystemManagement />;
+      case "book":
+        return <BookManagement />;
       default:
         return <SlotsManagement />;
     }
@@ -157,7 +212,7 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
                 className={`admin-nav-item ${
                   activeSection === item.id ? "active" : ""
                 }`}
-                onClick={() => setActiveSection(item.id)}
+                onClick={() => handleSectionChange(item.id)}
               >
                 <div className="admin-nav-item-icon">{item.icon}</div>
                 <div className="admin-nav-item-content">

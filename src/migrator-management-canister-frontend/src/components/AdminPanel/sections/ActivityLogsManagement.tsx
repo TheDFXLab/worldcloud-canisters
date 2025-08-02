@@ -91,14 +91,16 @@ const ActivityLogsManagement: React.FC = () => {
                         <div className="activity-log-header">
                           <span className="activity-log-id">#{log.id}</span>
                           <span className="activity-log-action">
-                            {log.action}
+                            {log.category}
                           </span>
                           <span className="activity-log-time">
-                            {new Date(log.create_time).toLocaleString()}
+                            {new Date(
+                              Math.floor(log.create_time / 1000)
+                            ).toString()}
                           </span>
                         </div>
                         <div className="activity-log-details">
-                          <p>{log.details}</p>
+                          <p>{log.description}</p>
                         </div>
                       </div>
                     ))}

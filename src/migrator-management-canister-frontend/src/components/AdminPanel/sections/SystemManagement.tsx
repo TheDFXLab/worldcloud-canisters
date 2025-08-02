@@ -199,7 +199,8 @@ const SystemManagement: React.FC = () => {
                   <div key={principal} className="system-management-log-item">
                     <span>{principal.substring(0, 8)}...</span>
                     <span>
-                      Used: {log.usage_count}/{log.quota.total}
+                      Used: {log.usage_log.usage_count}/
+                      {log.usage_log.quota.total}
                     </span>
                   </div>
                 ))}

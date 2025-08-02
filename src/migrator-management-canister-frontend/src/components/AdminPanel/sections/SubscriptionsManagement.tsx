@@ -3,6 +3,7 @@ import { useAdmin } from "../../../context/AdminContext/AdminContext";
 import { useToaster } from "../../../context/ToasterContext/ToasterContext";
 import { SerializedSubscription } from "../../../serialization/subscription";
 import AdminConfirmationModal from "../AdminConfirmationModal";
+import TreasuryManagement from "./TreasuryManagement";
 import {
   CreditCard,
   CheckCircle,
@@ -22,6 +23,9 @@ const SubscriptionsManagement: React.FC = () => {
   const [selectedSubscription, setSelectedSubscription] = useState<
     string | null
   >(null);
+  const [activeTab, setActiveTab] = useState<"subscriptions" | "treasury">(
+    "subscriptions"
+  );
 
   // Confirmation modal state
   const [confirmationModal, setConfirmationModal] = useState<{
@@ -257,180 +261,213 @@ const SubscriptionsManagement: React.FC = () => {
         confirmButtonVariant={confirmationModal.confirmButtonVariant}
       />
 
-      {/* Summary Cards */}
-      <div className="admin-summary-cards">
-        <div className="admin-summary-card">
-          <div className="admin-card-icon">
-            <CreditCard />
-          </div>
-          <div className="admin-card-content">
-            <h3>Total Subscriptions</h3>
-            <p className="admin-card-value">{totalSubscriptions}</p>
-          </div>
-        </div>
-
-        <div className="admin-summary-card">
-          <div className="admin-card-icon">
-            <CheckCircle />
-          </div>
-          <div className="admin-card-content">
-            <h3>Active Subscriptions</h3>
-            <p className="admin-card-value">{activeSubscriptions}</p>
-          </div>
-        </div>
-
-        <div className="admin-summary-card">
-          <div className="admin-card-icon">
-            <Warning />
-          </div>
-          <div className="admin-card-content">
-            <h3>Expired Subscriptions</h3>
-            <p className="admin-card-value">{expiredSubscriptions}</p>
-          </div>
-        </div>
-
-        <div className="admin-summary-card">
-          <div className="admin-card-icon">
-            <TrendingUp />
-          </div>
-          <div className="admin-card-content">
-            <h3>Total Revenue</h3>
-            <p className="admin-card-value">${totalRevenue.toFixed(2)}</p>
-          </div>
-        </div>
+      {/* Tab Navigation */}
+      <div className="admin-tab-navigation">
+        <button
+          className={`admin-tab-btn ${
+            activeTab === "subscriptions" ? "active" : ""
+          }`}
+          onClick={() => setActiveTab("subscriptions")}
+        >
+          <CreditCard />
+          Subscriptions
+        </button>
+        <button
+          className={`admin-tab-btn ${
+            activeTab === "treasury" ? "active" : ""
+          }`}
+          onClick={() => setActiveTab("treasury")}
+        >
+          <CreditCard />
+          Treasury Management
+        </button>
       </div>
 
-      {/* Actions Section */}
-      <div className="admin-actions-section">
-        <div className="admin-action-card">
-          <h3>Subscription Operations</h3>
-          <p>Manage user subscriptions and billing operations</p>
-          <div className="admin-action-buttons">
-            <button onClick={handleRefreshAllSubscriptions} className="primary">
-              <Refresh /> Refresh All Subscriptions
-            </button>
-            <button onClick={handleUpdateBillingStatus} className="warning">
-              <CreditCard /> Update Billing Status
-            </button>
-            <button
-              onClick={handleCancelExpiredSubscriptions}
-              className="danger"
-            >
-              <Cancel /> Cancel Expired Subscriptions
-            </button>
-          </div>
-        </div>
+      {activeTab === "subscriptions" && (
+        <>
+          {/* Summary Cards */}
+          <div className="admin-summary-cards">
+            <div className="admin-summary-card">
+              <div className="admin-card-icon">
+                <CreditCard />
+              </div>
+              <div className="admin-card-content">
+                <h3>Total Subscriptions</h3>
+                <p className="admin-card-value">{totalSubscriptions}</p>
+              </div>
+            </div>
 
-        <div className="admin-action-card">
-          <h3>Bulk Operations</h3>
-          <p>Perform operations on multiple subscriptions</p>
-          <div className="admin-action-buttons">
-            <button onClick={() => {}} className="primary">
-              <Visibility /> View All Details
-            </button>
-            <button onClick={handleBatchRefresh} className="warning">
-              <Refresh /> Batch Refresh
-            </button>
-            <button onClick={handleBatchCancel} className="danger">
-              <Cancel /> Batch Cancel
-            </button>
-          </div>
-        </div>
-      </div>
+            <div className="admin-summary-card">
+              <div className="admin-card-icon">
+                <CheckCircle />
+              </div>
+              <div className="admin-card-content">
+                <h3>Active Subscriptions</h3>
+                <p className="admin-card-value">{activeSubscriptions}</p>
+              </div>
+            </div>
 
-      {/* Subscriptions Table */}
-      <div className="admin-table-section">
-        <h3>All Subscriptions</h3>
-        {isLoadingSubscriptions ? (
-          <div className="admin-loading">Loading subscriptions...</div>
-        ) : (
-          <div className="admin-table-container">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Subscription ID</th>
-                  <th>Status</th>
-                  <th>Plan</th>
-                  <th>Amount</th>
-                  <th>Slots Used</th>
-                  <th>Created</th>
-                  <th>Updated</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {allSubscriptions.map(([userPrincipal, subscription]) => (
-                  <tr key={userPrincipal}>
-                    <td>
-                      <div className="admin-user-info">
-                        <Person className="admin-user-icon" />
-                        <span className="admin-user-id">
-                          {userPrincipal.substring(0, 8)}...
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="admin-subscription-id">
-                        {userPrincipal.substring(0, 12)}...
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className={`admin-status-badge ${
-                          subscription.used_slots < subscription.max_slots
-                            ? "active"
-                            : "expired"
-                        }`}
-                      >
-                        {subscription.used_slots < subscription.max_slots
-                          ? "active"
-                          : "expired"}
-                      </span>
-                    </td>
-                    <td>{getTierName(subscription.tier_id)}</td>
-                    <td>${getTierPrice(subscription.tier_id)}</td>
-                    <td>
-                      {subscription.used_slots}/{subscription.max_slots}
-                    </td>
-                    <td>{formatDate(subscription.date_created)}</td>
-                    <td>{formatDate(subscription.date_updated)}</td>
-                    <td>
-                      <div className="admin-action-buttons-row">
-                        <button
-                          className="admin-action-btn primary"
-                          onClick={() => handleViewSubscription(userPrincipal)}
-                          title="View Details"
-                        >
-                          <Visibility />
-                        </button>
-                        <button
-                          className="admin-action-btn warning"
-                          onClick={() =>
-                            handleRefreshSubscription(userPrincipal)
-                          }
-                          title="Refresh"
-                        >
-                          <Refresh />
-                        </button>
-                        <button
-                          className="admin-action-btn danger"
-                          onClick={() =>
-                            handleCancelSubscription(userPrincipal)
-                          }
-                          title="Cancel"
-                        >
-                          <Cancel />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="admin-summary-card">
+              <div className="admin-card-icon">
+                <Warning />
+              </div>
+              <div className="admin-card-content">
+                <h3>Expired Subscriptions</h3>
+                <p className="admin-card-value">{expiredSubscriptions}</p>
+              </div>
+            </div>
+
+            <div className="admin-summary-card">
+              <div className="admin-card-icon">
+                <TrendingUp />
+              </div>
+              <div className="admin-card-content">
+                <h3>Total Revenue</h3>
+                <p className="admin-card-value">${totalRevenue.toFixed(2)}</p>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Actions Section */}
+          <div className="admin-actions-section">
+            <div className="admin-action-card">
+              <h3>Subscription Operations</h3>
+              <p>Manage user subscriptions and billing operations</p>
+              <div className="admin-action-buttons">
+                <button
+                  onClick={handleRefreshAllSubscriptions}
+                  className="primary"
+                >
+                  <Refresh /> Refresh All Subscriptions
+                </button>
+                <button onClick={handleUpdateBillingStatus} className="warning">
+                  <CreditCard /> Update Billing Status
+                </button>
+                <button
+                  onClick={handleCancelExpiredSubscriptions}
+                  className="danger"
+                >
+                  <Cancel /> Cancel Expired Subscriptions
+                </button>
+              </div>
+            </div>
+
+            <div className="admin-action-card">
+              <h3>Bulk Operations</h3>
+              <p>Perform operations on multiple subscriptions</p>
+              <div className="admin-action-buttons">
+                <button onClick={() => {}} className="primary">
+                  <Visibility /> View All Details
+                </button>
+                <button onClick={handleBatchRefresh} className="warning">
+                  <Refresh /> Batch Refresh
+                </button>
+                <button onClick={handleBatchCancel} className="danger">
+                  <Cancel /> Batch Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Subscriptions Table */}
+          <div className="admin-table-section">
+            <h3>All Subscriptions</h3>
+            {isLoadingSubscriptions ? (
+              <div className="admin-loading">Loading subscriptions...</div>
+            ) : (
+              <div className="admin-table-container">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Subscription ID</th>
+                      <th>Status</th>
+                      <th>Plan</th>
+                      <th>Amount</th>
+                      <th>Slots Used</th>
+                      <th>Created</th>
+                      <th>Updated</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allSubscriptions.map(([userPrincipal, subscription]) => (
+                      <tr key={userPrincipal}>
+                        <td>
+                          <div className="admin-user-info">
+                            <Person className="admin-user-icon" />
+                            <span className="admin-user-id">
+                              {userPrincipal.substring(0, 8)}...
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="admin-subscription-id">
+                            {userPrincipal.substring(0, 12)}...
+                          </span>
+                        </td>
+                        <td>
+                          <span
+                            className={`admin-status-badge ${
+                              subscription.used_slots < subscription.max_slots
+                                ? "active"
+                                : "expired"
+                            }`}
+                          >
+                            {subscription.used_slots < subscription.max_slots
+                              ? "active"
+                              : "expired"}
+                          </span>
+                        </td>
+                        <td>{getTierName(subscription.tier_id)}</td>
+                        <td>${getTierPrice(subscription.tier_id)}</td>
+                        <td>
+                          {subscription.used_slots}/{subscription.max_slots}
+                        </td>
+                        <td>{formatDate(subscription.date_created)}</td>
+                        <td>{formatDate(subscription.date_updated)}</td>
+                        <td>
+                          <div className="admin-action-buttons-row">
+                            <button
+                              className="admin-action-btn primary"
+                              onClick={() =>
+                                handleViewSubscription(userPrincipal)
+                              }
+                              title="View Details"
+                            >
+                              <Visibility />
+                            </button>
+                            <button
+                              className="admin-action-btn warning"
+                              onClick={() =>
+                                handleRefreshSubscription(userPrincipal)
+                              }
+                              title="Refresh"
+                            >
+                              <Refresh />
+                            </button>
+                            <button
+                              className="admin-action-btn danger"
+                              onClick={() =>
+                                handleCancelSubscription(userPrincipal)
+                              }
+                              title="Cancel"
+                            >
+                              <Cancel />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {activeTab === "treasury" && <TreasuryManagement />}
     </div>
   );
 };

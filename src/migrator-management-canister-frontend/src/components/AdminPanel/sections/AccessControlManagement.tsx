@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAdmin } from "../../../context/AdminContext/AdminContext";
 import { useConfirmationModal } from "../../../context/ConfirmationModalContext/ConfirmationModalContext";
 import { useToaster } from "../../../context/ToasterContext/ToasterContext";
@@ -11,22 +11,37 @@ import {
   Remove,
   Visibility,
   Edit,
+  ContentCopy,
 } from "@mui/icons-material";
 import "./AccessControlManagement.css";
+import { useAdminLogic } from "../../../hooks/useAdminLogic";
 
 const AccessControlManagement: React.FC = () => {
   const { isLoadingAccessControl } = useAdmin();
+  const { admins, handleGetAdmins } = useAdminLogic();
   const { setShowModal, call } = useConfirmationModal();
   const { setToasterData, setShowToaster } = useToaster();
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [newRole, setNewRole] = useState("");
   const [newPrincipal, setNewPrincipal] = useState("");
 
+  // Pagination state for admins
+  const [adminPage, setAdminPage] = useState(0);
+  const [adminLimit, setAdminLimit] = useState(10);
+
   // Mock data for demonstration
   const totalUsers = 150;
-  const adminUsers = 5;
+  const adminUsers = admins?.length || 0;
   const regularUsers = 140;
   const blockedUsers = 5;
+
+  useEffect(() => {
+    const payload = {
+      limit: adminLimit,
+      page: adminPage,
+    };
+    handleGetAdmins(payload);
+  }, [adminPage, adminLimit, handleGetAdmins]);
 
   const handleGrantRole = async (principal: string, role: string) => {
     try {
@@ -78,6 +93,41 @@ const AccessControlManagement: React.FC = () => {
     }
   };
 
+  // Pagination handlers
+  const handleAdminPageChange = (newPage: number) => {
+    setAdminPage(newPage);
+  };
+
+  const handleAdminLimitChange = (newLimit: number) => {
+    setAdminLimit(newLimit);
+    setAdminPage(0); // Reset to first page when changing limit
+  };
+
+  // Copy to clipboard function
+  const handleCopyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setToasterData({
+        headerContent: "Success",
+        toastStatus: true,
+        toastData: "Principal copied to clipboard",
+        textColor: "green",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+    } catch (error) {
+      console.error("Failed to copy to clipboard:", error);
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Failed to copy to clipboard",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+    }
+  };
+
   // Mock users data
   const mockUsers = [
     {
@@ -109,54 +159,54 @@ const AccessControlManagement: React.FC = () => {
   return (
     <div className="access-control-management">
       {/* Summary Cards */}
-      <div className="summary-cards">
-        <div className="summary-card">
-          <div className="card-icon">
+      <div className="admin-summary-cards">
+        <div className="admin-summary-card">
+          <div className="admin-card-icon">
             <Security />
           </div>
-          <div className="card-content">
+          <div className="admin-card-content">
             <h3>Total Users</h3>
-            <p className="card-value">{totalUsers}</p>
+            <p className="admin-card-value">{totalUsers}</p>
           </div>
         </div>
 
-        <div className="summary-card">
-          <div className="card-icon">
+        <div className="admin-summary-card">
+          <div className="admin-card-icon">
             <AdminPanelSettings />
           </div>
-          <div className="access-control card-content">
+          <div className="admin-card-content">
             <h3>Admin Users</h3>
-            <p className="card-value">{adminUsers}</p>
+            <p className="admin-card-value">{adminUsers}</p>
           </div>
         </div>
 
-        <div className="summary-card">
-          <div className="card-icon">
+        <div className="admin-summary-card">
+          <div className="admin-card-icon">
             <Person />
           </div>
-          <div className="access-control card-content">
+          <div className="admin-card-content">
             <h3>Regular Users</h3>
-            <p className="card-value">{regularUsers}</p>
+            <p className="admin-card-value">{regularUsers}</p>
           </div>
         </div>
 
-        <div className="summary-card">
-          <div className="card-icon">
+        <div className="admin-summary-card">
+          <div className="admin-card-icon">
             <Block />
           </div>
-          <div className="access-control card-content">
+          <div className="admin-card-content">
             <h3>Blocked Users</h3>
-            <p className="card-value">{blockedUsers}</p>
+            <p className="admin-card-value">{blockedUsers}</p>
           </div>
         </div>
       </div>
 
       {/* Actions Section */}
-      <div className="actions-section">
-        <div className="action-card">
+      <div className="admin-actions-section">
+        <div className="admin-action-card">
           <h3>Add New User</h3>
           <p>Grant access to new users with specific roles</p>
-          <div className="action-input">
+          <div className="admin-action-input">
             <input
               type="text"
               placeholder="Principal ID"
@@ -172,19 +222,16 @@ const AccessControlManagement: React.FC = () => {
               <option value="moderator">Moderator</option>
               <option value="user">User</option>
             </select>
-            <button
-              onClick={handleAddUser}
-              disabled={!newPrincipal || !newRole}
-            >
-              <Add /> Add User
-            </button>
           </div>
+          <button onClick={handleAddUser} disabled={!newPrincipal || !newRole}>
+            <Add /> Add User
+          </button>
         </div>
 
-        <div className="action-card">
+        <div className="admin-action-card">
           <h3>Bulk Operations</h3>
           <p>Perform operations on multiple users</p>
-          <div className="action-buttons">
+          <div className="admin-action-buttons">
             <button onClick={() => {}} className="primary">
               <Visibility /> View All Users
             </button>
@@ -198,74 +245,129 @@ const AccessControlManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Users Table */}
-      <div className="table-section">
-        <h3>User Access Control</h3>
+      {/* Admins Table */}
+      <div className="admin-table-section">
+        <h3>Admin Users</h3>
         {isLoadingAccessControl ? (
-          <div className="loading">Loading access control data...</div>
+          <div className="admin-loading">Loading admin data...</div>
         ) : (
-          <div className="table-container">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Principal</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Last Active</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockUsers.map((user, index) => (
-                  <tr key={user.principal}>
-                    <td>
-                      <span className="principal-id">
-                        {user.principal.substring(0, 12)}...
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`role-badge ${user.role}`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${user.status}`}>
-                        {user.status}
-                      </span>
-                    </td>
-                    <td>{user.lastActive}</td>
-                    <td>
-                      <div className="action-buttons-row">
-                        <button
-                          className="action-btn primary"
-                          onClick={() => setSelectedUser(user.principal)}
-                          title="View Details"
-                        >
-                          <Visibility />
-                        </button>
-                        <button
-                          className="action-btn warning"
-                          onClick={() =>
-                            handleGrantRole(user.principal, "admin")
-                          }
-                          title="Grant Admin"
-                        >
-                          <Add />
-                        </button>
-                        <button
-                          className="action-btn danger"
-                          onClick={() => handleBlockUser(user.principal)}
-                          title="Block User"
-                        >
-                          <Block />
-                        </button>
-                      </div>
-                    </td>
+          <>
+            <div className="admin-table-container">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Principal</th>
+                    <th>Role</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {admins && admins.length > 0 ? (
+                    admins.map((admin, index) => (
+                      <tr key={index}>
+                        <td>
+                          <div className="admin-principal-container">
+                            <span className="admin-principal-id">
+                              {admin[0].toString().substring(0, 12)}...
+                            </span>
+                            <button
+                              className="admin-copy-btn"
+                              onClick={() =>
+                                handleCopyToClipboard(admin[0].toString())
+                              }
+                              title="Copy Principal"
+                            >
+                              <ContentCopy />
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          <span
+                            className={`admin-role-badge ${admin[1].toLowerCase()}`}
+                          >
+                            {admin[1]}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="admin-action-buttons-row">
+                            <button
+                              className="admin-action-btn primary"
+                              onClick={() =>
+                                setSelectedUser(admin[0].toString())
+                              }
+                              title="View Details"
+                            >
+                              <Visibility />
+                            </button>
+                            <button
+                              className="admin-action-btn warning"
+                              onClick={() =>
+                                handleRevokeRole(admin[0].toString())
+                              }
+                              title="Revoke Role"
+                            >
+                              <Remove />
+                            </button>
+                            <button
+                              className="admin-action-btn danger"
+                              onClick={() =>
+                                handleBlockUser(admin[0].toString())
+                              }
+                              title="Block User"
+                            >
+                              <Block />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className="admin-no-data">
+                        No admin users found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="admin-pagination">
+              <div className="admin-pagination-info">
+                <span>Showing {adminLimit} items per page</span>
+                <select
+                  value={adminLimit}
+                  onChange={(e) =>
+                    handleAdminLimitChange(Number(e.target.value))
+                  }
+                  className="admin-limit-select"
+                >
+                  <option value={5}>5 per page</option>
+                  <option value={10}>10 per page</option>
+                  <option value={20}>20 per page</option>
+                  <option value={50}>50 per page</option>
+                </select>
+              </div>
+              <div className="admin-pagination-controls">
+                <button
+                  onClick={() => handleAdminPageChange(adminPage - 1)}
+                  disabled={adminPage === 0}
+                  className="admin-pagination-btn"
+                >
+                  Previous
+                </button>
+                <span className="admin-page-info">Page {adminPage + 1}</span>
+                <button
+                  onClick={() => handleAdminPageChange(adminPage + 1)}
+                  disabled={admins && admins.length < adminLimit}
+                  className="admin-pagination-btn"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>
