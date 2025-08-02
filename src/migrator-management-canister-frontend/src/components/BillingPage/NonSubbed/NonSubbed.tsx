@@ -70,7 +70,12 @@ export default function NonSubbed({
                       ? "Free"
                       : `${fromE8sStable(tier.price.e8s)} ICP`}
                   </span>
-                  <span className="period">One-time payment</span>
+                  <span className="period">
+                    {" "}
+                    {Number(tier.min_deposit.e8s) > 0
+                      ? "One-time payment"
+                      : "No payment required"}
+                  </span>
                 </div>
               </div>
               <div className="pricing-content">
