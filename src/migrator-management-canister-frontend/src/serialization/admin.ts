@@ -1,5 +1,5 @@
 import { Principal } from "@dfinity/principal";
-import { ProjectPlan, Role, UsageLogExtended } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { ProjectPlan, Role, UsageLog, UsageLogExtended } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { SerializedUsageLogExtended } from "../utility/bigint";
 
 // Activity Log Types
@@ -186,7 +186,23 @@ export const serializeUsageLog = (usageLog: UsageLogExtended): SerializedUsageLo
                 total: Number(usageLog.usage_log.quota.total),
             },
         },
-        reset_time_unix: Number(usageLog.reset_time_unix)
+        reset_time_unix: Number(0)
+    };
+}
+export const serializeUsageLogAdmin = (usageLog: UsageLog): SerializedUsageLogExtended => {
+    return {
+        usage_log: {
+            is_active: usageLog.is_active,
+            usage_count: usageLog.usage_count.toString(),
+            last_used: usageLog.last_used.toString(),
+            rate_limit_window: usageLog.rate_limit_window.toString(),
+            max_uses_threshold: usageLog.max_uses_threshold.toString(),
+            quota: {
+                consumed: Number(usageLog.quota.consumed),
+                total: Number(usageLog.quota.total),
+            },
+        },
+        reset_time_unix: Number(0)
     };
 };
 const serializeProjectPlan = (plan: ProjectPlan): SerializedProjectPlan => {
@@ -280,7 +296,11 @@ export const serializeWorkflowRunDetailsPair = (pair: [any, any[]]): [number, Se
     const [projectId, workflowRuns] = pair;
     return [Number(projectId), serializeWorkflowRunDetailsArray(workflowRuns)];
 };
-
+export const serializeUsageLogsPairAdmin = (pair: [any, any]): [string, SerializedUsageLogExtended] => {
+    const [principal, usageLog] = pair;
+    const serializedPrincipal = typeof principal === 'string' ? principal : principal.toString();
+    return [serializedPrincipal, serializeUsageLogAdmin(usageLog)];
+};
 export const serializeUsageLogsPair = (pair: [any, any]): [string, SerializedUsageLogExtended] => {
     const [principal, usageLog] = pair;
     const serializedPrincipal = typeof principal === 'string' ? principal : principal.toString();

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useAdminLogic } from "../../hooks/useAdminLogic";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
@@ -12,6 +12,7 @@ import {
   Security,
   Storage,
   AccountBalance,
+  Code,
 } from "@mui/icons-material";
 import "./AdminPanel.css";
 
@@ -23,7 +24,9 @@ import ActivityLogsManagement from "./sections/ActivityLogsManagement";
 import AccessControlManagement from "./sections/AccessControlManagement";
 import SystemManagement from "./sections/SystemManagement";
 import BookManagement from "./sections/BookManagement";
+import WasmUploader from "../WasmUploader/WasmUploader";
 import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
+import { useAdmin } from "../../context/AdminContext/AdminContext";
 
 type AdminSection =
   | "slots"
@@ -32,7 +35,8 @@ type AdminSection =
   | "activity-logs"
   | "access-control"
   | "system"
-  | "book";
+  | "book"
+  | "wasm-uploader";
 
 interface AdminPanelProps {}
 
@@ -47,11 +51,15 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
     isLoadingCurrentUserRole,
     checkCurrentUserRole,
   } = useAdminLogic();
+  const { isAdmin } = useAdmin();
   const { showToaster, setShowToaster, setToasterData } = useToaster();
   const { setShowModal } = useConfirmationModal();
   const { setHeaderCard } = useHeaderCard();
   const { summon, destroy } = useLoaderOverlay();
   const navigate = useNavigate();
+
+  // Add a ref to track if admin check has been performed
+  const hasCheckedAdmin = useRef(false);
 
   // Get the active section from URL params or default to "slots"
   const getActiveSectionFromURL = (): AdminSection => {
@@ -64,6 +72,7 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
       "access-control",
       "system",
       "book",
+      "wasm-uploader",
     ];
 
     if (sectionParam && validSections.includes(sectionParam as AdminSection)) {
@@ -90,30 +99,28 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
     }
   }, [searchParams, activeSection]);
 
-  // Check user's admin role on mount
+  // Check user's admin role on mount - FIXED to prevent infinite loop
   useEffect(() => {
     const checkAdminAccess = async () => {
-      try {
-        summon("Checking admin access...");
-        await checkCurrentUserRole();
-      } catch (error) {
-        console.error("Failed to check admin access:", error);
-        // Redirect to main page if not admin
-        navigate("/");
-      } finally {
-        destroy();
+      // Only check once and only if we haven't checked before
+      if (!hasCheckedAdmin.current) {
+        try {
+          hasCheckedAdmin.current = true;
+          // summon("Checking admin access...");
+          await checkCurrentUserRole();
+        } catch (error) {
+          console.error("Failed to check admin access:", error);
+          // Reset the flag so we can try again if needed
+          hasCheckedAdmin.current = false;
+          // Don't redirect on error - let the user see the error message
+        } finally {
+          // destroy();
+        }
       }
     };
 
     checkAdminAccess();
-  }, [checkCurrentUserRole, summon, destroy, navigate]);
-
-  // Redirect if user is not admin
-  useEffect(() => {
-    if (!isLoadingCurrentUserRole && currentUserRole === null) {
-      navigate("/");
-    }
-  }, [currentUserRole, isLoadingCurrentUserRole, navigate]);
+  }, []); // Remove dependencies to prevent re-runs
 
   // Initialize URL with default section if no section is specified
   useEffect(() => {
@@ -121,9 +128,6 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
       setSearchParams({ section: "slots" });
     }
   }, [searchParams, setSearchParams]);
-
-  // Note: Admin access control should be handled at the route level
-  // This component assumes the user has admin access
 
   // Handle error and success messages
   React.useEffect(() => {
@@ -157,6 +161,7 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
   useEffect(() => {
     setHeaderCard(null);
   }, []);
+
   const navigationItems = [
     {
       id: "slots" as AdminSection,
@@ -200,6 +205,12 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
       icon: <AccountBalance />,
       description: "Manage user balances and token deposits",
     },
+    {
+      id: "wasm-uploader" as AdminSection,
+      label: "WASM Uploader",
+      icon: <Code />,
+      description: "Upload and manage asset canister WASM files",
+    },
   ];
 
   const renderActiveSection = () => {
@@ -218,14 +229,50 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
         return <SystemManagement />;
       case "book":
         return <BookManagement />;
+      case "wasm-uploader":
+        return <WasmUploader />;
       default:
         return <SlotsManagement />;
     }
   };
 
-  // Don't render admin panel if still loading or user is not admin
-  if (isLoadingCurrentUserRole || currentUserRole === null) {
-    return null;
+  // Show loading state while checking admin status
+  if (isLoadingCurrentUserRole) {
+    return (
+      <div className="admin-panel-container">
+        <div className="admin-loading">
+          <div className="loading-content">
+            <div className="loading-spinner"></div>
+            <h2>Checking Admin Access...</h2>
+            <p>Please wait while we verify your permissions.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied state if user is not admin
+  if (!isAdmin) {
+    return (
+      <div className="admin-panel-container">
+        <div className="admin-access-denied">
+          <div className="access-denied-content">
+            <Security className="access-denied-icon" />
+            <h2>Access Denied</h2>
+            <p>
+              You don't have permission to access the admin panel. Please
+              contact an administrator if you believe this is an error.
+            </p>
+            <button
+              className="admin-back-button"
+              onClick={() => navigate("/dashboard")}
+            >
+              Return to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
