@@ -34,7 +34,7 @@ module {
       Map.add(projects, Nat.compare, project_id, payload);
     };
 
-    public func get_projects_by_user(user : Principal, payload : Types.GetProjectsByUserPayload) : async Types.Response<[Types.Project]> {
+    public func get_projects_by_user(user : Principal, payload : Types.GetProjectsByUserPayload) : Types.Response<[Types.Project]> {
       let project_ids : [Nat] = Utility.expect_else(Map.get(user_to_projects, Principal.compare, user), []);
       // Early return for empty projects
       if (project_ids.size() == 0) return #ok([]);

@@ -104,7 +104,7 @@ module {
     };
 
     // TODO: Admin function
-    public func get_all_subscriptions() : async [(Principal, Types.Subscription)] {
+    public func get_all_subscriptions() : [(Principal, Types.Subscription)] {
       return Iter.toArray(Map.entries(subscriptions));
     };
 
