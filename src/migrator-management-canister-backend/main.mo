@@ -132,6 +132,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
         // Set up recurring timer for every 24 hours after this
         let recurring_timer_id = Timer.recurringTimer<system>(
           #seconds(QUOTA_CLEAR_DURATION_SECONDS), // 24 hours in seconds
+          // #seconds(QUOTA_CLEAR_DURATION_SECONDS_DEV), // 24 hours in seconds
           func() : async () {
             shareable_canister_manager.reset_quotas();
             shareable_canister_manager.next_quota_reset_s := Int.abs(Utility.get_time_now(#seconds)) + QUOTA_CLEAR_DURATION_SECONDS_DEV;
@@ -160,21 +161,21 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
    * START SLOTS METHODS (Shareable canisters)
    *
    */
-  public shared (msg) func get_next_quota_reset_utc() : async Nat {
+  public shared query func get_next_quota_reset_utc() : async Nat {
     return shareable_canister_manager.next_quota_reset_s;
   };
 
-  public shared (msg) func get_next_project_id() : async Nat {
+  public shared query func get_next_project_id() : async Nat {
     return stable_next_project_id;
   };
   /// TODO: Implement paging for large project count
   /// Gets user's projects list
-  public shared (msg) func get_projects_by_user(payload : Types.GetProjectsByUserPayload) : async Types.Response<[Types.Project]> {
+  public shared query (msg) func get_projects_by_user(payload : Types.GetProjectsByUserPayload) : async Types.Response<[Types.Project]> {
     if (Utility.is_anonymous(msg.caller)) return #err(Errors.Unauthorized());
-    await project_manager.get_projects_by_user(payload.user, payload);
+    return project_manager.get_projects_by_user(payload.user, payload);
   };
 
-  public shared (msg) func get_user_usage() : async Types.Response<Types.UsageLogExtended> {
+  public shared query (msg) func get_user_usage() : async Types.Response<Types.UsageLogExtended> {
     if (Utility.is_anonymous(msg.caller)) return #err(Errors.Unauthorized());
     let usage_log : Types.UsageLog = shareable_canister_manager.get_usage_log(msg.caller);
 
@@ -187,19 +188,19 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   /** Shareable Canisters */
   // TAG: Admin
-  public shared (msg) func get_slots(limit : ?Nat, index : ?Nat) : async Types.Response<[Types.ShareableCanister]> {
+  public shared query (msg) func get_slots(limit : ?Nat, index : ?Nat) : async Types.Response<[Types.ShareableCanister]> {
     if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
     #ok(shareable_canister_manager.get_slots(limit, index));
   };
 
   /// TAG: Admin
-  public shared (msg) func get_available_slots(limit : ?Nat, index : ?Nat) : async Types.Response<[Nat]> {
+  public shared query (msg) func get_available_slots(limit : ?Nat, index : ?Nat) : async Types.Response<[Nat]> {
     if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
     #ok(shareable_canister_manager.get_available_slots());
   };
 
   /// Returns the slot details used by the caller
-  public shared (msg) func get_user_slot() : async Types.Response<?Types.ShareableCanister> {
+  public shared query (msg) func get_user_slot() : async Types.Response<?Types.ShareableCanister> {
     if (Utility.is_anonymous(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
@@ -207,13 +208,13 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   };
 
   /// TAG: Admin
-  public shared (msg) func get_used_slots() : async [(Nat, Bool)] {
+  public shared query (msg) func get_used_slots() : async [(Nat, Bool)] {
     if (not access_control.is_authorized(msg.caller)) return [];
     return shareable_canister_manager.get_used_slots();
   };
 
   /// TAG: Admin
-  public shared (msg) func get_slot_by_id(slot_id : Nat) : async Types.Response<Types.ShareableCanister> {
+  public shared query (msg) func get_slot_by_id(slot_id : Nat) : async Types.Response<Types.ShareableCanister> {
     if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
     return shareable_canister_manager.get_canister_by_slot(slot_id);
   };
@@ -271,11 +272,11 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return #ok(treasury_account);
   };
 
-  public shared (msg) func is_admin() : async Types.Response<Bool> {
+  public shared query (msg) func is_admin() : async Types.Response<Bool> {
     return #ok(access_control.is_authorized(msg.caller));
   };
 
-  public shared (msg) func admin_get_treasury_principal() : async Types.Response<Principal> {
+  public shared query (msg) func admin_get_treasury_principal() : async Types.Response<Principal> {
     let principal : Principal = switch (TREASURY_ACCOUNT) {
       case (null) { return #err(Errors.TreasuryNotSet()) };
       case (?val) { val };
@@ -283,7 +284,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return #ok(principal);
   };
 
-  public shared (msg) func admin_set_treasury(principal : Principal) : async Types.Response<()> {
+  public shared query (msg) func admin_set_treasury(principal : Principal) : async Types.Response<()> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
@@ -310,42 +311,42 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return #ok(Nat64.toNat(balance.e8s));
   };
 
-  public shared (msg) func admin_get_activity_logs_all(payload : Types.PaginationPayload) : async Types.Response<[(Types.ProjectId, [Types.ActivityLog])]> {
+  public shared query (msg) func admin_get_activity_logs_all(payload : Types.PaginationPayload) : async Types.Response<[(Types.ProjectId, [Types.ActivityLog])]> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
     return activity_manager.get_project_activity_all(payload);
   };
 
-  public shared (msg) func admin_get_workflow_run_history_all(payload : Types.PaginationPayload) : async Types.Response<[(Nat, [Types.WorkflowRunDetails])]> {
+  public shared query (msg) func admin_get_workflow_run_history_all(payload : Types.PaginationPayload) : async Types.Response<[(Nat, [Types.WorkflowRunDetails])]> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
     return workflow_manager.get_workflow_history_all(payload);
   };
 
-  public shared (msg) func admin_get_usage_logs_all(payload : Types.PaginationPayload) : async Types.Response<[(Principal, Types.UsageLog)]> {
+  public shared query (msg) func admin_get_usage_logs_all(payload : Types.PaginationPayload) : async Types.Response<[(Principal, Types.UsageLog)]> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
     return shareable_canister_manager.get_usage_logs_paginated(payload);
   };
 
-  public shared (msg) func admin_get_user_slot_id(user : Principal) : async Types.Response<?Types.ShareableCanister> {
+  public shared query (msg) func admin_get_user_slot_id(user : Principal) : async Types.Response<?Types.ShareableCanister> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
     return shareable_canister_manager.get_canister_by_user(user);
   };
 
-  public shared (msg) func admin_get_user_projects_all(payload : Types.PaginationPayload) : async Types.Response<[(Principal, [Types.Project])]> {
+  public shared query (msg) func admin_get_user_projects_all(payload : Types.PaginationPayload) : async Types.Response<[(Principal, [Types.Project])]> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
     return project_manager.get_user_projects_batch_paginated(payload);
   };
 
-  public shared (msg) func admin_get_user_projects(user : Principal, payload : Types.PaginationPayload) : async Types.Response<[Types.Project]> {
+  public shared query (msg) func admin_get_user_projects(user : Principal, payload : Types.PaginationPayload) : async Types.Response<[Types.Project]> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
@@ -355,17 +356,17 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       limit = payload.limit;
       page = payload.page;
     };
-    return await project_manager.get_projects_by_user(user, payload_with_user);
+    return project_manager.get_projects_by_user(user, payload_with_user);
   };
 
-  public shared (msg) func admin_get_admins(payload : Types.PaginationPayload) : async Types.Response<[(Principal, Types.Role)]> {
+  public shared query (msg) func admin_get_admins(payload : Types.PaginationPayload) : async Types.Response<[(Principal, Types.Role)]> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
     return access_control.get_role_users(payload);
   };
 
-  public shared (msg) func admin_get_projects_all(payload : Types.PaginationPayload) : async Types.Response<[(Types.ProjectId, Types.Project)]> {
+  public shared query (msg) func admin_get_projects_all(payload : Types.PaginationPayload) : async Types.Response<[(Types.ProjectId, Types.Project)]> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
@@ -373,7 +374,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return project_manager.get_all_projects_paginated(payload);
   };
 
-  public shared (msg) func admin_get_canister_deployments_all(payload : Types.PaginationPayload) : async Types.Response<[(Principal, Types.CanisterDeployment)]> {
+  public shared query (msg) func admin_get_canister_deployments_all(payload : Types.PaginationPayload) : async Types.Response<[(Principal, Types.CanisterDeployment)]> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
@@ -381,7 +382,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return canisters.get_canister_deployments_all(payload);
   };
 
-  public shared (msg) func admin_get_book_entries_all(payload : Types.PaginationPayload) : async Types.Response<[(Principal, [(Types.Token, Nat)])]> {
+  public shared query (msg) func admin_get_book_entries_all(payload : Types.PaginationPayload) : async Types.Response<[(Principal, [(Types.Token, Nat)])]> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
@@ -1004,7 +1005,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
    *
    */
 
-  public shared (msg) func get_project_activity_logs(project_id : Types.ProjectId) : async Types.Response<[Types.ActivityLog]> {
+  public shared query (msg) func get_project_activity_logs(project_id : Types.ProjectId) : async Types.Response<[Types.ActivityLog]> {
     if (Utility.is_anonymous(msg.caller)) return #err(Errors.Unauthorized());
 
     let is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
@@ -1021,7 +1022,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
    *
    */
 
-  public shared (msg) func getWorkflowRunHistory(project_id : Nat) : async Types.Response<[Types.WorkflowRunDetails]> {
+  public shared query (msg) func getWorkflowRunHistory(project_id : Nat) : async Types.Response<[Types.WorkflowRunDetails]> {
     let is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
       case (#err(_msg)) { return #err(_msg) };
       case (#ok(authorized)) { authorized };
@@ -1142,7 +1143,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   };
 
   /// TAG: Admin
-  public shared (msg) func check_role(principal : Principal) : async Types.Response<Types.Role> {
+  public shared query (msg) func check_role(principal : Principal) : async Types.Response<Types.Role> {
     // if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
     return access_control.check_role(principal);
   };
@@ -1174,12 +1175,12 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return await subscription_manager.create_subscription(msg.caller, tier_id);
   };
 
-  public func get_tiers() : async [Types.Tier] {
+  public shared query func get_tiers() : async [Types.Tier] {
     return subscription_manager.tiers_list;
   };
 
   // Get the caller's subscription
-  public shared (msg) func get_subscription() : async Types.Response<Types.Subscription> {
+  public shared query (msg) func get_subscription() : async Types.Response<Types.Subscription> {
     if (Utility.is_anonymous(msg.caller)) return #err(Errors.Unauthorized());
 
     let sub = subscription_manager.get_subscription(msg.caller);
@@ -1207,13 +1208,13 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   // TODO: Implement paging for data retrieval
   // Helper function to get all deployed asset canisters
-  public shared (msg) func getDeployedCanisters() : async Types.Response<[Principal]> {
+  public shared query (msg) func getDeployedCanisters() : async Types.Response<[Principal]> {
     if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
     // return #ok(Iter.toArray(stable_deployed_canisters.keys()));
     return #ok(Iter.toArray(Map.keys(stable_deployed_canisters)));
   };
 
-  public query func getWasmModule() : async [Nat8] {
+  public shared query func getWasmModule() : async [Nat8] {
     let wasm_module = switch (asset_canister_wasm) {
       case null { [] };
       case (?wasm) { wasm };
@@ -1263,18 +1264,18 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
    *
    */
   /// TODO: Use Types.Response return type
-  public func get_deposit_account_id(canisterPrincipal : Principal, caller : Principal) : async Blob {
+  public shared query func get_deposit_account_id(canisterPrincipal : Principal, caller : Principal) : async Blob {
     let accountIdentifier = Account.accountIdentifier(canisterPrincipal, Account.principalToSubaccount(caller));
     return accountIdentifier;
   };
 
   /// TAG: Admin
-  public shared (msg) func get_all_subscriptions() : async Types.Response<[(Principal, Types.Subscription)]> {
+  public shared query (msg) func get_all_subscriptions() : async Types.Response<[(Principal, Types.Subscription)]> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
 
-    return #ok(await subscription_manager.get_all_subscriptions());
+    return #ok(subscription_manager.get_all_subscriptions());
   };
 
   // Get pending deposits for the caller
@@ -1284,7 +1285,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   };
 
   // Get pending deposits for the specified caller
-  public func getPendingDeposits(caller : Principal) : async Types.Tokens {
+  private func getPendingDeposits(caller : Principal) : async Types.Tokens {
     // Calculate target subaccount
     let source_account = Account.accountIdentifier(Principal.fromActor(this), Account.principalToSubaccount(caller));
 
@@ -1297,7 +1298,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   };
 
   // Returns the caller's available credits in book
-  public shared (msg) func getMyCredits() : async Nat {
+  public shared query (msg) func getMyCredits() : async Nat {
     return book.fetchUserIcpBalance(msg.caller, ledger);
   };
 
@@ -1311,7 +1312,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
    *
    */
 
-  public shared (msg) func getCanisterDeployments(project_id : Nat) : async Types.Response<?Types.CanisterDeployment> {
+  public shared query (msg) func getCanisterDeployments(project_id : Nat) : async Types.Response<?Types.CanisterDeployment> {
     let is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
       case (#err(_msg)) { return #err(_msg) };
       case (#ok(authorized)) { authorized };
@@ -1599,7 +1600,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   // If amount is not passed, user's credit balance will be used
   // If caller is not specificed, msg.caller will be used
-  public shared (msg) func getCyclesToAdd(amount_in_e8s : ?Int, caller_principal : ?Principal) : async Types.Response<Nat> {
+  public shared query (msg) func getCyclesToAdd(amount_in_e8s : ?Int, caller_principal : ?Principal) : async Types.Response<Nat> {
     if (Utility.is_anonymous(msg.caller)) return #ok(0);
 
     let _caller = switch (caller_principal) {
@@ -1625,7 +1626,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   };
 
   // Returns the amount of cycles expected when converting amount in e8s
-  public shared (msg) func estimateCyclesToAdd(amount_in_e8s : Int) : async Nat {
+  public shared query (msg) func estimateCyclesToAdd(amount_in_e8s : Int) : async Nat {
     if (Utility.is_anonymous(msg.caller)) return 0;
     return calculateCyclesToAdd(amount_in_e8s);
   };
