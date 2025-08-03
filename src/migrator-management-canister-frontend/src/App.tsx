@@ -144,7 +144,9 @@ function App() {
                                                                     <Route
                                                                       path="new"
                                                                       element={
-                                                                        <CreateProjectForm />
+                                                                        <div className="new-project-container">
+                                                                          <CreateProjectForm />
+                                                                        </div>
                                                                       }
                                                                     />
                                                                     <Route
