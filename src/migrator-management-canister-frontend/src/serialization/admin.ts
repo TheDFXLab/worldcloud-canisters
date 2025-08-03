@@ -186,7 +186,7 @@ export const serializeUsageLog = (usageLog: UsageLogExtended): SerializedUsageLo
                 total: Number(usageLog.usage_log.quota.total),
             },
         },
-        reset_time_unix: Number(0)
+        reset_time_unix: Number(usageLog.reset_time_unix)
     };
 }
 export const serializeUsageLogAdmin = (usageLog: UsageLog): SerializedUsageLogExtended => {

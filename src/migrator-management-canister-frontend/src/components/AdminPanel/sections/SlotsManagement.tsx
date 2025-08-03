@@ -72,12 +72,12 @@ const SlotsManagement: React.FC = () => {
         timeout: 3000,
       });
       setShowToaster(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to set slot duration:", error);
       setToasterData({
         headerContent: "Error",
         toastStatus: false,
-        toastData: "Failed to update slot duration",
+        toastData: error.message || "Failed to update slot duration",
         textColor: "red",
         timeout: 3000,
       });
@@ -120,12 +120,12 @@ const SlotsManagement: React.FC = () => {
         timeout: 3000,
       });
       setShowToaster(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to purge expired sessions:", error);
       setToasterData({
         headerContent: "Error",
         toastStatus: false,
-        toastData: "Failed to purge expired sessions",
+        toastData: error.message || "Failed to purge expired sessions",
         textColor: "red",
         timeout: 3000,
       });
@@ -144,12 +144,12 @@ const SlotsManagement: React.FC = () => {
         timeout: 3000,
       });
       setShowToaster(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to delete usage logs:", error);
       setToasterData({
         headerContent: "Error",
         toastStatus: false,
-        toastData: "Failed to delete usage logs",
+        toastData: error.message || "Failed to delete usage logs",
         textColor: "red",
         timeout: 3000,
       });
