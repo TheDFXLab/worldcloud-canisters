@@ -89,199 +89,335 @@ export const useAdminLogic = () => {
     // Fetch slots
     const refreshSlots = useCallback(async () => {
         if (identity && agent) {
-            await dispatch(fetchSlots({ identity, agent }));
+            await dispatch(fetchSlots({ identity, agent })).unwrap();
         }
     }, [dispatch, identity, agent]);
 
     // Fetch available slots
     const refreshAvailableSlots = useCallback(async () => {
         if (identity && agent) {
-            await dispatch(fetchAvailableSlots({ identity, agent }));
+            await dispatch(fetchAvailableSlots({ identity, agent })).unwrap();
         }
     }, [dispatch, identity, agent]);
 
     // Fetch used slots
     const refreshUsedSlots = useCallback(async () => {
         if (identity && agent) {
-            await dispatch(fetchUsedSlots({ identity, agent }));
+            await dispatch(fetchUsedSlots({ identity, agent })).unwrap();
         }
     }, [dispatch, identity, agent]);
 
     // Fetch all subscriptions
     const refreshAllSubscriptions = useCallback(async () => {
         if (identity && agent) {
-            await dispatch(fetchAllSubscriptions({ identity, agent }));
+            await dispatch(fetchAllSubscriptions({ identity, agent })).unwrap();
         }
     }, [dispatch, identity, agent]);
 
     // Fetch deployed canisters
     const refreshDeployedCanisters = useCallback(async () => {
         if (identity && agent) {
-            await dispatch(fetchDeployedCanisters({ identity, agent }));
+            await dispatch(fetchDeployedCanisters({ identity, agent })).unwrap();
         }
     }, [dispatch, identity, agent]);
 
     // Set all slot duration
     const handleSetAllSlotDuration = useCallback(async (newDurationMs: number) => {
-        if (identity && agent) {
-            await dispatch(setAllSlotDuration({ identity, agent, newDurationMs }));
-            refreshSlots();
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
         }
-    }, [dispatch, identity, agent]);
+        try {
+            await dispatch(setAllSlotDuration({ identity, agent, newDurationMs })).unwrap();
+            refreshSlots();
+            return { status: true, message: 'Slot duration updated successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to update slot duration',
+            };
+        }
+    }, [dispatch, identity, agent, refreshSlots]);
 
     // Delete usage logs
     const handleDeleteUsageLogs = useCallback(async () => {
-        if (identity && agent) {
-            await dispatch(deleteUsageLogs({ identity, agent }));
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(deleteUsageLogs({ identity, agent })).unwrap();
+            return { status: true, message: 'Usage logs deleted successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to delete usage logs',
+            };
         }
     }, [dispatch, identity, agent]);
 
     // Update slot
     const handleUpdateSlot = useCallback(async (slotId: number, updatedSlot: any) => {
-        if (identity && agent) {
-            await dispatch(updateSlot({ identity, agent, slotId, updatedSlot }));
-            refreshSlots();
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
         }
-    }, [dispatch, identity, agent]);
+        try {
+            await dispatch(updateSlot({ identity, agent, slotId, updatedSlot })).unwrap();
+            await refreshSlots();
+            return { status: true, message: 'Slot updated successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to update slot',
+            };
+        }
+    }, [dispatch, identity, agent, refreshSlots]);
 
     // Delete all projects
     const handleDeleteProjects = useCallback(async () => {
-        if (identity && agent) {
-            await dispatch(deleteProjects({ identity, agent }));
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(deleteProjects({ identity, agent })).unwrap();
+            return { status: true, message: 'Projects deleted successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to delete projects',
+            };
         }
     }, [dispatch, identity, agent]);
 
     // Delete workflow run history
     const handleDeleteWorkflowRunHistory = useCallback(async () => {
-        if (identity && agent) {
-            await dispatch(deleteWorkflowRunHistory({ identity, agent }));
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(deleteWorkflowRunHistory({ identity, agent })).unwrap();
+            return { status: true, message: 'Workflow run history deleted successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to delete workflow run history',
+            };
         }
     }, [dispatch, identity, agent]);
 
     // Reset project slot
     const handleResetProjectSlot = useCallback(async (projectId: number) => {
-        if (identity && agent) {
-            await dispatch(resetProjectSlot({ identity, agent, projectId }));
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(resetProjectSlot({ identity, agent, projectId })).unwrap();
+            return { status: true, message: 'Project slot reset successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to reset project slot',
+            };
         }
     }, [dispatch, identity, agent]);
 
     // Reset all slots
     const handleResetSlots = useCallback(async () => {
-        if (identity && agent) {
-            await dispatch(resetSlots({ identity, agent }));
-            refreshSlots();
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
         }
-    }, [dispatch, identity, agent]);
+        try {
+            await dispatch(resetSlots({ identity, agent })).unwrap();
+            await refreshSlots();
+            return { status: true, message: 'All slots reset successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to reset slots',
+            };
+        }
+    }, [dispatch, identity, agent, refreshSlots]);
 
     // Purge expired sessions
     const handlePurgeExpiredSessions = useCallback(async () => {
-        if (identity && agent) {
-            await dispatch(purgeExpiredSessions({ identity, agent }));
-            refreshSlots();
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
         }
-    }, [dispatch, identity, agent]);
+        try {
+            await dispatch(purgeExpiredSessions({ identity, agent })).unwrap();
+            await refreshSlots();
+            return { status: true, message: 'Expired sessions purged successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to purge expired sessions',
+            };
+        }
+    }, [dispatch, identity, agent, refreshSlots]);
 
     // Delete all logs
     const handleDeleteAllLogs = useCallback(async () => {
-        if (identity && agent) {
-            await dispatch(deleteAllLogs({ identity, agent }));
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(deleteAllLogs({ identity, agent })).unwrap();
+            return { status: true, message: 'All logs deleted successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to delete all logs',
+            };
         }
     }, [dispatch, identity, agent]);
 
     const handleGetAdmins = useCallback(async (payload: PaginationPayload) => {
-        if (identity && agent) {
-            await dispatch(getAdmins({ identity, agent, payload }));
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
         }
-    }, [dispatch, identity, agent])
+        try {
+            await dispatch(getAdmins({ identity, agent, payload })).unwrap();
+            return { status: true, message: 'Admins fetched successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to fetch admins',
+            };
+        }
+    }, [dispatch, identity, agent]);
+
     // Grant role
     const handleGrantRole = useCallback(async (principal: string, role: any) => {
-        if (identity && agent) {
-            await dispatch(grantRole({ identity, agent, principal, role }));
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(grantRole({ identity, agent, principal, role })).unwrap();
+            return { status: true, message: 'Role granted successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to grant role',
+            };
         }
     }, [dispatch, identity, agent]);
 
     // Revoke role
     const handleRevokeRole = useCallback(async (principal: string) => {
-        if (identity && agent) {
-            await dispatch(revokeRole({ identity, agent, principal }));
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(revokeRole({ identity, agent, principal })).unwrap();
+            return { status: true, message: 'Role revoked successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to revoke role',
+            };
         }
     }, [dispatch, identity, agent]);
 
     // Check role
     const handleCheckRole = useCallback(async (principal: string) => {
-        if (identity && agent) {
-            await dispatch(checkRole({ identity, agent, principal }));
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(checkRole({ identity, agent, principal })).unwrap();
+            return { status: true, message: 'Role checked successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to check role',
+            };
         }
     }, [dispatch, identity, agent]);
 
     // Check current user's role
     const checkCurrentUserRole = useCallback(async () => {
-        if (identity && agent) {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
             const principal = identity.getPrincipal().toText();
-            await dispatch(isAdmin({ identity, agent, principal }));
+            await dispatch(isAdmin({ identity, agent, principal })).unwrap();
+            return { status: true, message: 'Admin status checked successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to check admin status',
+            };
         }
     }, [dispatch, identity, agent]);
 
     // Upload asset canister WASM
     const handleUploadAssetCanisterWasm = useCallback(async (wasm: number[]) => {
-        if (identity && agent) {
-            await dispatch(uploadAssetCanisterWasm({ identity, agent, wasm }));
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(uploadAssetCanisterWasm({ identity, agent, wasm })).unwrap();
+            return { status: true, message: 'Asset canister WASM uploaded successfully' };
+        } catch (error: any) {
+            throw {
+                status: false,
+                message: error.message || 'Failed to upload WASM',
+            };
         }
     }, [dispatch, identity, agent]);
 
     // Fetch activity logs all
     const refreshActivityLogsAll = useCallback(async (payload: any) => {
         if (identity && agent) {
-            await dispatch(fetchActivityLogsAll({ identity, agent, payload }));
+            await dispatch(fetchActivityLogsAll({ identity, agent, payload })).unwrap();
         }
     }, [dispatch, identity, agent]);
 
     // Fetch workflow run history all
     const refreshWorkflowRunHistoryAll = useCallback(async (payload: any) => {
         if (identity && agent) {
-            await dispatch(fetchWorkflowRunHistoryAll({ identity, agent, payload }));
+            await dispatch(fetchWorkflowRunHistoryAll({ identity, agent, payload })).unwrap();
         }
     }, [dispatch, identity, agent]);
 
     // Fetch usage logs all
     const refreshUsageLogsAll = useCallback(async (payload: any) => {
         if (identity && agent) {
-            await dispatch(fetchUsageLogsAll({ identity, agent, payload }));
+            await dispatch(fetchUsageLogsAll({ identity, agent, payload })).unwrap();
         }
     }, [dispatch, identity, agent]);
 
     // Fetch user slot
     const refreshUserSlot = useCallback(async (user: string) => {
         if (identity && agent) {
-            await dispatch(fetchUserSlot({ identity, agent, user }));
+            await dispatch(fetchUserSlot({ identity, agent, user })).unwrap();
         }
     }, [dispatch, identity, agent]);
 
     // Fetch user projects all
     const refreshUserProjectsAll = useCallback(async (payload: any) => {
         if (identity && agent) {
-            await dispatch(fetchUserProjectsAll({ identity, agent, payload }));
+            await dispatch(fetchUserProjectsAll({ identity, agent, payload })).unwrap();
         }
     }, [dispatch, identity, agent]);
 
     // Fetch user projects
     const refreshUserProjects = useCallback(async (user: string, payload: any) => {
         if (identity && agent) {
-            await dispatch(fetchUserProjects({ identity, agent, user, payload }));
+            await dispatch(fetchUserProjects({ identity, agent, user, payload })).unwrap();
         }
     }, [dispatch, identity, agent]);
 
     // Fetch projects all
     const refreshProjectsAll = useCallback(async (payload: any) => {
         if (identity && agent) {
-            await dispatch(fetchProjectsAll({ identity, agent, payload }));
+            await dispatch(fetchProjectsAll({ identity, agent, payload })).unwrap();
         }
     }, [dispatch, identity, agent]);
 
     // Fetch canister deployments all
     const refreshCanisterDeploymentsAll = useCallback(async (payload: any) => {
         if (identity && agent) {
-            await dispatch(fetchCanisterDeploymentsAll({ identity, agent, payload }));
+            await dispatch(fetchCanisterDeploymentsAll({ identity, agent, payload })).unwrap();
         }
     }, [dispatch, identity, agent]);
 

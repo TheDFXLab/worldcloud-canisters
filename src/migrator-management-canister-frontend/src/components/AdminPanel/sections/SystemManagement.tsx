@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAdminLogic } from "../../../hooks/useAdminLogic";
 import { PaginationPayload } from "../../../serialization/admin";
 import "./SystemManagement.css";
+import { useToaster } from "../../../context/ToasterContext/ToasterContext";
 
 const SystemManagement: React.FC = () => {
   const {
@@ -53,6 +54,7 @@ const SystemManagement: React.FC = () => {
     refreshWorkflowRunHistoryAll,
     refreshProjectsAll,
   ]);
+  const { setToasterData, setShowToaster } = useToaster();
 
   const handleDeleteUsageLogsAction = async () => {
     if (
@@ -60,8 +62,19 @@ const SystemManagement: React.FC = () => {
         "Are you sure you want to delete all usage logs? This action cannot be undone."
       )
     ) {
-      await handleDeleteUsageLogs();
-      refreshUsageLogsAll(usagePagination);
+      try {
+        await handleDeleteUsageLogs();
+        refreshUsageLogsAll(usagePagination);
+      } catch (error: any) {
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: false,
+          toastData: error.message || "Failed to delete usage logs.",
+          textColor: "red",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+      }
     }
   };
 
@@ -71,8 +84,19 @@ const SystemManagement: React.FC = () => {
         "Are you sure you want to delete all workflow run history? This action cannot be undone."
       )
     ) {
-      await handleDeleteWorkflowRunHistory();
-      refreshWorkflowRunHistoryAll(workflowPagination);
+      try {
+        await handleDeleteWorkflowRunHistory();
+        refreshWorkflowRunHistoryAll(workflowPagination);
+      } catch (error: any) {
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: false,
+          toastData: error.message || "Failed to delete usage logs.",
+          textColor: "red",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+      }
     }
   };
 
@@ -82,8 +106,19 @@ const SystemManagement: React.FC = () => {
         "Are you sure you want to delete all projects? This action cannot be undone."
       )
     ) {
-      await handleDeleteProjects();
-      refreshProjectsAll(projectsPagination);
+      try {
+        await handleDeleteProjects();
+        refreshProjectsAll(projectsPagination);
+      } catch (error: any) {
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: false,
+          toastData: error.message || "Failed to perform operation.",
+          textColor: "red",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+      }
     }
   };
 
@@ -93,7 +128,18 @@ const SystemManagement: React.FC = () => {
         "Are you sure you want to purge all expired sessions? This action cannot be undone."
       )
     ) {
-      await handlePurgeExpiredSessions();
+      try {
+        await handlePurgeExpiredSessions();
+      } catch (error: any) {
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: false,
+          toastData: error.message || "Failed to perform operation",
+          textColor: "red",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+      }
     }
   };
 
@@ -103,7 +149,18 @@ const SystemManagement: React.FC = () => {
         "Are you sure you want to reset all slots? This action cannot be undone."
       )
     ) {
-      await handleResetSlots();
+      try {
+        await handleResetSlots();
+      } catch (error: any) {
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: false,
+          toastData: error.message || "Failed to perform operation",
+          textColor: "red",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+      }
     }
   };
 
