@@ -27,6 +27,7 @@ import {
     serializeAdminRolePairs,
     SerializedBookEntry,
     serializeBookEntries,
+    serializeUsageLogsPairAdmin,
 } from '../../serialization/admin';
 import { SerializedUsageLogExtended } from '../../utility/bigint';
 
@@ -530,7 +531,7 @@ export const fetchUsageLogsAll = createAsyncThunk(
         if (!api) throw new Error('Failed to create API instance');
         const response = await api.admin_get_usage_logs_all(serializePaginationPayload(payload));
         if ('ok' in response) {
-            return response.ok.map(serializeUsageLogsPair);
+            return response.ok.map(serializeUsageLogsPairAdmin);
         }
         throw new Error('Failed to fetch usage logs');
     }
