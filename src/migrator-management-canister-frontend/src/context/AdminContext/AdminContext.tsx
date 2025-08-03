@@ -41,19 +41,41 @@ interface AdminContextType {
   refreshUsedSlots: () => Promise<void>;
   refreshAllSubscriptions: () => Promise<void>;
   refreshDeployedCanisters: () => Promise<void>;
-  handleSetAllSlotDuration: (newDurationMs: number) => Promise<void>;
-  handleDeleteUsageLogs: () => Promise<void>;
-  handleUpdateSlot: (slotId: number, updatedSlot: any) => Promise<void>;
-  handleDeleteProjects: () => Promise<void>;
-  handleDeleteWorkflowRunHistory: () => Promise<void>;
-  handleResetProjectSlot: (projectId: number) => Promise<void>;
-  handleResetSlots: () => Promise<void>;
-  handlePurgeExpiredSessions: () => Promise<void>;
-  handleDeleteAllLogs: () => Promise<void>;
-  handleGrantRole: (principal: string, role: any) => Promise<void>;
-  handleRevokeRole: (principal: string) => Promise<void>;
-  handleCheckRole: (principal: string) => Promise<void>;
-  handleUploadAssetCanisterWasm: (wasm: number[]) => Promise<void>;
+  handleSetAllSlotDuration: (
+    newDurationMs: number
+  ) => Promise<{ status: boolean; message: string }>;
+  handleDeleteUsageLogs: () => Promise<{ status: boolean; message: string }>;
+  handleUpdateSlot: (
+    slotId: number,
+    updatedSlot: any
+  ) => Promise<{ status: boolean; message: string }>;
+  handleDeleteProjects: () => Promise<{ status: boolean; message: string }>;
+  handleDeleteWorkflowRunHistory: () => Promise<{
+    status: boolean;
+    message: string;
+  }>;
+  handleResetProjectSlot: (
+    projectId: number
+  ) => Promise<{ status: boolean; message: string }>;
+  handleResetSlots: () => Promise<{ status: boolean; message: string }>;
+  handlePurgeExpiredSessions: () => Promise<{
+    status: boolean;
+    message: string;
+  }>;
+  handleDeleteAllLogs: () => Promise<{ status: boolean; message: string }>;
+  handleGrantRole: (
+    principal: string,
+    role: any
+  ) => Promise<{ status: boolean; message: string }>;
+  handleRevokeRole: (
+    principal: string
+  ) => Promise<{ status: boolean; message: string }>;
+  handleCheckRole: (
+    principal: string
+  ) => Promise<{ status: boolean; message: string }>;
+  handleUploadAssetCanisterWasm: (
+    wasm: number[]
+  ) => Promise<{ status: boolean; message: string }>;
   handleClearError: () => void;
   handleClearSuccessMessage: () => void;
 
