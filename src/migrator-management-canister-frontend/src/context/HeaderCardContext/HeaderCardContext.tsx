@@ -38,8 +38,6 @@ export function HeaderCardProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    console.log(`Params `, params);
-    console.log(`ative tabe `, activeTab);
     setHeaderCard(mapHeaderContent(activeTab ? activeTab : "home"));
   }, [activeTab]);
 

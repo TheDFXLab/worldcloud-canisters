@@ -43,22 +43,15 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     }
   };
 
-  const loginWithPlug = async () => {
-    console.log("Login with Plug");
-  };
+  const loginWithPlug = async () => {};
 
   useEffect(() => {
     try {
       refreshIdentity();
     } catch (error) {
-      console.log(`error.....`, error);
       setIsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    console.log({ isConnected, isLoadingIdentity });
-  }, [isConnected, isLoadingIdentity]);
 
   if (isLoadingIdentity && !isConnected) {
     return <LoaderOverlay />;

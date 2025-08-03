@@ -96,7 +96,6 @@ export const useCyclesLogic = () => {
             const result = await dispatch(
                 fetchCanisterStatus({ identity, agent, project_id: BigInt(project_id) })
             ).unwrap();
-            console.log(`GETTING STATSS:`, result)
             return result;
         } catch (error) {
             console.error('Failed to fetch canister status:', error);

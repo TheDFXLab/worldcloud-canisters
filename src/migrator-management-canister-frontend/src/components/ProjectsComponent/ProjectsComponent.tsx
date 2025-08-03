@@ -118,10 +118,6 @@ const ProjectsComponent: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    console.log(`is loading`, isLoading);
-  }, [isLoading]);
-
-  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
         filterRef.current &&
@@ -399,9 +395,6 @@ const ProjectsComponent: React.FC = () => {
                     );
 
                     if (result) {
-                      console.log(
-                        `Canister deployed successfully: ${result.canisterId}`
-                      );
                       setToasterData({
                         headerContent: "Success",
                         toastStatus: true,
@@ -493,9 +486,6 @@ const ProjectsComponent: React.FC = () => {
                         );
 
                         if (result) {
-                          console.log(
-                            `Canister deployed successfully: ${result.canisterId}`
-                          );
                           setToasterData({
                             headerContent: "Success",
                             toastStatus: true,

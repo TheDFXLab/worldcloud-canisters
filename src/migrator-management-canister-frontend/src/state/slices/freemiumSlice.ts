@@ -81,7 +81,6 @@ export const fetchFreemiumUsage = createAsyncThunk(
     }) => {
         const mainApi = await MainApi.create(identity, agent);
         const usage = await mainApi?.getUserFreemiumUsage();
-        console.log('Raw freemium usage data:', usage);
 
         // Return both the usage data and whether there's an active slot
         return {

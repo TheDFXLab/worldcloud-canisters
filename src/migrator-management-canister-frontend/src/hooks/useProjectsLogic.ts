@@ -62,7 +62,6 @@ export const useProjectsLogic = () => {
     // Function to refresh projects
     const refreshProjects = useCallback(async () => {
         if (identity && agent) {
-            console.log(`Now getting user project in dispatch..`);
             await dispatch(getUserProjects({
                 identity,
                 agent,
@@ -152,7 +151,6 @@ export const useProjectsLogic = () => {
         }
 
         if (!agent) {
-            console.log(`HttpAgent not set.`);
             throw new Error("HttpAgent not set.");
         }
 

@@ -274,12 +274,6 @@ function FileUploader({ project_id }: { project_id: bigint }) {
 
       setCurrentFiles(sanitizedFiles);
 
-      console.log(
-        `Storing files in asset canister ${canisterId} for user: ${identity
-          ?.getPrincipal()
-          .toText()}`
-      );
-
       if (!agent) {
         throw new Error("Agent not found");
       }

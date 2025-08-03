@@ -119,7 +119,6 @@ class LedgerApi {
         else if ('Err' in response) {
             throw response.Err;
         }
-        console.log(`Transfer failed`, response);
         return false;
     }
 }

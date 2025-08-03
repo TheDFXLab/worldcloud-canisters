@@ -39,7 +39,6 @@ export const fetchDeployments = createAsyncThunk(
 
         const mainApi = await MainApi.create(identity, agent);
         const result = await mainApi?.getCanisterDeployments(project_id);
-        console.log(`GOT USER DEPLPOYMENTA:`, result)
         if (!result) {
             throw new Error('No deployments found');
         }
@@ -137,10 +136,8 @@ export const deploymentSlice = createSlice({
             .addCase(fetchDeployments.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.deployment = action.payload;
-                console.log(`action payload:`, action.payload)
 
                 state.selectedDeployment = action.payload;
-                console.log(`action payload:`, action.payload)
             })
             .addCase(fetchDeployments.rejected, (state, action) => {
                 state.isLoading = false;

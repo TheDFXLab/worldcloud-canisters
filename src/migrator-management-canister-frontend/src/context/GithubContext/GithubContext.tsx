@@ -58,8 +58,6 @@ export function GithubProvider({ children }: GithubProviderProps) {
     const jwt = AuthState.getInstance().getAccessToken();
     if (jwt) {
       try {
-        console.log(`Getting github user data with jwt`, jwt);
-
         const githubApi = GithubApi.getInstance();
         const data = await githubApi.getUser();
         if (!data) {
@@ -99,13 +97,6 @@ export function GithubProvider({ children }: GithubProviderProps) {
           },
         });
         const data = await response.json();
-        console.log("GitHub Rate Limit Status:", {
-          core: data.resources.core,
-          search: data.resources.search,
-          graphql: data.resources.graphql,
-          integration_manifest: data.resources.integration_manifest,
-          source_import: data.resources.source_import,
-        });
       } catch (err) {
         console.error("Failed to check rate limit:", err);
       }

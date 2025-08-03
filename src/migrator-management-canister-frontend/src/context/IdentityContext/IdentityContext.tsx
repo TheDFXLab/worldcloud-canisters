@@ -60,7 +60,6 @@ const getGlobalAuthClient = async () => {
       if (isInitializing) {
         return null;
       }
-      console.log("Creating AuthClient");
       isInitializing = true;
       globalAuthClient = await AuthClient.create({
         idleOptions: {
@@ -107,12 +106,10 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
   const loadInitialData = useCallback(
     async (_identity: Identity, _agent: any) => {
       try {
-        console.log(`(((LOADING INITIAL DATA)))`);
         // Load projects
         await dispatch(
           getUserProjects({ identity: _identity, agent: _agent, silent: true })
         );
-        console.log(`DISPATCHING FETCH FREMIUM USAGE`);
         // Load freemium usage
         await dispatch(
           fetchFreemiumUsage({
@@ -146,7 +143,6 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       const authClient = await getGlobalAuthClient();
 
       if (!authClient) {
-        console.log("No auth client found");
         return null;
       }
 
@@ -154,22 +150,17 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       const identity = authClient.getIdentity();
 
       if (!identity) {
-        console.log("No identity found");
         return null;
       }
 
       return identity;
     } catch (error) {
-      console.error("Error getting identity:", error);
       return null;
     }
   }
 
   const refreshIdentity = async () => {
     try {
-      // if (!identity) return null;
-
-      console.log("refreshIdentity");
       setIsLoadingIdentity(true);
 
       let _identity = await getIdentity();
@@ -240,7 +231,6 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
 
   const connectWallet = async () => {
     try {
-      console.log(`Connecting wallet`);
       setIsLoadingIdentity(true);
       summon("Logging in...");
       const _authClient = await AuthClient.create({
@@ -250,7 +240,6 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         },
       });
 
-      console.log("Auth client created");
       setGlobalAuthClient(_authClient);
 
       // Responsive popup dimensions for all devices
@@ -329,15 +318,10 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       });
 
       const identity = _authClient.getIdentity();
-      console.log(
-        `Logged in with principal:`,
-        identity.getPrincipal().toText()
-      );
 
       // Initialize the agent
       const agent = await fetchHttpAgent(identity);
       if (!agent) {
-        console.log("IdentityContext: No agent found");
         return null;
       }
 

@@ -310,13 +310,8 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
     }
   };
 
-  useEffect(() => {
-    console.log(`repo`, repoStates);
-  }, [repoStates]);
-
   const handleDeploy = async (repo: string) => {
     try {
-      console.log(`repo states`, repoStates[repo]);
       if (!identity) {
         throw new Error("Please login to deploy");
       }

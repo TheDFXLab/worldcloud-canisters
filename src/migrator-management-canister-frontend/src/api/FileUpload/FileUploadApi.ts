@@ -108,10 +108,6 @@ class FileUploadApi {
                     const totalSize = this.calculateTotalSize(files);
 
                     const result = await this.storeAssetsInCanister(files, projectId, identity, workflowRunDetails, i + 1, batches.length, agent);
-                    if (!result) {
-                        console.log(`Error: Failed to store batch ${i + 1}`);
-                    }
-
                     totalUploadedSize += result.uploadedSize ?? 0;
 
                 }

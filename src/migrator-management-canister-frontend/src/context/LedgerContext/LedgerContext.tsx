@@ -57,7 +57,6 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error("Ledger API not initialized");
       }
       const balance = await ledgerApi.getBalance();
-      console.log(`Balance()`, balance);
 
       localStorage.setItem(
         "userBalance",
@@ -132,9 +131,7 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!ledgerApi) {
         throw new Error("Ledger API not initialized");
       }
-      console.log(`Getting balance`);
       const balance = await ledgerApi.getBalance();
-      console.log(`Balance`, balance);
       return balance;
     } catch (error) {
       console.error(`Error getting balance`, error);
@@ -174,13 +171,6 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
 
         // Not enough credits depositted to backend
         if (credits_available < icpToE8s(amountInIcp)) {
-          console.log(`============================================`);
-          console.log(`============================================`);
-          console.log(
-            `Available Credits is less than required amount. Available: ${credits_available.toString()}, Required: ${amountInIcp}`
-          );
-          console.log(`============================================`);
-          console.log(`============================================`);
           // Check if there are any pending deposits
           const pending_deposits_in_icp = await getPendingDepositsInIcp();
           if (pending_deposits_in_icp < amountInIcp) {
@@ -206,12 +196,6 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
           }
 
           const available_balance = await mainApi.deposit();
-          console.log(`============================================`);
-          console.log(`============================================`);
-          console.log(`available balance after deposit:`, available_balance);
-          console.log(`============================================`);
-          console.log(`============================================`);
-
           return Number(available_balance);
         }
 
@@ -220,12 +204,6 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [identity, agent]
   );
-
-  // TODO: call directly pending deposits
-  useEffect(() => {
-    // getPendingDeposits();
-    // getBalance();
-  }, []);
 
   return (
     <LedgerContext.Provider

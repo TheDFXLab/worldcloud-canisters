@@ -142,7 +142,6 @@ export const deployProject = createAsyncThunk(
 
         const mainApi = await MainApi.create(identity, agent);
         const canisterId = await mainApi?.deployAssetCanister(projectId);
-        console.log(`DEPLOYED ASSET CANISTER`, canisterId);
 
         if (!canisterId) {
             throw new Error('Failed to deploy canister');

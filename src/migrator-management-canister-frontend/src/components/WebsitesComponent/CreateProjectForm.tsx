@@ -176,7 +176,6 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
     }
 
     if (!agent) {
-      console.log(`HttpAgent not initialized, relog.`);
       return;
     }
 

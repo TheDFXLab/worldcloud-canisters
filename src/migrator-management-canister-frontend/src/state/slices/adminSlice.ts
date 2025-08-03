@@ -315,11 +315,9 @@ export const resetSlots = createAsyncThunk(
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
         const response = await api.reset_slots();
-        debugger;
         if ('ok' in response) {
             return response.ok;
         }
-        debugger;
         throw new Error(response.err);
     }
 );
@@ -426,11 +424,9 @@ export const isAdmin = createAsyncThunk(
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
         const response = await api.is_admin();
-        debugger;
         if ('ok' in response) {
             return response.ok;
         }
-        debugger;
         throw new Error('Failed to check role');
     }
 );
@@ -448,11 +444,9 @@ export const checkRole = createAsyncThunk(
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
         const response = await api.check_role(principal);
-        debugger;
         if ('ok' in response) {
             return serializeAdminRole(response.ok);
         }
-        debugger;
         throw new Error('Failed to check role');
     }
 );

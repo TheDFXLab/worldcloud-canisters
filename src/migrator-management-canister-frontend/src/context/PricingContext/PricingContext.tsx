@@ -48,7 +48,6 @@ export function PricingProvider({ children }: { children: ReactNode }) {
     queryKey: [queryNameTiersList, agent, identity],
     queryFn: async () => {
       try {
-        console.log("fetching tiers");
         const res = await getTiersList();
         if (!res) {
           return null;
@@ -69,10 +68,8 @@ export function PricingProvider({ children }: { children: ReactNode }) {
       }
     },
     initialData: () => {
-      console.log("initialData for tiers running");
       const stored = localStorage.getItem(queryNameTiersList);
       if (!stored) {
-        console.log("No stored tiers data found");
         return null;
       }
 
@@ -82,12 +79,10 @@ export function PricingProvider({ children }: { children: ReactNode }) {
       // Check if data is expired
       const isExpired = Date.now() - timestamp > VERIFICATION_INTERVAL;
       if (isExpired) {
-        console.log("Tiers data expired");
         localStorage.removeItem(queryNameTiersList);
         return false;
       }
 
-      console.log("Using cached tiers data");
       return status;
     },
     staleTime: 0,
@@ -98,7 +93,6 @@ export function PricingProvider({ children }: { children: ReactNode }) {
 
   const getTiersList = async () => {
     try {
-      console.log("fetching tiers");
       const subscriptionApi = new SubscriptionApi();
 
       const tiers = await subscriptionApi.getTiersList(identity, agent);

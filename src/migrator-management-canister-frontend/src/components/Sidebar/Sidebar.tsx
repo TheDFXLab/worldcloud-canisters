@@ -98,7 +98,6 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
     menuItem: MenuItem,
     shouldNavigate: boolean = true
   ) => {
-    console.log(`cloicked menu option`, menuItem, shouldNavigate);
     const headerCardData: HeaderCardData | null = mapHeaderContent(
       menuItem ? menuItem : "home",
       githubUser,
@@ -118,7 +117,6 @@ function Sidebar({ isSidebarCollapsed, setIsSidebarCollapsed }: SidebarProps) {
       handleClose();
     }
     if (shouldNavigate) {
-      console.log(`Navigating to `, navigateToPath);
       navigate(navigateToPath);
     }
   };

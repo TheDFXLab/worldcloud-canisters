@@ -99,33 +99,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     return { title, tooltipMessage, isButton };
   };
 
-  useEffect(() => {
-    console.log("Countdown Debug:", {
-      projectName: project.name,
-      isFreemium,
-      hasCanister,
-      hasFreemiumSlot,
-      hasFreemiumCanisterId,
-      projectCanisterId: project.canister_id,
-      freemiumCanisterId: freemiumSlot?.canister_id,
-      freemiumStatus: freemiumSlot?.status,
-      canisterIdsMatch,
-      showCountdown,
-      allConditions: {
-        isFreemium,
-        hasCanister,
-        hasFreemiumSlot,
-        statusCheck: freemiumSlot?.status === "occupied",
-      },
-    });
-  }, [
-    isFreemium,
-    hasCanister,
-    freemiumSlot,
-    project.canister_id,
-    project.name,
-  ]);
-
   return (
     <div className={`project-card ${project.plan}`} onClick={onClick}>
       <div className="project-card-content">

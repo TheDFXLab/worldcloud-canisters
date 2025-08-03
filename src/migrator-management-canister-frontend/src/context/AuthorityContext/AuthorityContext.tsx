@@ -38,31 +38,6 @@ export function AuthorityProvider({
   const { canisterId } = useParams();
   const { agent } = useHttpAgent();
 
-  // const refreshStatus = async () => {
-  //   try {
-  //     if (!canisterId) {
-  //       throw new Error("Canister ID is not set");
-  //     }
-  //     const authApi = new AuthorityApi(Principal.fromText(canisterId));
-
-  //     setIsLoadingStatus(true);
-  //     if (!agent) {
-  //       throw new Error("Agent not found");
-  //     }
-  //     const result = await authApi.getCanisterStatus(
-  //       authApi.canisterId,
-  //       identity,
-  //       agent
-  //     );
-  //     setStatus(result);
-  //   } catch (error) {
-  //     console.log(`Error:`, error);
-  //     setIsLoadingStatus(false);
-  //   } finally {
-  //     setIsLoadingStatus(false);
-  //   }
-  // };
-
   const handleAddController = async (newController: string) => {
     try {
       if (!canisterId) {
@@ -85,8 +60,6 @@ export function AuthorityProvider({
       }
       return true;
     } catch (error: any) {
-      console.log(`error:`, decodeError(error.toString()));
-
       setIsLoadingStatus(false);
       return false;
     } finally {
@@ -117,18 +90,12 @@ export function AuthorityProvider({
       }
       return true;
     } catch (error: any) {
-      console.log(`Error:`, decodeError(error.toString()));
       setIsLoadingStatus(false);
       return false;
     } finally {
       setIsLoadingStatus(false);
     }
   };
-
-  // TODO: remove this and propagate changes in project
-  // useEffect(() => {
-  //   refreshStatus();
-  // }, []);
 
   return (
     <AuthorityContext.Provider

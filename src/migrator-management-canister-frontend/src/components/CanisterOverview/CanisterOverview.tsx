@@ -222,7 +222,6 @@ export const CanisterOverview: React.FC = () => {
           );
 
           if (result) {
-            console.log(`Canister deployed successfully: ${result.canisterId}`);
             setToasterData({
               headerContent: "Success",
               toastStatus: true,

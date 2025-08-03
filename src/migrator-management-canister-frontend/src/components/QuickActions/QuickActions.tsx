@@ -142,11 +142,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                 className={`quick-action-item ${
                   action.isDangerous ? "dangerous" : ""
                 } ${action.disabled ? "disabled" : ""}`}
-                onClick={
-                  !action.disabled
-                    ? action.onClick
-                    : () => console.log("clcked")
-                }
+                onClick={!action.disabled ? action.onClick : () => {}}
                 role="button"
                 tabIndex={action.disabled ? -1 : 0}
               >
@@ -162,7 +158,6 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                       startTimestamp={freemiumSlot.start_timestamp}
                       duration={freemiumSlot.duration}
                       onExpire={() => {
-                        debugger;
                         refreshProjects();
                       }}
                     />

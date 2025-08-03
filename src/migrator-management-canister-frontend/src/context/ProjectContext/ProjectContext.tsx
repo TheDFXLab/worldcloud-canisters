@@ -58,12 +58,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         const res = await getProjects();
 
         if (!res) {
-          console.log("No projects found");
           return null;
         }
 
         if (!identity) {
-          console.log("No identity found");
           return null;
         }
 
@@ -120,12 +118,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const getProjects = async () => {
     try {
       if (!agent) {
-        console.log(`no agent..`);
         return null;
       }
       const mainApi = await MainApi.create(identity, agent);
       if (!mainApi) {
-        console.log(`Failed to create main api`);
         return null;
       }
       const projects = await mainApi.getUserProjects();

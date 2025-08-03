@@ -125,7 +125,6 @@ class MainApi {
             return depositAddr;
 
         } catch (error) {
-            console.log(`Error getting deposit address:`, error)
             return null;
         }
     }
@@ -144,7 +143,6 @@ class MainApi {
             const pendingDeposits = await this.actor.getMyPendingDeposits();
             return pendingDeposits;
         } catch (error) {
-            console.log(`Error getting pending deposits:`, error)
             // return null;
             throw error;
         }
@@ -163,8 +161,6 @@ class MainApi {
 
     async getCanisterDeployments(project_id: number) {
         try {
-            console.log("Getting canister deployments", this.agent);
-
             if (!this.actor) {
                 throw new Error("Actor not initialized.");
             }
@@ -174,7 +170,6 @@ class MainApi {
             if (!this.identity) {
                 throw new Error("Identity not initialized.");
             }
-            console.log("Getting canister deployments", this.agent);
             const response = await this.actor.getCanisterDeployments(BigInt(project_id));
             if ("ok" in response) {
                 return response.ok[0];
@@ -183,7 +178,6 @@ class MainApi {
                 throw this.handleResponseError(response.err);
             }
         } catch (error) {
-            console.log(`Error getting canister deployments:`, error)
             throw error;
         }
     }
@@ -257,7 +251,6 @@ class MainApi {
                 throw result.err;
             }
         } catch (error) {
-            console.log(`Error uploading WASM:`, error)
             throw error;
         }
     }
@@ -275,7 +268,6 @@ class MainApi {
                 throw this.handleResult(result);
             }
         } catch (error) {
-            console.log(`Error deploying asset canister:`, error)
             throw error;
         }
     }
@@ -284,7 +276,6 @@ class MainApi {
         try {
             return await this.uploadAssetsToProject(project_id, files, current_batch, total_batch_count, workflowRunDetails);
         } catch (error: any) {
-            console.log(`Error storing in asset canister:`, error)
             throw error;
         }
     }
@@ -305,7 +296,6 @@ class MainApi {
                 throw this.handleResponseError(depositResult.err);
             }
         } catch (error) {
-            console.log(`Error depositing ICP:`, error)
             throw error;
         }
     }
@@ -331,7 +321,6 @@ class MainApi {
                 throw this.handleResponseError(result.err);
             }
         } catch (error) {
-            console.log(`Error requesting freemium session:`, error)
             throw error;
         }
     }
@@ -354,7 +343,6 @@ class MainApi {
 
             if ("ok" in result) {
                 const slot = result.ok.length > 0 ? result.ok[0] : null;
-                console.log(`((((SLOT)))) slot,`, slot)
 
                 // If no slot exists, return null (this is a valid state)
                 if (!slot) {
@@ -379,7 +367,6 @@ class MainApi {
                 throw this.handleResponseError(result.err);
             }
         } catch (error) {
-            console.log(`Error requesting freemium session:`, error);
             throw error;
         }
     }
@@ -463,7 +450,6 @@ class MainApi {
                 throw this.handleResponseError(result.err);
             }
         } catch (error: any) {
-            console.log(`Error storing in asset canister:`, error)
             return { status: false, message: `Failed to upload file batch. ${error.message}` };
         }
     }
@@ -487,28 +473,16 @@ class MainApi {
             };
 
             const result = await this.actor.get_projects_by_user(payload);
-            console.log(`REUSLT froM get USER FEREMIUM`, result)
             if (!result) {
                 throw new Error("Failed to get projects");
             }
 
             if ('err' in result) {
-                console.log(`ERROR IN REUSLT`)
                 throw this.handleResponseError(result.err);
             }
 
             return result.ok.map((project: Project) => {
                 const canisterId = project.canister_id && project.canister_id.length > 0 ? project.canister_id[0] : null;
-                console.log("RETURNINGINGIN", {
-                    id: project.id,
-                    name: project.name,
-                    description: project.description,
-                    tags: project.tags,
-                    plan: project.plan,
-                    canister_id: canisterId ? canisterId.toText() : null,
-                    date_created: Number(project.date_created),
-                    date_updated: Number(project.date_updated)
-                })
                 return {
                     id: project.id,
                     name: project.name,
@@ -543,7 +517,6 @@ class MainApi {
             }
 
             if ('err' in result) {
-                console.log(`ERROR IN REUSLT`)
                 throw this.handleResponseError(result.err);
             }
 
@@ -569,11 +542,7 @@ class MainApi {
         if (!result) {
             throw new Error("Failed to get activity logs");
         }
-        console.log(`Activity lgs`, result)
         if ('ok' in result) {
-            console.log(`retr`, result.ok[0])
-            console.log(`retr`, result.ok.map(o => { return { ...o, create_time: Number(o.create_time / BigInt(1_000_000)) } }));
-
             return result.ok.map(o => { return { ...o, create_time: Number(o.create_time / BigInt(1_000_000)) } });
         }
         else {
@@ -798,7 +767,6 @@ class MainApi {
             throw new Error("Identity not initialized.");
         }
         let is = await this.actor.reset_slots();
-        debugger;
         return is;
     }
 

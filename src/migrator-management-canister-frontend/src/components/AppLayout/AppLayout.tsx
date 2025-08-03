@@ -83,12 +83,6 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   }, [location.pathname]);
 
   useEffect(() => {
-    console.log(`refreshIdentity`);
-
-    // refreshIdentity();
-  }, [activeTab]);
-
-  useEffect(() => {
     const get = async () => {
       if (!deployments.length) {
         return;
@@ -96,10 +90,6 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
     };
     get();
   }, [deployments]);
-
-  useEffect(() => {
-    // refreshDeployments();
-  }, []);
 
   const handleHideOptionsModal = () => {
     setShowOptionsModal(false);
@@ -118,10 +108,6 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
       />
     );
   }
-  useEffect(() => {
-    console.log(`HWEADER CARD>`, headerCard);
-  }, [headerCard]);
-
   return (
     <div className="app-layout" style={{ display: "flex", height: "100vh" }}>
       <LoaderOverlay />

@@ -87,9 +87,7 @@ const SlotsManagement: React.FC = () => {
 
   const handleResetAllSlots = async () => {
     try {
-      debugger;
       await handleResetSlots();
-      debugger;
       setToasterData({
         headerContent: "Success",
         toastStatus: true,
@@ -99,7 +97,6 @@ const SlotsManagement: React.FC = () => {
       });
       setShowToaster(true);
     } catch (error: any) {
-      debugger;
       console.error("Failed to reset slots:", error);
       setToasterData({
         headerContent: "Error",
@@ -322,7 +319,6 @@ const SlotsManagement: React.FC = () => {
               </thead>
               <tbody>
                 {slots.map((slot) => {
-                  console.log("Slot data:", slot);
                   try {
                     return (
                       <tr key={slot.id}>

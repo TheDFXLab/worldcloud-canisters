@@ -195,11 +195,6 @@ export const useSubscriptionLogic = () => {
                 refreshSubscription();
                 return { status: true, message: "Retrieved subscription", data: response };
             } catch (error: any) {
-                console.log(`============================================`)
-                console.log(`============================================`)
-                console.log(`Error in ():`, error.message)
-                console.log(`============================================`)
-                console.log(`============================================`)
                 return {
                     status: false,
                     message: error.message || 'Failed to create subscription',
