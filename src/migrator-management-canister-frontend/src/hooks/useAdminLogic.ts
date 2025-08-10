@@ -439,9 +439,9 @@ export const useAdminLogic = () => {
     }, [dispatch]);
 
 
-    const handleGetTreasuryPrincipal = useCallback(() => {
+    const handleGetTreasuryPrincipal = useCallback(async () => {
         if (identity && agent) {
-            dispatch(getTreasury({ identity, agent }))
+            await dispatch(getTreasury({ identity, agent }))
         }
     }, [dispatch])
 
@@ -565,7 +565,7 @@ export const useAdminLogic = () => {
 
         // Treasury
         handleGetTreasuryPrincipal,
-        setTreasury: handleSetTreasury,
+        handleSetTreasury,
         withdrawTreasury: handleWithdrawTreasury,
     };
 }; 
