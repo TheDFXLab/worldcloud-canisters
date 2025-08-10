@@ -230,12 +230,9 @@ export const setAllSlotDuration = createAsyncThunk(
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
         const response = await api.admin_set_all_slot_duration(newDurationMs);
-        debugger;
         if ('ok' in response) {
-            debugger;
             return response.ok;
         }
-        debugger;
         throw new Error(response.err);
     }
 );

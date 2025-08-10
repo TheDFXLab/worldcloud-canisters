@@ -39,7 +39,7 @@ export const internetIdentityConfig = {
 export const githubClientId = environment == "ic" ? process.env.REACT_APP_GITHUB_CLIENT_ID || "" : _dev_env.github_client_id;
 export const githubClientSecret = process.env.REACT_APP_GITHUB_CLIENT_SECRET || ""; // TODO: Remove this
 
-export const ngrok_tunnel = "https://8064bf3a256f.ngrok-free.app";
+export const ngrok_tunnel = "https://a3ba5b2b8926.ngrok-free.app";
 export const reverse_proxy_url = environment === "ic" ? process.env.REACT_APP_REVERSE_PROXY_REMOTE_URL : "http://localhost:8080";
 // export const reverse_proxy_url = process.env.REACT_APP_REVERSE_PROXY_REMOTE_URL || "";
 export const frontend_url = environment === "ic" ? `https://${frontend_canister_id}.icp0.io` : ngrok_tunnel;
