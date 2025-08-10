@@ -7,6 +7,8 @@ import Principal "mo:base/Principal";
 import Errors "../modules/errors";
 import Array "mo:base/Array";
 import Iter "mo:base/Iter";
+import Text "mo:base/Text";
+import Nat "mo:base/Nat";
 
 module {
   // Utility function that helps writing assertion-driven code more concisely.

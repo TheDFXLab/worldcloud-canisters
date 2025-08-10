@@ -157,7 +157,40 @@ module {
     settings : CanisterSettings;
   };
 
+  public type HttpHeader = {
+    name : Text;
+    value : Text;
+  };
+
+  public type HttpRequestResult = {
+    status : Nat;
+    headers : [HttpHeader];
+    body : Blob;
+  };
+
+  type Transform = {
+    function : shared query ({
+      response : HttpRequestResult;
+      context : Blob;
+    }) -> async HttpRequestResult;
+    context : Blob;
+  };
+  public type HttpMethodArgs = {
+    #get;
+    #head;
+    #post;
+  };
+  public type HttpRequestArgs = {
+    url : Text;
+    max_response_bytes : ?Nat64;
+    method : HttpMethodArgs;
+    headers : [HttpHeader];
+    body : ?Blob;
+    transform : ?Transform;
+  };
+
   public type IC = actor {
+    http_request : shared (http_request_args : HttpRequestArgs) -> async HttpRequestResult;
     canister_status : shared { canister_id : Principal } -> async CanisterStatusResponse;
     create_canister : shared {
       settings : ?CanisterSettings;
@@ -466,5 +499,84 @@ module {
     seconds_until_next_midnight : Nat;
     seconds_since_midnight : Nat;
   };
+
+  // DNS Record Types
+  public type DnsRecordType = {
+    #A;
+    #AAAA;
+    #CNAME;
+    #MX;
+    #TXT;
+    #SRV;
+    #CAA;
+    #NS;
+    #PTR;
+  };
+
+  public type DnsRecord = {
+    id : Text;
+    zone_id : Text;
+    zone_name : Text;
+    name : Text;
+    dns_type : DnsRecordType;
+    content : Text;
+    ttl : Nat;
+    proxied : Bool;
+    created_on : Int;
+    modified_on : Int;
+  };
+
+  public type DnsZone = {
+    id : Text;
+    name : Text;
+    status : Text;
+    paused : Bool;
+    dns_type : Text;
+    development_mode : Nat;
+    name_servers : [Text];
+    original_name_servers : [Text];
+    original_registrar : ?Text;
+    original_dnshost : ?Text;
+    created_on : Text;
+    modified_on : Text;
+    activated_on : Text;
+    owner : {
+      id : ?Text;
+      email : ?Text;
+      owner_type : Text;
+    };
+    account : {
+      id : Text;
+      name : Text;
+    };
+    permissions : [Text];
+    plan : {
+      id : Text;
+      name : Text;
+      price : Nat;
+      currency : Text;
+      frequency : ?Text;
+      is_subscribed : Bool;
+      can_subscribe : Bool;
+      legacy_id : Text;
+      legacy_discount : Bool;
+      externally_managed : Bool;
+    };
+  };
+
+  public type CandleData = {
+    timestamp : Int;
+    low : Float;
+    high : Float;
+    open : Float;
+    close : Float;
+    volume : Float;
+  };
+
+  public type TokenPrice = {
+    value : Float;
+    last_updated_seconds : Nat; // time in seconds
+  }
+
   /** End of types */
 };
