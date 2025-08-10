@@ -1,4 +1,5 @@
 
+dfx identity use default
 echo "===========Deploying ICP Ledger========="
 dfx deploy --specified-id ryjl3-tyaaa-aaaaa-aaaba-cai icp_ledger_canister --argument "(variant {
     Init = record {
