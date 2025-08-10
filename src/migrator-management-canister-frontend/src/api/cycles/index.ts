@@ -101,7 +101,8 @@ class CyclesApi {
         }
         const amountInE8s = BigInt(icpToE8s(amountInIcp));
         const result = await this.actor.estimateCyclesToAdd(amountInE8s);
-        return result;
+        if ('ok' in result) return result.ok;
+        throw new Error(result.err);
     }
 
     /**

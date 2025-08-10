@@ -128,15 +128,22 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   }, [amount, config.showEstimatedCycles]);
 
   useEffect(() => {
-    const estimateCyclesForIcp = async () => {
-      if (!balance) return;
-      const cycles = await estimateCycles(fromE8sStable(balance));
-      setEstimatedMax(cycles);
+    const updateEstimates = async () => {
+      if (!config.showEstimatedCycles) return;
+
+      try {
+        // Update estimated max if balance exists
+        if (balance) {
+          const cycles = await estimateCycles(fromE8sStable(balance));
+          setEstimatedMax(cycles || 0);
+        }
+      } catch (error) {
+        console.error("Error updating estimates:", error);
+      }
     };
-    if (config.showEstimatedCycles) {
-      estimateCyclesForIcp();
-    }
-  }, [balance, config.showEstimatedCycles]);
+
+    updateEstimates();
+  }, [balance, config.showEstimatedCycles, estimateCycles]);
 
   const handleClickSubmit = async () => {
     setIsSubmitting(true);
@@ -207,10 +214,11 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                           }`}
                         >
                           ≈{" "}
-                          {fromE8sStable(
-                            BigInt(Math.floor(estimatedMax)),
-                            12
-                          ).toFixed(2)}
+                          {estimatedMax &&
+                            fromE8sStable(
+                              BigInt(Math.floor(estimatedMax)),
+                              12
+                            ).toFixed(2)}
                         </span>{" "}
                         T Cycles
                       </span>
@@ -252,7 +260,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                       isLoadingEstimateCycles ? "blink-loading" : ""
                     }`}
                   >
-                    ≈ {fromE8sStable(BigInt(estimatedOutput), 12).toFixed(2)}
+                    ≈{" "}
+                    {estimatedOutput &&
+                      fromE8sStable(BigInt(estimatedOutput), 12).toFixed(2)}
                   </span>{" "}
                   T Cycles
                 </span>
