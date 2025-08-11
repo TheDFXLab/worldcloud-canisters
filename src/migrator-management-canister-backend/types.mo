@@ -576,7 +576,43 @@ module {
   public type TokenPrice = {
     value : Float;
     last_updated_seconds : Nat; // time in seconds
-  }
+  };
 
+  public type HttpResponse = {
+    response : HttpRequestResult;
+    body : Text;
+  };
+
+  public type CloudflareRecord = {
+    id : Text;
+    name : Text;
+    type_ : Text;
+    content : Text;
+    proxiable : Bool;
+    proxied : Bool;
+    ttl : Nat;
+    settings : { flatten_cname : Bool };
+    meta : {};
+    comment : ?Text;
+    tags : [Text];
+    created_on : Text;
+    modified_on : Text;
+  };
+
+  public type CloudflarePaginationInfo = {
+    page : Nat;
+    per_page : Nat;
+    count : Nat;
+    total_count : Nat;
+    total_pages : Nat;
+  };
+
+  public type CloudflareListDNSRecordsResponse = {
+    result : [CloudflareRecord];
+    success : Bool;
+    errors : [Text];
+    messages : [Text];
+    result_info : CloudflarePaginationInfo;
+  };
   /** End of types */
 };

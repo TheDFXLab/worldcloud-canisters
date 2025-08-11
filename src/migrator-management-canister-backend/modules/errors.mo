@@ -58,4 +58,6 @@ module ErrorType {
   public func AlreadyCreated() : Text = "Resource already created";
 
   public func PriceFeedError() : Text = "Error getting token price from price feed.";
+  public func NotFoundCloudflareApiKey() : Text = "Cloudflare API is not set.";
+
 };
