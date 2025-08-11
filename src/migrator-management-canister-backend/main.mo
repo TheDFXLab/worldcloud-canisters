@@ -36,18 +36,14 @@ import { migration } "modules/migration";
 import Access "modules/access";
 import JSON "mo:json.mo/JSON";
 import Parsing "utils/Parsing";
+import Nat8 "mo:base/Nat8";
 
-// TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
-// TODO: Handle stable variables (if needed)
-// TODO: Remove unneeded if else in `storeInAssetCanister` for handling files larger than ±2MB (since its handled by frontend)
 // (with migration)
 shared (deployMsg) persistent actor class CanisterManager() = this {
   transient let IC_MANAGEMENT_CANISTER = "aaaaa-aa"; // Production
   transient let ledger : Principal = Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai");
   transient let BASE_CANISTER_START_CYCLES = 230_949_972_000;
 
-  // TODO: Get these from price oracle canister
-  // transient let ICP_PRICE : Float = 10;
   transient let XDR_PRICE : Float = 1.3;
   transient let E8S_PER_ICP : Nat = 100_000_000;
   transient let CYCLES_PER_XDR : Float = 1_000_000_000_000;
@@ -2143,40 +2139,23 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     };
   };
 
-  /// Fetches the current ICP price from Coinbase API
-  /// Returns the most recent candle data including timestamp, open, high, low, close, and volume
-  /// The data represents 1-minute intervals from the Coinbase exchange
-  public func get_icp_price() : async Types.Response<Float> {
+  private func make_http_request(method : Types.HttpMethodArgs, url : Text, request_headers : [Types.HttpHeader]) : async Types.Response<Types.HttpResponse> {
+    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
 
-    //1. SETUP ARGUMENTS FOR HTTP GET request
-    let ONE_MINUTE : Nat64 = 60;
-    let end_timestamp : Nat64 = Nat64.fromNat(Int.abs(Utility.get_time_now(#seconds)));
-    let start_timestamp : Nat64 = end_timestamp - ONE_MINUTE - ONE_MINUTE;
-    let host : Text = "api.exchange.coinbase.com";
-    let url = "https://" # host # "/products/ICP-USD/candles?start=" # Nat64.toText(start_timestamp) # "&end=" # Nat64.toText(end_timestamp) # "&granularity=" # Nat64.toText(ONE_MINUTE);
-
-    // 1.2 prepare headers for the system http_request call
-    let request_headers = [
-      { name = "User-Agent"; value = "price-feed" },
-    ];
-
-    // 1.3 The HTTP request
+    // Prepare HTTP req
     let http_request : Types.HttpRequestArgs = {
       url = url;
-      max_response_bytes = null; //optional for request
+      max_response_bytes = null;
       headers = request_headers;
-      body = null; //optional for request
+      body = null;
       method = #get;
       transform = ?{
         function = transform;
         context = Blob.fromArray([]);
       };
-      // Toggle this flag to switch between replicated and non-replicated http outcalls.
       is_replicated = ?false;
     };
 
-    let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
-    //2. MAKE HTTPS REQUEST AND WAIT FOR RESPONSE, BUT MAKE SURE TO ADD CYCLES.
     let http_response : Types.HttpRequestResult = await (with cycles = 230_949_972_000) IC.http_request(http_request);
 
     // Check if the HTTP request was successful
@@ -2189,15 +2168,6 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       return #err("Empty response body received");
     };
 
-    //3. DECODE THE RESPONSE
-    //As per the type declarations, the BODY in the HTTP response
-    //comes back as Blob. Type signature:
-    //public type HttpRequestResult = {
-    //     status : Nat;
-    //     headers : [HttpHeader];
-    //     body : Blob;
-    // };
-    //We need to decode that Blob that is the body into readable text.
     let decoded_text : Text = switch (Text.decodeUtf8(http_response.body)) {
       case (null) { return #err("Failed to decode response body as UTF-8") };
       case (?y) {
@@ -2208,11 +2178,84 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       };
     };
 
-    Debug.print("HTTP Status: " # Nat.toText(http_response.status));
-    Debug.print("Response Headers: " # debug_show (http_response.headers));
-    Debug.print("Response Body Size: " # Nat.toText(http_response.body.size()));
-    Debug.print("Decoded Text Length: " # Nat.toText(Text.size(decoded_text)));
-    let candle_data : Types.CandleData = switch (Parsing.parse_coinbase_price_response(decoded_text)) {
+    return #ok({ response = http_response; body = decoded_text });
+  };
+
+  // private func make_http_post_request(url : Text, extraHeaders : [Types.HttpHeader], body : Text) : async Text {
+  //   let headers = Array.append(
+  //     extraHeaders,
+  //     [
+  //       { name = "User-Agent"; value = "caffeine.ai" },
+  //       { name = "Idempotency-Key"; value = "Time-" # Int.toText(Time.now()) },
+  //     ],
+  //   );
+  //   let requestBody = Text.encodeUtf8(body);
+
+  //   let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+
+  //   let httpRequest : Types.HttpRequestArgs = {
+  //     url = url;
+  //     max_response_bytes = null;
+  //     headers;
+  //     body = ?requestBody;
+  //     method = #post;
+  //     transform = ?{
+  //       function = transform;
+  //       context = Blob.fromArray([]);
+  //     };
+  //     is_replicated = ?false;
+  //   };
+  //   let httpResponse = await (with cycles = 230_949_972_000) IC.http_request(httpRequest);
+  //   switch (Text.decodeUtf8(httpResponse.body)) {
+  //     case (null) { Debug.trap("empty HTTP response") };
+  //     case (?decodedResponse) { decodedResponse };
+  //   };
+  // };
+
+  public shared ({ caller }) func edit_ic_domains(canister_id : Principal, new_ic_domains : Types.StaticFile) : async Types.Response<()> {
+    if (not access_control.is_authorized(caller)) return #err(Errors.Unauthorized());
+    let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
+    await asset_canister.store({
+      key = new_ic_domains.path;
+      content_type = new_ic_domains.content_type;
+      content_encoding = "identity";
+      content = new_ic_domains.content;
+      sha256 = null;
+      headers = [];
+    });
+
+    return #ok();
+  };
+
+  /// Fetches the current ICP price from Coinbase API
+  /// Returns the most recent candle data including timestamp, open, high, low, close, and volume
+  /// The data represents 1-minute intervals from the Coinbase exchange
+  public func get_icp_price() : async Types.Response<Float> {
+    // Construct url
+    let ONE_MINUTE : Nat64 = 60;
+    let end_timestamp : Nat64 = Nat64.fromNat(Int.abs(Utility.get_time_now(#seconds)));
+    let start_timestamp : Nat64 = end_timestamp - ONE_MINUTE - ONE_MINUTE;
+    let host : Text = "api.exchange.coinbase.com";
+    let url = "https://" # host # "/products/ICP-USD/candles?start=" # Nat64.toText(start_timestamp) # "&end=" # Nat64.toText(end_timestamp) # "&granularity=" # Nat64.toText(ONE_MINUTE);
+
+    // Prepare headers
+    let request_headers = [
+      { name = "User-Agent"; value = "price-feed" },
+    ];
+
+    // Await response
+    let res : Types.HttpResponse = switch (await make_http_request(#get, url, request_headers)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    Debug.print("HTTP Status: " # Nat.toText(res.response.status));
+    Debug.print("Response Headers: " # debug_show (res.response.headers));
+    Debug.print("Response Body Size: " # Nat.toText(res.response.body.size()));
+    Debug.print("Decoded Text Length: " # Nat.toText(Text.size(res.body)));
+
+    // Parse Candle data
+    let candle_data : Types.CandleData = switch (Parsing.parse_coinbase_price_response(res.body)) {
       case (#err(err)) { return #err(err) };
       case (#ok(val)) { val };
     };
@@ -2229,7 +2272,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
    */
 
   // List DNS records for a zone
-  public shared query (msg) func listDnsRecords(zone_id : Text) : async Types.Response<[Types.DnsRecord]> {
+  public shared (msg) func listDnsRecords(zone_id : Text) : async Types.Response<[Types.CloudflareRecord]> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
@@ -2239,11 +2282,32 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       return #err(Errors.CloudflareNotConfigured());
     };
 
-    // TODO: Implement actual Cloudflare API call
-    // GET /zones/{zone_id}/dns_records
-    // Headers: X-Auth-Email, X-Auth-Key
-    // For now, return empty array
-    return #ok([]);
+    let api_key = switch (CLOUDFLARE_API_KEY) {
+      case (null) return #err(Errors.NotFoundCloudflareApiKey());
+      case (?val) val;
+    };
+
+    let host = "api.cloudflare.com";
+    let url = "https://" # host # "/client/v4/zones/" # zone_id # "/dns_records";
+    Debug.print("URL: " # url);
+    // Prepare headers
+    let request_headers = [
+      { name = "Authorization"; value = "Bearer " # api_key },
+    ];
+
+    // Await response
+    let res : Types.HttpResponse = switch (await make_http_request(#get, url, request_headers)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    let parsed_typed : [Types.CloudflareRecord] = switch (Parsing.parse_cloudflare_dns_response(res.body)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    Debug.print("Parsed types res list dns records: " # debug_show (parsed_typed));
+    return #ok(parsed_typed);
   };
 
   // Create a new DNS record
@@ -2262,11 +2326,6 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       return #err(Errors.InvalidInput("DNS record name and content are required"));
     };
 
-    // TODO: Implement actual Cloudflare API call
-    // POST /zones/{zone_id}/dns_records
-    // Headers: X-Auth-Email, X-Auth-Key
-    // Body: { name, type, content, ttl, proxied }
-    // For now, return the record as if it was created
     let created_record : Types.DnsRecord = {
       id = "dns_record_" # Nat.toText(Int.abs(Utility.get_time_now(#milliseconds)));
       zone_id = zone_id;
