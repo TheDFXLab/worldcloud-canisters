@@ -10,9 +10,11 @@ import {
   Delete,
   Refresh,
   Visibility,
+  Language,
 } from "@mui/icons-material";
 import "./CanistersManagement.css";
 import { formatBytes } from "../../../utility/formatter";
+import { StaticFile } from "../../../utility/compression";
 
 const CanistersManagement: React.FC = () => {
   const {
@@ -22,6 +24,8 @@ const CanistersManagement: React.FC = () => {
     isLoadingCanisterDeployments,
     refreshCanisterDeploymentsAll,
     refreshDeployedCanisters,
+    handleSetIcDomains,
+    isLoadingEditIcDomains,
   } = useAdminLogic();
   const { setShowModal, call } = useConfirmationModal();
   const { setToasterData, setShowToaster } = useToaster();
@@ -30,6 +34,10 @@ const CanistersManagement: React.FC = () => {
     limit: 20,
     page: 0,
   });
+  const [icDomainsMessage, setIcDomainsMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     refreshCanisterDeploymentsAll(pagination);
@@ -74,6 +82,166 @@ const CanistersManagement: React.FC = () => {
     setSelectedCanister(canisterId);
     // TODO: Implement canister details view
   };
+
+  const handleIcDomainsUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    canisterId: string
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIcDomainsMessage(null);
+
+      // Convert file to StaticFile format
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      // Determine content type - prefer file type, fallback to text/plain for files without extensions
+      let contentType = file.type;
+      if (!contentType || contentType === "application/octet-stream") {
+        // If no type or generic binary type, check file extension or default to text/plain
+        const fileName = file.name.toLowerCase();
+        if (fileName.endsWith(".json") || fileName.endsWith(".json5")) {
+          contentType = "application/json";
+        } else if (fileName.endsWith(".txt")) {
+          contentType = "application/octet-stream";
+        } else {
+          contentType = "application/octet-stream"; // Default for files without extension
+        }
+      }
+
+      const staticFile: StaticFile = {
+        path: "/.well-known/ic-domains",
+        content_type: contentType,
+        content_encoding: [],
+        content: uint8Array,
+        is_chunked: false,
+        chunk_id: 0n,
+        batch_id: 0n,
+        is_last_chunk: true,
+      };
+      debugger;
+      const result = await handleSetIcDomains(canisterId, staticFile);
+
+      if (result.status) {
+        setIcDomainsMessage({ type: "success", text: result.message });
+        // Clear the file input
+        event.target.value = "";
+
+        // Show success toast
+        setToasterData({
+          headerContent: "Success",
+          toastStatus: true,
+          toastData: `IC domains set successfully for canister ${canisterId}`,
+          textColor: "green",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+      } else {
+        setIcDomainsMessage({ type: "error", text: result.message });
+      }
+    } catch (error) {
+      console.error("Failed to set IC domains:", error);
+      setIcDomainsMessage({
+        type: "error",
+        text: "Failed to set IC domains. Please try again.",
+      });
+    }
+  };
+
+  const clearIcDomainsMessage = () => {
+    setIcDomainsMessage(null);
+  };
+
+  const IcDomainsSection = () => (
+    <div className="admin-ic-domains-section">
+      <div className="admin-action-card">
+        <h3>
+          <Language /> IC Domains Management
+        </h3>
+        <p>Upload IC domain configuration files for canisters</p>
+
+        {icDomainsMessage && (
+          <div
+            className={`admin-alert admin-alert-${
+              icDomainsMessage.type === "success" ? "success" : "danger"
+            }`}
+          >
+            {icDomainsMessage.text}
+            <button
+              type="button"
+              className="admin-alert-close"
+              onClick={clearIcDomainsMessage}
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        <div className="ic-domains-upload-area">
+          <h4>Upload IC Domains File</h4>
+          <p>
+            Select a canister and upload a file containing IC domain
+            configurations
+          </p>
+
+          <div className="ic-domains-file-input">
+            <input
+              type="file"
+              id="ic-domains-file"
+              onChange={(e) => {
+                const canisterId = prompt(
+                  "Enter the canister ID for IC domains:"
+                );
+                if (canisterId) {
+                  handleIcDomainsUpload(e, canisterId);
+                }
+              }}
+              disabled={isLoadingEditIcDomains}
+            />
+            <label
+              htmlFor="ic-domains-file"
+              className="ic-domains-upload-label"
+            >
+              <button className="primary" disabled={isLoadingEditIcDomains}>
+                {isLoadingEditIcDomains ? "Uploading..." : "Choose File"}
+              </button>
+            </label>
+          </div>
+
+          <div className="ic-domains-info">
+            <h5>Supported File Formats:</h5>
+            <ul>
+              <li>
+                <strong>Text file (.txt):</strong> One domain per line
+              </li>
+              <li>
+                <strong>JSON file (.json):</strong> Array of domain strings
+              </li>
+              <li>
+                <strong>JSON5 file (.json5):</strong> Array of domain strings
+              </li>
+              <li>
+                <strong>Files without extension:</strong> Treated as text files
+              </li>
+            </ul>
+
+            <h5>Example Content:</h5>
+            <pre className="ic-domains-example">
+              {`# Text file example:
+canister1.worldcloud.app
+canister2.worldcloud.app
+
+# JSON file example:
+["canister1.worldcloud.app", "canister2.worldcloud.app"]`}
+            </pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="admin-canisters-management">
@@ -154,6 +322,9 @@ const CanistersManagement: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* IC Domains Section */}
+      <IcDomainsSection />
 
       {/* Canisters Table */}
       <div className="admin-table-section">
