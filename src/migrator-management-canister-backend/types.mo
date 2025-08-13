@@ -33,6 +33,14 @@ module {
     is_last_chunk : Bool;
   };
 
+  //   public type AssetCanisterAsset = {
+  //   content : Blob;
+  //   content_type : Text;
+  //   content_encoding : Text;
+  //   sha256 : ?Blob;
+  //   total_length : Nat;
+  // }
+
   // Asset canister operations
   public type Operation = {
     #CreateAsset : {
@@ -175,6 +183,14 @@ module {
     }) -> async HttpRequestResult;
     context : Blob;
   };
+
+  public type TransformationInput = {
+    context : Blob;
+    response : HttpRequestResult;
+  };
+
+  public type TransformationOutput = HttpRequestResult;
+
   public type HttpMethodArgs = {
     #get;
     #head;

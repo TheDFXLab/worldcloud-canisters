@@ -11,6 +11,8 @@ module ErrorType {
   public func CloudflareNotConfigured() : Text = "Cloudflare API credentials are not configured. Please set email and API key first.";
   public func InsufficientCycleAmount(amount : Nat, minimum : Nat) : Text = "Insufficient amount provided " # Nat.toText(amount) # " T cycles. Need minimum " # Nat.toText(minimum) # " T cycles.";
   public func FailedToPurge(amount : Nat) : Text = "Failed to purge " # Nat.toText(amount) # " sessions";
+  public func UnexpectedError(action : Text) : Text = "Unexpected error occured while " # action;
+
   /** Timer */
   public func NotFoundTimer() : Text = "Timer not found";
   /** Balance */
