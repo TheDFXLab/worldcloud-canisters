@@ -145,7 +145,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
           // #seconds(QUOTA_CLEAR_DURATION_SECONDS_DEV), // 24 hours in seconds
           func() : async () {
             shareable_canister_manager.reset_quotas();
-            shareable_canister_manager.next_quota_reset_s := Int.abs(Utility.get_time_now(#seconds)) + QUOTA_CLEAR_DURATION_SECONDS_DEV;
+            shareable_canister_manager.next_quota_reset_s := Int.abs(Utility.get_time_now(#seconds)) + QUOTA_CLEAR_DURATION_SECONDS;
           },
         );
 
