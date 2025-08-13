@@ -35,11 +35,13 @@ import {
     getTreasury,
     withdrawTreasury,
     setTreasury,
+    setIcDomains,
 } from '../state/slices/adminSlice';
 import { RootState, AppDispatch } from '../state/store';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
 import { useHttpAgent } from '../context/HttpAgentContext/HttpAgentContext';
 import { PaginationPayload } from '../serialization/admin';
+import { StaticFile } from '../utility/compression';
 
 // Add typed dispatch hook
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -82,6 +84,7 @@ export const useAdminLogic = () => {
         isLoadingBookEntries,
         isLoading,
         isLoadingTreasury,
+        isLoadingEditIcDomains,
         error,
         successMessage,
     } = useSelector((state: RootState) => state.admin);
@@ -439,9 +442,9 @@ export const useAdminLogic = () => {
     }, [dispatch]);
 
 
-    const handleGetTreasuryPrincipal = useCallback(() => {
+    const handleGetTreasuryPrincipal = useCallback(async () => {
         if (identity && agent) {
-            dispatch(getTreasury({ identity, agent }))
+            await dispatch(getTreasury({ identity, agent }))
         }
     }, [dispatch])
 
@@ -472,6 +475,21 @@ export const useAdminLogic = () => {
             return {
                 status: false,
                 message: error.message || 'Failed to withdraw from treasury',
+            };
+        }
+    }, [dispatch, identity, agent]);
+
+    const handleSetIcDomains = useCallback(async (canister_id: string, file: StaticFile) => {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            const result = await dispatch(setIcDomains({ identity, agent, canister_id, file })).unwrap();
+            return { status: true, message: `Set ic domains for canster ${canister_id}` };
+        } catch (error: any) {
+            return {
+                status: false,
+                message: error.message || 'Failed to set the ic domain name',
             };
         }
     }, [dispatch, identity, agent]);
@@ -523,6 +541,7 @@ export const useAdminLogic = () => {
         isLoadingBookEntries,
         isLoading,
         isLoadingTreasury,
+        isLoadingEditIcDomains,
 
         // Messages
         error,
@@ -565,7 +584,8 @@ export const useAdminLogic = () => {
 
         // Treasury
         handleGetTreasuryPrincipal,
-        setTreasury: handleSetTreasury,
+        handleSetTreasury,
         withdrawTreasury: handleWithdrawTreasury,
+        handleSetIcDomains
     };
 }; 

@@ -7,8 +7,12 @@ module ErrorType {
   public func NotInitialized(resource : Text) : Text = resource # " is not initialized";
   public func NotFoundWasm() : Text = "Asset canister WASM code is not installed.";
   public func NotAllowedOperation() : Text = "Operation not permitted.";
+  public func InvalidInput(message : Text) : Text = "Invalid input: " # message;
+  public func CloudflareNotConfigured() : Text = "Cloudflare API credentials are not configured. Please set email and API key first.";
   public func InsufficientCycleAmount(amount : Nat, minimum : Nat) : Text = "Insufficient amount provided " # Nat.toText(amount) # " T cycles. Need minimum " # Nat.toText(minimum) # " T cycles.";
   public func FailedToPurge(amount : Nat) : Text = "Failed to purge " # Nat.toText(amount) # " sessions";
+  public func UnexpectedError(action : Text) : Text = "Unexpected error occured while " # action;
+
   /** Timer */
   public func NotFoundTimer() : Text = "Timer not found";
   /** Balance */
@@ -54,5 +58,8 @@ module ErrorType {
   public func SlotUnavailable() : Text = "Slot is busy.";
   public func IndexOutOfBounds() : Text = "Index out of bounds";
   public func AlreadyCreated() : Text = "Resource already created";
+
+  public func PriceFeedError() : Text = "Error getting token price from price feed.";
+  public func NotFoundCloudflareApiKey() : Text = "Cloudflare API is not set.";
 
 };

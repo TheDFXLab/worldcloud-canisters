@@ -34,7 +34,7 @@ class AssetApi {
         }
         const res = await mainApi.actor?.getCanisterAsset(Principal.fromText(canisterId), key);
         if ('ok' in res) {
-            return res.ok;
+            return res.ok ? res.ok[0] : null;
         }
         throw this.handleResponseError(res.err);
     }

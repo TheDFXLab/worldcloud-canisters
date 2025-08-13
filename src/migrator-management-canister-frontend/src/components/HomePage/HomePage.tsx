@@ -145,6 +145,7 @@ const HomePage: React.FC = () => {
         customConfig={{
           totalPrice: parseFloat(icpToDeposit),
           showTotalPrice: true,
+          showEstimatedCycles: true,
         }}
       />
 

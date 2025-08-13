@@ -572,3 +572,169 @@
     display: none;
   }
 }
+
+/* IC Domains Section Styles */
+.admin-ic-domains-section {
+  margin-top: 1rem;
+}
+
+.admin-ic-domains-section .admin-action-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.admin-ic-domains-section .admin-action-card h3 svg {
+  color: var(--color-primary);
+}
+
+.admin-ic-domains-section .admin-action-card p {
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+}
+
+.admin-alert {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-alert-success {
+  background-color: #d1e7dd;
+  color: #0f5132;
+  border: 1px solid #badbcc;
+}
+
+.admin-alert-danger {
+  background-color: #f8d7da;
+  color: #842029;
+  border: 1px solid #f5c2c7;
+}
+
+.admin-alert-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: inherit;
+  padding: 0;
+  line-height: 1;
+}
+
+.admin-alert-close:hover {
+  opacity: 0.7;
+}
+
+.ic-domains-upload-area {
+  margin-top: 1.5rem;
+}
+
+.ic-domains-upload-area h4 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.ic-domains-upload-area p {
+  margin: 0 0 1rem 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.ic-domains-file-input {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ic-domains-file-input input[type="file"] {
+  display: none;
+}
+
+.ic-domains-upload-label button {
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.ic-domains-upload-label button:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.ic-domains-upload-label button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ic-domains-info {
+  background: var(--background-secondary);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.ic-domains-info h5 {
+  margin: 0 0 0.75rem 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.ic-domains-info ul {
+  margin: 0 0 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.ic-domains-info li {
+  margin-bottom: 0.5rem;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.ic-domains-example {
+  background: var(--background-dark);
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  white-space: pre-wrap;
+  overflow-x: auto;
+  margin: 0;
+}
+
+/* Responsive adjustments for IC Domains section */
+@media (max-width: 768px) {
+  .ic-domains-file-input {
+    align-items: center;
+  }
+
+  .ic-domains-upload-label button {
+    width: 100%;
+    max-width: 200px;
+  }
+
+  .ic-domains-info {
+    padding: 0.75rem;
+  }
+
+  .ic-domains-example {
+    font-size: 0.75rem;
+    padding: 0.5rem;
+  }
+}

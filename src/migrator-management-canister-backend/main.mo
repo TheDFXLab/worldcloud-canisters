@@ -1,5 +1,3 @@
-// asset_manager.mo
-
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
@@ -20,6 +18,7 @@ import Bool "mo:base/Bool";
 import Time "mo:base/Time";
 import Float "mo:base/Float";
 import Timer "mo:base/Timer";
+import Char "mo:base/Char";
 import Account "Account";
 import Book "./book";
 import SubscriptionManager "./modules/subscription";
@@ -35,21 +34,21 @@ import ActivityManager "modules/activity";
 import Map "mo:core/Map";
 import { migration } "modules/migration";
 import Access "modules/access";
+import JSON "mo:json.mo/JSON";
+import Parsing "utils/Parsing";
+import Nat8 "mo:base/Nat8";
+import Outcall "modules/outcall";
 
-// TODO: Remove all deprecated code such as `initializeAsset`, `uploadChunk`, `getAsset`, `getChunk`, `isAssetComplete`, `deleteAsset`
-// TODO: Handle stable variables (if needed)
-// TODO: Remove unneeded if else in `storeInAssetCanister` for handling files larger than ±2MB (since its handled by frontend)
 // (with migration)
 shared (deployMsg) persistent actor class CanisterManager() = this {
   transient let IC_MANAGEMENT_CANISTER = "aaaaa-aa"; // Production
   transient let ledger : Principal = Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai");
   transient let BASE_CANISTER_START_CYCLES = 230_949_972_000;
 
-  // TODO: Get these from price oracle canister
-  transient let ICP_PRICE : Float = 10;
-  transient let XDR_PRICE : Float = 1.33;
+  transient let XDR_PRICE : Float = 1.3;
   transient let E8S_PER_ICP : Nat = 100_000_000;
   transient let CYCLES_PER_XDR : Float = 1_000_000_000_000;
+  transient let REFRESH_PRICE_INTERVAL_SECONDS = 3600;
 
   transient let icp_fee : Nat = 10_000;
   transient let Ledger : Types.Ledger = actor (Principal.toText(ledger));
@@ -92,6 +91,16 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   private transient var QUOTA_CLEAR_DURATION_SECONDS : Nat = 24 * 60 * 60;
   private transient var QUOTA_CLEAR_DURATION_SECONDS_DEV : Nat = 10 * 60;
 
+  private transient var icp_last_price : Types.TokenPrice = {
+    value = 0.0;
+    last_updated_seconds = 0;
+  };
+
+  // Cloudflare API Configuration
+  private stable var CLOUDFLARE_API_BASE_URL : Text = "https://api.cloudflare.com/client/v4";
+  private stable var CLOUDFLARE_EMAIL : ?Text = null;
+  private stable var CLOUDFLARE_API_KEY : ?Text = null;
+
   /** Classes Instances */
   private transient var book : Book.Book = Book.Book(stable_book);
   private transient let project_manager = ProjectManager.ProjectManager(stable_projects, stable_user_to_projects, stable_next_project_id);
@@ -102,6 +111,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   private transient let activity_manager = ActivityManager.ActivityManager(stable_project_activity_logs);
   private transient let subscription_manager = SubscriptionManager.SubscriptionManager(book, ledger, _subscriptions, TREASURY_ACCOUNT);
   private transient let canisters = Canisters.Canisters(stable_canister_table, stable_user_canisters, stable_deployed_canisters);
+  // private transient let outcall = Outcall.Outcall(IC_MANAGEMENT_CANISTER);
 
   /** Transient Storage */
   private transient var chunks = HashMap.HashMap<Text, Blob>(0, Text.equal, Text.hash);
@@ -135,7 +145,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
           // #seconds(QUOTA_CLEAR_DURATION_SECONDS_DEV), // 24 hours in seconds
           func() : async () {
             shareable_canister_manager.reset_quotas();
-            shareable_canister_manager.next_quota_reset_s := Int.abs(Utility.get_time_now(#seconds)) + QUOTA_CLEAR_DURATION_SECONDS_DEV;
+            shareable_canister_manager.next_quota_reset_s := Int.abs(Utility.get_time_now(#seconds)) + QUOTA_CLEAR_DURATION_SECONDS;
           },
         );
 
@@ -284,7 +294,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return #ok(principal);
   };
 
-  public shared query (msg) func admin_set_treasury(principal : Principal) : async Types.Response<()> {
+  public shared (msg) func admin_set_treasury(principal : Principal) : async Types.Response<()> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
@@ -1242,16 +1252,21 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     };
   };
 
-  public shared (msg) func getCanisterAsset(canister_id : Principal, asset_key : Text) : async Types.Response<Types.AssetCanisterAsset> {
+  public shared (msg) func getCanisterAsset(canister_id : Principal, asset_key : Text) : async Types.Response<?Types.AssetCanisterAsset> {
     if (not (await _isController(canister_id, msg.caller)) and not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
 
-    let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
-    let asset = await asset_canister.get({
-      key = asset_key;
-      accept_encodings = ["identity", "gzip", "compress"];
-    });
+    try {
+      let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
+      let asset = await asset_canister.get({
+        key = asset_key;
+        accept_encodings = ["identity", "gzip", "compress"];
+      });
+      return #ok(?asset);
 
-    return #ok(asset);
+    } catch (e) {
+      // return #err(Error.message(e));
+      return #ok(null);
+    };
   };
 
   /*
@@ -1600,7 +1615,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   // If amount is not passed, user's credit balance will be used
   // If caller is not specificed, msg.caller will be used
-  public shared query (msg) func getCyclesToAdd(amount_in_e8s : ?Int, caller_principal : ?Principal) : async Types.Response<Nat> {
+  public shared (msg) func getCyclesToAdd(amount_in_e8s : ?Int, caller_principal : ?Principal) : async Types.Response<Nat> {
     if (Utility.is_anonymous(msg.caller)) return #ok(0);
 
     let _caller = switch (caller_principal) {
@@ -1618,28 +1633,71 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
         if (amount > user_credits) {
           return #err("Insufficient credits");
         };
-        calculateCyclesToAdd(amount);
+        await calculateCyclesToAdd(amount);
       };
-      case (null) calculateCyclesToAdd(user_credits);
+      case (null) await calculateCyclesToAdd(user_credits);
     };
-    return #ok(cyclesToAdd);
+    return cyclesToAdd;
   };
 
   // Returns the amount of cycles expected when converting amount in e8s
-  public shared query (msg) func estimateCyclesToAdd(amount_in_e8s : Int) : async Nat {
-    if (Utility.is_anonymous(msg.caller)) return 0;
-    return calculateCyclesToAdd(amount_in_e8s);
+  public shared (msg) func estimateCyclesToAdd(amount_in_e8s : Int) : async Types.Response<Nat> {
+    if (Utility.is_anonymous(msg.caller)) return #ok(0);
+    return await calculateCyclesToAdd(amount_in_e8s);
+  };
+
+  public shared (msg) func get_icp_last_price() : async Types.TokenPrice {
+    return icp_last_price;
+  };
+
+  private func update_icp_price() : async Types.Response<Types.TokenPrice> {
+    let now : Nat = Int.abs(Utility.get_time_now(#seconds));
+    if (now < icp_last_price.last_updated_seconds) {
+      icp_last_price := { value = 0.0; last_updated_seconds = 0 };
+    };
+
+    // Return current price stored in memory
+    if (now - icp_last_price.last_updated_seconds < REFRESH_PRICE_INTERVAL_SECONDS and icp_last_price.value != 0.0 and icp_last_price.last_updated_seconds != 0) {
+      Debug.print("Return price as is...");
+
+      return #ok(icp_last_price);
+    } else {
+      Debug.print("Updating price because its stale...");
+      // Update token price
+      let usd_price : Float = switch (await get_icp_price()) {
+        case (#err(err)) { return #err(err) };
+        case (#ok(val)) { val };
+      };
+
+      icp_last_price := {
+        value = usd_price;
+        last_updated_seconds = Int.abs(Utility.get_time_now(#seconds));
+      };
+      Debug.print("Updated price: " # debug_show (icp_last_price));
+    };
+
+    return #ok(icp_last_price);
   };
 
   // TODO: Implement price api
   // Calculates the amount of cycles equivalent to amount in e8s based on xdr price
-  private func calculateCyclesToAdd(amountInE8s : Int) : Nat {
+  private func calculateCyclesToAdd(amountInE8s : Int) : async Types.Response<Nat> {
     let icp_amount = Float.fromInt(amountInE8s) / Float.fromInt(E8S_PER_ICP);
-    let usd_value : Float = icp_amount * ICP_PRICE;
-    let xdr_value : Float = usd_value / XDR_PRICE;
+    let token_price : Types.TokenPrice = switch (await update_icp_price()) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
 
-    let cyclesToAdd = Int.abs(Float.toInt(Float.floor(xdr_value * CYCLES_PER_XDR)));
-    return cyclesToAdd;
+    Debug.print("ICP amount to excahnge: " # Float.toText(icp_amount));
+    if (token_price.value == 0) return #err(Errors.PriceFeedError());
+    Debug.print("TOKEN PRICE RECORD: " # debug_show (token_price));
+    let usd_value : Float = icp_amount * token_price.value;
+    Debug.print("USD Value: " # Float.toText(usd_value));
+    let t_cycles : Float = usd_value / XDR_PRICE;
+    Debug.print("T cycles to add: " # Float.toText(t_cycles));
+    let cyclesToAdd = Int.abs(Float.toInt(Float.floor(t_cycles * CYCLES_PER_XDR)));
+    Debug.print("Cycles to add: " # Nat.toText(cyclesToAdd));
+    return #ok(cyclesToAdd);
   };
 
   // Used by users for estimating and adding cycles matching amount in icp
@@ -1732,19 +1790,19 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   };
 
-  private func _convert_e8s_to_cycles(e8s : Nat64, max_slots : Nat) : Nat {
+  private func _convert_e8s_to_cycles(e8s : Nat64, max_slots : Nat) : async Types.Response<Nat> {
     let deposit_per_canister = Nat64.toNat(e8s) / max_slots;
-    calculateCyclesToAdd(deposit_per_canister);
+    await calculateCyclesToAdd(deposit_per_canister);
   };
 
-  private func _get_cycles_for_canister_init(tier_id : Nat, is_freemium : Bool) : Int {
+  private func _get_cycles_for_canister_init(tier_id : Nat, is_freemium : Bool) : async Types.Response<Int> {
     switch (is_freemium) {
       case (true) {
-        return shareable_canister_manager.MIN_CYCLES_INIT;
+        return #ok(shareable_canister_manager.MIN_CYCLES_INIT);
       };
       case (false) {
         let min_deposit = subscription_manager.tiers_list[tier_id].min_deposit;
-        let cyclesForCanister = _convert_e8s_to_cycles(min_deposit.e8s, subscription_manager.tiers_list[tier_id].slots);
+        let cyclesForCanister = await _convert_e8s_to_cycles(min_deposit.e8s, subscription_manager.tiers_list[tier_id].slots);
         return cyclesForCanister;
       };
     };
@@ -1767,7 +1825,10 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     };
 
     // Get cycles to add to fresh canister
-    let cyclesForCanister : Int = _get_cycles_for_canister_init(tier_id, is_freemium);
+    let cyclesForCanister : Int = switch (await _get_cycles_for_canister_init(tier_id, is_freemium)) {
+      case (#err(err)) { return #err(err) };
+      case (#ok(val)) { val };
+    };
 
     // Ensure cycles amount is enough
     if (cyclesForCanister == 0) {
@@ -2021,8 +2082,39 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       date_updated = Utility.get_time_now(#milliseconds);
     };
 
+    let asset : ?Types.AssetCanisterAsset = switch (await getCanisterAsset(canister_id, "/.well-known/.ic-domains")) {
+      case (#err(err)) { null };
+      case (#ok(val)) { val };
+    };
+
     canisters.put_canister_table(canister_id, updated_deployment);
     await canister.clear();
+
+    if (asset != null) {
+      let asset_file : Types.AssetCanisterAsset = switch (asset) {
+        case (null) {
+          return #err(Errors.UnexpectedError("setting ic-domains asset file."));
+        };
+        case (?val) { val };
+      };
+
+      // await canister.store
+      let file : Types.StaticFile = {
+        path = "/.well-known/.ic-domains";
+        content = asset_file.content;
+        content_type = asset_file.content_type;
+        content_encoding = ?asset_file.content_encoding;
+        is_chunked = false;
+        chunk_id = 0;
+        batch_id = 0;
+        is_last_chunk = true;
+      };
+
+      let is_set = switch (await edit_ic_domains(canister_id, file)) {
+        case (#err(err)) return #err(err);
+        case (#ok()) return #ok();
+      };
+    };
     return #ok();
   };
 
@@ -2063,4 +2155,371 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   };
 
   /** End Actor */
+
+  /*
+   *
+   * END ADMIN METHODS
+   *
+   */
+
+  /*
+   *
+   * START HTTP METHODS
+   *
+   */
+  public query func transform(input : Outcall.TransformationInput) : async Outcall.TransformationOutput {
+    Outcall.transform(input);
+  };
+
+  // public query func transform({
+  //   context : Blob;
+  //   response : Types.HttpRequestResult;
+  // }) : async Types.HttpRequestResult {
+  //   {
+  //     response with headers = []; // not intersted in the headers
+  //   };
+  // };
+
+  // private func make_http_request(method : Types.HttpMethodArgs, url : Text, request_headers : [Types.HttpHeader]) : async Types.Response<Types.HttpResponse> {
+  //   let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+
+  //   // Prepare HTTP req
+  //   let http_request : Types.HttpRequestArgs = {
+  //     url = url;
+  //     max_response_bytes = null;
+  //     headers = request_headers;
+  //     body = null;
+  //     method = #get;
+  //     transform = ?{
+  //       function = transform;
+  //       context = Blob.fromArray([]);
+  //     };
+  //   };
+
+  //   let http_response : Types.HttpRequestResult = await (with cycles = 230_949_972_000) IC.http_request(http_request);
+
+  //   // Check if the HTTP request was successful
+  //   if (http_response.status != 200) {
+  //     return #err("HTTP request failed with status: " # Nat.toText(http_response.status));
+  //   };
+
+  //   // Check if we have a response body
+  //   if (http_response.body.size() == 0) {
+  //     return #err("Empty response body received");
+  //   };
+
+  //   let decoded_text : Text = switch (Text.decodeUtf8(http_response.body)) {
+  //     case (null) { return #err("Failed to decode response body as UTF-8") };
+  //     case (?y) {
+  //       if (Text.size(y) == 0) {
+  //         return #err("Empty decoded text");
+  //       };
+  //       y;
+  //     };
+  //   };
+
+  //   return #ok({ response = http_response; body = decoded_text });
+  // };
+
+  // // private func make_http_post_request(url : Text, extraHeaders : [Types.HttpHeader], body : Text) : async Text {
+  // //   let headers = Array.append(
+  // //     extraHeaders,
+  // //     [
+  // //       { name = "User-Agent"; value = "caffeine.ai" },
+  // //       { name = "Idempotency-Key"; value = "Time-" # Int.toText(Time.now()) },
+  // //     ],
+  // //   );
+  // //   let requestBody = Text.encodeUtf8(body);
+
+  // //   let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+
+  // //   let httpRequest : Types.HttpRequestArgs = {
+  // //     url = url;
+  // //     max_response_bytes = null;
+  // //     headers;
+  // //     body = ?requestBody;
+  // //     method = #post;
+  // //     transform = ?{
+  // //       function = transform;
+  // //       context = Blob.fromArray([]);
+  // //     };
+  // //     is_replicated = ?false;
+  // //   };
+  // //   let httpResponse = await (with cycles = 230_949_972_000) IC.http_request(httpRequest);
+  // //   switch (Text.decodeUtf8(httpResponse.body)) {
+  // //     case (null) { Debug.trap("empty HTTP response") };
+  // //     case (?decodedResponse) { decodedResponse };
+  // //   };
+  // // };
+
+  public shared ({ caller }) func edit_ic_domains(canister_id : Principal, new_ic_domains : Types.StaticFile) : async Types.Response<()> {
+    if (not access_control.is_authorized(caller)) return #err(Errors.Unauthorized());
+    let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
+    await asset_canister.store({
+      key = new_ic_domains.path;
+      content_type = new_ic_domains.content_type;
+      content_encoding = "identity";
+      content = new_ic_domains.content;
+      sha256 = null;
+      headers = [];
+    });
+
+    return #ok();
+  };
+
+  /// Fetches the current ICP price from Coinbase API
+  /// Returns the most recent candle data including timestamp, open, high, low, close, and volume
+  /// The data represents 1-minute intervals from the Coinbase exchange
+  public func get_icp_price() : async Types.Response<Float> {
+    // Construct url
+    let ONE_MINUTE : Nat64 = 60;
+    let end_timestamp : Nat64 = Nat64.fromNat(Int.abs(Utility.get_time_now(#seconds)));
+    let start_timestamp : Nat64 = end_timestamp - ONE_MINUTE - ONE_MINUTE;
+    let host : Text = "api.exchange.coinbase.com";
+    let url = "https://" # host # "/products/ICP-USD/candles?start=" # Nat64.toText(start_timestamp) # "&end=" # Nat64.toText(end_timestamp) # "&granularity=" # Nat64.toText(ONE_MINUTE);
+
+    // Prepare headers
+    let request_headers = [
+      { name = "User-Agent"; value = "price-feed" },
+    ];
+
+    // Await response
+    let res : Types.HttpResponse = switch (await Outcall.make_http_request(#get, url, request_headers, transform)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    Debug.print("HTTP Status: " # Nat.toText(res.response.status));
+    Debug.print("Response Headers: " # debug_show (res.response.headers));
+    Debug.print("Response Body Size: " # Nat.toText(res.response.body.size()));
+    Debug.print("Decoded Text Length: " # Nat.toText(Text.size(res.body)));
+
+    // Parse Candle data
+    let candle_data : Types.CandleData = switch (Parsing.parse_coinbase_price_response(res.body)) {
+      case (#err(err)) { return #err(err) };
+      case (#ok(val)) { val };
+    };
+    Debug.print("ICP PRICE RESPONSE:" # debug_show (candle_data));
+
+    // Return the open price
+    #ok(candle_data.open);
+  };
+
+  /*
+   *
+   * START DNS RECORD METHODS
+   *
+   */
+
+  // List DNS records for a zone
+  public shared (msg) func listDnsRecords(zone_id : Text) : async Types.Response<[Types.CloudflareRecord]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    // Check if Cloudflare credentials are configured
+    if (not hasCloudflareCredentials()) {
+      return #err(Errors.CloudflareNotConfigured());
+    };
+
+    let api_key = switch (CLOUDFLARE_API_KEY) {
+      case (null) return #err(Errors.NotFoundCloudflareApiKey());
+      case (?val) val;
+    };
+
+    let host = "api.cloudflare.com";
+    let url = "https://" # host # "/client/v4/zones/" # zone_id # "/dns_records";
+    Debug.print("URL: " # url);
+    // Prepare headers
+    let request_headers = [
+      { name = "Authorization"; value = "Bearer " # api_key },
+    ];
+
+    // Await response
+    let res : Types.HttpResponse = switch (await Outcall.make_http_request(#get, url, request_headers, transform)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    let parsed_typed : [Types.CloudflareRecord] = switch (Parsing.parse_cloudflare_dns_response(res.body)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    Debug.print("Parsed types res list dns records: " # debug_show (parsed_typed));
+    return #ok(parsed_typed);
+  };
+
+  // Create a new DNS record
+  public shared (msg) func createDnsRecord(zone_id : Text, record : Types.DnsRecord) : async Types.Response<Types.DnsRecord> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    // Check if Cloudflare credentials are configured
+    if (not hasCloudflareCredentials()) {
+      return #err(Errors.CloudflareNotConfigured());
+    };
+
+    // Validate DNS record
+    if (record.name == "" or record.content == "") {
+      return #err(Errors.InvalidInput("DNS record name and content are required"));
+    };
+
+    let created_record : Types.DnsRecord = {
+      id = "dns_record_" # Nat.toText(Int.abs(Utility.get_time_now(#milliseconds)));
+      zone_id = zone_id;
+      zone_name = record.zone_name;
+      name = record.name;
+      dns_type = record.dns_type;
+      content = record.content;
+      ttl = record.ttl;
+      proxied = record.proxied;
+      created_on = Int.abs(Utility.get_time_now(#milliseconds));
+      modified_on = Int.abs(Utility.get_time_now(#milliseconds));
+    };
+
+    return #ok(created_record);
+  };
+
+  // Update an existing DNS record
+  public shared (msg) func updateDnsRecord(zone_id : Text, record_id : Text, record : Types.DnsRecord) : async Types.Response<Types.DnsRecord> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    // Check if Cloudflare credentials are configured
+    if (not hasCloudflareCredentials()) {
+      return #err(Errors.CloudflareNotConfigured());
+    };
+
+    // Validate DNS record
+    if (record.name == "" or record.content == "") {
+      return #err(Errors.InvalidInput("DNS record name and content are required"));
+    };
+
+    // TODO: Implement actual Cloudflare API call
+    // PATCH /zones/{zone_id}/dns_records/{dns_record_id}
+    // Headers: X-Auth-Email, X-Auth-Key
+    // Body: { name, type, content, ttl, proxied }
+    // For now, return the updated record
+    let updated_record : Types.DnsRecord = {
+      id = record_id;
+      zone_id = zone_id;
+      zone_name = record.zone_name;
+      name = record.name;
+      dns_type = record.dns_type;
+      content = record.content;
+      ttl = record.ttl;
+      proxied = record.proxied;
+      created_on = record.created_on;
+      modified_on = Int.abs(Utility.get_time_now(#milliseconds));
+    };
+
+    return #ok(updated_record);
+  };
+
+  // Delete a DNS record
+  public shared (msg) func deleteDnsRecord(zone_id : Text, record_id : Text) : async Types.Response<Bool> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    // Check if Cloudflare credentials are configured
+    if (not hasCloudflareCredentials()) {
+      return #err(Errors.CloudflareNotConfigured());
+    };
+
+    // TODO: Implement actual Cloudflare API call
+    // DELETE /zones/{zone_id}/dns_records/{dns_record_id}
+    // Headers: X-Auth-Email, X-Auth-Key
+    // For now, return success
+    return #ok(true);
+  };
+
+  // Get a specific DNS record
+  public shared query (msg) func getDnsRecord(zone_id : Text, record_id : Text) : async Types.Response<Types.DnsRecord> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    // Check if Cloudflare credentials are configured
+    if (not hasCloudflareCredentials()) {
+      return #err(Errors.CloudflareNotConfigured());
+    };
+
+    // TODO: Implement actual Cloudflare API call
+    // GET /zones/{zone_id}/dns_records/{dns_record_id}
+    // Headers: X-Auth-Email, X-Auth-Key
+    // For now, return a mock record
+    let mock_record : Types.DnsRecord = {
+      id = record_id;
+      zone_id = zone_id;
+      zone_name = "example.com";
+      name = "www.example.com";
+      dns_type = #A;
+      content = "192.168.1.1";
+      ttl = 120;
+      proxied = false;
+      created_on = Int.abs(Utility.get_time_now(#milliseconds));
+      modified_on = Int.abs(Utility.get_time_now(#milliseconds));
+    };
+
+    return #ok(mock_record);
+  };
+
+  // Get DNS zones (domains)
+  public shared query (msg) func getDnsZones() : async Types.Response<[Types.DnsZone]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    // Check if Cloudflare credentials are configured
+    if (not hasCloudflareCredentials()) {
+      return #err(Errors.CloudflareNotConfigured());
+    };
+
+    // TODO: Implement actual Cloudflare API call
+    // GET /zones
+    // Headers: X-Auth-Email, X-Auth-Key
+    // For now, return empty array
+    return #ok([]);
+  };
+
+  /*
+   *
+   * END DNS RECORD METHODS
+   *
+   */
+
+  // Cloudflare API Configuration Methods
+  public shared (msg) func setCloudflareCredentials(email : Text, api_key : Text) : async Types.Response<()> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    CLOUDFLARE_EMAIL := ?email;
+    CLOUDFLARE_API_KEY := ?api_key;
+
+    return #ok();
+  };
+
+  public shared query (msg) func getCloudflareCredentials() : async Types.Response<{ email : ?Text; api_key : ?Text }> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    return #ok({
+      email = CLOUDFLARE_EMAIL;
+      api_key = CLOUDFLARE_API_KEY;
+    });
+  };
+
+  // Helper function to check if Cloudflare credentials are set
+  private func hasCloudflareCredentials() : Bool {
+    switch (CLOUDFLARE_EMAIL, CLOUDFLARE_API_KEY) {
+      case (?email, ?api_key) { true };
+      case (_, _) { false };
+    };
+  };
 };

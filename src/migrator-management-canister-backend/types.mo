@@ -33,6 +33,14 @@ module {
     is_last_chunk : Bool;
   };
 
+  //   public type AssetCanisterAsset = {
+  //   content : Blob;
+  //   content_type : Text;
+  //   content_encoding : Text;
+  //   sha256 : ?Blob;
+  //   total_length : Nat;
+  // }
+
   // Asset canister operations
   public type Operation = {
     #CreateAsset : {
@@ -157,7 +165,48 @@ module {
     settings : CanisterSettings;
   };
 
+  public type HttpHeader = {
+    name : Text;
+    value : Text;
+  };
+
+  public type HttpRequestResult = {
+    status : Nat;
+    headers : [HttpHeader];
+    body : Blob;
+  };
+
+  type Transform = {
+    function : shared query ({
+      response : HttpRequestResult;
+      context : Blob;
+    }) -> async HttpRequestResult;
+    context : Blob;
+  };
+
+  public type TransformationInput = {
+    context : Blob;
+    response : HttpRequestResult;
+  };
+
+  public type TransformationOutput = HttpRequestResult;
+
+  public type HttpMethodArgs = {
+    #get;
+    #head;
+    #post;
+  };
+  public type HttpRequestArgs = {
+    url : Text;
+    max_response_bytes : ?Nat64;
+    method : HttpMethodArgs;
+    headers : [HttpHeader];
+    body : ?Blob;
+    transform : ?Transform;
+  };
+
   public type IC = actor {
+    http_request : shared (http_request_args : HttpRequestArgs) -> async HttpRequestResult;
     canister_status : shared { canister_id : Principal } -> async CanisterStatusResponse;
     create_canister : shared {
       settings : ?CanisterSettings;
@@ -465,6 +514,121 @@ module {
   public type QuotaSchedulerSeconds = {
     seconds_until_next_midnight : Nat;
     seconds_since_midnight : Nat;
+  };
+
+  // DNS Record Types
+  public type DnsRecordType = {
+    #A;
+    #AAAA;
+    #CNAME;
+    #MX;
+    #TXT;
+    #SRV;
+    #CAA;
+    #NS;
+    #PTR;
+  };
+
+  public type DnsRecord = {
+    id : Text;
+    zone_id : Text;
+    zone_name : Text;
+    name : Text;
+    dns_type : DnsRecordType;
+    content : Text;
+    ttl : Nat;
+    proxied : Bool;
+    created_on : Int;
+    modified_on : Int;
+  };
+
+  public type DnsZone = {
+    id : Text;
+    name : Text;
+    status : Text;
+    paused : Bool;
+    dns_type : Text;
+    development_mode : Nat;
+    name_servers : [Text];
+    original_name_servers : [Text];
+    original_registrar : ?Text;
+    original_dnshost : ?Text;
+    created_on : Text;
+    modified_on : Text;
+    activated_on : Text;
+    owner : {
+      id : ?Text;
+      email : ?Text;
+      owner_type : Text;
+    };
+    account : {
+      id : Text;
+      name : Text;
+    };
+    permissions : [Text];
+    plan : {
+      id : Text;
+      name : Text;
+      price : Nat;
+      currency : Text;
+      frequency : ?Text;
+      is_subscribed : Bool;
+      can_subscribe : Bool;
+      legacy_id : Text;
+      legacy_discount : Bool;
+      externally_managed : Bool;
+    };
+  };
+
+  public type CandleData = {
+    timestamp : Int;
+    low : Float;
+    high : Float;
+    open : Float;
+    close : Float;
+    volume : Float;
+  };
+
+  public type TokenPrice = {
+    value : Float;
+    last_updated_seconds : Nat; // time in seconds
+  };
+
+  public type HttpResponse = {
+    response : HttpRequestResult;
+    body : Text;
+  };
+
+  public type CloudflareRecord = {
+    id : Text;
+    name : Text;
+    type_ : Text;
+    content : Text;
+    proxiable : Bool;
+    proxied : Bool;
+    ttl : Nat;
+    settings : { flatten_cname : Bool };
+    meta : {};
+    comment : ?Text;
+    tags : [Text];
+    created_on : Text;
+    modified_on : Text;
+  };
+
+  public type CloudflarePaginationInfo = {
+    page : Nat;
+    per_page : Nat;
+    count : Nat;
+    total_count : Nat;
+    total_pages : Nat;
+  };
+
+  public type CloudflareListDNSRecordsResponse = {
+    result : [CloudflareRecord];
+    success : Bool;
+    errors : [Text];
+    messages : [Text];
+    result_info : CloudflarePaginationInfo;
   };
   /** End of types */
 };

@@ -33,9 +33,9 @@ const TreasuryManagement: React.FC = () => {
     treasuryBalance,
     isLoadingTreasury,
     error,
-    setTreasury,
     withdrawTreasury,
     handleGetTreasuryPrincipal,
+    handleSetTreasury,
   } = useAdminLogic();
 
   const { identity } = useIdentity();
@@ -54,11 +54,11 @@ const TreasuryManagement: React.FC = () => {
     handleGetTreasuryPrincipal();
     // Fetch treasury balance from Redux
     if (identity && agent) {
-      dispatch(fetchTreasuryBalance({ identity, agent }));
+      dispatch(fetchTreasuryBalance({ identity, agent })).unwrap();
     }
   }, [dispatch, identity, agent, handleGetTreasuryPrincipal]);
 
-  const handleSetTreasury = async () => {
+  const setTreasury = async () => {
     if (!treasuryInput.trim()) {
       setToasterData({
         headerContent: "Error",
@@ -73,7 +73,7 @@ const TreasuryManagement: React.FC = () => {
 
     setIsSettingTreasury(true);
     try {
-      const result = await setTreasury(treasuryInput.trim());
+      const result = await handleSetTreasury(treasuryInput.trim());
       if (result.status) {
         setToasterData({
           headerContent: "Success",
@@ -224,7 +224,7 @@ const TreasuryManagement: React.FC = () => {
               disabled={isSettingTreasury}
             />
             <button
-              onClick={handleSetTreasury}
+              onClick={setTreasury}
               className="admin-action-btn primary"
               disabled={isSettingTreasury || !treasuryInput.trim()}
             >

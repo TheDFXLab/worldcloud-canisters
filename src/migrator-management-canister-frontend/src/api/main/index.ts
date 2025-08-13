@@ -1037,6 +1037,13 @@ class MainApi {
         }
         return await this.actor.admin_get_treasury_balance();
     }
+
+
+    async admin_set_ic_domains(canister_id: string, file: StaticFile) {
+        this.validate();
+        await this.actor?.edit_ic_domains(Principal.fromText(canister_id), file);
+        return true;
+    }
 }
 
 

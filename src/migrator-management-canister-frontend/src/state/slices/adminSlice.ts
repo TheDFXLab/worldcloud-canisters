@@ -30,6 +30,7 @@ import {
     serializeUsageLogsPairAdmin,
 } from '../../serialization/admin';
 import { SerializedUsageLogExtended } from '../../utility/bigint';
+import { StaticFile } from '../../utility/compression';
 
 // Types
 export interface AdminState {
@@ -98,6 +99,8 @@ export interface AdminState {
     // current user role
     currentUserRole: SerializedRole | null,
     isLoadingCurrentUserRole: boolean,
+
+    isLoadingEditIcDomains: boolean
 }
 
 
@@ -137,6 +140,7 @@ const initialState: AdminState = {
     isLoadingTreasury: false,
     currentUserRole: null,
     isLoadingCurrentUserRole: false,
+    isLoadingEditIcDomains: false,
 
 };
 
@@ -230,12 +234,9 @@ export const setAllSlotDuration = createAsyncThunk(
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
         const response = await api.admin_set_all_slot_duration(newDurationMs);
-        debugger;
         if ('ok' in response) {
-            debugger;
             return response.ok;
         }
-        debugger;
         throw new Error(response.err);
     }
 );
@@ -757,6 +758,37 @@ export const getTreasury = createAsyncThunk(
 );
 
 
+export const setIcDomains = createAsyncThunk(
+    'domains/setIcDomains',
+    async ({
+        identity,
+        agent,
+        canister_id,
+        file
+    }: {
+        identity: any;
+        agent: any;
+        canister_id: string;
+        file: StaticFile
+    }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) {
+            throw new Error('Failed to create API instance');
+        }
+        const response = await mainApi.admin_set_ic_domains(canister_id, file);
+        debugger;
+        if (!response) {
+            throw new Error("Failed to set ic domains.");
+        }
+
+        // Use the new error handling utility
+        // const result = handleBackendResponse(response);
+        return true;
+    }
+);
+
+
+
 // Slice
 const adminSlice = createSlice({
     name: 'admin',
@@ -1262,6 +1294,17 @@ const adminSlice = createSlice({
                 state.isLoadingTreasury = false;
                 state.error = handleError(action.error);
             })
+            .addCase(setIcDomains.pending, (state) => {
+                state.isLoadingEditIcDomains = true;
+            })
+            .addCase(setIcDomains.fulfilled, (state, action) => {
+                state.isLoadingEditIcDomains = false;
+            })
+            .addCase(setIcDomains.rejected, (state, action) => {
+                state.isLoadingEditIcDomains = false;
+                state.error = handleError(action.error);
+            })
+
     },
 });
 
