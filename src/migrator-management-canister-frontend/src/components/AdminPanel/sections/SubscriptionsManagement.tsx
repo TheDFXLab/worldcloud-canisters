@@ -13,6 +13,7 @@ import {
   Visibility,
   TrendingUp,
   Person,
+  ContentCopy,
 } from "@mui/icons-material";
 import "./SubscriptionsManagement.css";
 
@@ -247,6 +248,29 @@ const SubscriptionsManagement: React.FC = () => {
     setConfirmationModal((prev) => ({ ...prev, show: false }));
   };
 
+  const handleCopyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setToasterData({
+        headerContent: "Success",
+        toastStatus: true,
+        toastData: "Principal copied to clipboard",
+        textColor: "green",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+    } catch (error) {
+      console.error("Failed to copy to clipboard:", error);
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Failed to copy to clipboard",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+    }
+  };
   return (
     <div className="admin-subscriptions-management">
       {/* Confirmation Modal */}
@@ -399,6 +423,15 @@ const SubscriptionsManagement: React.FC = () => {
                             <span className="admin-user-id">
                               {userPrincipal.substring(0, 8)}...
                             </span>
+                            <button
+                              className="admin-copy-btn"
+                              onClick={() =>
+                                handleCopyToClipboard(userPrincipal.toString())
+                              }
+                              title="Copy Principal"
+                            >
+                              <ContentCopy />
+                            </button>
                           </div>
                         </td>
                         <td>
