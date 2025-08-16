@@ -15,7 +15,7 @@ module {
   public class AccessControl(deployer_principal : Principal, role_map_init : Types.RoleMap) {
     public var role_map : Types.RoleMap = role_map_init;
     private var is_initialized : Bool = false;
-    private let disable_guards : Bool = false;
+    private let disable_guards : Bool = true;
 
     public func init() {
       Map.add(role_map, Principal.compare, deployer_principal, #super_admin);

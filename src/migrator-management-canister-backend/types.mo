@@ -3,6 +3,7 @@ import TimeLib "mo:base/Time";
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Map "mo:core/Map";
+import IC "ic:aaaaa-aa";
 
 module {
   // Type definitions
@@ -176,20 +177,20 @@ module {
     body : Blob;
   };
 
-  type Transform = {
-    function : shared query ({
-      response : HttpRequestResult;
-      context : Blob;
-    }) -> async HttpRequestResult;
-    context : Blob;
-  };
+  // type Transform = {
+  //   function : shared query ({
+  //     response : HttpRequestResult;
+  //     context : Blob;
+  //   }) -> async HttpRequestResult;
+  //   context : Blob;
+  // };
 
-  public type TransformationInput = {
-    context : Blob;
-    response : HttpRequestResult;
-  };
+  // public type TransformationInput = {
+  //   context : Blob;
+  //   response : HttpRequestResult;
+  // };
 
-  public type TransformationOutput = HttpRequestResult;
+  // public type TransformationOutput = HttpRequestResult;
 
   public type HttpMethodArgs = {
     #get;
@@ -205,41 +206,41 @@ module {
     transform : ?Transform;
   };
 
-  public type IC = actor {
-    http_request : shared (http_request_args : HttpRequestArgs) -> async HttpRequestResult;
-    canister_status : shared { canister_id : Principal } -> async CanisterStatusResponse;
-    create_canister : shared {
-      settings : ?CanisterSettings;
-    } -> async {
-      canister_id : Principal;
-    };
+  // public type IC = actor {
+  //   http_request : shared (http_request_args : HttpRequestArgs) -> async HttpRequestResult;
+  //   canister_status : shared { canister_id : Principal } -> async CanisterStatusResponse;
+  //   create_canister : shared {
+  //     settings : ?CanisterSettings;
+  //   } -> async {
+  //     canister_id : Principal;
+  //   };
 
-    update_settings : shared ({
-      canister_id : Principal;
-      settings : CanisterSettings;
-    }) -> async ();
-    install_code : shared {
-      arg : [Nat8];
-      wasm_module : [Nat8];
-      mode : { #install; #reinstall; #upgrade };
-      canister_id : Principal;
-    } -> async ();
+  //   update_settings : shared ({
+  //     canister_id : Principal;
+  //     settings : CanisterSettings;
+  //   }) -> async ();
+  //   install_code : shared {
+  //     arg : [Nat8];
+  //     wasm_module : [Nat8];
+  //     mode : { #install; #reinstall; #upgrade };
+  //     canister_id : Principal;
+  //   } -> async ();
 
-    deposit_cycles : shared {
-      canister_id : Principal;
-    } -> async ();
+  //   deposit_cycles : shared {
+  //     canister_id : Principal;
+  //   } -> async ();
 
-    ecdsa_public_key : ({
-      canister_id : ?Principal;
-      derivation_path : [Blob];
-      key_id : { curve : { #secp256k1 }; name : Text };
-    }) -> async ({ public_key : Blob; chain_code : Blob });
-    sign_with_ecdsa : ({
-      message_hash : Blob;
-      derivation_path : [Blob];
-      key_id : { curve : { #secp256k1 }; name : Text };
-    }) -> async ({ signature : Blob });
-  };
+  //   ecdsa_public_key : ({
+  //     canister_id : ?Principal;
+  //     derivation_path : [Blob];
+  //     key_id : { curve : { #secp256k1 }; name : Text };
+  //   }) -> async ({ public_key : Blob; chain_code : Blob });
+  //   sign_with_ecdsa : ({
+  //     message_hash : Blob;
+  //     derivation_path : [Blob];
+  //     key_id : { curve : { #secp256k1 }; name : Text };
+  //   }) -> async ({ signature : Blob });
+  // };
 
   public type CanisterDeploymentStatus = {
     #uninitialized;
@@ -630,6 +631,15 @@ module {
     messages : [Text];
     result_info : CloudflarePaginationInfo;
   };
+
+  public type TransformationInput = {
+    context : Blob;
+    response : IC.http_request_result;
+  };
+
+  public type TransformationOutput = IC.http_request_result;
+  public type Transform = query TransformationInput -> async TransformationOutput;
+
   public type InitializedResponse = {
     is_init : Bool;
     is_run : Bool;
@@ -640,5 +650,18 @@ module {
     next_secs_till_midnight : Nat;
     next_trigger_at : Nat;
   };
+
+  public type CloudflareCredentials = {
+    email : ?Text;
+    api_key : ?Text;
+  };
+  public type Cloudflare = {
+    list_dns_records : (zone_id : Text, transform : Transform) -> async Response<[CloudflareRecord]>;
+    create_dns_record : (zone_id : Text, record : DnsRecord) -> async Response<DnsRecord>;
+    update_dns_record : (zone_id : Text, record_id : Text, record : DnsRecord) -> async Response<DnsRecord>;
+    set_cloudflare_credentials : (email : Text, api_key : Text) -> Response<()>;
+    get_cloudflare_credentials : () -> Response<CloudflareCredentials>;
+  }
+
   /** End of types */
 };

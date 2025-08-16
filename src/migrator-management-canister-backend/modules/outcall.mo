@@ -5,13 +5,13 @@ import Text "mo:base/Text";
 import IC "ic:aaaaa-aa";
 
 module {
-  public type TransformationInput = {
-    context : Blob;
-    response : IC.http_request_result;
-  };
+  // public type TransformationInput = {
+  //   context : Blob;
+  //   response : IC.http_request_result;
+  // };
 
-  public type TransformationOutput = IC.http_request_result;
-  public type Transform = query TransformationInput -> async TransformationOutput;
+  // public type TransformationOutput = IC.http_request_result;
+  // public type Transform = query TransformationInput -> async TransformationOutput;
 
   //   public class Outcall(management_canister : Text) {
   public func transform(input : Types.TransformationInput) : Types.TransformationOutput {
@@ -21,7 +21,7 @@ module {
     };
   };
 
-  public func make_http_request(method : Types.HttpMethodArgs, url : Text, request_headers : [IC.http_header], transform : Transform) : async Types.Response<Types.HttpResponse> {
+  public func make_http_request(method : Types.HttpMethodArgs, url : Text, request_headers : [IC.http_header], transform : Types.Transform) : async Types.Response<Types.HttpResponse> {
     // let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
 
     // Prepare HTTP req
