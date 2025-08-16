@@ -11,6 +11,7 @@ import {
   Refresh,
   Visibility,
   Language,
+  ContentCopy,
 } from "@mui/icons-material";
 import "./CanistersManagement.css";
 import { formatBytes } from "../../../utility/formatter";
@@ -75,6 +76,31 @@ const CanistersManagement: React.FC = () => {
       setShowToaster(true);
     } catch (error) {
       console.error("Failed to refresh canister:", error);
+    }
+  };
+
+  // Copy to clipboard function
+  const handleCopyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setToasterData({
+        headerContent: "Success",
+        toastStatus: true,
+        toastData: "Principal copied to clipboard",
+        textColor: "green",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+    } catch (error) {
+      console.error("Failed to copy to clipboard:", error);
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Failed to copy to clipboard",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
     }
   };
 
@@ -351,6 +377,15 @@ canister2.worldcloud.app
                       <span className="admin-canister-id">
                         {principal.substring(0, 8)}...
                       </span>
+                      <button
+                        className="admin-copy-btn"
+                        onClick={() =>
+                          handleCopyToClipboard(principal.toString())
+                        }
+                        title="Copy Principal"
+                      >
+                        <ContentCopy />
+                      </button>
                     </td>
                     <td>
                       <span

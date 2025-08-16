@@ -630,5 +630,15 @@ module {
     messages : [Text];
     result_info : CloudflarePaginationInfo;
   };
+  public type InitializedResponse = {
+    is_init : Bool;
+    is_run : Bool;
+    is_run_recurring : Bool;
+    secs_since_midnight : Nat;
+    secs_till_midnight : Nat;
+    next_secs_since_midnight : Nat;
+    next_secs_till_midnight : Nat;
+    next_trigger_at : Nat;
+  };
   /** End of types */
 };

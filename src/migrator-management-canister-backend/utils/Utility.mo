@@ -158,12 +158,12 @@ module {
     };
   };
 
-  public func get_quota_scheduler_seconds() : Types.QuotaSchedulerSeconds {
+  public func get_quota_scheduler_seconds(seconds_in_day : Nat) : Types.QuotaSchedulerSeconds {
     let now = get_time_now(#seconds);
 
     // Calculate seconds until next midnight (UTC)
-    // let seconds_in_day : Nat = 5 * 60; // 5mins for debugging
-    let seconds_in_day : Nat = 24 * 60 * 60; // 86400 seconds
+    // let seconds_in_day : Nat = 3 * 60; // 5mins for debugging
+    // let seconds_in_day : Nat = 24 * 60 * 60; // 86400 seconds
     let seconds_since_midnight : Nat = Int.abs(now % seconds_in_day);
     let seconds_until_next_midnight : Nat = seconds_in_day - seconds_since_midnight;
     return {
