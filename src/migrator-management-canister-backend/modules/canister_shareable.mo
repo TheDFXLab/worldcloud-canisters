@@ -57,7 +57,17 @@ module {
         // Update usage log for users of slots
         if (not (slot.user == actor_principal)) {
           let _usage_log = get_usage_log(slot.user);
+          let quota : Types.Quota = get_quota(slot.user);
+          let updated_usage_log : Types.UsageLog = {
+            is_active = false;
+            usage_count = _usage_log.usage_count;
+            last_used = Int.abs(Utility.get_time_now(#milliseconds));
+            rate_limit_window = _usage_log.rate_limit_window;
+            max_uses_threshold = _usage_log.max_uses_threshold;
+            quota = quota;
+          };
 
+          Map.add(usage_logs, Principal.compare, slot.user, updated_usage_log);
           // Track cleaned up slot id for further project cleanup
           reset_project_ids := Array.append(reset_project_ids, [slot.project_id]);
           slot_ids := Array.append(slot_ids, [slot.id]);
