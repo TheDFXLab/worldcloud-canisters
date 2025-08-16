@@ -1,6 +1,7 @@
 import { Principal } from "@dfinity/principal";
-import { CanisterDeployment, CanisterSettings, CanisterStatus, Project, UsageLog, UsageLogExtended } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { CanisterDeployment, Project, UsageLogExtended } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { CanisterDeploymentStatus } from "./principal";
+import { canister_settings, canister_status_result } from "@dfinity/agent/lib/cjs/canisters/management_service";
 export interface SerializedCanisterStatus {
     status: string;
     cycles: number;
@@ -13,9 +14,9 @@ export interface SerializedCanisterStatus {
 }
 
 export interface DeserializedCanisterStatus {
-    status: CanisterStatus;
+    status: canister_status_result;
     cycles: bigint;
-    settings: CanisterSettings;
+    settings: canister_settings;
 }
 // export type CanisterDeploymentStatus = "uninitialized" | "installing" | "installed" | "failed";
 export interface SerializedCanisterDeployment {
@@ -197,14 +198,18 @@ export const deserializeActivityLogs = (logs: SerializedActivityLog[]): Deserial
 //     }
 // })
 
-export const serializeCanisterStatus = (status: DeserializedCanisterStatus): SerializedCanisterStatus => ({
+export const serializeCanisterStatus = (status: canister_status_result): SerializedCanisterStatus => ({
     status: "running" in status.status ? "running" : "stopping" in status.status ? "stopping" : "stopped",
     cycles: Number(status.cycles),
     settings: {
-        ...{ freezing_threshold: status.settings.freezing_threshold.length > 0 ? Number(status.settings.freezing_threshold[0]) : undefined, },
-        ...{ controllers: status.settings.controllers.length > 0 ? status.settings.controllers.map(c => c.toString()) : undefined, },
-        ...{ memory_allocation: status.settings.memory_allocation.length > 0 ? Number(status.settings.memory_allocation) : undefined },
-        ...{ compute_allocation: status.settings.compute_allocation.length > 0 ? Number(status.settings.compute_allocation) : undefined }
+        freezing_threshold: Number(status.settings.freezing_threshold),
+        controllers: status.settings.controllers.map(c => c.toString()),
+        memory_allocation: Number(status.settings.memory_allocation),
+        compute_allocation: Number(status.settings.compute_allocation),
+        // ...{ freezing_threshold: status.settings.freezing_threshold.length > 0 ? Number(status.settings.freezing_threshold[0]) : undefined, },
+        // ...{ controllers: status.settings.controllers.length > 0 ? status.settings.controllers.map(c => c.toString()) : undefined, },
+        // ...{ memory_allocation: status.settings.memory_allocation.length > 0 ? Number(status.settings.memory_allocation) : undefined },
+        // ...{ compute_allocation: status.settings.compute_allocation.length > 0 ? Number(status.settings.compute_allocation) : undefined }
     }
 })
 export const serializeCanisterDeployment = (canister_deployment: CanisterDeployment): SerializedCanisterDeployment => ({
