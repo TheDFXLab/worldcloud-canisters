@@ -86,11 +86,21 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   private stable var stable_user_canisters : Types.UserCanistersMap = Map.empty<Principal, [Principal]>();
   private stable var stable_slot_id_active_timer : [Nat] = [];
   private stable var timers : Types.TimersMap = Map.empty<Nat, Nat>();
+  private stable var global_timers : Types.GlobalTimersMap = Map.empty<Text, Nat>();
+  private stable var active_global_timers : [Text] = [];
+
   private stable var stable_deployed_canisters : Types.DeployedCanistersMap = Map.empty<Principal, Bool>();
   private stable var stable_quotas : Types.QuotasMap = Map.empty<Principal, Types.Quota>();
   private stable var stable_system_timers : Types.TimersMap = Map.empty<Nat, Nat>();
   private stable var stable_quota_timer_id : Nat = 0;
   private stable var TREASURY_ACCOUNT : ?Principal = null;
+  private stable var canister_to_records_map : Types.CanisterToRecordMap = Map.empty<Principal, [Types.DnsRecordId]>();
+  private stable var cloudflare_records_map : Types.CloudflareRecordsMap = Map.empty<Types.DnsRecordId, Types.CreateRecordResponse>();
+  private stable var domain_registration : Types.DomainRegistrationMap = Map.empty<Types.DomainRegistrationId, Types.DomainRegistration>();
+  private stable var canister_to_domain_registration : Types.CanisterToDomainRegistration = Map.empty<Principal, [Types.DomainRegistration]>();
+
+  private transient var subscription_services : Types.SubscriptionServices = Map.empty<Types.ProjectId, [Types.AddOnService]>();
+
   private transient var QUOTA_CLEAR_DURATION_SECONDS : Nat = 24 * 60 * 60;
   private transient var QUOTA_CLEAR_DURATION_SECONDS_DEV : Nat = 3 * 60;
 
@@ -103,6 +113,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   private stable var CLOUDFLARE_API_BASE_URL : Text = "https://api.cloudflare.com/client/v4";
   private stable var CLOUDFLARE_EMAIL : ?Text = null;
   private stable var CLOUDFLARE_API_KEY : ?Text = null;
+  private stable var CLOUDFLARE_ZONE_ID : ?Text = null;
 
   /** Classes Instances */
   private transient var book : Book.Book = Book.Book(stable_book);
@@ -112,9 +123,10 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   private transient let shareable_canister_manager = CanisterShareable.ShareableCanisterManager(stable_slots, stable_user_to_slot, stable_used_slots, stable_usage_logs, stable_next_slot_id, stable_quotas);
   private transient let workflow_manager = WorkflowManager.WorkflowManager(stable_workflow_run_history);
   private transient let activity_manager = ActivityManager.ActivityManager(stable_project_activity_logs);
-  private transient let subscription_manager = SubscriptionManager.SubscriptionManager(book, ledger, _subscriptions, TREASURY_ACCOUNT);
+  private transient let subscription_manager = SubscriptionManager.SubscriptionManager(book, ledger, _subscriptions, TREASURY_ACCOUNT, subscription_services);
   private transient let canisters = Canisters.Canisters(stable_canister_table, stable_user_canisters, stable_deployed_canisters);
-  private transient let cloudflare = Cloudflare.Cloudflare(CLOUDFLARE_API_BASE_URL, CLOUDFLARE_EMAIL, CLOUDFLARE_API_KEY);
+  private transient let cloudflare = Cloudflare.Cloudflare(CLOUDFLARE_API_BASE_URL, CLOUDFLARE_EMAIL, CLOUDFLARE_API_KEY, CLOUDFLARE_ZONE_ID);
+  private transient let domain = Domain.Domain(cloudflare_records_map, canister_to_records_map, canister_to_domain_registration, domain_registration);
 
   /** Transient Storage */
   private transient var chunks = HashMap.HashMap<Text, Blob>(0, Text.equal, Text.hash);
@@ -225,14 +237,46 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   /// Gets user's projects list
   public shared query (msg) func get_projects_by_user(payload : Types.GetProjectsByUserPayload) : async Types.Response<[Types.Project]> {
     if (Utility.is_anonymous(msg.caller)) return #err(Errors.Unauthorized());
-    return project_manager.get_projects_by_user(payload.user, payload);
+    return project_manager.get_projects_by_user(msg.caller, payload);
+  };
+
+  public shared query (msg) func get_add_ons_list() : async [Types.AddOnVariant] {
+    return subscription_manager.addons_list;
+  };
+
+  /// Retrieve purchased add-ons for a project
+  public shared query (msg) func get_add_ons_by_project(project_id : Types.ProjectId) : async Types.Response<[Types.AddOnService]> {
+    let _is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(authorized)) { authorized };
+    };
+    return #ok(subscription_manager.get_add_ons_by_project(project_id));
+  };
+
+  /// Check if project has the specified add on activated
+  public shared query (msg) func has_add_on_by_project(project_id : Types.ProjectId, add_on_id : Types.AddOnId) : async Types.Response<Bool> {
+    let _is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(authorized)) { authorized };
+    };
+
+    let result : Types.HasAddonResult = subscription_manager.has_add_on(project_id, add_on_id);
+    return #ok(result.has_add_on);
+  };
+
+  public shared (msg) func subscribe_add_on(project_id : Types.ProjectId, add_on_id : Types.AddOnId) : async Types.Response<[Types.AddOnService]> {
+    let _is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(authorized)) { authorized };
+    };
+
+    return subscription_manager.subscribe_add_on(msg.caller, project_id, add_on_id, project_manager, domain);
   };
 
   public shared query (msg) func get_user_usage() : async Types.Response<Types.UsageLogExtended> {
     if (Utility.is_anonymous(msg.caller)) return #err(Errors.Unauthorized());
     let usage_log : Types.UsageLog = shareable_canister_manager.get_usage_log(msg.caller);
 
-    // stable_usage_logs := shareable_canister_manager.usage_logs; // update stable storage
     return #ok({
       usage_log = usage_log;
       reset_time_unix = shareable_canister_manager.next_quota_reset_s;
@@ -327,6 +371,68 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   public shared query (msg) func is_admin() : async Types.Response<Bool> {
     return #ok(access_control.is_authorized(msg.caller));
+  };
+
+  public shared (msg) func admin_get_domain_registration_id_by_domain(domain_name : Text) : async Types.Response<Types.DomainRegistrationId> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    let id = switch (await domain.register_domain(domain_name, transform)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+    return #ok(id);
+  };
+
+  public shared (msg) func admin_cancel_domain_registration_timer(subdomain_name : Text) : async Types.Response<Bool> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    let key : Text = subdomain_name;
+    let timer_id : Nat = switch (Map.get(global_timers, Text.compare, key)) {
+      case (null) return #err(Errors.NotFound("global timer id for key " # key));
+      case (?val) val;
+    };
+
+    Timer.cancelTimer(timer_id);
+    ignore Map.delete(global_timers, Text.compare, key);
+    return #ok(true);
+  };
+
+  public shared query (msg) func admin_get_domain_registrations() : async Types.Response<[(Types.DomainRegistrationId, Types.DomainRegistration)]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return #ok(domain.get_all_registrations());
+  };
+
+  public shared query (msg) func admin_get_dns_records() : async Types.Response<[(Types.DnsRecordId, Types.CreateRecordResponse)]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return #ok(domain.get_all_records());
+  };
+
+  public shared query (msg) func admin_get_canister_domain_registrations(canister_id : Principal) : async Types.Response<[Types.DomainRegistration]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return domain.get_domain_registrations(canister_id);
+  };
+
+  public shared query (msg) func admin_get_global_timers() : async [(Text, Nat)] {
+    if (not access_control.is_authorized(msg.caller)) {
+      return [];
+    };
+    return Iter.toArray(Map.entries(global_timers));
+  };
+
+  public shared (msg) func admin_setup_custom_domain(canister_id : Principal, subdomain_name : Text) : async Types.Response<Types.DomainRegistration> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return await setup_custom_domain(canister_id, subdomain_name);
   };
 
   public shared query (msg) func admin_get_treasury_principal() : async Types.Response<Principal> {
@@ -1298,6 +1404,10 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   public shared (msg) func getCanisterAsset(canister_id : Principal, asset_key : Text) : async Types.Response<?Types.AssetCanisterAsset> {
     if (not (await _isController(canister_id, msg.caller)) and not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
 
+    return await get_canister_asset(canister_id, asset_key);
+  };
+
+  private func get_canister_asset(canister_id : Principal, asset_key : Text) : async Types.Response<?Types.AssetCanisterAsset> {
     try {
       let asset_canister : Types.AssetCanister = actor (Principal.toText(canister_id));
       let asset = await asset_canister.get({
@@ -1311,7 +1421,6 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       return #ok(null);
     };
   };
-
   /*
    * END ASSET CANISTERS METHODS
    *
@@ -2033,9 +2142,15 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   system func postupgrade() {
     init<system>(); // Bootstrap canister
     _recover_timers<system>(); // Recreate timers for active slot sessions
+    _recover_global_timers<system>(); // Recreate timers for active register domain jobs
   };
 
-  // Dangling
+  private func _recover_global_timers<system>() : () {
+    for ((key, timer_id) in Map.entries(global_timers)) {
+      schedule_register_domain(key, 5 * 60);
+    };
+  };
+
   private func _recover_timers<system>() : () {
     for ((slot_id, timer_id) in Map.entries(timers)) {
       let slot : Types.ShareableCanister = switch (shareable_canister_manager.get_canister_by_slot(slot_id)) {
@@ -2130,12 +2245,15 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       date_updated = Utility.get_time_now(#milliseconds);
     };
 
-    let asset : ?Types.AssetCanisterAsset = switch (await getCanisterAsset(canister_id, "/.well-known/.ic-domains")) {
+    // Restore the ic-domains file
+    let asset : ?Types.AssetCanisterAsset = switch (await get_canister_asset(canister_id, "/.well-known/ic-domains")) {
       case (#err(err)) { null };
       case (#ok(val)) { val };
     };
 
     canisters.put_canister_table(canister_id, updated_deployment);
+
+    // Clear the canister assets
     await canister.clear();
 
     if (asset != null) {
@@ -2148,7 +2266,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
       // await canister.store
       let file : Types.StaticFile = {
-        path = "/.well-known/.ic-domains";
+        path = "/.well-known/ic-domains";
         content = asset_file.content;
         content_type = asset_file.content_type;
         content_encoding = ?asset_file.content_encoding;
@@ -2158,10 +2276,15 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
         is_last_chunk = true;
       };
 
+      Debug.print("Found well-known/ic-domains file: " # debug_show (file));
+
       let is_set = switch (await edit_ic_domains(canister_id, file)) {
         case (#err(err)) return #err(err);
         case (#ok()) return #ok();
       };
+
+    } else {
+      Debug.print("Not found well-known/ic-domains file.");
     };
     return #ok();
   };
@@ -2303,7 +2426,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   public shared ({ caller }) func edit_ic_domains(canister_id : Principal, new_ic_domains : Types.StaticFile) : async Types.Response<()> {
     if (not access_control.is_authorized(caller)) return #err(Errors.Unauthorized());
 
-    return await Domain.edit_ic_domains(canister_id, new_ic_domains);
+    return await domain.edit_ic_domains(canister_id, new_ic_domains);
   };
 
   /// Fetches the current ICP price from Coinbase API
@@ -2323,7 +2446,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     ];
 
     // Await response
-    let res : Types.HttpResponse = switch (await Outcall.make_http_request(#get, url, request_headers, transform)) {
+    let res : Types.HttpResponse = switch (await Outcall.make_http_request(#get, url, request_headers, null, transform)) {
       case (#err(err)) return #err(err);
       case (#ok(val)) val;
     };
@@ -2351,50 +2474,26 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
    */
 
   // // List DNS records for a zone
-  public shared (msg) func listDnsRecords(zone_id : Text) : async Types.Response<[Types.CloudflareRecord]> {
-    //   if (not access_control.is_authorized(msg.caller)) {
-    //     return #err(Errors.Unauthorized());
-    //   };
-
-    //   // Check if Cloudflare credentials are configured
-    //   if (not hasCloudflareCredentials()) {
-    //     return #err(Errors.CloudflareNotConfigured());
-    //   };
-
-    //   let api_key = switch (CLOUDFLARE_API_KEY) {
-    //     case (null) return #err(Errors.NotFoundCloudflareApiKey());
-    //     case (?val) val;
-    //   };
-
-    //   let host = "api.cloudflare.com";
-    //   let url = "https://" # host # "/client/v4/zones/" # zone_id # "/dns_records";
-    //   Debug.print("URL: " # url);
-    //   // Prepare headers
-    //   let request_headers = [
-    //     { name = "Authorization"; value = "Bearer " # api_key },
-    //   ];
-
-    //   // Await response
-    //   let res : Types.HttpResponse = switch (await Outcall.make_http_request(#get, url, request_headers, transform)) {
-    //     case (#err(err)) return #err(err);
-    //     case (#ok(val)) val;
-    //   };
-
-    //   let parsed_typed : [Types.CloudflareRecord] = switch (Parsing.parse_cloudflare_dns_response(res.body)) {
-    //     case (#err(err)) return #err(err);
-    //     case (#ok(val)) val;
-    //   };
-
-    //   Debug.print("Parsed types res list dns records: " # debug_show (parsed_typed));
-    //   return #ok(parsed_typed);
-    return await Domain.list_dns_records(zone_id, transform, cloudflare);
+  public shared (msg) func listDnsRecords(zone_id : Text) : async Types.Response<[Types.DnsRecord]> {
+    return await domain.list_dns_records(zone_id, transform, cloudflare);
   };
 
   public shared (msg) func set_cloudflare_credentials(email : Text, api_key : Text) : async Types.Response<()> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
+
+    CLOUDFLARE_EMAIL := ?email;
+    CLOUDFLARE_API_KEY := ?api_key;
     return cloudflare.set_cloudflare_credentials(email, api_key);
+  };
+
+  public shared (msg) func set_cloudflare_zone_id(zone_id : Text) : async Types.Response<()> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    CLOUDFLARE_ZONE_ID := ?zone_id;
+    return #ok(cloudflare.set_zone_id(zone_id));
   };
 
   public query (msg) func get_cloudflare_credentials() : async Types.Response<{ email : ?Text; api_key : ?Text }> {
@@ -2404,140 +2503,193 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return cloudflare.get_cloudflare_credentials();
   };
 
+  public query (msg) func get_records_for_canister(canister_id : Principal) : async Types.Response<[Types.CreateRecordResponse]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return domain.get_records_for_canister(canister_id);
+  };
+
+  public query (msg) func get_records() : async Types.Response<[(Types.DnsRecordId, Types.CreateRecordResponse)]> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return #ok(domain.get_all_records());
+  };
+
+  public shared (msg) func delete_records() : async Types.Response<()> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    return #ok(domain.delete_records());
+  };
+
+  public shared (msg) func delete_canister_records_map() : async Types.Response<()> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    return #ok(domain.delete_canister_to_records_map());
+  };
+
   // // Create a new DNS record
-  // public shared (msg) func createDnsRecord(zone_id : Text, record : Types.DnsRecord) : async Types.Response<Types.DnsRecord> {
-  //   if (not access_control.is_authorized(msg.caller)) {
-  //     return #err(Errors.Unauthorized());
-  //   };
+  public shared (msg) func create_dns_record(payload : Types.CreateDnsRecordPayload) : async Types.Response<Types.DnsRecord> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
 
-  //   // Check if Cloudflare credentials are configured
-  //   if (not hasCloudflareCredentials()) {
-  //     return #err(Errors.CloudflareNotConfigured());
-  //   };
+    return await domain.create_dns_record(payload, transform, cloudflare);
+  };
 
-  //   // Validate DNS record
-  //   if (record.name == "" or record.content == "") {
-  //     return #err(Errors.InvalidInput("DNS record name and content are required"));
-  //   };
+  public shared (msg) func create_dns_records_for_canister(payload : Types.CreateCanisterDNSRecordsPayload) : async Types.Response<Types.DomainRegistration> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return await domain.create_dns_records_for_canister(cloudflare.get_zone_id(), payload, transform, cloudflare);
+  };
 
-  //   let created_record : Types.DnsRecord = {
-  //     id = "dns_record_" # Nat.toText(Int.abs(Utility.get_time_now(#milliseconds)));
-  //     zone_id = zone_id;
-  //     zone_name = record.zone_name;
-  //     name = record.name;
-  //     dns_type = record.dns_type;
-  //     content = record.content;
-  //     ttl = record.ttl;
-  //     proxied = record.proxied;
-  //     created_on = Int.abs(Utility.get_time_now(#milliseconds));
-  //     modified_on = Int.abs(Utility.get_time_now(#milliseconds));
-  //   };
+  public shared (msg) func setup_custom_domain(canister_id : Principal, subdomain_name : Text) : async Types.Response<Types.DomainRegistration> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
 
-  //   return #ok(created_record);
-  // };
+    let payload : Types.CreateCanisterDNSRecordsPayload = {
+      domain_name = "worldcloud.app";
+      subdomain_name = subdomain_name;
+      user_principal = Principal.fromActor(this);
+      canister_id = canister_id;
+    };
+
+    // Create TXT and CNAME records for linking canister to custom subdomain
+    let res : Types.DomainRegistration = switch (await domain.create_dns_records_for_canister(cloudflare.get_zone_id(), payload, transform, cloudflare)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    schedule_register_domain(subdomain_name, 3 * 60);
+
+    return #ok(res);
+  };
+
+  private func _delete_global_timer(id : Text) {
+    // let _res = switch (timers.get(slot_id)) {
+    let _res = switch (Map.get(global_timers, Text.compare, id)) {
+      case (null) {
+        0;
+      };
+      case (?_timer_id) {
+        ignore Map.delete(global_timers, Text.compare, id);
+        0;
+      };
+    };
+
+    let new_active_global_timers : [Text] = Array.filter(active_global_timers, func(_id : Text) : Bool { _id != id });
+
+    active_global_timers := new_active_global_timers;
+  };
+
+  private func schedule_register_domain<system>(subdomain_name : Text, duration_seconds : Nat) : () {
+    let timer_id = Timer.setTimer<system>(
+      #seconds duration_seconds,
+      func<system>() : async () {
+        Debug.print("[schedule_register_domain] triggered register domain job for domain: " # subdomain_name # ".");
+        let register_domain_request_id = switch (await domain.register_domain(subdomain_name # ".worldcloud.app", transform)) {
+          case (#err(err)) {
+            Debug.print("[schedule_register_domain] Error registering domain with IC: " # err);
+            // Delete reference for current timer
+            _delete_global_timer(subdomain_name);
+
+            // Schedule another registration later
+            schedule_register_domain(subdomain_name, duration_seconds);
+            Debug.print("Scheduled new timer. Triggering in " # Nat.toText(duration_seconds) # " seconds");
+            return;
+          };
+          case (#ok(val)) {
+            Debug.print("[schedule_register_domain] Successfully triggered register domain: " # val);
+            _delete_global_timer(subdomain_name);
+            val;
+          };
+        };
+      },
+    );
+
+    Debug.print("Scheduled register domain job for domain: " # subdomain_name # ". Triggering in " # Nat.toText(duration_seconds) # " seconds.");
+    Map.add(global_timers, Text.compare, "domain-ic-registration--" # subdomain_name, timer_id);
+    return;
+  };
+
+  /// Get project canister's domain registration
+  public shared (msg) func get_domain_registrations_by_canister(project_id : Types.ProjectId) : async Types.Response<[Types.DomainRegistration]> {
+    let _is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(authorized)) { authorized };
+    };
+
+    let project : Types.Project = switch (project_manager.get_project_by_id(project_id)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    let canister_id : Principal = switch (project.canister_id) {
+      case (null) return #ok([]);
+      case (?val) val;
+    };
+
+    return domain.get_domain_registrations(canister_id);
+  };
+
+  public shared (msg) func get_domain_registration_status(registration_id : Text) : async Types.Response<Bool> {
+    return await domain.get_domain_registration_by_id(registration_id, transform);
+  };
+
+  public shared (msg) func register_domain(subdomain_name : Text) : async Types.Response<Types.DomainRegistrationId> {
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    let register_domain_request_id = switch (await domain.register_domain(subdomain_name # ".worldcloud.app", transform)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    return #ok(register_domain_request_id);
+  }
 
   // // Update an existing DNS record
-  // public shared (msg) func updateDnsRecord(zone_id : Text, record_id : Text, record : Types.DnsRecord) : async Types.Response<Types.DnsRecord> {
+  // public shared (msg) func update_dns_record(zone_id : Text, record_id : Text, record : Types.DnsRecord) : async Types.Response<Types.DnsRecord> {
   //   if (not access_control.is_authorized(msg.caller)) {
   //     return #err(Errors.Unauthorized());
   //   };
 
-  //   // Check if Cloudflare credentials are configured
-  //   if (not hasCloudflareCredentials()) {
-  //     return #err(Errors.CloudflareNotConfigured());
-  //   };
-
-  //   // Validate DNS record
-  //   if (record.name == "" or record.content == "") {
-  //     return #err(Errors.InvalidInput("DNS record name and content are required"));
-  //   };
-
-  //   // TODO: Implement actual Cloudflare API call
-  //   // PATCH /zones/{zone_id}/dns_records/{dns_record_id}
-  //   // Headers: X-Auth-Email, X-Auth-Key
-  //   // Body: { name, type, content, ttl, proxied }
-  //   // For now, return the updated record
-  //   let updated_record : Types.DnsRecord = {
-  //     id = record_id;
-  //     zone_id = zone_id;
-  //     zone_name = record.zone_name;
-  //     name = record.name;
-  //     dns_type = record.dns_type;
-  //     content = record.content;
-  //     ttl = record.ttl;
-  //     proxied = record.proxied;
-  //     created_on = record.created_on;
-  //     modified_on = Int.abs(Utility.get_time_now(#milliseconds));
-  //   };
-
-  //   return #ok(updated_record);
+  //   return await Domain.update_dns_record(zone_id, record_id, record, cloudflare);
   // };
 
   // // Delete a DNS record
-  // public shared (msg) func deleteDnsRecord(zone_id : Text, record_id : Text) : async Types.Response<Bool> {
+  // public shared (msg) func delete_dns_record(zone_id : Text, record_id : Text) : async Types.Response<Bool> {
   //   if (not access_control.is_authorized(msg.caller)) {
   //     return #err(Errors.Unauthorized());
   //   };
 
-  //   // Check if Cloudflare credentials are configured
-  //   if (not hasCloudflareCredentials()) {
-  //     return #err(Errors.CloudflareNotConfigured());
-  //   };
-
-  //   // TODO: Implement actual Cloudflare API call
-  //   // DELETE /zones/{zone_id}/dns_records/{dns_record_id}
-  //   // Headers: X-Auth-Email, X-Auth-Key
-  //   // For now, return success
-  //   return #ok(true);
+  //   return await Domain.delete_dns_record(zone_id, record_id, cloudflare);
   // };
 
   // // Get a specific DNS record
-  // public shared query (msg) func getDnsRecord(zone_id : Text, record_id : Text) : async Types.Response<Types.DnsRecord> {
+  // public shared (msg) func get_dns_record(zone_id : Text, record_id : Text) : async Types.Response<Types.DnsRecord> {
   //   if (not access_control.is_authorized(msg.caller)) {
   //     return #err(Errors.Unauthorized());
   //   };
 
-  //   // Check if Cloudflare credentials are configured
-  //   if (not hasCloudflareCredentials()) {
-  //     return #err(Errors.CloudflareNotConfigured());
-  //   };
-
-  //   // TODO: Implement actual Cloudflare API call
-  //   // GET /zones/{zone_id}/dns_records/{dns_record_id}
-  //   // Headers: X-Auth-Email, X-Auth-Key
-  //   // For now, return a mock record
-  //   let mock_record : Types.DnsRecord = {
-  //     id = record_id;
-  //     zone_id = zone_id;
-  //     zone_name = "example.com";
-  //     name = "www.example.com";
-  //     dns_type = #A;
-  //     content = "192.168.1.1";
-  //     ttl = 120;
-  //     proxied = false;
-  //     created_on = Int.abs(Utility.get_time_now(#milliseconds));
-  //     modified_on = Int.abs(Utility.get_time_now(#milliseconds));
-  //   };
-
-  //   return #ok(mock_record);
+  //   return await Domain.get_dns_record(zone_id, record_id, cloudflare);
   // };
 
   // // Get DNS zones (domains)
-  // public shared query (msg) func getDnsZones() : async Types.Response<[Types.DnsZone]> {
+  // public shared (msg) func getDnsZones() : async Types.Response<[Types.DnsZone]> {
   //   if (not access_control.is_authorized(msg.caller)) {
   //     return #err(Errors.Unauthorized());
   //   };
 
-  //   // Check if Cloudflare credentials are configured
-  //   if (not hasCloudflareCredentials()) {
-  //     return #err(Errors.CloudflareNotConfigured());
-  //   };
-
-  //   // TODO: Implement actual Cloudflare API call
-  //   // GET /zones
-  //   // Headers: X-Auth-Email, X-Auth-Key
-  //   // For now, return empty array
-  //   return #ok([]);
+  //   return await Domain.get_dns_zones(cloudflare);
   // };
 
   // /*
@@ -2546,34 +2698,4 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   //  *
   //  */
 
-  // // Cloudflare API Configuration Methods
-  // public shared (msg) func setCloudflareCredentials(email : Text, api_key : Text) : async Types.Response<()> {
-  //   if (not access_control.is_authorized(msg.caller)) {
-  //     return #err(Errors.Unauthorized());
-  //   };
-
-  //   CLOUDFLARE_EMAIL := ?email;
-  //   CLOUDFLARE_API_KEY := ?api_key;
-
-  //   return #ok();
-  // };
-
-  // public shared query (msg) func getCloudflareCredentials() : async Types.Response<{ email : ?Text; api_key : ?Text }> {
-  //   if (not access_control.is_authorized(msg.caller)) {
-  //     return #err(Errors.Unauthorized());
-  //   };
-
-  //   return #ok({
-  //     email = CLOUDFLARE_EMAIL;
-  //     api_key = CLOUDFLARE_API_KEY;
-  //   });
-  // };
-
-  // // Helper function to check if Cloudflare credentials are set
-  // private func hasCloudflareCredentials() : Bool {
-  //   switch (CLOUDFLARE_EMAIL, CLOUDFLARE_API_KEY) {
-  //     case (?email, ?api_key) { true };
-  //     case (_, _) { false };
-  //   };
-  // };
 };
