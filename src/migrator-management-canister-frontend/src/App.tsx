@@ -1,5 +1,10 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { useState } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useNavigate,
+} from "react-router-dom";
+import { useEffect, useState } from "react";
 import LandingPage from "./components/LandingPage/LandingPage";
 import { HelmetProvider } from "react-helmet-async";
 
@@ -9,7 +14,11 @@ import { DeploymentsProvider } from "./context/DeploymentContext/DeploymentConte
 import { AuthWrapper } from "./components/AuthWrapper/AuthWrapper";
 import { IdentityProvider } from "./context/IdentityContext/IdentityContext";
 import { AuthorityProvider } from "./context/AuthorityContext/AuthorityContext";
-import { backend_canister_id } from "./config/config";
+import {
+  backend_canister_id,
+  environment,
+  ngrok_tunnel,
+} from "./config/config";
 import GitHubCallback from "./components/GithubCallback/GithubCallback";
 import { GithubProvider } from "./context/GithubContext/GithubContext";
 import RepoSelector from "./components/RepoSelector/RepoSelector";
@@ -50,6 +59,11 @@ import { ProjectProvider } from "./context/ProjectContext/ProjectContext";
 import ProjectsComponent from "./components/ProjectsComponent/ProjectsComponent";
 import { HeaderCardProvider } from "./context/HeaderCardContext/HeaderCardContext";
 import ProjectCreationFlow from "./components/ProjectCreationFlow/ProjectCreationFlow";
+import { setGlobalDisconnectFunction } from "./utility/errorInterceptor";
+import AuthApi from "./api/auth/AuthApi";
+import { IdbStorage } from "@dfinity/auth-client";
+import { HttpAgentManager } from "./agent/http_agent";
+import { clearUserData } from "./utility/cleanup";
 const queryClient = new QueryClient();
 export interface State {
   canister_id: string;
@@ -69,6 +83,42 @@ function App() {
     textColor: "green",
     timeout: 2000,
   });
+
+  const disconnect = async () => {
+    try {
+      // Delete jwt token
+      const authApi = new AuthApi();
+      await authApi.signOut();
+
+      // Clear IDB storage
+      const storage = new IdbStorage();
+      await Promise.all([
+        storage.remove("identity"),
+        storage.remove("delegation"),
+      ]);
+
+      queryClient.clear();
+      const agent = await HttpAgentManager.getInstance(null);
+      agent?.clear();
+      // Clear all stored data
+      clearUserData();
+
+      let location = "https://worldcloud.app/dashboard";
+      if (environment === "local") location = `${ngrok_tunnel}/dashboard`;
+
+      window.location.href = location;
+
+      return true;
+    } catch (error) {
+      console.error("Error during disconnect:", error);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    // Set the global disconnect function
+    setGlobalDisconnectFunction(disconnect);
+  }, [disconnect]);
 
   return (
     <div className="app">

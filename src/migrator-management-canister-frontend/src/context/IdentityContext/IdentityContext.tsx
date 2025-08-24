@@ -29,6 +29,8 @@ import {
   fetchSubscription,
   fetchTiers,
 } from "../../state/slices/subscriptionSlice";
+import { useNavigate } from "react-router-dom";
+import { HttpAgentManager } from "../../agent/http_agent";
 
 interface IdentityProviderProps {
   children: ReactNode;
@@ -101,6 +103,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [isLoadingIdentity, setIsLoadingIdentity] = useState(true);
   const [authClient, setAuthClient] = useState<AuthClient | null>(null);
+  const navigate = useNavigate();
 
   // Function to load initial data after authentication
   const loadInitialData = useCallback(
@@ -215,6 +218,8 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       ]);
 
       queryClient.clear();
+      const agent = await HttpAgentManager.getInstance(null);
+      agent?.clear();
 
       setIdentity(null);
       setIsConnected(false);
@@ -345,7 +350,12 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       loadInitialData(identity, agent);
 
       return identity;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message.includes("Invalid delegation expiry")) {
+        console.log(`invalid...`);
+        disconnect();
+        navigate("/");
+      }
       console.error("Error during wallet connection:", error);
       return null;
     } finally {
