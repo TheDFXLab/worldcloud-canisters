@@ -8,77 +8,31 @@ import Book "../book";
 import Nat64 "mo:base/Nat64";
 import Nat "mo:base/Nat";
 import Array "mo:base/Array";
+import Text "mo:base/Text";
+import Int "mo:base/Int";
 import Errors "../modules/errors";
 import Utility "../utils/Utility";
 import Map "mo:core/Map";
+import { tiers; addons } "addons";
 
 module {
-  public class SubscriptionManager(book : Book.Book, ledger : Principal, subscriptionsInit : Map.Map<Principal, Types.Subscription>, treasury_account_init : ?Principal) {
+  public class SubscriptionManager(
+    book : Book.Book,
+    ledger : Principal,
+    subscriptionsInit : Map.Map<Principal, Types.Subscription>,
+    treasury_account_init : ?Principal,
+    add_ons_map_init : Types.SubscriptionServices,
+  ) {
     private var icp_fee : Nat = 10_000;
     public var treasury : ?Principal = treasury_account_init; // Receiver of payments
     // public var subscriptions : Types.SubscriptionsMap = HashMap.HashMap<Principal, Types.Subscription>(0, Principal.equal, Principal.hash);
     // public var subscriptions = Map.empty<Principal, Types.Subscription>();
     public var subscriptions = subscriptionsInit;
-    public var tiers_list : Types.TiersList = [
-      {
-        id = 0;
-        name = "Basic";
-        slots = 1;
-        min_deposit = { e8s = 50_000_000 }; // 0.5 ICP
-        price = { e8s = 0 }; // Free tier
-        features = [
-          "1 Canister",
-          "Basic Support",
-          "Manual Deployments",
-          "GitHub Integration",
-        ];
-      },
-      {
-        id = 1;
-        name = "Pro";
-        slots = 5;
-        min_deposit = { e8s = 200_000_000 }; // 2 ICP
-        price = { e8s = 500_000_000 }; // 5 ICP
-        features = [
-          "5 Canisters",
-          "Priority Support",
-          "Automated Deployments",
-          "Custom Domains",
-          "Deployment History",
-          "Advanced Analytics",
-        ];
-      },
-      {
-        id = 2;
-        name = "Enterprise";
-        slots = 25;
-        min_deposit = { e8s = 500_000_000 }; // 5 ICP
-        price = { e8s = 2_500_000_000 }; // 25 ICP
-        features = [
-          "25 Canisters",
-          "24/7 Support",
-          "Team Management",
-          "Advanced Analytics",
-          "Priority Queue",
-          "Custom Branding",
-          "API Access",
-        ];
-      },
-      {
-        id = 3;
-        name = "Freemium";
-        slots = 1;
-        min_deposit = { e8s = 0 };
-        price = { e8s = 0 }; // Free tier
-        features = [
-          "1 Canister",
-          "Manual Deployments",
-          "GitHub Integration",
-          "4hrs Demo Hosting Trial",
-          "3 Free Trials per day",
-        ];
-      },
-    ];
+    public var add_ons_map = add_ons_map_init;
+    public var DNS_ADD_ON_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+    public var tiers_list : Types.TiersList = tiers;
+    public var addons_list : [Types.AddOnVariant] = addons;
 
     public func set_treasury(new_treasury : Principal) : () {
       treasury := ?new_treasury;
@@ -122,6 +76,147 @@ module {
         case (null) { return null };
         case (?sub) { return ?sub };
       };
+    };
+
+    public func get_add_ons_by_project(project_id : Nat) : [Types.AddOnService] {
+      let add_ons : [Types.AddOnService] = switch (Map.get(add_ons_map, Nat.compare, project_id)) {
+        case (null) [];
+        case (?val) val;
+      };
+      return add_ons;
+    };
+
+    public func find_add_on(add_on_id : Types.AddOnId) : ?Types.AddOnVariant {
+      return Array.find(addons, func(addon : Types.AddOnVariant) : Bool { addon.id == add_on_id });
+    };
+
+    public func has_add_on(project_id : Types.ProjectId, add_on_id : Types.AddOnId) : Types.HasAddonResult {
+      let add_ons = get_add_ons_by_project(project_id);
+      let existing_add_ons : [Types.AddOnService] = Array.filter<Types.AddOnService>(
+        add_ons,
+        func(add_on : Types.AddOnService) : Bool {
+          return add_on.id == add_on_id;
+        },
+      );
+
+      let result = {
+        has_add_on = existing_add_ons.size() > 0;
+        add_ons = add_ons;
+      };
+      return result;
+    };
+
+    private func has_enough_credits_subscription(caller : Principal, tier_id : Nat) : Types.EnoughCreditsResult {
+      // Get pricing list
+      let tier : Types.Tier = tiers_list[tier_id];
+
+      // Get user's ICP balance
+      let deposited_icp = book.fetchUserIcpBalance(caller, ledger);
+
+      // Get total cost
+      let total_cost = Nat64.toNat(tier.min_deposit.e8s + tier.price.e8s);
+
+      // Validate user has enough ICP balance
+      if (deposited_icp < total_cost) {
+        return { status = false; need = total_cost; available = deposited_icp };
+      };
+
+      return { status = true; need = total_cost; available = deposited_icp };
+    };
+
+    private func has_enough_credits_add_on(caller : Principal, add_on_id : Types.AddOnId) : Types.Response<Types.EnoughCreditsResult> {
+      let matching : [Types.AddOnVariant] = Array.filter(addons_list, func(addon : Types.AddOnVariant) : Bool { addon.id == add_on_id });
+
+      if (matching.size() == 0) return #err(Errors.NotFound("add-on id"));
+
+      let addon : Types.AddOnVariant = matching[0];
+
+      // Get user's ICP balance
+      let deposited_icp = book.fetchUserIcpBalance(caller, ledger);
+
+      // Validate user has enough ICP balance
+      if (deposited_icp < addon.price) {
+        return #ok({
+          status = false;
+          need = addon.price;
+          available = deposited_icp;
+        });
+      };
+
+      return #ok({
+        status = true;
+        need = addon.price;
+        available = deposited_icp;
+      });
+    };
+
+    public func subscribe_add_on(caller : Principal, project_id : Types.ProjectId, add_on_id : Types.AddOnId, project_manager : Types.ProjectInterface, domain_manager : Types.DomainInterface) : Types.Response<[Types.AddOnService]> {
+      // Ensure user has paid the total cost for the add on
+      let has_credits_result : Types.EnoughCreditsResult = switch (has_enough_credits_add_on(caller, add_on_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      // Get project
+      let project : Types.Project = switch (project_manager.get_project_by_id(project_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      // Prevent freemium project access
+      if (project.plan == #freemium) return #err(Errors.PremiumFeature());
+      let canister_id : Principal = switch (project.canister_id) {
+        case (null) return #err(Errors.NotFoundCanister());
+        case (?val) val;
+      };
+
+      // Ensure project doesn't have the requested add on
+      let add_on_exists : Types.HasAddonResult = has_add_on(project_id, add_on_id);
+
+      // Reject duplicate add on subscription
+      if (add_on_exists.has_add_on) {
+        return #err(Errors.AddOnExists(add_on_id));
+      };
+
+      // Validate treasury principal
+      let payment_receiver : Principal = switch (treasury) {
+        case (null) { return #err(Errors.TreasuryNotSet()) };
+        case (?val) { val };
+      };
+
+      // Find the requested add-on details
+      let add_on : Types.AddOnVariant = switch (find_add_on(add_on_id)) {
+        case (null) return #err(Errors.NotFound("add-on id " # Nat.toText(add_on_id)));
+        case (?val) val;
+      };
+
+      let now = Int.abs(Utility.get_time_now(#milliseconds));
+
+      // Get expiry time for add-on
+      let expiry = Utility.calculate_expiry_timestamp(add_on.expiry, add_on.expiry_duration);
+
+      // Create add-on for project
+      let new_add_on : Types.AddOnService = {
+        id = add_on.id;
+        status = #available;
+        type_ = add_on.type_;
+        created_on = now;
+        updated_on = now;
+        expires_at = ?expiry;
+      };
+
+      // Deduct payment from caller's balance
+      let _success = switch (book.process_payment(caller, payment_receiver, ledger, has_credits_result.need)) {
+        case (false) return #err(Errors.PaymentProcessingFailure());
+        case (true) true;
+      };
+
+      // Add new add on to the project's list
+      let new_add_ons : [Types.AddOnService] = Array.append(add_on_exists.add_ons, [new_add_on]);
+      Map.add(add_ons_map, Nat.compare, project_id, new_add_ons);
+
+      let _new_domain_registration : Types.DomainRegistration = domain_manager.initialize_domain_registration(canister_id);
+      return #ok(new_add_ons);
     };
 
     private func _create_subscription(caller : Principal, tier_id : Nat, subscription : Types.Subscription, payment_receiver : Principal) : async Types.Response<Types.Subscription> {
