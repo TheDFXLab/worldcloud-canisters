@@ -6,6 +6,7 @@ import LaunchIcon from "@mui/icons-material/Launch";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import StorageIcon from "@mui/icons-material/Storage";
 import TimerIcon from "@mui/icons-material/Timer";
+import ExtensionIcon from "@mui/icons-material/Extension";
 import "./QuickActions.css";
 import { CircularProgress, Tooltip } from "@mui/material";
 import { SerializedProject } from "../../utility/bigint";
@@ -30,6 +31,8 @@ interface QuickActionsProps {
   hasCanister: boolean;
   isFreemium: boolean;
   deploymentStatus?: string;
+  showAddOns?: boolean;
+  onToggleAddOns?: () => void;
 }
 
 const QuickActions: React.FC<QuickActionsProps> = ({
@@ -38,6 +41,8 @@ const QuickActions: React.FC<QuickActionsProps> = ({
   hasCanister,
   isFreemium,
   deploymentStatus = "uninitialized",
+  showAddOns = false,
+  onToggleAddOns,
 }) => {
   const { usageData: freemiumSlot, fetchUsage } = useFreemiumLogic();
   const { isLoadingClearAssets, isLoadingDeleteProject, refreshProjects } =
@@ -103,6 +108,20 @@ const QuickActions: React.FC<QuickActionsProps> = ({
         : !isFreemium && !hasCanister
         ? "No runner attached."
         : "This feature is temporarily disabled.",
+    },
+    {
+      title: showAddOns ? "Hide Add-ons" : "Add-ons",
+      icon: ExtensionIcon,
+      isDangerous: false,
+      description: showAddOns
+        ? "Hide available add-on services"
+        : "View and subscribe to add-on services",
+      onClick: onToggleAddOns,
+      disabled: isFreemium,
+      disabledReason: isFreemium
+        ? "Add-ons are available for paid projects only"
+        : undefined,
+      hide: isFreemium,
     },
   ];
 

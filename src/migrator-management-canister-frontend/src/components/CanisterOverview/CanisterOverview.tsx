@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../state/store";
 import "./CanisterOverview.css";
@@ -30,6 +30,10 @@ import { ProjectInfoCard } from "./components/ProjectInfoCard";
 import { CyclesCard } from "./components/CyclesCard";
 import { DeploymentHistoryCard } from "./components/DeploymentHistoryCard";
 import { UsageStatisticsCard } from "./components/UsageStatisticsCard";
+import { AddOnsCard } from "./components/AddOnsCard";
+import { AddOnsSidebar } from "./components/AddOnsSidebar";
+import { AddonSelector, AddonView } from "./components/AddonSelector";
+import { MyAddonsCard } from "./components/MyAddonsCard";
 import { useToaster } from "../../context/ToasterContext/ToasterContext";
 import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
 import { SerializedProject } from "../../utility/bigint";
@@ -72,12 +76,15 @@ export const CanisterOverview: React.FC = () => {
   const [confirmationAction, setConfirmationAction] = useState<string | null>(
     null
   );
+  const [showAddOns, setShowAddOns] = useState(false);
+  const [addonView, setAddonView] = useState<AddonView>("marketplace");
   /** END STATE */
 
   /** START HOOKS */
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { projectId } = useParams();
   const {
     deployments,
@@ -106,6 +113,8 @@ export const CanisterOverview: React.FC = () => {
     handleDeleteProject,
     handleFetchUserUsage,
     handleInstallCode,
+    handleFetchAddOnsList,
+    handleFetchAddOns,
   } = useProjectsLogic();
 
   const { identity } = useIdentity();
@@ -115,9 +124,15 @@ export const CanisterOverview: React.FC = () => {
   const { summon, destroy } = useLoaderOverlay();
   const { showModal, setShowModal } = useConfirmationModal();
 
-  const { projects, activityLogs, isLoadingActivityLogs } = useSelector(
-    (state: RootState) => state.projects
-  );
+  const {
+    projects,
+    activityLogs,
+    isLoadingActivityLogs,
+    projectAddOns,
+    addOnsList,
+    isLoadingAddOnsList,
+    isLoadingAddOns,
+  } = useSelector((state: RootState) => state.projects);
 
   /**END HOOKS */
 
@@ -134,10 +149,17 @@ export const CanisterOverview: React.FC = () => {
   }, [dispatch, projectId, identity, agent]);
 
   useEffect(() => {
-    setHeaderCard({
-      title: "Project Overview",
-    });
-  }, []);
+    if (showAddOns) {
+      setHeaderCard({
+        title:
+          addonView === "marketplace" ? "Add-ons Marketplace" : "My Add-ons",
+      });
+    } else {
+      setHeaderCard({
+        title: "Project Overview",
+      });
+    }
+  }, [showAddOns, addonView]);
   useEffect(() => {
     const t = async () => {
       if (projectId !== null && projectId !== undefined && identity && agent) {
@@ -169,6 +191,32 @@ export const CanisterOverview: React.FC = () => {
 
     fetchData();
   }, [projectId, currentProject?.canister_id]);
+
+  // Initialize addon state from URL parameters
+  useEffect(() => {
+    const addonsParam = searchParams.get("addons");
+    const viewParam = searchParams.get("view");
+
+    if (addonsParam === "true") {
+      setShowAddOns(true);
+      if (viewParam === "my-addons") {
+        setAddonView("my-addons");
+      } else {
+        setAddonView("marketplace");
+      }
+    } else {
+      setShowAddOns(false);
+      setAddonView("marketplace");
+    }
+  }, [searchParams]);
+
+  // Sync URL with current state on mount (for direct navigation)
+  useEffect(() => {
+    if (showAddOns && !searchParams.get("addons")) {
+      // If addons are shown but not in URL, update URL
+      updateAddonURL(true, addonView);
+    }
+  }, []); // Only run on mount
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -264,6 +312,56 @@ export const CanisterOverview: React.FC = () => {
         setShowModal(true);
         break;
     }
+  };
+
+  const handleToggleAddOns = () => {
+    const newShowAddOns = !showAddOns;
+    setShowAddOns(newShowAddOns);
+
+    if (newShowAddOns) {
+      // Fetch addons list when showing addons
+      handleFetchAddOnsList();
+      // Update URL to show addons with current view
+      updateAddonURL(true, addonView);
+    } else {
+      // Update URL to hide addons
+      updateAddonURL(false, addonView);
+    }
+  };
+
+  const handleAddOnSubscribe = (addonId: number) => {
+    // Refresh project data after subscription
+    // This could trigger a refresh of the project's addons
+    console.log("Subscribed to addon:", addonId);
+  };
+
+  const handleAddonViewChange = (view: AddonView) => {
+    setAddonView(view);
+
+    if (view === "my-addons") {
+      // Fetch project addons when switching to my addons view
+      handleFetchAddOns(parseInt(projectId!));
+    }
+
+    // Update URL with new view
+    if (showAddOns) {
+      updateAddonURL(true, view);
+    }
+  };
+
+  // Update URL when addon state changes
+  const updateAddonURL = (showAddons: boolean, view: AddonView) => {
+    const params = new URLSearchParams(searchParams);
+
+    if (showAddons) {
+      params.set("addons", "true");
+      params.set("view", view);
+    } else {
+      params.delete("addons");
+      params.delete("view");
+    }
+
+    setSearchParams(params);
   };
 
   const handleConfirmation = async (amount: number) => {
@@ -474,50 +572,85 @@ export const CanisterOverview: React.FC = () => {
           hasCanister={!!currentProject.canister_id}
           isFreemium={"freemium" in (currentProject.plan || {})}
           deploymentStatus={selectedDeployment?.status}
+          showAddOns={showAddOns}
+          onToggleAddOns={handleToggleAddOns}
         />
       )}
 
-      <div
-        className={`overview-grid ${
-          isSidebarCollapsed ? "sidebar-collapsed" : ""
-        }`}
-      >
-        <ProjectInfoCard currentProject={currentProject} />
-
-        <CanisterInfoCard
-          currentProject={currentProject}
-          canisterStatus={selectedDeployment}
-        />
-
-        {currentProject.canister_id && (
-          <CyclesCard
-            isFreemium={"freemium" in currentProject.plan}
-            isLoadingBalance={isLoadingBalance}
-            isLoadingAddCycles={isLoadingAddCycles}
-            balance={balance}
-            isLoadingCycles={isLoadingCycles}
-            cyclesStatus={cyclesStatus}
-            isLoadingEstimateCycles={isLoadingEstimateCycles}
-            maxCyclesExchangeable={maxCyclesExchangeable}
+      {showAddOns ? (
+        <>
+          <AddonSelector
+            currentView={addonView}
+            onViewChange={handleAddonViewChange}
+            myAddonsCount={
+              currentProject
+                ? (projectAddOns[parseInt(currentProject.id)] || []).length
+                : 0
+            }
+            isLoading={isLoadingAddOnsList || isLoadingAddOns}
           />
-        )}
 
-        <DeploymentHistoryCard
-          isLoading={isLoading}
-          workflowRunHistory={workflowRunHistory}
-          onRedeploy={handleClickRedeploy}
-        />
+          <div
+            className={`addons-layout ${
+              isSidebarCollapsed ? "sidebar-collapsed" : ""
+            }`}
+          >
+            <div className="addons-main">
+              {addonView === "marketplace" ? (
+                <AddOnsCard
+                  projectId={currentProject.id}
+                  onSubscribe={handleAddOnSubscribe}
+                />
+              ) : (
+                <MyAddonsCard projectId={currentProject.id} />
+              )}
+            </div>
+            <AddOnsSidebar currentView={addonView} />
+          </div>
+        </>
+      ) : (
+        <div
+          className={`overview-grid ${
+            isSidebarCollapsed ? "sidebar-collapsed" : ""
+          }`}
+        >
+          <ProjectInfoCard currentProject={currentProject} />
 
-        <UsageStatisticsCard
-          deployment={selectedDeployment}
-          hasCanister={!!currentProject.canister_id}
-          isFreemium={"freemium" in currentProject.plan}
-        />
-        <ActivityCard
-          isLoadingActivityLogs={isLoadingActivityLogs}
-          activityLogs={formattedActivityLogs}
-        />
-      </div>
+          <CanisterInfoCard
+            currentProject={currentProject}
+            canisterStatus={selectedDeployment}
+          />
+
+          {currentProject.canister_id && (
+            <CyclesCard
+              isFreemium={"freemium" in currentProject.plan}
+              isLoadingBalance={isLoadingBalance}
+              isLoadingAddCycles={isLoadingAddCycles}
+              balance={balance}
+              isLoadingCycles={isLoadingCycles}
+              cyclesStatus={cyclesStatus}
+              isLoadingEstimateCycles={isLoadingEstimateCycles}
+              maxCyclesExchangeable={maxCyclesExchangeable}
+            />
+          )}
+
+          <DeploymentHistoryCard
+            isLoading={isLoading}
+            workflowRunHistory={workflowRunHistory}
+            onRedeploy={handleClickRedeploy}
+          />
+
+          <UsageStatisticsCard
+            deployment={selectedDeployment}
+            hasCanister={!!currentProject.canister_id}
+            isFreemium={"freemium" in currentProject.plan}
+          />
+          <ActivityCard
+            isLoadingActivityLogs={isLoadingActivityLogs}
+            activityLogs={formattedActivityLogs}
+          />
+        </div>
+      )}
     </div>
   );
 };

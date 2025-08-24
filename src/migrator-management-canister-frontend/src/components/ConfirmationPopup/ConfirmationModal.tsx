@@ -9,7 +9,12 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
 
-export type ModalType = "topup" | "cycles" | "subscription" | "default";
+export type ModalType =
+  | "topup"
+  | "cycles"
+  | "subscription"
+  | "addon"
+  | "default";
 
 export interface ModalConfig {
   title: string;
@@ -50,6 +55,15 @@ const MODAL_CONFIGS: Record<ModalType, ModalConfig> = {
     title: "Confirm Subscription",
     message: "Enter the amount to deposit for your subscription",
     confirmText: "Subscribe",
+    cancelText: "Cancel",
+    showWalletInfo: true,
+    showInputField: false,
+    showTotalPrice: true,
+  },
+  addon: {
+    title: "Purchase Add-on",
+    message: "Deposit ICP to purchase this add-on service",
+    confirmText: "Purchase",
     cancelText: "Cancel",
     showWalletInfo: true,
     showInputField: false,
