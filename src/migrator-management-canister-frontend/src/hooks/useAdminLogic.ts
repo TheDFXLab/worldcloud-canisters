@@ -36,6 +36,9 @@ import {
     withdrawTreasury,
     setTreasury,
     setIcDomains,
+    fetchCanisterDomainRegistrations,
+    fetchGlobalTimers,
+    setupCustomDomain,
 } from '../state/slices/adminSlice';
 import { RootState, AppDispatch } from '../state/store';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
@@ -81,10 +84,17 @@ export const useAdminLogic = () => {
         currentUserRole,
         isLoadingCurrentUserRole,
         bookEntries,
+        canisterDomainRegistrations,
+        globalTimers,
+
         isLoadingBookEntries,
         isLoading,
         isLoadingTreasury,
         isLoadingEditIcDomains,
+        isLoadingDomainRegistrations,
+        isLoadingGlobalTimers,
+        isLoadingCustomDomain,
+        isLoadingCanisterDomainRegistrations,
         error,
         successMessage,
     } = useSelector((state: RootState) => state.admin);
@@ -494,6 +504,35 @@ export const useAdminLogic = () => {
         }
     }, [dispatch, identity, agent]);
 
+
+    const refreshCanisterDomainRegistrations = useCallback(async (canisterId: string) => {
+        if (identity && agent) {
+            await dispatch(fetchCanisterDomainRegistrations({ identity, agent, canisterId })).unwrap();
+        }
+    }, [dispatch, identity, agent]);
+
+    const refreshGlobalTimers = useCallback(async () => {
+        if (identity && agent) {
+            await dispatch(fetchGlobalTimers({ identity, agent })).unwrap();
+        }
+    }, [dispatch, identity, agent]);
+
+    const handleSetupCustomDomain = useCallback(async (canisterId: string, subdomainName: string) => {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(setupCustomDomain({ identity, agent, canisterId, subdomainName })).unwrap();
+            return { status: true, message: 'Custom domain setup successfully' };
+        } catch (error: any) {
+            return {
+                status: false,
+                message: error.message || 'Failed to setup custom domain',
+            };
+        }
+    }, [dispatch, identity, agent]);
+
+
     // Fetch initial data on mount
     useEffect(() => {
         if (identity && agent) {
@@ -524,6 +563,8 @@ export const useAdminLogic = () => {
         bookEntries,
         treasuryPrincipal,
         treasuryBalance,
+        canisterDomainRegistrations,
+        globalTimers,
 
         // Loading states
         isLoadingSlots,
@@ -542,6 +583,10 @@ export const useAdminLogic = () => {
         isLoading,
         isLoadingTreasury,
         isLoadingEditIcDomains,
+        isLoadingDomainRegistrations,
+        isLoadingGlobalTimers,
+        isLoadingCustomDomain,
+        isLoadingCanisterDomainRegistrations,
 
         // Messages
         error,
@@ -581,11 +626,14 @@ export const useAdminLogic = () => {
         handleUploadAssetCanisterWasm,
         handleClearError,
         handleClearSuccessMessage,
+        handleSetupCustomDomain,
 
         // Treasury
         handleGetTreasuryPrincipal,
         handleSetTreasury,
         withdrawTreasury: handleWithdrawTreasury,
-        handleSetIcDomains
+        handleSetIcDomains,
+        refreshCanisterDomainRegistrations,
+        refreshGlobalTimers,
     };
 }; 

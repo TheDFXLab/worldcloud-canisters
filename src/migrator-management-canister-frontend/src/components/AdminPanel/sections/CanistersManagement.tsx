@@ -12,10 +12,13 @@ import {
   Visibility,
   Language,
   ContentCopy,
+  Timer,
 } from "@mui/icons-material";
 import "./CanistersManagement.css";
 import { formatBytes } from "../../../utility/formatter";
 import { StaticFile } from "../../../utility/compression";
+import { Chip } from "@mui/material";
+import CanisterDetailsModal from "../components/CanisterDetailsModal/CanisterDetailsModal";
 
 const CanistersManagement: React.FC = () => {
   const {
@@ -23,6 +26,7 @@ const CanistersManagement: React.FC = () => {
     isLoadingCanisters,
     canisterDeployments,
     isLoadingCanisterDeployments,
+    globalTimers,
     refreshCanisterDeploymentsAll,
     refreshDeployedCanisters,
     handleSetIcDomains,
@@ -38,6 +42,12 @@ const CanistersManagement: React.FC = () => {
   const [icDomainsMessage, setIcDomainsMessage] = useState<{
     type: "success" | "error";
     text: string;
+  } | null>(null);
+
+  // State for canister details modal
+  const [selectedCanisterForModal, setSelectedCanisterForModal] = useState<{
+    canisterId: string;
+    canisterData: any;
   } | null>(null);
 
   useEffect(() => {
@@ -105,8 +115,14 @@ const CanistersManagement: React.FC = () => {
   };
 
   const handleViewCanister = (canisterId: string) => {
-    setSelectedCanister(canisterId);
-    // TODO: Implement canister details view
+    // setSelectedCanister(canisterId);
+    const canisterData = canisterDeployments.find(
+      ([principal]) => principal === canisterId
+    )?.[1];
+    setSelectedCanisterForModal({
+      canisterId,
+      canisterData: canisterData || {},
+    });
   };
 
   const handleIcDomainsUpload = async (
@@ -313,7 +329,6 @@ canister2.worldcloud.app
           </div>
         </div>
       </div>
-
       {/* Actions Section */}
       <div className="admin-actions-section">
         <div className="admin-action-card">
@@ -348,10 +363,35 @@ canister2.worldcloud.app
           </div>
         </div>
       </div>
-
       {/* IC Domains Section */}
       <IcDomainsSection />
+      <div className="admin-global-timers-section">
+        <div className="admin-action-card">
+          <h3>
+            <Timer /> Global Active Timers
+          </h3>
+          <p>Monitor active global timers across the system</p>
 
+          {globalTimers.length > 0 ? (
+            <div className="global-timers-list">
+              {globalTimers.map((timer, index) => (
+                <div key={index} className="timer-item">
+                  <span className="timer-id">{timer.id}</span>
+                  <span className="timer-value">{timer.timer_id}</span>
+                  <Chip
+                    icon={<Timer />}
+                    label="Active"
+                    color="success"
+                    size="small"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="no-timers">No active global timers</p>
+          )}
+        </div>
+      </div>
       {/* Canisters Table */}
       <div className="admin-table-section">
         <h3>Deployed Canisters</h3>
@@ -438,6 +478,15 @@ canister2.worldcloud.app
           </div>
         )}
       </div>
+
+      {selectedCanisterForModal && (
+        <CanisterDetailsModal
+          open={!!selectedCanisterForModal}
+          onClose={() => setSelectedCanisterForModal(null)}
+          canisterId={selectedCanisterForModal.canisterId}
+          canisterData={selectedCanisterForModal.canisterData}
+        />
+      )}
     </div>
   );
 };

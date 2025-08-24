@@ -1,5 +1,5 @@
 import { Principal } from "@dfinity/principal";
-import { ProjectPlan, Role, UsageLog, UsageLogExtended } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { CreateRecordResponse, DomainRegistration, DomainRegistrationId, IcDomainRegistration, IcDomainRegistrationStatus, ProjectPlan, Role, UsageLog, UsageLogExtended } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { SerializedUsageLogExtended } from "../utility/bigint";
 
 // Activity Log Types
@@ -149,6 +149,113 @@ export interface DeserializedPaginationPayload {
     limit: [bigint];
     page: [bigint];
 }
+
+export interface SerializedDomainRegistration {
+    txt_domain_record_id: string;
+    cname_challenge_record_id: string;
+    cname_domain_record_id: string;
+    ic_registration: SerializedIcDomainRegistration;
+}
+export type SerializedIcDomainRegistrationStatus = "inactive" | "pending" | "failed" | "complete";
+export interface SerializedIcDomainRegistration {
+    request_id: string;
+    is_apex: boolean;
+    domain: string;
+    subdomain: string;
+    status: string;
+}
+
+export interface SerializedDomainRegistrationPair {
+    id: string;
+    domainRegistration: SerializedDomainRegistration;
+}
+
+export interface SerializedCreateRecordResponse {
+    id: string;
+    name: string;
+    type: string;
+    content: string;
+    created_on: string;
+    modified_on: string;
+    ttl: number;
+    proxied: boolean;
+    proxiable: boolean;
+}
+
+export interface SerializedGlobalTimer {
+    id: string;
+    timer_id: number;
+}
+
+export const serializeGlobalTimers = (timers: [string, bigint][]): SerializedGlobalTimer[] => {
+    return timers.map(serializeGlobalTimer);
+};
+
+export const serializeGlobalTimer = (timer: [string, bigint]): SerializedGlobalTimer => {
+    const [id, timer_id] = timer;
+    return {
+        id,
+        timer_id: Number(timer_id),
+    };
+}
+
+export const serializeCreateRecordResponse = (createRecordResponse: CreateRecordResponse): SerializedCreateRecordResponse => {
+    return {
+        id: createRecordResponse.id,
+        name: createRecordResponse.name,
+        type: createRecordResponse.type,
+        content: createRecordResponse.content,
+        created_on: createRecordResponse.created_on,
+        modified_on: createRecordResponse.modified_on,
+        ttl: Number(createRecordResponse.ttl),
+        proxied: createRecordResponse.proxied,
+        proxiable: createRecordResponse.proxiable,
+    };
+}
+
+export const serializeDomainRegistrationsPairs = (pairs: [DomainRegistrationId, DomainRegistration][]): SerializedDomainRegistrationPair[] => {
+    return pairs.map(serializeDomainRegistrationPair);
+};
+
+export const serializeDomainRegistrationPair = (pair: [DomainRegistrationId, DomainRegistration]): SerializedDomainRegistrationPair => {
+    const [id, domainRegistration] = pair;
+    return {
+        id,
+        domainRegistration: serializeDomainRegistration(domainRegistration),
+    };
+};
+
+export const serializeDomainRegistrations = (domainRegistrations: DomainRegistration[]): SerializedDomainRegistration[] => {
+    return domainRegistrations.map(serializeDomainRegistration);
+};
+
+export const serializeDomainRegistration = (domainRegistration: DomainRegistration): SerializedDomainRegistration => {
+    return {
+        txt_domain_record_id: domainRegistration.txt_domain_record_id,
+        cname_challenge_record_id: domainRegistration.cname_challenge_record_id,
+        cname_domain_record_id: domainRegistration.cname_domain_record_id,
+        ic_registration: serializeIcDomainRegistration(domainRegistration.ic_registration),
+    };
+};
+
+export const serializeIcDomainRegistration = (icDomainRegistration: IcDomainRegistration
+): SerializedIcDomainRegistration => {
+    return {
+        request_id: icDomainRegistration.request_id,
+        is_apex: icDomainRegistration.is_apex,
+        domain: icDomainRegistration.domain,
+        subdomain: icDomainRegistration.subdomain,
+        status: serializeIcDomainRegistrationStatus(icDomainRegistration.status),
+    };
+};
+
+
+export const serializeIcDomainRegistrationStatus = (status: IcDomainRegistrationStatus): SerializedIcDomainRegistrationStatus => {
+    if ("pending" in status) return "pending";
+    if ("failed" in status) return "failed";
+    if ("complete" in status) return "complete";
+    return "inactive";
+};
 
 // Serialization Functions
 export const serializeActivityLog = (activityLog: any): SerializedActivityLog => {

@@ -28,6 +28,13 @@ import {
     SerializedBookEntry,
     serializeBookEntries,
     serializeUsageLogsPairAdmin,
+    SerializedDomainRegistration,
+    serializeDomainRegistrationPair,
+    serializeDomainRegistrationsPairs,
+    SerializedDomainRegistrationPair,
+    serializeGlobalTimers,
+    serializeDomainRegistrations,
+    SerializedGlobalTimer,
 } from '../../serialization/admin';
 import { SerializedUsageLogExtended } from '../../utility/bigint';
 import { StaticFile } from '../../utility/compression';
@@ -100,7 +107,19 @@ export interface AdminState {
     currentUserRole: SerializedRole | null,
     isLoadingCurrentUserRole: boolean,
 
-    isLoadingEditIcDomains: boolean
+    isLoadingEditIcDomains: boolean,
+
+    canisterDomainRegistrations: SerializedDomainRegistration[],
+    globalTimers: SerializedGlobalTimer[],
+
+    domainRegistrations: SerializedDomainRegistrationPair[],
+    isLoadingDomainRegistrations: boolean,
+
+    isLoadingGlobalTimers: boolean,
+    isLoadingCustomDomain: boolean,
+
+    isLoadingCanisterDomainRegistrations: boolean
+
 }
 
 
@@ -141,7 +160,13 @@ const initialState: AdminState = {
     currentUserRole: null,
     isLoadingCurrentUserRole: false,
     isLoadingEditIcDomains: false,
-
+    canisterDomainRegistrations: [],
+    globalTimers: [],
+    domainRegistrations: [],
+    isLoadingDomainRegistrations: false,
+    isLoadingGlobalTimers: false,
+    isLoadingCustomDomain: false,
+    isLoadingCanisterDomainRegistrations: false
 };
 
 // Async thunks
@@ -788,6 +813,74 @@ export const setIcDomains = createAsyncThunk(
 );
 
 
+export const fetchCanisterDomainRegistrations = createAsyncThunk(
+    'admin/fetchCanisterDomainRegistrations',
+    async ({
+        identity,
+        agent,
+        canisterId
+    }: {
+        identity: any;
+        agent: any;
+        canisterId: string;
+    }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_get_canister_domain_registrations(canisterId);
+        if ('ok' in response) {
+            return serializeDomainRegistrations(response.ok);
+        }
+        throw new Error('Failed to fetch canister domain registrations');
+    }
+);
+
+export const fetchDomainRegistrations = createAsyncThunk(
+    'admin/fetchDomainRegistrations',
+    async ({ identity, agent }: { identity: any; agent: any }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_get_domain_registrations();
+        if ('ok' in response) {
+            return serializeDomainRegistrationsPairs(response.ok);
+        }
+        throw new Error('Failed to fetch domain registrations');
+    }
+);
+
+export const fetchGlobalTimers = createAsyncThunk(
+    'admin/fetchGlobalTimers',
+    async ({ identity, agent }: { identity: any; agent: any }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_get_global_timers();
+        return serializeGlobalTimers(response);
+    }
+);
+
+
+export const setupCustomDomain = createAsyncThunk(
+    'admin/setupCustomDomain',
+    async ({
+        identity,
+        agent,
+        canisterId,
+        subdomainName
+    }: {
+        identity: any;
+        agent: any;
+        canisterId: string;
+        subdomainName: string;
+    }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_setup_custom_domain(canisterId, subdomainName);
+        if ('ok' in response) {
+            return response.ok;
+        }
+        throw new Error('Failed to setup custom domain');
+    }
+);
+
 
 // Slice
 const adminSlice = createSlice({
@@ -1302,6 +1395,50 @@ const adminSlice = createSlice({
             })
             .addCase(setIcDomains.rejected, (state, action) => {
                 state.isLoadingEditIcDomains = false;
+                state.error = handleError(action.error);
+            })
+            .addCase(fetchCanisterDomainRegistrations.pending, (state) => {
+                state.isLoadingCanisterDomainRegistrations = true;
+            })
+            .addCase(fetchCanisterDomainRegistrations.fulfilled, (state, action) => {
+                state.isLoadingCanisterDomainRegistrations = false;
+                state.canisterDomainRegistrations = action.payload;
+            })
+            .addCase(fetchCanisterDomainRegistrations.rejected, (state, action) => {
+                state.isLoadingCanisterDomainRegistrations = false;
+                state.error = handleError(action.error);
+            })
+            .addCase(fetchGlobalTimers.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(fetchGlobalTimers.fulfilled, (state, action) => {
+                state.isLoadingGlobalTimers = false;
+                state.globalTimers = action.payload;
+            })
+            .addCase(fetchGlobalTimers.rejected, (state, action) => {
+                state.isLoadingGlobalTimers = false;
+                state.error = handleError(action.error);
+            })
+            .addCase(setupCustomDomain.pending, (state) => {
+                state.isLoadingCustomDomain = true;
+            })
+            .addCase(setupCustomDomain.fulfilled, (state, action) => {
+                state.isLoadingCustomDomain = false;
+                state.successMessage = 'Custom domain setup successfully';
+            })
+            .addCase(setupCustomDomain.rejected, (state, action) => {
+                state.isLoadingCustomDomain = false;
+                state.error = handleError(action.error);
+            })
+            .addCase(fetchDomainRegistrations.pending, (state) => {
+                state.isLoadingDomainRegistrations = true;
+            })
+            .addCase(fetchDomainRegistrations.fulfilled, (state, action) => {
+                state.isLoadingDomainRegistrations = false;
+                state.domainRegistrations = action.payload;
+            })
+            .addCase(fetchDomainRegistrations.rejected, (state, action) => {
+                state.isLoadingDomainRegistrations = false;
                 state.error = handleError(action.error);
             })
 
