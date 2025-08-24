@@ -171,4 +171,74 @@ module {
       seconds_until_next_midnight = seconds_until_next_midnight;
     };
   };
+
+  /** Helpers for expiry duration calculation from human readable configuration*/
+  public func calculate_expiry_timestamp(
+    expiry : Types.ExpiryDuration,
+    expiry_duration : Nat,
+  ) : Nat {
+    let now = Int.abs(get_time_now(#milliseconds));
+
+    let duration_in_ms = switch (expiry) {
+      case (#none) { 0 };
+      case (#minute) { expiry_duration * 60 * 1000 };
+      case (#hour) { expiry_duration * 60 * 60 * 1000 };
+      case (#day) { expiry_duration * 24 * 60 * 60 * 1000 };
+      case (#month) { expiry_duration * 30 * 24 * 60 * 60 * 1000 }; // Fixed 30-day month
+      case (#year) { expiry_duration * 365 * 24 * 60 * 60 * 1000 }; // Fixed 365-day year
+    };
+
+    return now + duration_in_ms;
+  };
+
+  // Alternative: Calculate duration in milliseconds without adding to current time
+  public func calculate_duration_ms(
+    expiry : Types.ExpiryDuration,
+    expiry_duration : Nat,
+  ) : Nat {
+    switch (expiry) {
+      case (#none) { 0 };
+      case (#minute) { expiry_duration * 60 * 1000 };
+      case (#hour) { expiry_duration * 60 * 60 * 1000 };
+      case (#day) { expiry_duration * 24 * 60 * 60 * 1000 };
+      case (#month) { expiry_duration * 30 * 24 * 60 * 60 * 1000 }; // Fixed 30-day month
+      case (#year) { expiry_duration * 365 * 24 * 60 * 60 * 1000 }; // Fixed 365-day year
+    };
+  };
+
+  // Helper: Get human-readable duration string
+  public func format_duration(
+    expiry : Types.ExpiryDuration,
+    expiry_duration : Nat,
+  ) : Text {
+    let duration_text = switch (expiry) {
+      case (#none) { "No expiry" };
+      case (#minute) {
+        if (expiry_duration == 1) { "1 minute" } else {
+          Nat.toText(expiry_duration) # " minutes";
+        };
+      };
+      case (#hour) {
+        if (expiry_duration == 1) { "1 hour" } else {
+          Nat.toText(expiry_duration) # " hours";
+        };
+      };
+      case (#day) {
+        if (expiry_duration == 1) { "1 day" } else {
+          Nat.toText(expiry_duration) # " days";
+        };
+      };
+      case (#month) {
+        if (expiry_duration == 1) { "1 month" } else {
+          Nat.toText(expiry_duration) # " months";
+        };
+      };
+      case (#year) {
+        if (expiry_duration == 1) { "1 year" } else {
+          Nat.toText(expiry_duration) # " years";
+        };
+      };
+    };
+    return duration_text;
+  };
 };
