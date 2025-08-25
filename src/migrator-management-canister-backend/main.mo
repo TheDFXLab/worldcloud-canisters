@@ -157,7 +157,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   /** Initialization*/
   private func init<system>() {
     Debug.print("Initializing backend canister....");
-    access_control.init();
+    // access_control.init();
     init_quota_timer<system>();
   };
 
@@ -804,10 +804,16 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   public shared (msg) func create_project(payload : Types.CreateProjectPayload) : async Types.Response<Types.CreateProjectResponse> {
     if (Utility.is_anonymous(msg.caller)) return #err(Errors.Unauthorized());
 
+    // Ensure user doesnt go over subscription limit
+    let can_subscribe = switch (subscription_manager.validate_increment_slots_by_user(msg.caller)) {
+      case (false) return #err(Errors.MaxSlotsReached());
+      case (true) true;
+    };
+
     let subscription : Types.Subscription = switch (subscription_manager.get_subscription(msg.caller)) {
       case (#err(err)) {
-        if (err == "Subscription not found" and payload.plan == #freemium) return #err(Errors.FreemiumSubscriptionRequired());
-        if (err == "Subscription not found" and payload.plan == #paid) return #err(Errors.SubscriptionRequired());
+        if (err == Errors.SubscriptionNotFound() and payload.plan == #freemium) return #err(Errors.FreemiumSubscriptionRequired());
+        if (err == Errors.SubscriptionNotFound() and payload.plan == #paid) return #err(Errors.SubscriptionRequired());
         return #err(err);
       };
       case (#ok(val)) { val };
@@ -882,6 +888,12 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
         )
       );
     } else if (project.plan == #paid) {
+      // Ensure user doesnt go over subscription limit
+      let can_subscribe = switch (subscription_manager.validate_increment_slots_by_user(msg.caller)) {
+        case (false) return #err(Errors.MaxSlotsReached());
+        case (true) true;
+      };
+
       // Handle Paid plan type
       let canister_id : Principal = switch (project.canister_id) {
         case (null) {
@@ -2549,6 +2561,25 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return await domain.create_dns_records_for_canister(cloudflare.get_zone_id(), payload, transform, cloudflare);
   };
 
+  public shared (msg) func setup_custom_domain_by_project(project_id : Types.ProjectId, subdomain_name : Text) : async Types.Response<Types.DomainRegistration> {
+    let _is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(authorized)) { authorized };
+    };
+
+    let project : Types.Project = switch (project_manager.get_project_by_id(project_id)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    let canister_id : Principal = switch (project.canister_id) {
+      case (null) return #err(Errors.NotFoundCanister());
+      case (?val) val;
+    };
+
+    return await setup_custom_domain(canister_id, subdomain_name);
+  };
+
   public shared (msg) func setup_custom_domain(canister_id : Principal, subdomain_name : Text) : async Types.Response<Types.DomainRegistration> {
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
@@ -2608,6 +2639,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
           case (#ok(val)) {
             Debug.print("[schedule_register_domain] Successfully triggered register domain: " # val);
             _delete_global_timer(subdomain_name);
+
             val;
           };
         };
@@ -2641,6 +2673,26 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   public shared (msg) func get_domain_registration_status(registration_id : Text) : async Types.Response<Bool> {
     return await domain.get_domain_registration_by_id(registration_id, transform);
+  };
+
+  public shared query (msg) func get_domain_registrations(project_id : Types.ProjectId) : async Types.Response<[Types.DomainRegistration]> {
+    let _is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
+      case (#err(_msg)) { return #err(_msg) };
+      case (#ok(authorized)) { authorized };
+    };
+
+    let project : Types.Project = switch (project_manager.get_project_by_id(project_id)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    if (project.plan != #paid) return #err(Errors.PremiumFeature());
+    let canister_id : Principal = switch (project.canister_id) {
+      case (null) return #err(Errors.NotFoundCanister());
+      case (?val) val;
+    };
+
+    return domain.get_domain_registrations(canister_id);
   };
 
   public shared (msg) func register_domain(subdomain_name : Text) : async Types.Response<Types.DomainRegistrationId> {
