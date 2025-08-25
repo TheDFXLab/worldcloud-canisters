@@ -72,10 +72,17 @@ module {
 
       return #ok(registrations);
     };
-
     // Used to initialize the domain registration object when an add-on is purchased
-    public func initialize_domain_registration(canister_id : Principal) : Types.DomainRegistration {
+    public func initialize_domain_registration(canister_id : Principal) : Types.Response<Types.DomainRegistration> {
+      // Get existing registrations list for id calculation
+      let existing_registrations : [Types.DomainRegistration] = switch (get_domain_registrations(canister_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      if (existing_registrations.size() != 0) return #err(Errors.AlreadyCreated());
       let empty_registration : Types.DomainRegistration = {
+        id = 0;
         txt_domain_record_id = "";
         cname_challenge_record_id = "";
         cname_domain_record_id = "";
@@ -89,7 +96,7 @@ module {
       };
 
       Map.add(canister_to_domain_registration, Principal.compare, canister_id, [empty_registration]);
-      return empty_registration;
+      return #ok(empty_registration);
     };
     // Create a new DNS record
     public func create_dns_record(payload : Types.CreateDnsRecordPayload, transform : Types.Transform, cloudflare : Types.Cloudflare) : async Types.Response<Types.DnsRecord> {
@@ -182,15 +189,15 @@ module {
         case (#err(err)) return #err(err);
         case (#ok(val)) val;
       };
-      // if (not is_stored) return #err(Errors.FailedSaveRecords());
 
-      // Debug.print("Registering domain with IC");
-      // let register_domain_request_id = switch (await register_domain(payload.subdomain_name # "." # payload.domain_name, transform)) {
-      //   case (#err(err)) return #err(err);
-      //   case (#ok(val)) val;
-      // };
+      // Get existing registrations list for id calculation
+      let existing_registrations : [Types.DomainRegistration] = switch (get_domain_registrations(payload.canister_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
 
       let canister_domain_registration : Types.DomainRegistration = {
+        id = existing_registrations.size();
         txt_domain_record_id = dns_record_ids.txt_domain_record_id;
         cname_challenge_record_id = dns_record_ids.cname_challenge_record_id;
         cname_domain_record_id = dns_record_ids.cname_domain_record_id;
@@ -287,6 +294,44 @@ module {
       });
 
       return #ok();
+    };
+
+    private func update_domain_registration(canister_id : Principal, new_domain_registration : Types.DomainRegistration) : Types.Response<Types.DomainRegistration> {
+      var existing_registrations : [Types.DomainRegistration] = switch (get_domain_registrations(canister_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      if (existing_registrations.size() == 0) return #err(Errors.NotFound("domain registration"));
+
+      // Find the index of the matching registration
+      let matching_index : ?Nat = Array.indexOf<Types.DomainRegistration>(
+        new_domain_registration,
+        existing_registrations,
+        func(a : Types.DomainRegistration, b : Types.DomainRegistration) : Bool {
+          a.id == b.id;
+        },
+      );
+
+      switch (matching_index) {
+        case (null) return #err(Errors.NotFound("domain registration"));
+        case (?index) {
+          // Create a new array with the updated element
+          let new_array : [Types.DomainRegistration] = Array.tabulate<Types.DomainRegistration>(
+            existing_registrations.size(),
+            func(i : Nat) : Types.DomainRegistration {
+              if (i == index) {
+                new_domain_registration;
+              } else {
+                existing_registrations[i];
+              };
+            },
+          );
+
+          Map.add(canister_to_domain_registration, Principal.compare, canister_id, new_array);
+          return #ok(new_domain_registration);
+        };
+      };
     };
 
     public func get_domain_registration_by_id(id : Text, transform : Types.Transform) : async Types.Response<Bool> {

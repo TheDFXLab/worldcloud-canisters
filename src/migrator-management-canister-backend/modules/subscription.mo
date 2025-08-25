@@ -215,7 +215,11 @@ module {
       let new_add_ons : [Types.AddOnService] = Array.append(add_on_exists.add_ons, [new_add_on]);
       Map.add(add_ons_map, Nat.compare, project_id, new_add_ons);
 
-      let _new_domain_registration : Types.DomainRegistration = domain_manager.initialize_domain_registration(canister_id);
+      let _new_domain_registration : Types.DomainRegistration = switch (domain_manager.initialize_domain_registration(canister_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
       return #ok(new_add_ons);
     };
 
@@ -309,17 +313,46 @@ module {
       return create_response;
     };
 
-    public func push_canister_id(caller : Principal, canister_id : Principal) : async Bool {
+    private func increment_used_slots(sub : Types.Subscription) : Types.Response<Types.Subscription> {
+      if (not _validate_increment_slots(sub)) return #err(Errors.MaxSlotsReached());
+      let updated_sub : Types.Subscription = {
+        sub with used_slots = sub.used_slots + 1
+      };
+
+      return #ok(updated_sub);
+    };
+
+    public func validate_increment_slots_by_user(user : Principal) : Bool {
+      let sub : Types.Subscription = switch (get_subscription(user)) {
+        case (#err(_)) return false;
+        case (#ok(sub)) sub;
+      };
+
+      return _validate_increment_slots(sub);
+    };
+
+    private func _validate_increment_slots(sub : Types.Subscription) : Bool {
+      if (sub.used_slots + 1 > sub.max_slots) return false;
+      return true;
+    };
+
+    public func push_canister_id(caller : Principal, canister_id : Principal) : async Types.Response<Bool> {
       let subscription = get_subscription(caller);
       switch (subscription) {
-        case (#err(_)) { return false };
+        case (#err(_)) { return #ok(false) };
         case (#ok(sub)) {
           let updated_sub = {
-            sub with canisters = Array.append(sub.canisters, [canister_id])
+            sub with canisters = Array.append(sub.canisters, [canister_id]);
           };
+
+          let updated_used_slots : Types.Subscription = switch (increment_used_slots(updated_sub)) {
+            case (#err(err)) return #err(err);
+            case (#ok(val)) val;
+          };
+
           //   subscriptions.put(caller, { sub with canisters = Array.append(sub.canisters, [canister_id]) });
-          Map.add(subscriptions, Principal.compare, caller, updated_sub);
-          return true;
+          Map.add(subscriptions, Principal.compare, caller, updated_used_slots);
+          return #ok(true);
         };
       };
     };
