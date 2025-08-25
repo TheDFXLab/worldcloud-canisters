@@ -9,6 +9,7 @@ module {
       expiry_duration = 1;
       price = 50_000_000; // 0.5 icp
       features = ["Custom Subdomain Name", "Host Website on WorldCloud Domain", "Renew Monthly"];
+      is_available = true;
     },
     {
       id = 0;
@@ -18,6 +19,7 @@ module {
       expiry_duration = 1;
       price = 100_000_000; // 1 icp
       features = ["Custom Domain", "Bring Your Own Name Servers", "Renew Monthly"];
+      is_available = false;
     },
   ];
 

@@ -423,6 +423,7 @@ module {
     expiry : ExpiryDuration;
     price : Nat;
     features : [Text];
+    is_available : Bool;
   };
 
   public type HasAddonResult = {
@@ -581,6 +582,7 @@ module {
 
   // Overview of a domain registration's records and status
   public type DomainRegistration = {
+    id : Nat;
     txt_domain_record_id : Text;
     cname_challenge_record_id : Text;
     cname_domain_record_id : Text;
@@ -894,7 +896,7 @@ module {
     edit_ic_domains : (canister_id : Principal, new_ic_domains : StaticFile) -> async Response<()>;
     get_domain_registration_by_id : (id : Text, transform : Transform) -> async Response<Bool>;
     register_domain : (domain : Text, transform : Transform) -> async Response<Text>;
-    initialize_domain_registration : (canister_id : Principal) -> DomainRegistration;
+    initialize_domain_registration : (canister_id : Principal) -> Response<DomainRegistration>;
   };
 
   public type RegisterDomainSuccessResponse = {
