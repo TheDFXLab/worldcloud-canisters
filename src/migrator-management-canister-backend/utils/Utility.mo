@@ -241,4 +241,46 @@ module {
     };
     return duration_text;
   };
+
+  public func compare_counter_type(a : Types.CounterType, b : Types.CounterType) : {
+    #less;
+    #equal;
+    #greater;
+  } {
+    switch (a, b) {
+      case (#addon_id, #addon_id) { #equal };
+      case (#project_id, #project_id) { #equal };
+      case (#subscription_id, #subscription_id) { #equal };
+      case (#domain_registration_id, #domain_registration_id) { #equal };
+
+      // addon_id is the smallest
+      case (#addon_id, _) { #less };
+      case (_, #addon_id) { #greater };
+
+      // project_id next
+      case (#project_id, _) { #less };
+      case (_, #project_id) { #greater };
+
+      // subscription_id next
+      case (#subscription_id, _) { #less };
+      case (_, #subscription_id) { #greater };
+    };
+  };
+
+  public func get_domain_registration_error(_key : Types.DomainRegistrationErrorKey) : Text {
+    let err = switch (_key) {
+      case (#cloudflare_exists_dns_txt_challenge_record) "DNS Record for TXT Challenge already exists.";
+      case (#cloudflare_exists_dns_txt_record) "DNS Record for TXT domain already exists.";
+      case (#ic_existing_dns_txt_challenge_record) "IC Registration: The DNS record already contains a TXT entry for the _acme-challenge subdomain. Remove it and try again";
+      case (#ic_missing_dns_cname_record) "IC Registration: The CNAME entry for the _acme-challenge subdomain is missing";
+      case (#ic_missing_dns_txt_record) "IC Registration: The TXT entry for the _canister-id subdomain is missing";
+      case (#ic_invalid_dns_txt_record) "IC Registration: The content of the TXT entry is not a valid canister ID";
+      case (#ic_more_than_one_dns_txt_record) "IC Registration: There are multiple TXT entries for the _canister-id-subdomain. Remove them and keep only one";
+      case (#ic_failed_to_retrieve_known_domains) "IC Registration: The ic-domains file is not accessible under .well-known/ic-domains";
+      case (#ic_rate_limit_exceeded) "IC Registration: Rate limited exceeded. Please try again later.";
+      case (#cloudflare_exist_records) Errors.DomainRecordsExist();
+      case (_) "";
+    };
+    return err;
+  };
 };
