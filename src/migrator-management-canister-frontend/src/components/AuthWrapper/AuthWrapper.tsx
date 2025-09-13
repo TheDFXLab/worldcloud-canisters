@@ -83,60 +83,62 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     return (
       <>
         <div className="auth-container">
-          <div className="auth-logo-section">
-            <span className="auth-logo-text-parent">
-              <img
-                src={logo}
-                alt="WorldCloud Logo"
-                className="auth-logo-icon"
-              />
-              <span>
-                <span className="auth-logo-text-child">World</span>
-                <span className="auth-logo-text-child">{"("}</span>
-                <span className="auth-logo-text-child">cloud</span>
-                <span className="auth-logo-text-child">{")"}</span>
-                <span className="auth-logo-text-child">{";"}</span>
-                <span className="auth-beta-text">{" beta"}</span>
+          <div className="auth-cards-container">
+            <div className="auth-logo-section">
+              <span className="auth-logo-text-parent">
+                <img
+                  src={logo}
+                  alt="WorldCloud Logo"
+                  className="auth-logo-icon"
+                />
+                <span>
+                  <span className="auth-logo-text-child">World</span>
+                  <span className="auth-logo-text-child">{"("}</span>
+                  <span className="auth-logo-text-child">cloud</span>
+                  <span className="auth-logo-text-child">{")"}</span>
+                  <span className="auth-logo-text-child">{";"}</span>
+                  <span className="auth-beta-text">{" beta"}</span>
+                </span>
               </span>
-            </span>
-          </div>
-          <div className="auth-card">
-            {/* <h1 className="auth-title">Welcome to WorldCloud</h1> */}
+            </div>
+            <div className="auth-card">
+              {/* <h1 className="auth-title">Welcome to WorldCloud</h1> */}
 
-            <p className="auth-description">
-              Connect your wallet to access the dashboard and start deploying
-              your projects on the Internet Computer
-            </p>
-            <div className="auth-buttons">
-              <button onClick={login} className="auth-button ii">
-                <img
-                  className="auth-button-icon iiLogo"
-                  src={ii}
-                  alt="Internet Identity"
-                />
-                <span className="auth-button-text">
-                  Continue with Internet Identity
-                </span>
-              </button>
+              <p className="auth-description">
+                Connect your wallet to access the dashboard and start deploying
+                your projects on the Internet Computer
+              </p>
+              <div className="auth-buttons">
+                <button onClick={login} className="auth-button ii">
+                  <img
+                    className="auth-button-icon iiLogo"
+                    src={ii}
+                    alt="Internet Identity"
+                  />
+                  <span className="auth-button-text">
+                    Continue with Internet Identity
+                  </span>
+                </button>
 
-              <button onClick={loginII2} className="auth-button ii">
-                <img
-                  className="auth-button-icon iiLogo"
-                  src={ii}
-                  alt="Internet Identity 2.0"
-                />
-                <span className="auth-button-text">
-                  Continue with Internet Identity 2.0
-                </span>
-              </button>
+                <button onClick={loginII2} className="auth-button ii">
+                  <img
+                    className="auth-button-icon iiLogo"
+                    src={ii}
+                    alt="Internet Identity 2.0"
+                  />
+                  <span className="auth-button-text">
+                    Continue with Internet Identity 2.0
+                  </span>
+                </button>
 
-              {/* <div onClick={loginWithPlug} className="auth-button-image">
+                {/* <div onClick={loginWithPlug} className="auth-button-image">
                 <img
                   className="auth-button-image-icon"
                   src={plugLogo}
                   alt="Plug Wallet"
                 />
               </div> */}
+              </div>
             </div>
           </div>
         </div>
