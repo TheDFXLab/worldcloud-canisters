@@ -17,10 +17,13 @@ import {
     SerializedUsageLogExtended
 } from '../../utility/bigint';
 import { fetchFreemiumUsage } from './freemiumSlice';
-import { serializeUsageLog } from '../../serialization/admin';
+import { SerializedDomainRegistration, serializeDomainRegistrations, SerializedParsedMyAddons, serializeParsedMyAddons, serializeUsageLog } from '../../serialization/admin';
 import { serializeAddOns, serializeAddOnVariantList, SerializedAddOn, SerializedAddOnVariant } from '../../serialization/addons';
 
 export type UsageLog = SerializedUsageLogExtended;
+export interface DomainRegistrationsMap {
+    [projectId: number]: SerializedDomainRegistration[]
+}
 
 export interface ProjectsState {
     projects: SerializedProject[];
@@ -32,6 +35,12 @@ export interface ProjectsState {
     addOns: SerializedAddOn[];
     userUsage: UsageLog | null;
     activityLogs: DeserializedActivityLog[];
+    // Domain registrations
+    domainRegistrations: { [projectId: number]: SerializedDomainRegistration[] };
+    parsedMyAddons: SerializedParsedMyAddons;
+
+
+
     // Loading flags
     isLoading: boolean;
     isLoadingUsage: boolean;
@@ -40,6 +49,10 @@ export interface ProjectsState {
     isLoadingDeleteProject: boolean;
     isLoadingAddOns: boolean;
     isLoadingAddOnsList: boolean;
+    isLoadingDomainRegistrations: boolean;
+    isLoadingGetParsedMyAddons: boolean;
+    isLoadingSubdomainNameAvailable: boolean;
+    isLoadingDeleteDomainRegistration: boolean;
 
     // Errors
     error: string | null;
@@ -56,6 +69,8 @@ const initialState: ProjectsState = {
     viewMode: 'card',
     userUsage: null,
     activityLogs: [],
+    domainRegistrations: {},
+    parsedMyAddons: { domain_addons: [] },
 
     // Loading flags
     isLoadingUsage: false,
@@ -65,7 +80,10 @@ const initialState: ProjectsState = {
     isLoading: false,
     isLoadingAddOns: false,
     isLoadingAddOnsList: false,
-
+    isLoadingDomainRegistrations: false,
+    isLoadingGetParsedMyAddons: false,
+    isLoadingSubdomainNameAvailable: false,
+    isLoadingDeleteDomainRegistration: false,
     // Errors
     error: null,
 };
@@ -248,14 +266,15 @@ export const hasAddOn = createAsyncThunk(
     }
 )
 
-export const addOns = createAsyncThunk(
+export const getMyAddOns = createAsyncThunk(
     'projects/getAddOns',
     async ({ identity, agent, projectId }: { identity: any, agent: any, projectId: number }) => {
         const mainApi = await MainApi.create(identity, agent);
         if (!mainApi) throw new Error("MainApi is not initialized.");
-
         const addOns = await mainApi.get_add_ons_by_project(projectId);
-        return serializeAddOns(addOns);
+        let s = serializeAddOns(addOns);
+        return s;
+
     }
 )
 
@@ -268,6 +287,74 @@ export const getAddOnsList = createAsyncThunk(
 
         const addOns = await mainApi.get_add_ons_list();
         return serializeAddOnVariantList(addOns);
+    }
+)
+
+export const getDomainRegistrationsByProject = createAsyncThunk(
+    'projects/getDomainRegistrationsByProject',
+    async ({ identity, agent, projectId }: { identity: any, agent: any, projectId: number }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) throw new Error("MainApi not initialized.");
+        const registrations = await mainApi.get_domain_registrations_by_project(projectId);
+        return serializeDomainRegistrations(registrations);
+    }
+)
+
+export const getDomainRegistrationStatus = createAsyncThunk(
+    'projects/getDomainRegistrationStatus',
+    async ({ identity, agent, registrationId }: { identity: any, agent: any, registrationId: string }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) throw new Error("MainApi not initialized.");
+
+        const status = await mainApi.get_domain_registration_status(registrationId);
+        return status;
+    }
+)
+
+export const getParsedMyAddons = createAsyncThunk(
+    'projects/getParsedMyAddons',
+    async ({ identity, agent, projectId }: { identity: any, agent: any, projectId: number }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) throw new Error("MainApi not initialized.");
+
+        const result = await mainApi.get_parsed_my_addons((projectId));
+
+        // debugger;
+        return serializeParsedMyAddons(result);
+    }
+)
+
+
+export const setupCustomDomainByProject = createAsyncThunk(
+    'projects/setupCustomDomainByProject',
+    async ({ identity, agent, projectId, domainName, addonId }: { identity: any, agent: any, projectId: number, domainName: string, addonId: number }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) throw new Error("MainApi not initialized.");
+
+        const result = await mainApi.setup_custom_domain_by_project(projectId, domainName, addonId);
+        return result;
+    }
+)
+
+export const isAvailableSubdomainName = createAsyncThunk(
+    'projects/isAvailableSubdomainName',
+    async ({ identity, agent, projectId, domainName, addonId }: { identity: any, agent: any, projectId: number, domainName: string, addonId: number }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) throw new Error("MainApi not initialized.");
+
+        const result = await mainApi.is_subdomain_available(domainName, projectId, addonId);
+        return result;
+    }
+)
+
+export const deleteDomainRegistration = createAsyncThunk(
+    'projects/deleteDomainRegistration',
+    async ({ identity, agent, projectId, addonId }: { identity: any, agent: any, projectId: number, addonId: number }) => {
+        const mainApi = await MainApi.create(identity, agent);
+        if (!mainApi) throw new Error("MainApi not initialized.");
+
+        const result = await mainApi.delete_domain_registration(projectId, addonId);
+        return result;
     }
 )
 
@@ -386,19 +473,19 @@ export const projectsSlice = createSlice({
                 state.isLoadingDeleteProject = false;
                 state.error = action.error.message || "Failed to delete project"
             })
-            .addCase(addOns.pending, (state) => {
+            .addCase(getMyAddOns.pending, (state) => {
                 state.isLoadingAddOns = true;
                 state.error = null;
             })
-            .addCase(addOns.fulfilled, (state, action) => {
+            .addCase(getMyAddOns.fulfilled, (state, action) => {
                 state.isLoadingAddOns = false;
                 state.addOns = action.payload;
                 // Also store addons for the specific project
-                if (action.meta.arg.projectId) {
+                if (action.meta.arg.projectId.toString().length) {
                     state.projectAddOns[action.meta.arg.projectId] = action.payload;
                 }
             })
-            .addCase(addOns.rejected, (state, action) => {
+            .addCase(getMyAddOns.rejected, (state, action) => {
                 state.isLoadingAddOns = false;
                 state.error = action.error.message || 'Failed to fetch add-ons';
             })
@@ -426,6 +513,91 @@ export const projectsSlice = createSlice({
                 state.addOnsList = [];
                 state.error = action.error.message || "Failed to get add-on list from backend API.";
             })
+
+            .addCase(getDomainRegistrationsByProject.pending, (state) => {
+                state.isLoadingDomainRegistrations = true;
+                state.error = null;
+            })
+            .addCase(getDomainRegistrationsByProject.fulfilled, (state, action) => {
+                state.isLoadingDomainRegistrations = false;
+                state.domainRegistrations[action.meta.arg.projectId] = action.payload;
+            })
+            .addCase(getDomainRegistrationsByProject.rejected, (state, action) => {
+                state.isLoadingDomainRegistrations = false;
+                state.error = action.error.message || "Failed to fetch domain registrations by project";
+            })
+            .addCase(isAvailableSubdomainName.pending, (state) => {
+                state.isLoadingSubdomainNameAvailable = true;
+            })
+            .addCase(isAvailableSubdomainName.fulfilled, (state, action) => {
+                state.isLoadingSubdomainNameAvailable = false;
+            })
+            .addCase(isAvailableSubdomainName.rejected, (state, action) => {
+                state.isLoadingSubdomainNameAvailable = false;
+                state.error = action.error.message ? action.error.message : "Failed to check availability of subdomain name.";
+            })
+
+            // .addCase(getDomainRegistrationsByProject.pending, (state) => {
+            //     state.isLoadingDomainRegistrations = true;
+            //     state.error = null;
+            // })
+            // .addCase(getDomainRegistrationsByProject.fulfilled, (state, action) => {
+            //     state.isLoadingDomainRegistrations = false;
+            //     // This thunk is for fetching by canister, not project.
+            //     // We need to find the projectId from the canisterId.
+            //     // For now, we'll just store the raw result.
+            //     // A more robust solution would involve mapping canisterId to projectId.
+            //     // For this example, we'll just store the raw result.
+            //     state.domainRegistrations[action.meta.arg.projectId] = action.payload; // This line is problematic
+            // })
+            // .addCase(getDomainRegistrationsByProject.rejected, (state, action) => {
+            //     state.isLoadingDomainRegistrations = false;
+            //     state.error = action.error.message || "Failed to fetch domain registrations by canister";
+            // })
+
+            .addCase(getDomainRegistrationStatus.pending, (state) => {
+                state.error = null;
+            })
+            .addCase(getDomainRegistrationStatus.fulfilled, (state, action) => {
+                // This thunk is for fetching status by registrationId.
+                // We don't need to store it in the state as it's a single value.
+            })
+            .addCase(getDomainRegistrationStatus.rejected, (state, action) => {
+                state.error = action.error.message || "Failed to fetch domain registration status";
+            })
+
+            .addCase(setupCustomDomainByProject.pending, (state) => {
+                state.error = null;
+            })
+            .addCase(setupCustomDomainByProject.fulfilled, (state, action) => {
+                // This thunk is for setting up a custom domain.
+                // We don't need to store it in the state as it's a single value.
+            })
+            .addCase(setupCustomDomainByProject.rejected, (state, action) => {
+                state.error = action.error.message || "Failed to setup custom domain";
+            })
+            .addCase(getParsedMyAddons.pending, (state) => {
+                state.isLoadingGetParsedMyAddons = true;
+            })
+            .addCase(getParsedMyAddons.fulfilled, (state, action) => {
+                state.isLoadingGetParsedMyAddons = false;
+                state.parsedMyAddons = action.payload;
+            })
+            .addCase(getParsedMyAddons.rejected, (state, action) => {
+                state.isLoadingGetParsedMyAddons = false;
+                state.error = action.error.message ? action.error.message : "Failed to get parsed addons";
+            })
+            .addCase(deleteDomainRegistration.pending, (state) => {
+                state.isLoadingDeleteDomainRegistration = true;
+            })
+            .addCase(deleteDomainRegistration.fulfilled, (state, action) => {
+                state.isLoadingDeleteDomainRegistration = false;
+            })
+            .addCase(deleteDomainRegistration.rejected, (state, action) => {
+                state.isLoadingDeleteDomainRegistration = false;
+                state.error = action.error.message ? action.error.message : "Failed to delete domain registration"
+            })
+
     },
 });
 
@@ -452,6 +624,16 @@ export const selectAllAddOns = (state: { projects: ProjectsState }): SerializedA
 // Selector to get addons loading state
 export const selectAddOnsLoading = (state: { projects: ProjectsState }): boolean => {
     return state.projects.isLoadingAddOns;
+};
+
+// Selector to get domain registrations for a specific project
+export const selectProjectDomainRegistrations = (state: { projects: ProjectsState }, projectId: number): any[] => {
+    return state.projects.domainRegistrations[projectId] || [];
+};
+
+// Selector to get domain registrations loading state
+export const selectDomainRegistrationsLoading = (state: { projects: ProjectsState }): boolean => {
+    return state.projects.isLoadingDomainRegistrations;
 };
 
 export default projectsSlice.reducer; 

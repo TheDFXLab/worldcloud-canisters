@@ -19,9 +19,15 @@ import {
     clearProjectAssets,
     deleteProject,
     fetchUserUsage,
-    addOns,
+    getMyAddOns,
     getAddOnsList,
     hasAddOn,
+    setupCustomDomainByProject,
+    selectProjectDomainRegistrations,
+    getDomainRegistrationsByProject,
+    getParsedMyAddons,
+    isAvailableSubdomainName,
+    deleteDomainRegistration,
     // setProjectAddOns,
 } from '../state/slices/projectsSlice';
 import { RootState, AppDispatch } from '../state/store';
@@ -64,6 +70,7 @@ export const useProjectsLogic = () => {
 
     const {
         projects: serializedProjects,
+        parsedMyAddons,
         isLoading,
         isLoadingClearAssets,
         isLoadingDeleteProject,
@@ -73,10 +80,16 @@ export const useProjectsLogic = () => {
         viewMode,
         userUsage,
         addOns: projectAddOnsData,
+        domainRegistrations,
         addOnsList,
         projectAddOns,
         isLoadingAddOns,
-        isLoadingAddOnsList
+        isLoadingAddOnsList,
+        isLoadingDomainRegistrations,
+        isLoadingActivityLogs,
+        isLoadingGetParsedMyAddons,
+        isLoadingSubdomainNameAvailable,
+        isLoadingDeleteDomainRegistration
     } = useSelector((state: RootState) => state.projects);
 
     // Function to refresh projects
@@ -160,7 +173,7 @@ export const useProjectsLogic = () => {
     // Addon-related functions
     const handleFetchAddOns = useCallback(async (projectId: number) => {
         if (identity && agent) {
-            dispatch(addOns({
+            let result = await dispatch(getMyAddOns({
                 identity,
                 agent,
                 projectId
@@ -170,7 +183,7 @@ export const useProjectsLogic = () => {
 
     const handleFetchAddOnsList = useCallback(async () => {
         if (identity && agent) {
-            dispatch(getAddOnsList({
+            let list = await dispatch(getAddOnsList({
                 identity,
                 agent
             })).unwrap();
@@ -179,22 +192,38 @@ export const useProjectsLogic = () => {
 
     const handleCheckAddOn = useCallback(async (projectId: number, addonId: number) => {
         if (identity && agent) {
-            dispatch(hasAddOn({
+            const has = await dispatch(hasAddOn({
                 identity,
                 agent,
                 projectId,
                 addonId
             })).unwrap();
+            return has;
         }
     }, [dispatch, identity, agent]);
 
-    // const handleSetProjectAddOns = useCallback((projectId: number, addOns: SerializedAddOn[]) => {
-    //     // dispatch(setProjectAddOns({ projectId, addOns }));
-    //     dispatch(getAddOnsList({
-    //         identity,
-    //         agent
-    //     }));
-    // }, [dispatch]);
+    const handleSetupCustomDomainByProject = useCallback(async (projectId: number, domainName: string, addonId: number) => {
+        if (identity && agent) {
+            const result = await dispatch(setupCustomDomainByProject({
+                identity,
+                agent,
+                projectId,
+                domainName,
+                addonId
+            })).unwrap();
+            return result;
+        }
+    }, [dispatch, identity, agent]);
+
+
+    const handleGetParsedMyAddons = useCallback(async (projectId: number) => {
+        if (identity && agent) {
+            let my_addons = await dispatch(getParsedMyAddons({ identity, agent, projectId })).unwrap();
+            return my_addons;
+        }
+    }, [dispatch, identity, agent])
+
+
 
     const refreshProjectAddOns = useCallback(async (projectId: number) => {
         if (identity && agent) {
@@ -202,12 +231,28 @@ export const useProjectsLogic = () => {
         }
     }, [identity, agent, handleFetchAddOns]);
 
-    // Fetch addons list on mount and when identity/agent changes
-    useEffect(() => {
+    const handleFetchDomainRegistrations = useCallback(async (projectId: number) => {
         if (identity && agent) {
-            handleFetchAddOnsList();
+            await dispatch(getDomainRegistrationsByProject({
+                identity, agent, projectId
+            })).unwrap();
         }
-    }, [handleFetchAddOnsList, identity, agent]);
+    }, [dispatch, identity, agent])
+
+    const handleCheckSubdomainNameAvailability = useCallback(async (projectId: number, subdomain: string, addon_id: number) => {
+        if (identity && agent) {
+            const available = await dispatch(isAvailableSubdomainName({ identity, agent, projectId, domainName: subdomain, addonId: addon_id })).unwrap();
+            return available;
+        }
+        return false;
+    }, [dispatch, identity, agent]);
+
+    const handleDeleteDomainRegistration = useCallback(async (projectId: number, addonId: number) => {
+        if (identity && agent) {
+            const is_deleted = await dispatch(deleteDomainRegistration({ identity, agent, projectId, addonId })).unwrap();
+            return is_deleted;
+        }
+    }, [dispatch, identity, agent])
 
     const handleInstallCode = useCallback(async (
         e: React.MouseEvent<HTMLButtonElement>,
@@ -374,36 +419,29 @@ export const useProjectsLogic = () => {
     }, [getActiveProjectAddOns]);
 
     return {
-        projects: sortedProjects,
         isLoading,
         isLoadingClearAssets,
         isLoadingDeleteProject,
         isLoadingUsage,
+        isLoadingAddOns,
+        isLoadingAddOnsList,
+        isLoadingDomainRegistrations,
+        isLoadingGetParsedMyAddons,
         activeFilterTag,
         activeSortTag,
         viewMode,
         userUsage,
-        handleFilterChange,
-        handleSortChange,
-        handleViewModeChange,
-        handleInstallCode,
-        handleVisitWebsite,
-        handleProjectClick,
-        refreshProjects,
-        handleFetchActivityLogs,
-        handleClearProjectAssets,
-        handleDeleteProject,
-        handleFetchUserUsage,
-        // Addon-related state and functions
+        projects: sortedProjects,
+        domainRegistrations,
         addOns: projectAddOnsData,
         addOnsList,
         projectAddOns,
-        isLoadingAddOns,
-        isLoadingAddOnsList,
+        parsedMyAddons,
+
         handleFetchAddOns,
         handleFetchAddOnsList,
         handleCheckAddOn,
-        // handleSetProjectAddOns,
+        handleSetupCustomDomainByProject,
         refreshProjectAddOns,
         getProjectAddOns,
         checkProjectHasAddOn,
@@ -417,6 +455,20 @@ export const useProjectsLogic = () => {
         getProjectAddOnsByType,
         getProjectAddOnsCount,
         getProjectActiveAddOnsCount,
-
+        handleFetchDomainRegistrations,
+        handleFilterChange,
+        handleSortChange,
+        handleViewModeChange,
+        handleInstallCode,
+        handleVisitWebsite,
+        handleProjectClick,
+        refreshProjects,
+        handleFetchActivityLogs,
+        handleClearProjectAssets,
+        handleDeleteProject,
+        handleFetchUserUsage,
+        handleGetParsedMyAddons,
+        handleCheckSubdomainNameAvailability,
+        handleDeleteDomainRegistration
     };
 }; 
