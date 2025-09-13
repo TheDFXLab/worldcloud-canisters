@@ -76,8 +76,9 @@ export const CanisterOverview: React.FC = () => {
   const [confirmationAction, setConfirmationAction] = useState<string | null>(
     null
   );
-  const [showAddOns, setShowAddOns] = useState(false);
   const [addonView, setAddonView] = useState<AddonView>("marketplace");
+  const [showAddOns, setShowAddOns] = useState(addonView === "my-addons");
+
   /** END STATE */
 
   /** START HOOKS */
@@ -115,6 +116,8 @@ export const CanisterOverview: React.FC = () => {
     handleInstallCode,
     handleFetchAddOnsList,
     handleFetchAddOns,
+    handleFetchDomainRegistrations,
+    handleGetParsedMyAddons,
   } = useProjectsLogic();
 
   const { identity } = useIdentity();
@@ -144,6 +147,7 @@ export const CanisterOverview: React.FC = () => {
     if (projectId !== undefined && identity && agent) {
       handleFetchActivityLogs(BigInt(projectId));
       handleFetchUserUsage(parseInt(projectId));
+      // handleFetchAddOns(parseInt(projectId));
       getStatus(parseInt(projectId));
     }
   }, [dispatch, projectId, identity, agent]);
@@ -169,6 +173,13 @@ export const CanisterOverview: React.FC = () => {
     };
     t();
   }, [projectId, identity, agent]);
+
+  // Fetch addons list on mount and when identity/agent changes
+  useEffect(() => {
+    if (identity && agent) {
+      handleFetchAddOnsList();
+    }
+  }, [identity, agent]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -217,6 +228,14 @@ export const CanisterOverview: React.FC = () => {
       updateAddonURL(true, addonView);
     }
   }, []); // Only run on mount
+
+  useEffect(() => {
+    if (showAddOns && projectId) {
+      handleFetchAddOns(parseInt(projectId));
+      handleFetchDomainRegistrations(parseInt(projectId));
+      handleGetParsedMyAddons(parseInt(projectId));
+    }
+  }, [dispatch, showAddOns, projectId, identity, agent]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
