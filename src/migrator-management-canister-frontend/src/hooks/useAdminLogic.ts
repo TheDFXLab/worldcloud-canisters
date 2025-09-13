@@ -517,12 +517,12 @@ export const useAdminLogic = () => {
         }
     }, [dispatch, identity, agent]);
 
-    const handleSetupCustomDomain = useCallback(async (canisterId: string, subdomainName: string) => {
+    const handleSetupCustomDomain = useCallback(async (projectId: number, canisterId: string, subdomainName: string, addonId: number) => {
         if (!identity || !agent) {
             throw new Error('Missing required dependencies');
         }
         try {
-            await dispatch(setupCustomDomain({ identity, agent, canisterId, subdomainName })).unwrap();
+            await dispatch(setupCustomDomain({ identity, agent, projectId, canisterId, subdomainName, addonId })).unwrap();
             return { status: true, message: 'Custom domain setup successfully' };
         } catch (error: any) {
             return {
