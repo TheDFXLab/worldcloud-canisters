@@ -28,6 +28,13 @@ import {
     SerializedBookEntry,
     serializeBookEntries,
     serializeUsageLogsPairAdmin,
+    SerializedDomainRegistration,
+    serializeDomainRegistrationPair,
+    serializeDomainRegistrationsPairs,
+    SerializedDomainRegistrationPair,
+    serializeGlobalTimers,
+    serializeDomainRegistrations,
+    SerializedGlobalTimer,
 } from '../../serialization/admin';
 import { SerializedUsageLogExtended } from '../../utility/bigint';
 import { StaticFile } from '../../utility/compression';
@@ -100,7 +107,21 @@ export interface AdminState {
     currentUserRole: SerializedRole | null,
     isLoadingCurrentUserRole: boolean,
 
-    isLoadingEditIcDomains: boolean
+    isLoadingEditIcDomains: boolean,
+
+    canisterDomainRegistrations: SerializedDomainRegistration[],
+    globalTimers: SerializedGlobalTimer[],
+
+    domainRegistrations: SerializedDomainRegistrationPair[],
+    isLoadingDomainRegistrations: boolean,
+
+    isLoadingGlobalTimers: boolean,
+    isLoadingCustomDomain: boolean,
+
+    isLoadingCanisterDomainRegistrations: boolean
+    isLoadingGrantSubscription: boolean;
+    isLoadingGrantAddon: boolean;
+
 }
 
 
@@ -141,7 +162,15 @@ const initialState: AdminState = {
     currentUserRole: null,
     isLoadingCurrentUserRole: false,
     isLoadingEditIcDomains: false,
-
+    canisterDomainRegistrations: [],
+    globalTimers: [],
+    domainRegistrations: [],
+    isLoadingDomainRegistrations: false,
+    isLoadingGlobalTimers: false,
+    isLoadingCustomDomain: false,
+    isLoadingCanisterDomainRegistrations: false,
+    isLoadingGrantSubscription: false,
+    isLoadingGrantAddon: false
 };
 
 // Async thunks
@@ -776,7 +805,6 @@ export const setIcDomains = createAsyncThunk(
             throw new Error('Failed to create API instance');
         }
         const response = await mainApi.admin_set_ic_domains(canister_id, file);
-        debugger;
         if (!response) {
             throw new Error("Failed to set ic domains.");
         }
@@ -786,6 +814,123 @@ export const setIcDomains = createAsyncThunk(
         return true;
     }
 );
+
+
+export const fetchCanisterDomainRegistrations = createAsyncThunk(
+    'admin/fetchCanisterDomainRegistrations',
+    async ({
+        identity,
+        agent,
+        canisterId
+    }: {
+        identity: any;
+        agent: any;
+        canisterId: string;
+    }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_get_canister_domain_registrations(canisterId);
+        if ('ok' in response) {
+            return serializeDomainRegistrations(response.ok);
+        }
+        throw new Error('Failed to fetch canister domain registrations');
+    }
+);
+
+export const fetchDomainRegistrations = createAsyncThunk(
+    'admin/fetchDomainRegistrations',
+    async ({ identity, agent }: { identity: any; agent: any }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_get_domain_registrations();
+        if ('ok' in response) {
+            return serializeDomainRegistrationsPairs(response.ok);
+        }
+        throw new Error('Failed to fetch domain registrations');
+    }
+);
+
+export const fetchGlobalTimers = createAsyncThunk(
+    'admin/fetchGlobalTimers',
+    async ({ identity, agent }: { identity: any; agent: any }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_get_global_timers();
+        return serializeGlobalTimers(response);
+    }
+);
+
+
+export const setupCustomDomain = createAsyncThunk(
+    'admin/setupCustomDomain',
+    async ({
+        identity,
+        agent,
+        projectId,
+        canisterId,
+        subdomainName,
+        addonId
+    }: {
+        identity: any;
+        agent: any;
+        projectId: number;
+        canisterId: string;
+        subdomainName: string;
+        addonId: number;
+    }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_setup_custom_domain(projectId, canisterId, subdomainName, addonId);
+        if ('ok' in response) {
+            return response.ok;
+        }
+        throw new Error('Failed to setup custom domain');
+    }
+);
+
+export const adminGrantSubscription = createAsyncThunk(
+    'admin/adminGrantSubscription',
+    async ({
+        identity,
+        agent,
+        user_principal,
+        subscription_tier_id
+    }: {
+        identity: any;
+        agent: any;
+        user_principal: string;
+        subscription_tier_id: number;
+    }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_grant_subscription(user_principal, subscription_tier_id);
+        return response;
+    }
+);
+
+
+export const adminGrantAddon = createAsyncThunk(
+    'admin/adminGrantSubscription',
+    async ({
+        identity,
+        agent,
+        project_id,
+        addon_id,
+        expiry_in_ms
+    }: {
+        identity: any;
+        agent: any;
+        project_id: number;
+        addon_id: number;
+        expiry_in_ms: number;
+    }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        return await api.admin_grant_addon(project_id, addon_id, expiry_in_ms);
+    }
+);
+
+
 
 
 
@@ -1302,6 +1447,50 @@ const adminSlice = createSlice({
             })
             .addCase(setIcDomains.rejected, (state, action) => {
                 state.isLoadingEditIcDomains = false;
+                state.error = handleError(action.error);
+            })
+            .addCase(fetchCanisterDomainRegistrations.pending, (state) => {
+                state.isLoadingCanisterDomainRegistrations = true;
+            })
+            .addCase(fetchCanisterDomainRegistrations.fulfilled, (state, action) => {
+                state.isLoadingCanisterDomainRegistrations = false;
+                state.canisterDomainRegistrations = action.payload;
+            })
+            .addCase(fetchCanisterDomainRegistrations.rejected, (state, action) => {
+                state.isLoadingCanisterDomainRegistrations = false;
+                state.error = handleError(action.error);
+            })
+            .addCase(fetchGlobalTimers.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(fetchGlobalTimers.fulfilled, (state, action) => {
+                state.isLoadingGlobalTimers = false;
+                state.globalTimers = action.payload;
+            })
+            .addCase(fetchGlobalTimers.rejected, (state, action) => {
+                state.isLoadingGlobalTimers = false;
+                state.error = handleError(action.error);
+            })
+            .addCase(setupCustomDomain.pending, (state) => {
+                state.isLoadingCustomDomain = true;
+            })
+            .addCase(setupCustomDomain.fulfilled, (state, action) => {
+                state.isLoadingCustomDomain = false;
+                state.successMessage = 'Custom domain setup successfully';
+            })
+            .addCase(setupCustomDomain.rejected, (state, action) => {
+                state.isLoadingCustomDomain = false;
+                state.error = handleError(action.error);
+            })
+            .addCase(fetchDomainRegistrations.pending, (state) => {
+                state.isLoadingDomainRegistrations = true;
+            })
+            .addCase(fetchDomainRegistrations.fulfilled, (state, action) => {
+                state.isLoadingDomainRegistrations = false;
+                state.domainRegistrations = action.payload;
+            })
+            .addCase(fetchDomainRegistrations.rejected, (state, action) => {
+                state.isLoadingDomainRegistrations = false;
                 state.error = handleError(action.error);
             })
 

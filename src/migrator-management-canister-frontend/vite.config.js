@@ -39,7 +39,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    allowedHosts: ["821a14f15fe5.ngrok-free.app"],
+    allowedHosts: ["a2756d34b554.ngrok.app"],
     proxy: {
       "/api": {
         target: "http://0.0.0.0:8000",
@@ -70,6 +70,12 @@ export default defineConfig({
           new URL("../declarations", import.meta.url)
         ),
       },
+      // {
+      //   find: /^~?@?/,
+      //   replacement: fileURLToPath(
+      //     new URL("../node_modules", import.meta.url)
+      //   ),
+      // },
     ],
   },
 });

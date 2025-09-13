@@ -19,7 +19,8 @@ module {
   public class ShareableCanisterManager(slots_init : Types.SlotsMap, user_to_slot_init : Types.UserToSlotMap, used_slots_init : Types.UsedSlotsMap, usage_logs_init : Types.UsageLogsMap, next_slot_id_init : Nat, quotas_map_init : Types.QuotasMap) {
     // private let DEFAULT_DURATION_MS = 60 * 1_000; // 1 mins
     // private let DEFAULT_DURATION_MS = 1200 * 1_000; // 20 mins
-    private let DEFAULT_DURATION_MS = 14_400 * 1_000; // 4 hrs
+    // private let DEFAULT_DURATION_MS = 14_400 * 1_000; // 4 hrs
+    private let DEFAULT_DURATION_MS = 3 * 60 * 1_000; // 3 mins
     private let RATE_LIMIT_WINDOW_MS = 86_400 * 1_000; // 1 day
     private let MAX_USES_THRESHOLD = 3; // 3 uses per day
     public var MAX_SHAREABLE_CANISTERS = 10;

@@ -16,10 +16,10 @@ import Access "access";
 
 module {
 
-  public class ProjectManager(projects_init : Types.ProjectsMap, user_to_projects_init : Types.UserToProjectsMap, next_project_id_init : Nat) {
+  public class ProjectManager(projects_init : Types.ProjectsMap, user_to_projects_init : Types.UserToProjectsMap, index_counter_init : Types.IndexCounterInterface) {
     public var projects : Types.ProjectsMap = projects_init;
     public var user_to_projects : Map.Map<Principal, [Nat]> = user_to_projects_init;
-    public var next_project_id : Nat = next_project_id_init;
+    public var index_counter : Types.IndexCounterInterface = index_counter_init;
 
     public func get_project_by_id(project_id : Nat) : Types.Response<Types.Project> {
       let project : Types.Project = switch (Map.get(projects, Nat.compare, project_id)) {
@@ -120,7 +120,7 @@ module {
     public func drop_projects() : Bool {
       projects := Map.empty<Nat, Types.Project>();
       user_to_projects := Map.empty<Principal, [Nat]>();
-      next_project_id := 0;
+      index_counter.reset_index(#project_id);
       return true;
     };
 
@@ -143,6 +143,8 @@ module {
     };
 
     public func create_project(user : Principal, payload : Types.CreateProjectPayload) : Nat {
+      let next_project_id : Nat = index_counter.get_index(#project_id);
+
       // Create the project record
       let project : Types.Project = {
         id = next_project_id;
@@ -162,46 +164,14 @@ module {
       Map.add(user_to_projects, Principal.compare, user, Array.append(existing_projects, [next_project_id]));
 
       // Update the next project id
-      next_project_id += 1;
+      index_counter.increment_index(#project_id);
 
-      return next_project_id - 1;
-    };
-
-    /**Start stable management */
-
-    // Function to get data for stable storage
-    public func get_stable_data_projects() : [(Nat, Types.Project)] {
-      Iter.toArray(Map.entries(projects));
-    };
-    public func get_stable_data_user_to_projects() : [(Principal, [Nat])] {
-      Iter.toArray(Map.entries(user_to_projects));
-    };
-    public func get_stable_data_next_project_id() : Nat {
-      next_project_id;
+      return next_project_id;
     };
 
     // Function to get current next_project_id for syncing with stable variable
     public func get_next_project_id() : Nat {
-      next_project_id;
-    };
-
-    // Function to restore from stable storage
-    public func load_from_stable_projects(stable_data : [(Nat, Types.Project)]) {
-      projects := Map.empty<Nat, Types.Project>();
-      for ((project_id, project) in stable_data.vals()) {
-        Map.add(projects, Nat.compare, project_id, project);
-      };
-    };
-
-    public func load_from_stable_user_to_projects(stable_data : [(Principal, [Nat])]) {
-      user_to_projects := Map.empty<Principal, [Nat]>();
-      for ((user, project_ids) in stable_data.vals()) {
-        Map.add(user_to_projects, Principal.compare, user, project_ids);
-      };
-    };
-
-    public func load_from_stable_next_project_id(stable_data : Nat) {
-      next_project_id := stable_data;
+      index_counter.get_index(#project_id);
     };
 
     /** End class */

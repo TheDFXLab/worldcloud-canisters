@@ -1,0 +1,435 @@
+/* Modal Container Styles */
+.canister-details-modal {
+  background: var(--background);
+  color: var(--text-primary);
+}
+
+.canister-details-modal .MuiDialog-paper {
+  background: var(--background-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Modal Header */
+.canister-details-modal .MuiDialogTitle-root {
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 1.5rem 2rem;
+}
+
+.canister-details-modal .MuiDialogTitle-root h6 {
+  color: var(--text-primary);
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+}
+
+/* Modal Content */
+.canister-details-modal .MuiDialogContent-root {
+  padding: 0;
+  background: var(--background-primary);
+}
+
+/* Tabs Styling */
+.canister-details-modal .MuiTabs-root {
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.canister-details-modal .MuiTab-root {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  text-transform: none;
+  min-height: 56px;
+  padding: 12px 24px;
+}
+
+.canister-details-modal .MuiTab-root.Mui-selected {
+  color: var(--color-primary);
+  background: var(--background-primary);
+}
+
+.canister-details-modal .MuiTabs-indicator {
+  background-color: var(--color-primary);
+  height: 3px;
+}
+
+/* Tab Panel Content */
+.canister-details-modal .MuiBox-root {
+  padding: 2rem;
+  background: var(--background-primary);
+  color: var(--text-primary);
+}
+
+/* Section Headers */
+.canister-details-modal .section-header {
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--color-primary);
+}
+
+.canister-details-modal .section-subheader {
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  margin-bottom: 1rem;
+  margin-top: 1.5rem;
+}
+
+/* Canister Info Display */
+.canister-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.canister-info-item {
+  background: var(--background-secondary);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.canister-info-label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.canister-info-value {
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+}
+
+/* Domain Management Section */
+.domain-management-section {
+  background: var(--background-secondary);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 2rem;
+  color: white;
+}
+
+.domain-input-group {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.domain-input-group .MuiTextField-root {
+  flex: 1;
+}
+
+.domain-input-group .MuiTextField-root .MuiOutlinedInput-root {
+  background: var(--background);
+  border-color: var(--border-color);
+}
+
+.domain-input-group .MuiTextField-root .MuiOutlinedInput-root:hover {
+  border-color: var(--color-primary);
+}
+
+.domain-input-group .MuiTextField-root .MuiOutlinedInput-root.Mui-focused {
+  border-color: var(--color-primary);
+}
+
+.domain-input-group .MuiTextField-root .MuiInputLabel-root {
+  color: var(--text-secondary);
+}
+
+.domain-input-group .MuiTextField-root .MuiInputBase-input {
+  color: var(--text-primary);
+}
+
+/* Buttons */
+.canister-details-modal .MuiButton-root {
+  text-transform: none;
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+  padding: 8px 24px;
+  border-radius: 8px;
+  color: var(--text-primary) !important;
+  min-height: 40px;
+}
+
+.canister-details-modal .MuiButton-contained {
+  background: var(--color-primary);
+  color: white;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.canister-details-modal .MuiButton-contained:hover {
+  background: var(--color-primary-dark);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.canister-details-modal .MuiButton-outlined {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.canister-details-modal .MuiButton-outlined:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.canister-details-modal .MuiButton-text {
+  color: var(--color-primary);
+}
+
+.canister-details-modal .MuiButton-text:hover {
+  background: var(--color-primary-bg);
+}
+
+/* File Upload */
+.file-upload-section {
+  background: var(--background-secondary);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 2px dashed var(--border-color);
+  text-align: center;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.file-upload-section:hover {
+  border-color: var(--color-primary);
+  background: var(--background-hover);
+}
+
+.file-upload-section input[type="file"] {
+  display: none;
+}
+
+.file-upload-label {
+  cursor: pointer;
+  display: inline-block;
+}
+
+.file-upload-info {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  margin-top: 0.5rem;
+}
+
+/* DNS Records Display */
+.dns-records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dns-record-item {
+  background: var(--background-secondary);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.dns-record-item:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.dns-record-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.dns-record-title {
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.dns-record-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.dns-record-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.dns-record-field-label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.dns-record-field-value {
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+  word-break: break-all;
+}
+
+/* Status Chips */
+.canister-details-modal .MuiChip-root {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  height: 24px;
+}
+
+.canister-details-modal .MuiChip-root.MuiChip-colorSuccess {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.canister-details-modal .MuiChip-root.MuiChip-colorWarning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.canister-details-modal .MuiChip-root.MuiChip-colorError {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-error);
+}
+
+/* Global Timers Section */
+.admin-global-timers-section {
+  margin-bottom: 2rem;
+}
+
+.global-timers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.timer-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.timer-item:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timer-id {
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.timer-value {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.no-timers {
+  color: var(--text-secondary);
+  font-style: italic;
+  text-align: center;
+  padding: 2rem;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px dashed var(--border-color);
+}
+
+/* Loading States */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem;
+}
+
+.loading-text {
+  color: var(--text-secondary);
+  margin-left: 1rem;
+  font-size: var(--font-size-sm);
+}
+
+/* Alerts */
+.canister-details-modal .MuiAlert-root {
+  margin-bottom: 1rem;
+  border-radius: 8px;
+}
+
+.canister-details-modal .MuiAlert-standardInfo {
+  background: var(--background-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.canister-details-modal .MuiAlert-standardSuccess {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border: 1px solid var(--color-success);
+}
+
+.canister-details-modal .MuiAlert-standardError {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .canister-details-modal .MuiDialog-paper {
+    margin: 1rem;
+    max-width: calc(100vw - 2rem);
+  }
+
+  .canister-details-modal .MuiBox-root {
+    padding: 1rem;
+  }
+
+  .domain-input-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .canister-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dns-record-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Dark theme specific adjustments */
+[data-theme="dark"] .canister-details-modal .MuiDialog-paper {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3),
+    0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .canister-details-modal .MuiTab-root:hover {
+  background: var(--background-hover);
+}
+
+[data-theme="dark"] .canister-details-modal .MuiButton-outlined:hover {
+  background: var(--color-primary);
+  color: white;
+}

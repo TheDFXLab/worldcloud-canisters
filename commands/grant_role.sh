@@ -22,6 +22,7 @@ fi
 
 if [ -z "$3" ]; then
     ENV="local"
+    dfx identity use default
 fi
 
 if [ "$2" != "super_admin" ] && [ "$2" != "admin" ]; then

@@ -1,4 +1,4 @@
 [dependencies]
-core = "0.6.0"
-base = "0.15.1"
+core = "1.0.0"
+base = "0.16.0"
 "json.mo" = "https://github.com/vporton/json.mo#master@003a8c2aa1535f8a15e373f694123c720c87e3d7"

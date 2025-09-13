@@ -99,6 +99,8 @@ class CyclesApi {
         if (!this.actor) {
             throw new Error("Actor not initialized.");
         }
+
+        if (!amountInIcp) return BigInt(0);
         const amountInE8s = BigInt(icpToE8s(amountInIcp));
         const result = await this.actor.estimateCyclesToAdd(amountInE8s);
         if ('ok' in result) return result.ok;

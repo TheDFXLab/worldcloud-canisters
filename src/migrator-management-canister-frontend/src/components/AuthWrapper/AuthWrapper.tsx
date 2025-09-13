@@ -7,6 +7,7 @@ import { Principal } from "@dfinity/principal";
 import { internet_identity_canister_id } from "../../config/config";
 import LoaderOverlay from "../LoaderOverlay/LoaderOverlay";
 import { useLoaderOverlay } from "../../context/LoaderOverlayContext/LoaderOverlayContext";
+import { useTheme } from "../../context/ThemeContext/ThemeContext";
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -23,12 +24,33 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     isConnected,
   } = useIdentity();
   const { summon, destroy } = useLoaderOverlay();
+  const { logo } = useTheme();
 
+  const loginII2 = async () => {
+    try {
+      summon("Connecting to Internet Identity 2.0...");
+      const identity = await connectWallet(
+        Principal.fromText(internet_identity_canister_id),
+        "ii2"
+      );
+
+      if (!identity) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Login failed:", error);
+    } finally {
+      destroy();
+    }
+  };
   const login = async () => {
     try {
       summon("Connecting to Internet Identity...");
       const identity = await connectWallet(
-        Principal.fromText(internet_identity_canister_id)
+        Principal.fromText(internet_identity_canister_id),
+        "ii1"
       );
 
       if (!identity) {
@@ -61,10 +83,29 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     return (
       <>
         <div className="auth-container">
+          <div className="auth-logo-section">
+            <span className="logo-text-parent">
+              <img
+                src={logo}
+                alt="WorldCloud Logo"
+                className="auth-logo-icon"
+              />
+              <span>
+                <span className="logo-text-child">World</span>
+                <span className="logo-text-child">{"("}</span>
+                <span className="logo-text-child">cloud</span>
+                <span className="logo-text-child">{" )"}</span>
+                <span className="logo-text-child">{";"}</span>
+                <span className="logo-text-child beta-text">{" beta"}</span>
+              </span>
+            </span>
+          </div>
           <div className="auth-card">
-            <h1 className="auth-title">Welcome Back</h1>
+            {/* <h1 className="auth-title">Welcome to WorldCloud</h1> */}
+
             <p className="auth-description">
-              Connect your wallet to access the Migrator Management Dashboard
+              Connect your wallet to access the dashboard and start deploying
+              your projects on the Internet Computer
             </p>
             <div className="auth-buttons">
               <button onClick={login} className="auth-button ii">
@@ -73,16 +114,29 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
                   src={ii}
                   alt="Internet Identity"
                 />
-                Continue with Internet Identity
+                <span className="auth-button-text">
+                  Continue with Internet Identity
+                </span>
               </button>
 
-              <div onClick={loginWithPlug} className="auth-button-image">
+              <button onClick={loginII2} className="auth-button ii">
+                <img
+                  className="auth-button-icon iiLogo"
+                  src={ii}
+                  alt="Internet Identity 2.0"
+                />
+                <span className="auth-button-text">
+                  Continue with Internet Identity 2.0
+                </span>
+              </button>
+
+              {/* <div onClick={loginWithPlug} className="auth-button-image">
                 <img
                   className="auth-button-image-icon"
                   src={plugLogo}
                   alt="Plug Wallet"
                 />
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

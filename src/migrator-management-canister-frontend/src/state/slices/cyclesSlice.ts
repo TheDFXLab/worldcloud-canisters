@@ -3,9 +3,8 @@ import { Principal } from '@dfinity/principal';
 import MainApi from '../../api/main';
 import CyclesApi from '../../api/cycles';
 import { fromE8sStable } from '../../utility/e8s';
-import { CanisterStatusResponse } from '../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did';
-import { CanisterStatus } from '../../api/authority';
 import { serializeCanisterStatus, SerializedCanisterStatus } from '../../utility/bigint';
+import { canister_status_result } from '@dfinity/agent/lib/cjs/canisters/management_service';
 
 export interface CreditsResponse {
     total_credits: number;
@@ -94,7 +93,7 @@ export const fetchCanisterStatus = createAsyncThunk(
             throw new Error('Main API not created');
         }
         const result = await mainApi.getCanisterStatus(project_id);
-        const serialized = serializeCanisterStatus(result);
+        const serialized = serializeCanisterStatus(result as unknown as canister_status_result);
         return serialized;
     }
 );

@@ -1,0 +1,39 @@
+/* Skeleton Loading Styles */
+.skeleton {
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-color: var(--skeleton-start, rgba(0, 0, 0, 0.1));
+  }
+  50% {
+    background-color: var(--skeleton-end, rgba(0, 0, 0, 0.2));
+  }
+  100% {
+    background-color: var(--skeleton-start, rgba(0, 0, 0, 0.1));
+  }
+}
+
+.selector-tab.skeleton {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.selector-tab.skeleton .tab-icon {
+  color: var(--skeleton-start, rgba(0, 0, 0, 0.1));
+}
+
+.selector-tab.skeleton .tab-label {
+  background: var(--skeleton-start, rgba(0, 0, 0, 0.1));
+  height: 1.25rem;
+  border-radius: 4px;
+  width: 6rem;
+}
+
+.selector-tab.skeleton .tab-description {
+  background: var(--skeleton-start, rgba(0, 0, 0, 0.1));
+  height: 0.875rem;
+  border-radius: 4px;
+  width: 8rem;
+}

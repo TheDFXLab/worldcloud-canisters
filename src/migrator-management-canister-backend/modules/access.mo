@@ -16,11 +16,7 @@ module {
     public var role_map : Types.RoleMap = role_map_init;
     private var is_initialized : Bool = false;
     private let disable_guards : Bool = false;
-
-    public func init() {
-      Map.add(role_map, Principal.compare, deployer_principal, #super_admin);
-      is_initialized := true;
-    };
+    Map.add(role_map, Principal.compare, deployer_principal, #super_admin);
 
     public func get_role_users(payload : Types.PaginationPayload) : Types.Response<[(Principal, Types.Role)]> {
       let roles : [(Principal, Types.Role)] = Iter.toArray(Map.entries(role_map));

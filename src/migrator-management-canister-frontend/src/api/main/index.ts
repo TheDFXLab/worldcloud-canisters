@@ -588,7 +588,134 @@ class MainApi {
     }
 
 
-    // Admin Methods
+    async get_add_ons_list() {
+        await this.validate();
+        const result = await this.actor?.get_add_ons_list();
+        if (result) return result;
+        throw this.handleResponseError("Unexpected error occured");
+    }
+
+    async has_add_on_by_project(project_id: number, add_on_id: number): Promise<boolean> {
+        await this.validate();
+        const result = await this.actor?.has_add_on_by_project(BigInt(project_id), BigInt(add_on_id));
+
+        if (result && 'ok' in result) return result.ok;
+        throw this.handleResponseError(result ? result.err : "Unexpected error occured");
+    }
+
+    async get_add_ons_by_project(project_id: number) {
+        await this.validate();
+        const result = await this.actor?.get_add_ons_by_project(BigInt(project_id));
+
+        if (result && 'ok' in result) return result.ok;
+        throw this.handleResponseError(result ? result.err : "Unexpected error occured");
+    }
+
+    async subscribe_add_on(project_id: number, add_on_id: number) {
+        await this.validate();
+        const result = await this.actor?.subscribe_add_on(BigInt(project_id), BigInt(add_on_id));
+
+        if (result && 'ok' in result) return result.ok;
+        throw this.handleResponseError(result ? result.err : "Unexpected error occured");
+    }
+
+    // Public domain methods for projects
+    async get_domain_registrations_by_project(projectId: number) {
+        await this.validate();
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+
+        const result = await this.actor.get_domain_registrations_by_canister(BigInt(projectId));
+        if (result && 'ok' in result) return result.ok;
+        throw this.handleResponseError(result ? result.err : "Unexpected error occured");
+    }
+
+    async get_domain_registration_status(registrationId: string) {
+        await this.validate();
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+
+        const result = await this.actor.get_domain_registration_status(registrationId);
+        if (result && 'ok' in result) return result.ok;
+        throw this.handleResponseError(result ? result.err : "Unexpected error occured");
+
+    }
+
+    async get_parsed_my_addons(projectId: number) {
+        await this.validate();
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+
+        const result = await this.actor.get_my_addons(BigInt(projectId));
+        if (result && 'ok' in result) return result.ok;
+        throw this.handleResponseError(result ? result.err : "Unexpected error occured");
+
+    }
+
+    async setup_custom_domain_by_project(projectId: number, subdomainName: string, add_on_id: number) {
+        await this.validate();
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+
+        const result = await this.actor.setup_custom_domain_by_project(BigInt(projectId), subdomainName, BigInt(add_on_id));
+        if (result && 'ok' in result) return result.ok;
+        throw this.handleResponseError(result ? result.err : "Unexpected error occured");
+    }
+
+
+    async is_subdomain_available(subdomain: string, project_id: number, addon_id: number) {
+        await this.validate();
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+
+        const result = await this.actor.is_available_subdomain(BigInt(project_id), subdomain, BigInt(addon_id));
+        return result;
+    }
+
+    async delete_domain_registration(project_id: number, addon_id: number) {
+        await this.validate();
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+
+        const result = await this.actor.delete_domain_registration(BigInt(project_id), BigInt(addon_id));
+        if ('ok' in result) return result.ok;
+        throw this.handleResponseError(result.err);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /************************** */
+    /************************** */
+    /************************** */
+    /******* ADMIN SECTION ******/
+    /************************** */
+    /************************** */
+    /************************** */
+
+
     async get_slots(limit?: number | null, index?: number | null) {
         if (!this.actor) {
             throw new Error("Actor not initialized.");
@@ -699,6 +826,59 @@ class MainApi {
 
         return await this.actor.admin_delete_usage_logs();
     }
+
+    async admin_get_canister_domain_registrations(canisterId: string) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+        return await this.actor.admin_get_canister_domain_registrations(Principal.fromText(canisterId));
+    }
+
+    async admin_get_global_timers() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+        return await this.actor.admin_get_global_timers();
+    }
+    async admin_setup_custom_domain(project_id: number, canisterId: string, subdomainName: string, add_on_id: number) {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+        return await this.actor.admin_setup_custom_domain(BigInt(project_id), Principal.fromText(canisterId), subdomainName, BigInt(add_on_id));
+    }
+    async admin_get_domain_registrations() {
+        if (!this.actor) {
+            throw new Error("Actor not initialized.");
+        }
+        if (!this.idenitified) {
+            throw new Error("Actor not identified.");
+        }
+        if (!this.identity) {
+            throw new Error("Identity not initialized.");
+        }
+        return await this.actor.admin_get_domain_registrations();
+
+    }
+
+
 
     async update_slot(slotId: number, updatedSlot: any) {
         if (!this.actor) {
@@ -1043,6 +1223,31 @@ class MainApi {
         this.validate();
         await this.actor?.edit_ic_domains(Principal.fromText(canister_id), file);
         return true;
+    }
+
+    async admin_grant_subscription(user_principal: string, subscription_tier_id: number) {
+        this.validate();
+
+        const result = await this.actor?.admin_grant_subscription(Principal.fromText(user_principal), BigInt(subscription_tier_id));
+        if (!result) {
+            throw new Error("Failed to grant subscription");
+        }
+        if ("ok" in result) {
+            return result.ok;
+        }
+        throw this.handleResponseError(result.err);
+    }
+
+    async admin_grant_addon(project_id: number, addon_id: number, expiry_in_ms: number) {
+        this.validate();
+        const result = await this.actor?.admin_grant_addon(BigInt(project_id), BigInt(addon_id), BigInt(expiry_in_ms));
+        if (!result) {
+            throw new Error("Failed to grant addon");
+        }
+        if ("ok" in result) {
+            return result.ok;
+        }
+        throw this.handleResponseError(result.err);
     }
 }
 

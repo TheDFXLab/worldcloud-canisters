@@ -5,13 +5,13 @@ import Text "mo:base/Text";
 import IC "ic:aaaaa-aa";
 
 module {
-  public type TransformationInput = {
-    context : Blob;
-    response : IC.http_request_result;
-  };
+  // public type TransformationInput = {
+  //   context : Blob;
+  //   response : IC.http_request_result;
+  // };
 
-  public type TransformationOutput = IC.http_request_result;
-  public type Transform = query TransformationInput -> async TransformationOutput;
+  // public type TransformationOutput = IC.http_request_result;
+  // public type Transform = query TransformationInput -> async TransformationOutput;
 
   //   public class Outcall(management_canister : Text) {
   public func transform(input : Types.TransformationInput) : Types.TransformationOutput {
@@ -21,7 +21,7 @@ module {
     };
   };
 
-  public func make_http_request(method : Types.HttpMethodArgs, url : Text, request_headers : [IC.http_header], transform : Transform) : async Types.Response<Types.HttpResponse> {
+  public func make_http_request(method : Types.HttpMethodArgs, url : Text, request_headers : [IC.http_header], body : ?Blob, transform : Types.Transform) : async Types.Response<Types.HttpResponse> {
     // let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
 
     // Prepare HTTP req
@@ -29,7 +29,7 @@ module {
       url = url;
       max_response_bytes = null;
       headers = request_headers;
-      body = null;
+      body = body;
       method = method;
       transform = ?{
         function = transform;
@@ -39,11 +39,6 @@ module {
     };
 
     let http_response : IC.http_request_result = await (with cycles = 231_000_000_000) IC.http_request(http_request);
-
-    // Check if the HTTP request was successful
-    if (http_response.status != 200) {
-      return #err("HTTP request failed with status: " # Nat.toText(http_response.status));
-    };
 
     // Check if we have a response body
     if (http_response.body.size() == 0) {

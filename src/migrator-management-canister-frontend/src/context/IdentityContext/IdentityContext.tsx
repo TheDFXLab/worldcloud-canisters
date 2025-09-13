@@ -12,6 +12,7 @@ import { AuthClient, IdbStorage } from "@dfinity/auth-client";
 
 import { Identity } from "@dfinity/agent";
 import {
+  environment,
   frontend_canister_id_url,
   internetIdentityConfig,
 } from "../../config/config";
@@ -29,17 +30,23 @@ import {
   fetchSubscription,
   fetchTiers,
 } from "../../state/slices/subscriptionSlice";
+import { useNavigate } from "react-router-dom";
+import { HttpAgentManager } from "../../agent/http_agent";
 
 interface IdentityProviderProps {
   children: ReactNode;
 }
 
+type InternetIdentityVersion = "ii1" | "ii2";
 interface IdentityContextType {
   isConnected: boolean;
   identity: Identity | null;
   isLoadingIdentity: boolean;
   refreshIdentity: () => Promise<Identity | null>;
-  connectWallet: (principal?: Principal) => Promise<Identity | null>;
+  connectWallet: (
+    principal: Principal,
+    ii_version: InternetIdentityVersion
+  ) => Promise<Identity | null>;
   disconnect: () => Promise<boolean>;
 }
 
@@ -101,6 +108,7 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [isLoadingIdentity, setIsLoadingIdentity] = useState(true);
   const [authClient, setAuthClient] = useState<AuthClient | null>(null);
+  const navigate = useNavigate();
 
   // Function to load initial data after authentication
   const loadInitialData = useCallback(
@@ -215,6 +223,8 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       ]);
 
       queryClient.clear();
+      const agent = await HttpAgentManager.getInstance(null);
+      agent?.clear();
 
       setIdentity(null);
       setIsConnected(false);
@@ -229,8 +239,18 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
     }
   };
 
-  const connectWallet = async () => {
+  const connectWallet = async (
+    principal: Principal,
+    ii_version: InternetIdentityVersion
+  ) => {
     try {
+      const provider_url =
+        environment === "ic"
+          ? ii_version === "ii1"
+            ? internetIdentityConfig.identityProviderII1
+            : internetIdentityConfig.identityProviderII2
+          : internetIdentityConfig.identityProviderII1;
+
       setIsLoadingIdentity(true);
       summon("Logging in...");
       const _authClient = await AuthClient.create({
@@ -301,7 +321,8 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         //
         _authClient.login({
           derivationOrigin: frontend_canister_id_url,
-          identityProvider: internetIdentityConfig.identityProvider,
+          // identityProvider: internetIdentityConfig.identityProvider,
+          identityProvider: provider_url,
           windowOpenerFeatures: `toolbar=0,location=0,menubar=0,width=${popUpWidth},height=${popUpHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`,
 
           maxTimeToLive: BigInt(
@@ -345,7 +366,12 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       loadInitialData(identity, agent);
 
       return identity;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message.includes("Invalid delegation expiry")) {
+        console.log(`invalid...`);
+        disconnect();
+        navigate("/");
+      }
       console.error("Error during wallet connection:", error);
       return null;
     } finally {

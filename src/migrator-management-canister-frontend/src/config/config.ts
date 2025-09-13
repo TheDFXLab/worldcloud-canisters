@@ -32,14 +32,16 @@ const _dev_env = {
 export const internetIdentityConfig = {
     identityProvider: internet_identity_canister_id_url,
     loggedOutPrincipal: "2vxsx-fae",
-    loginExpiryInHours: 1, // in hours
+    loginExpiryInHours: 12, // in hours
+    identityProviderII1: internet_identity_canister_id_url,
+    identityProviderII2: "https://id.ai"
 }
 
 
 export const githubClientId = environment == "ic" ? process.env.REACT_APP_GITHUB_CLIENT_ID || "" : _dev_env.github_client_id;
 export const githubClientSecret = process.env.REACT_APP_GITHUB_CLIENT_SECRET || ""; // TODO: Remove this
 
-export const ngrok_tunnel = "https://a3ba5b2b8926.ngrok-free.app";
+export const ngrok_tunnel = "https://a2756d34b554.ngrok.app";
 export const reverse_proxy_url = environment === "ic" ? process.env.REACT_APP_REVERSE_PROXY_REMOTE_URL : "http://localhost:8080";
 // export const reverse_proxy_url = process.env.REACT_APP_REVERSE_PROXY_REMOTE_URL || "";
 export const frontend_url = environment === "ic" ? `https://${frontend_canister_id}.icp0.io` : ngrok_tunnel;
