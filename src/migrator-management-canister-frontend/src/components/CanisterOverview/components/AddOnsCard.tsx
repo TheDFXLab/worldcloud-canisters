@@ -19,42 +19,6 @@ interface AddOnsCardProps {
   onSubscribe: (addonId: number) => void;
 }
 
-// Mock data for coming soon features - moved outside component to prevent recreation
-const COMING_SOON_ADDONS = [
-  {
-    id: 999,
-    name: "Advanced Analytics",
-    type: "analytics" as any,
-    expiry_duration: "month" as any,
-    expiry: 1,
-    price: 0,
-    features: [
-      "Real-time performance metrics",
-      "User behavior tracking",
-      "Custom dashboard creation",
-      "Export capabilities",
-    ],
-    isComingSoon: true,
-    estimatedRelease: "Q2 2025",
-  },
-  {
-    id: 998,
-    name: "Multi-Region Deployment",
-    type: "deployment" as any,
-    expiry_duration: "year" as any,
-    expiry: 1,
-    price: 0,
-    features: [
-      "Global CDN distribution",
-      "Region-specific optimization",
-      "Automatic failover",
-      "Performance monitoring",
-    ],
-    isComingSoon: true,
-    estimatedRelease: "Q3 2025",
-  },
-];
-
 // Skeleton component for addon cards
 const AddOnCardSkeleton: React.FC = () => (
   <div className="addon-card skeleton">
@@ -78,21 +42,19 @@ export const AddOnsCard: React.FC<AddOnsCardProps> = ({
   projectId,
   onSubscribe,
 }) => {
-  const { addOnsList, isLoadingAddOnsList } = useProjectsLogic();
+  const { addOnsList, isLoadingAddOnsList, handleCheckAddOn } =
+    useProjectsLogic();
   const { balance, depositIfNotEnoughCredits } = useLedger();
   const { showModal, setShowModal } = useConfirmationModal();
   const { setToasterData, setShowToaster } = useToaster();
   const { summon, destroy } = useLoaderOverlay();
   const { identity } = useIdentity();
   const { agent } = useHttpAgent();
-
   const [selectedAddon, setSelectedAddon] =
     React.useState<SerializedAddOnVariant | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
 
-  // Combine real addons with coming soon addons using useMemo to prevent recreation
   const allAddons = React.useMemo(() => {
-    // return [...(addOnsList || []), ...COMING_SOON_ADDONS];
     return [...(addOnsList || [])];
   }, [addOnsList]);
 
@@ -107,7 +69,7 @@ export const AddOnsCard: React.FC<AddOnsCardProps> = ({
         <div className="card-content">
           <div className="addons-grid">
             {[...Array(6)].map((_, index) => (
-              <AddOnCardSkeleton key={index} />
+              <AddOnCardSkeleton key={`skeleton-${index}`} />
             ))}
           </div>
         </div>
@@ -168,6 +130,22 @@ export const AddOnsCard: React.FC<AddOnsCardProps> = ({
       // Check if user has enough credits
       const mainApi = await MainApi.create(identity, agent);
       if (!mainApi) throw new Error("MainApi not initialized");
+
+      const addon_exists = await handleCheckAddOn(
+        parseInt(projectId),
+        addon.id
+      );
+
+      if (addon_exists) {
+        setShowToaster(true);
+        setToasterData({
+          headerContent: "Info",
+          toastStatus: true,
+          toastData: "Add-on is already activated.",
+          timeout: 3000,
+        });
+        return;
+      }
 
       const creditsAvailable = await mainApi.getCreditsAvailable();
       const requiredCredits = BigInt(addon.price);
@@ -292,13 +270,13 @@ export const AddOnsCard: React.FC<AddOnsCardProps> = ({
         </div>
         <div className="card-content">
           <div className="addons-grid">
-            {allAddons.map((addon) => {
-              const isComingSoon = (addon as any).isComingSoon;
+            {allAddons.map((addon, index) => {
+              const isComingSoon = !addon.is_available;
               const estimatedRelease = (addon as any).estimatedRelease;
 
               return (
                 <div
-                  key={addon.id}
+                  key={`marketplace-${index}`}
                   className={`addon-card ${isComingSoon ? "coming-soon" : ""}`}
                 >
                   {isComingSoon && (
@@ -374,7 +352,7 @@ export const AddOnsCard: React.FC<AddOnsCardProps> = ({
                       color={isComingSoon ? "inherit" : "primary"}
                       size="small"
                       onClick={() => handleSubscribe(addon)}
-                      disabled={isProcessing}
+                      disabled={isProcessing || isComingSoon}
                       className={`subscribe-button ${
                         isComingSoon ? "coming-soon" : ""
                       }`}

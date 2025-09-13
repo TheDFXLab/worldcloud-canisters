@@ -4,6 +4,7 @@ import { Button, Chip, Tooltip } from "@mui/material";
 import { SerializedAddOn } from "../../../serialization/addons";
 import { useProjectsLogic } from "../../../hooks/useProjectsLogic";
 import { formatDate } from "../../../utility/formatter";
+import { AddonComponentFactory } from "./AddonComponentFactory";
 import "./MyAddonsCard.css";
 
 interface MyAddonsCardProps {
@@ -44,11 +45,18 @@ const MyAddonItemSkeleton: React.FC = () => (
 );
 
 export const MyAddonsCard: React.FC<MyAddonsCardProps> = ({ projectId }) => {
-  const { projectAddOns, isLoadingAddOns } = useProjectsLogic();
+  const {
+    projectAddOns,
+    isLoadingAddOns,
+    isLoadingDomainRegistrations,
+    projects,
+    parsedMyAddons,
+    isLoadingGetParsedMyAddons,
+  } = useProjectsLogic();
   const currentProjectAddons = projectAddOns[parseInt(projectId)] || [];
 
   // Show skeleton while loading
-  if (isLoadingAddOns) {
+  if (isLoadingAddOns || isLoadingDomainRegistrations) {
     return (
       <div className="overview-card">
         <div className="card-header">
@@ -89,51 +97,9 @@ export const MyAddonsCard: React.FC<MyAddonsCardProps> = ({ projectId }) => {
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "available":
-        return "success";
-      case "frozen":
-        return "warning";
-      default:
-        return "default";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "available":
-        return "Active";
-      case "frozen":
-        return "Frozen";
-      default:
-        return "Unknown";
-    }
-  };
-
-  const isExpired = (expiresAt?: number) => {
-    if (!expiresAt) return false;
-    return Date.now() > expiresAt * 1000;
-  };
-
-  const getTimeUntilExpiry = (expiresAt?: number) => {
-    if (!expiresAt) return "No expiry";
-
-    const now = Date.now();
-    const expiryTime = expiresAt * 1000;
-    const timeLeft = expiryTime - now;
-
-    if (timeLeft <= 0) return "Expired";
-
-    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-    const hours = Math.floor(
-      (timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-    );
-
-    if (days > 0) return `${days} day${days !== 1 ? "s" : ""} left`;
-    if (hours > 0) return `${hours} hour${hours !== 1 ? "s" : ""} left`;
-    return "Less than 1 hour left";
-  };
+  // Get the current project to access canister ID
+  const currentProject = projects.find((p) => p.id.toString() === projectId);
+  const canisterId = currentProject?.canister_id || undefined;
 
   return (
     <div className="overview-card">
@@ -148,75 +114,12 @@ export const MyAddonsCard: React.FC<MyAddonsCardProps> = ({ projectId }) => {
       <div className="card-content">
         <div className="my-addons-list">
           {currentProjectAddons.map((addon) => (
-            <div key={addon.id} className="my-addon-item">
-              <div className="addon-main-info">
-                <div className="addon-icon">
-                  <ExtensionIcon />
-                </div>
-                <div className="addon-details">
-                  <h4 className="addon-name">{addon.id}</h4>
-                  <div className="addon-meta">
-                    <Chip
-                      label={addon.type.replace("_", " ")}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                    <Chip
-                      label={getStatusText(addon.status)}
-                      size="small"
-                      color={getStatusColor(addon.status) as any}
-                      variant="outlined"
-                    />
-                  </div>
-                </div>
-                <div className="addon-status">
-                  <div className={`status-indicator ${addon.status}`}>
-                    <span className="status-dot" />
-                    {getStatusText(addon.status)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="addon-info-grid">
-                <div className="info-item">
-                  <span className="info-label">Created:</span>
-                  <span className="info-value">
-                    {formatDate(addon.created_on)}
-                  </span>
-                </div>
-
-                <div className="info-item">
-                  <span className="info-label">Last Updated:</span>
-                  <span className="info-value">
-                    {formatDate(addon.updated_on)}
-                  </span>
-                </div>
-
-                <div className="info-item">
-                  <span className="info-label">Expires:</span>
-                  <span
-                    className={`info-value ${
-                      isExpired(addon.expires_at) ? "expired" : ""
-                    }`}
-                  >
-                    {addon.expires_at
-                      ? getTimeUntilExpiry(addon.expires_at)
-                      : "Never"}
-                  </span>
-                </div>
-              </div>
-
-              {isExpired(addon.expires_at) && (
-                <div className="expiry-warning">
-                  <span className="warning-icon">⚠️</span>
-                  <span className="warning-text">
-                    This add-on has expired. Renew to continue using the
-                    service.
-                  </span>
-                </div>
-              )}
-            </div>
+            <AddonComponentFactory
+              key={addon.id}
+              addon={addon}
+              projectId={projectId}
+              canisterId={canisterId}
+            />
           ))}
         </div>
       </div>
