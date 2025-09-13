@@ -23,6 +23,24 @@ module {
 
     public var subdomain_records : Types.SubdomainRecords = subdomain_records_init;
 
+    private func _get_cloudflare_credentials() : Types.Response<Types.CloudflareConfig> {
+      // Check if Cloudflare credentials are configured
+      if (not has_cloudflare_credentials()) {
+        return #err(Errors.CloudflareNotConfigured());
+      };
+
+      let api_key : Text = switch (CLOUDFLARE_API_KEY) {
+        case (null) return #err(Errors.NotFoundCloudflareApiKey());
+        case (?val) val;
+      };
+      let email : Text = switch (CLOUDFLARE_EMAIL) {
+        case (null) return #err(Errors.NotFoundCloudflareEmail());
+        case (?val) val;
+      };
+      let zone_id : Text = get_zone_id();
+      return #ok({ email; api_key; zone_id });
+    };
+
     public func get_cloudflare_credentials() : Types.Response<{ email : ?Text; api_key : ?Text }> {
       return #ok({
         email = CLOUDFLARE_EMAIL;
@@ -76,30 +94,37 @@ module {
 
     /** Cloudflare API */
 
-    public func find_dns_record_ids(subdomain_name : Text, domain_name : Text, canister_id : Principal, transform : Types.Transform) : async Types.Response<Types.DomainRegistrationRecords> {
-      let zone_id = get_zone_id();
-      let dns_records : [Types.DnsRecord] = switch (await list_dns_records(zone_id, transform)) {
-        case (#err(err)) return #err(err);
-        case (#ok(val)) val;
-      };
+    private func search_dns_record_id(
+      subdomain_name : Text,
+      domain_name : Text,
+      canister_id : Principal,
+      dns_records : [Types.DnsRecord],
+    ) : async Types.Response<Types.DomainRegistrationRecords> {
+      if (dns_records.size() == 0) return #err(Errors.EmptyPayloadArray("DNS Records search"));
 
       var txt_id : ?Text = null;
       var cname_domain_id : ?Text = null;
       var cname_challenge_id : ?Text = null;
-
+      Debug.print("Searching " # Nat.toText(dns_records.size()) # " records,,,");
       for (record in dns_records.vals()) {
         let content : Text = switch (record.content) {
           case (null) return #err(Errors.NotFound("DNS record `content`"));
           case (?val) val;
         };
 
+        Debug.print("Record content" # debug_show (content));
+
         // Find txt record
         if (Text.contains(content, #text(Principal.toText(canister_id)))) {
+          Debug.print("TXT record found: " # debug_show (record));
+
           txt_id := ?record.id;
         } else if (Text.contains(content, #text(subdomain_name # "." # domain_name # ".icp1.io"))) {
+          Debug.print("cname domain record found: " # debug_show (record));
           // Find cname domain record
           cname_domain_id := ?record.id;
         } else if (Text.contains(content, #text("_acme-challenge." # domain_name # ".icp2.io"))) {
+          Debug.print("cname challenge record found: " # debug_show (record));
           // Find cname challenge record
           cname_challenge_id := ?record.id;
         };
@@ -126,23 +151,88 @@ module {
         cname_domain_record_id;
       };
 
+      Debug.print("Found domain registration records for canister " # Principal.toText(canister_id));
+      Debug.print("Domain registration records: " # debug_show (domain_registration_records));
       return #ok(domain_registration_records);
     };
 
+    public func find_dns_record_ids(
+      subdomain_name : Text,
+      domain_name : Text,
+      canister_id : Principal,
+      transform : Types.Transform,
+    ) : async Types.Response<Types.DomainRegistrationRecords> {
+      let zone_id = get_zone_id();
+
+      let match_opts_txt : Types.CloudflareMatchOpts = {
+        record_type = #txt;
+        name = {
+          contains = "_canister-id." # subdomain_name;
+          ends_with = domain_name;
+          exact = "_canister-id." # subdomain_name # "." # domain_name;
+          starts_with = "_canister-id." # subdomain_name;
+        };
+        content = {
+          contains = Principal.toText(canister_id);
+          ends_with = Principal.toText(canister_id);
+          exact = Principal.toText(canister_id);
+          starts_with = Principal.toText(canister_id);
+        };
+      };
+
+      let match_opts_cname_challenge : Types.CloudflareMatchOpts = {
+        record_type = #cname_challenge;
+        name = {
+          contains = "_acme-challenge." # subdomain_name;
+          ends_with = domain_name;
+          exact = "_acme-challenge." # subdomain_name # "." # domain_name;
+          starts_with = "_acme-challenge." # subdomain_name;
+        };
+        content = {
+          contains = "_acme-challenge." # subdomain_name;
+          ends_with = domain_name # ".icp2.io";
+          exact = "_acme-challenge." # subdomain_name # "." # domain_name # ".icp2.io";
+          starts_with = "_acme-challenge." # subdomain_name;
+        };
+      };
+
+      let match_opts_cname_domain : Types.CloudflareMatchOpts = {
+        record_type = #cname_domain;
+        name = {
+          contains = subdomain_name;
+          ends_with = domain_name;
+          exact = subdomain_name # "." # domain_name;
+          starts_with = subdomain_name;
+        };
+        content = {
+          contains = subdomain_name # "." # domain_name;
+          ends_with = domain_name # ".icp1.io";
+          exact = subdomain_name # "." # domain_name # ".icp1.io";
+          starts_with = subdomain_name;
+        };
+      };
+
+      let match_opts : [Types.CloudflareMatchOpts] = [
+        match_opts_txt,
+        match_opts_cname_challenge,
+        match_opts_cname_domain,
+      ];
+
+      // let matched_records : Types.DomainRegistrationRecords = switch (await list_dns_records_with_match_opts(match_opts, canister_id, transform)) {
+      //   case (#err(err)) return #err(err);
+      //   case (#ok(val)) val;
+      // };
+
+      // return await search_dns_record_id(subdomain_name, domain_name, canister_id, results);
+
+      return await list_dns_records_with_match_opts(match_opts, canister_id, transform);
+
+    };
+
     public func list_dns_records(zone_id : Text, transform : Types.Transform) : async Types.Response<[Types.DnsRecord]> {
-      // Check if Cloudflare credentials are configured
-      if (not has_cloudflare_credentials()) {
-        return #err(Errors.CloudflareNotConfigured());
-      };
-
-      let api_key : Text = switch (CLOUDFLARE_API_KEY) {
-        case (null) return #err(Errors.NotFoundCloudflareApiKey());
-        case (?val) val;
-      };
-
-      let email : Text = switch (CLOUDFLARE_EMAIL) {
-        case (null) return #err(Errors.NotFoundCloudflareEmail());
-        case (?val) val;
+      let config : Types.CloudflareConfig = switch (_get_cloudflare_credentials()) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
       };
 
       let host = "api.cloudflare.com";
@@ -151,8 +241,8 @@ module {
       // Prepare headers
       let request_headers = [
         // { name = "Authorization"; value = "Bearer " # api_key },
-        { name = "X-Auth-Key"; value = api_key },
-        { name = "X-Auth-Email"; value = email },
+        { name = "X-Auth-Key"; value = config.api_key },
+        { name = "X-Auth-Email"; value = config.email },
       ];
 
       // Await response
@@ -169,74 +259,10 @@ module {
       return #ok(parsed_typed);
     };
 
-    // public func get_dns_zones() : async Types.Response<[Types.DnsZone]> {
-    //   // Check if Cloudflare credentials are configured
-    //   if (not has_cloudflare_credentials()) {
-    //     return #err(Errors.CloudflareNotConfigured());
-    //   };
-
-    //   // TODO: Implement actual Cloudflare API call
-    //   // GET /zones
-    //   // Headers: X-Auth-Email, X-Auth-Key
-    //   // For now, return empty array
-    //   return #ok([]);
-    // };
-
-    // public func get_dns_record(zone_id : Text, record_id : Text) : async Types.Response<Types.DnsRecord> {
-    //   // Check if Cloudflare credentials are configured
-    //   if (not has_cloudflare_credentials()) {
-    //     return #err(Errors.CloudflareNotConfigured());
-    //   };
-
-    //   // TODO: Implement actual Cloudflare API call
-    //   // GET /zones/{zone_id}/dns_records/{dns_record_id}
-    //   // Headers: X-Auth-Email, X-Auth-Key
-    //   // For now, return a mock record
-    //   let mock_record : Types.CloudflareRecord = {
-    //     id = record_id;
-    //     name = "www.example.com";
-    //     type_ = "";
-    //     content = "192.168.1.1";
-    //     proxiable = false;
-    //     proxied = false;
-    //     ttl = 120;
-    //     settings = { flatten_cname = false };
-    //     meta = {};
-    //     comment = ?"comments";
-    //     tags = ["tag"];
-    //     created_on = Nat.toText(Int.abs(Utility.get_time_now(#milliseconds)));
-    //     modified_on = Nat.toText(Int.abs(Utility.get_time_now(#milliseconds)));
-    //   };
-
-    //   return #ok(mock_record);
-    // };
-
-    // public func delete_dns_record(zone_id : Text, record_id : Text) : async Types.Response<Bool> {
-    //   // Check if Cloudflare credentials are configured
-    //   if (not has_cloudflare_credentials()) {
-    //     return #err(Errors.CloudflareNotConfigured());
-    //   };
-
-    //   // TODO: Implement actual Cloudflare API call
-    //   // DELETE /zones/{zone_id}/dns_records/{dns_record_id}
-    //   // Headers: X-Auth-Email, X-Auth-Key
-    //   // For now, return success
-    //   return #ok(true);
-    // };
-
     public func create_dns_record(payload : Types.CreateDnsRecordPayload, transform : Types.Transform) : async Types.Response<Types.DnsRecord> {
-      // Check if Cloudflare credentials are configured
-      if (not has_cloudflare_credentials()) {
-        return #err(Errors.CloudflareNotConfigured());
-      };
-
-      let api_key : Text = switch (CLOUDFLARE_API_KEY) {
-        case (null) return #err(Errors.NotFoundCloudflareApiKey());
-        case (?val) val;
-      };
-      let email : Text = switch (CLOUDFLARE_EMAIL) {
-        case (null) return #err(Errors.NotFoundCloudflareEmail());
-        case (?val) val;
+      let config : Types.CloudflareConfig = switch (_get_cloudflare_credentials()) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
       };
 
       // Validate DNS record
@@ -286,8 +312,8 @@ module {
       let request_headers = [
         { name = "Content-Type"; value = "application/json" },
         // { name = "Authorization"; value = "Bearer " # api_key },
-        { name = "X-Auth-Key"; value = api_key },
-        { name = "X-Auth-Email"; value = email },
+        { name = "X-Auth-Key"; value = config.api_key },
+        { name = "X-Auth-Email"; value = config.email },
       ];
 
       // Convert Text to Blob for the HTTP request body
@@ -313,19 +339,162 @@ module {
 
     };
 
-    public func batch_create_records(payload : Types.CanisterRecordsPayload, transform : Types.Transform) : async Types.Response<[Types.CreateRecordResponse]> {
-      // Check if Cloudflare credentials are configured
-      if (not has_cloudflare_credentials()) {
-        return #err(Errors.CloudflareNotConfigured());
+    public func list_dns_records_with_match_opts(payload : [Types.CloudflareMatchOpts], canister_id : Principal, transform : Types.Transform) : async Types.Response<Types.DomainRegistrationRecords> {
+      let config : Types.CloudflareConfig = switch (_get_cloudflare_credentials()) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
       };
 
-      let api_key : Text = switch (CLOUDFLARE_API_KEY) {
-        case (null) return #err(Errors.NotFoundCloudflareApiKey());
+      if (payload.size() == 0) return #err(Errors.EmptyPayloadArray("Batch list dns records"));
+
+      let host = "api.cloudflare.com";
+      let url = "https://" # host # "/client/v4/zones/" # config.zone_id # "/dns_records";
+      // let bod = [#Object(payload.txt_payload), #Object(payload.cname_challenge), #Object(payload.cname_domain)];
+      // var bod : [SearchRecordsRawPayload] = [];
+      // var bod = [];
+
+      var query_paths : [Types.DomainRecordPathType] = [];
+      var query_path_map : Map.Map<Text, Types.DomainRecordPathType> = Map.empty();
+
+      // Prepare headers
+      let request_headers = [
+        { name = "Content-Type"; value = "application/json" },
+        { name = "Authorization"; value = "Bearer " # config.api_key },
+        { name = "X-Auth-Key"; value = config.api_key },
+        { name = "X-Auth-Email"; value = config.email },
+      ];
+
+      // Build array of path parameter objects
+      for (opt in payload.vals()) {
+
+        // var content_query = "content.contains=" # opt.content.contains # "&content.endsWith=" # opt.content.ends_with # "&content.exact=" # opt.content.exact # "&content.startsWith=" # opt.content.starts_with;
+        // var name_query = "name.contains=" # opt.content.contains # "&name.endsWith=" # opt.content.ends_with # "&name.exact=" # opt.content.exact # "&name.startsWith=" # opt.content.starts_with;
+        var content_query = "content.exact=" # opt.content.exact;
+        var name_query = "name.exact=" # opt.name.exact;
+        var full_query = content_query # "&" # name_query;
+
+        let rec_type = switch (opt.record_type) {
+          case (#txt) {
+            Map.add(query_path_map, Text.compare, "txt", { record_type = "txt"; path = full_query });
+            "txt";
+          };
+          case (#cname_challenge) {
+            Map.add(query_path_map, Text.compare, "cname_challenge", { record_type = "cname_challenge"; path = full_query });
+            "cname_challenge";
+          };
+          case (#cname_domain) {
+            Map.add(query_path_map, Text.compare, "cname_domain", { record_type = "cname_domain"; path = full_query });
+            "cname_domain";
+          };
+        };
+        let _paths = Array.append(query_paths, [{ record_type = rec_type; path = full_query }]);
+
+        query_paths := _paths;
+      };
+
+      var records : [Types.DnsRecord] = [];
+      var matched_domain_registration : ?Types.DomainRegistrationRecords = ?{
+        canister_id = canister_id;
+        txt_domain_record_id = "";
+        cname_challenge_record_id = "";
+        cname_domain_record_id = "";
+      };
+
+      for (path_item in query_paths.vals()) {
+        let existing_domain_registration : Types.DomainRegistrationRecords = switch (matched_domain_registration) {
+          case (null) return #err(Errors.UnexpectedError("Domain registration not found"));
+          case (?val) val;
+        };
+
+        let opt = switch (Map.get(query_path_map, Text.compare, path_item.record_type)) {
+          case (null) return #err(Errors.UnexpectedError("searching dns records by exact match"));
+          case (?val) val;
+        };
+
+        let req_url = url # "?" # path_item.path;
+        Debug.print("requesting dns records for url:" # req_url);
+        // Await response
+        let res : Types.HttpResponse = switch (await Outcall.make_http_request(#get, req_url, request_headers, null, transform)) {
+          case (#err(err)) return #err(err);
+          case (#ok(val)) val;
+        };
+
+        let parsed_typed : [Types.DnsRecord] = switch (Parsing.parse_cloudflare_dns_response(res.body)) {
+          case (#err(err)) return #err(err);
+          case (#ok(val)) val;
+        };
+
+        Debug.print("got records:" # debug_show (parsed_typed));
+
+        let updated_records = switch (opt.record_type) {
+          case ("txt") {
+            {
+              canister_id = canister_id;
+              txt_domain_record_id = parsed_typed[0].id;
+              cname_challenge_record_id = existing_domain_registration.cname_challenge_record_id;
+              cname_domain_record_id = existing_domain_registration.cname_domain_record_id;
+            };
+          };
+          case ("cname_domain") {
+            {
+              canister_id = canister_id;
+              txt_domain_record_id = existing_domain_registration.txt_domain_record_id;
+              cname_challenge_record_id = existing_domain_registration.cname_challenge_record_id;
+              cname_domain_record_id = parsed_typed[0].id;
+            };
+          };
+          case ("cname_challenge") {
+            {
+              canister_id = canister_id;
+              txt_domain_record_id = existing_domain_registration.txt_domain_record_id;
+              cname_challenge_record_id = parsed_typed[0].id;
+              cname_domain_record_id = existing_domain_registration.cname_domain_record_id;
+            };
+          };
+          case (_) return #err(Errors.UnsupportedAction("Record type"));
+        };
+
+        matched_domain_registration := ?updated_records;
+
+        let new_records = Array.append(records, parsed_typed);
+        records := new_records;
+      };
+
+      // for (path in query_paths.vals()) {
+      //   let req_url = url # "?" # path;
+      //   Debug.print("requesting dns records for url:" # req_url);
+      //   // Await response
+      //   let res : Types.HttpResponse = switch (await Outcall.make_http_request(#get, req_url, request_headers, null, transform)) {
+      //     case (#err(err)) return #err(err);
+      //     case (#ok(val)) val;
+      //   };
+
+      //   let parsed_typed : [Types.DnsRecord] = switch (Parsing.parse_cloudflare_dns_response(res.body)) {
+      //     case (#err(err)) return #err(err);
+      //     case (#ok(val)) val;
+      //   };
+
+      //   Debug.print("got records:" # debug_show (parsed_typed));
+
+      //   let new_records = Array.append(records, parsed_typed);
+      //   records := new_records;
+      // };
+
+      Debug.print("ALl matched records:" # Nat.toText(records.size()));
+      Debug.print("parsed:" # debug_show (records));
+
+      let matched_records : Types.DomainRegistrationRecords = switch (matched_domain_registration) {
+        case (null) return #err(Errors.UnexpectedError("searching for domain records."));
         case (?val) val;
       };
-      let email : Text = switch (CLOUDFLARE_EMAIL) {
-        case (null) return #err(Errors.NotFoundCloudflareEmail());
-        case (?val) val;
+
+      return #ok(matched_records);
+    };
+
+    public func batch_create_records(payload : Types.CanisterRecordsPayload, transform : Types.Transform) : async Types.Response<[Types.CreateRecordResponse]> {
+      let config : Types.CloudflareConfig = switch (_get_cloudflare_credentials()) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
       };
 
       let host = "api.cloudflare.com";
@@ -401,9 +570,9 @@ module {
       // Prepare headers
       let request_headers = [
         { name = "Content-Type"; value = "application/json" },
-        { name = "Authorization"; value = "Bearer " # api_key },
-        { name = "X-Auth-Key"; value = api_key },
-        { name = "X-Auth-Email"; value = email },
+        { name = "Authorization"; value = "Bearer " # config.api_key },
+        { name = "X-Auth-Key"; value = config.api_key },
+        { name = "X-Auth-Email"; value = config.email },
       ];
 
       Debug.print("Headers : " # debug_show (request_headers));
@@ -462,6 +631,61 @@ module {
     //   };
 
     //   return #ok(updated_record);
+    // };
+
+    // public func get_dns_zones() : async Types.Response<[Types.DnsZone]> {
+    //   // Check if Cloudflare credentials are configured
+    //   if (not has_cloudflare_credentials()) {
+    //     return #err(Errors.CloudflareNotConfigured());
+    //   };
+
+    //   // TODO: Implement actual Cloudflare API call
+    //   // GET /zones
+    //   // Headers: X-Auth-Email, X-Auth-Key
+    //   // For now, return empty array
+    //   return #ok([]);
+    // };
+
+    // public func get_dns_record(zone_id : Text, record_id : Text) : async Types.Response<Types.DnsRecord> {
+    //   // Check if Cloudflare credentials are configured
+    //   if (not has_cloudflare_credentials()) {
+    //     return #err(Errors.CloudflareNotConfigured());
+    //   };
+
+    //   // TODO: Implement actual Cloudflare API call
+    //   // GET /zones/{zone_id}/dns_records/{dns_record_id}
+    //   // Headers: X-Auth-Email, X-Auth-Key
+    //   // For now, return a mock record
+    //   let mock_record : Types.CloudflareRecord = {
+    //     id = record_id;
+    //     name = "www.example.com";
+    //     type_ = "";
+    //     content = "192.168.1.1";
+    //     proxiable = false;
+    //     proxied = false;
+    //     ttl = 120;
+    //     settings = { flatten_cname = false };
+    //     meta = {};
+    //     comment = ?"comments";
+    //     tags = ["tag"];
+    //     created_on = Nat.toText(Int.abs(Utility.get_time_now(#milliseconds)));
+    //     modified_on = Nat.toText(Int.abs(Utility.get_time_now(#milliseconds)));
+    //   };
+
+    //   return #ok(mock_record);
+    // };
+
+    // public func delete_dns_record(zone_id : Text, record_id : Text) : async Types.Response<Bool> {
+    //   // Check if Cloudflare credentials are configured
+    //   if (not has_cloudflare_credentials()) {
+    //     return #err(Errors.CloudflareNotConfigured());
+    //   };
+
+    //   // TODO: Implement actual Cloudflare API call
+    //   // DELETE /zones/{zone_id}/dns_records/{dns_record_id}
+    //   // Headers: X-Auth-Email, X-Auth-Key
+    //   // For now, return success
+    //   return #ok(true);
     // };
 
     // Helper function to check if Cloudflare credentials are set
