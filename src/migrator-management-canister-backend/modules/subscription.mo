@@ -62,6 +62,11 @@ module {
       return treasury;
     };
 
+    public func get_tier(tier_id : Nat) : Types.Response<Types.Tier> {
+      if (tier_id >= tiers_list.size()) return #err(Errors.InvalidInput("Tier id does not exist"));
+      return #ok(tiers_list[tier_id]);
+    };
+
     public func get_tier_id_freemium() : Types.Response<Nat> {
       var i = 0;
       let n = tiers_list.size();
@@ -89,7 +94,7 @@ module {
       };
     };
 
-    private func _get_subscription(caller : Principal) : async ?Types.Subscription {
+    private func _get_subscription(caller : Principal) : ?Types.Subscription {
       //   switch (subscriptions.get(caller)) {
       switch (Map.get(subscriptions, Principal.compare, caller)) {
         case (null) { return null };
@@ -214,9 +219,13 @@ module {
       return result;
     };
 
-    private func has_enough_credits_subscription(caller : Principal, tier_id : Nat) : Types.EnoughCreditsResult {
+    private func has_enough_credits_subscription(caller : Principal, tier_id : Nat) : Types.Response<Types.EnoughCreditsResult> {
       // Get pricing list
-      let tier : Types.Tier = tiers_list[tier_id];
+      // let tier : Types.Tier = tiers_list[tier_id];
+      let tier : Types.Tier = switch (get_tier(tier_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
 
       // Get user's ICP balance
       let deposited_icp = book.fetchUserIcpBalance(caller, ledger);
@@ -226,10 +235,14 @@ module {
 
       // Validate user has enough ICP balance
       if (deposited_icp < total_cost) {
-        return { status = false; need = total_cost; available = deposited_icp };
+        return #ok({
+          status = false;
+          need = total_cost;
+          available = deposited_icp;
+        });
       };
 
-      return { status = true; need = total_cost; available = deposited_icp };
+      return #ok({ status = true; need = total_cost; available = deposited_icp });
     };
 
     private func has_enough_credits_add_on(caller : Principal, add_on_id : Types.AddOnId) : Types.Response<Types.EnoughCreditsResult> {
@@ -261,8 +274,14 @@ module {
     public func subscribe_add_on(
       caller : Principal,
       project_id : Types.ProjectId,
-      add_on_id : Types.AddOnId,
+      addon_variant_id : Types.AddOnId,
     ) : Types.Response<[Types.AddOnService]> {
+
+      // Validate treasury principal
+      let payment_receiver : Principal = switch (treasury) {
+        case (null) { return #err(Errors.TreasuryNotSet()) };
+        case (?val) { val };
+      };
 
       let _index_counter = switch (index_counter_manager) {
         case (null) return #err(Errors.NotFoundClass("Index counter"));
@@ -274,8 +293,95 @@ module {
         case (?val) val;
       };
 
+      let validate_result : Types.ValidateSubscribeAddonResult = switch (validate_subscribe_addon(caller, addon_variant_id, project_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      // Deduct payment from caller's balance
+      let _success = switch (book.process_payment(caller, payment_receiver, ledger, validate_result.has_credits_result.need)) {
+        case (false) return #err(Errors.PaymentProcessingFailure());
+        case (true) true;
+      };
+
+      return _create_addon(validate_result.add_on.type_, validate_result.canister_id, project_id, validate_result.add_on.id, validate_result.expiry);
+    };
+
+    private func _create_addon(
+      addon_type : Types.AddOnServiceType,
+      canister_id : Principal,
+      project_id : Types.ProjectId,
+      addon_variant_id : Nat,
+      expiry_ms : Nat,
+    ) : Types.Response<[Types.AddOnService]> {
+      let _domain_manager = switch (domain_manager) {
+        case (null) return #err(Errors.NotFoundClass("Domain manager"));
+        case (?val) val;
+      };
+
+      let _index_counter = switch (index_counter_manager) {
+        case (null) return #err(Errors.NotFoundClass("Index counter"));
+        case (?val) val;
+      };
+
+      let now = Int.abs(Utility.get_time_now(#milliseconds));
+
+      // Get id for new add on
+      let new_add_on_id : Nat = _index_counter.get_index(#addon_id);
+
+      // Get resource id to attach to add on
+      let resource_id : Nat = switch (addon_type) {
+        case (#register_subdomain) {
+          let _new_domain_registration : Types.DomainRegistration = switch (_domain_manager.initialize_domain_registration(canister_id, addon_variant_id)) {
+            case (#err(err)) return #err(err);
+            case (#ok(val)) val;
+          };
+
+          _new_domain_registration.id;
+        };
+        case (#register_domain) {
+          return #err(Errors.NotAvailableService());
+        };
+      };
+
+      // Create add-on for project using new id and attached resource id
+      let new_add_on : Types.AddOnService = {
+        id = new_add_on_id;
+        attached_resource_id = ?resource_id;
+        variant_id = addon_variant_id;
+        initialized = false;
+        status = #available;
+        type_ = addon_type;
+        created_on = now;
+        updated_on = now;
+        expires_at = ?expiry_ms;
+      };
+
+      let existing_addon_ids : [Types.AddOnId] = switch (Map.get(project_addons, Nat.compare, project_id)) {
+        case (null) [];
+        case (?val) val;
+      };
+
+      // Add new addon to project's add on list
+      let new_add_on_ids : [Types.AddOnId] = Array.append(existing_addon_ids, [new_add_on.id]);
+      let next_addons_id = _index_counter.increment_index(#addon_id);
+
+      Map.add(project_addons, Nat.compare, project_id, new_add_on_ids);
+      Map.add(add_ons_map, Nat.compare, new_add_on_id, new_add_on);
+
+      let new_add_ons : [Types.AddOnService] = get_add_ons_by_project(project_id);
+      return #ok(new_add_ons);
+    };
+
+    /// Validate subscription before creating it
+    private func validate_subscribe_addon(caller : Principal, add_on_id : Types.AddOnId, project_id : Types.ProjectId) : Types.Response<Types.ValidateSubscribeAddonResult> {
       let _project_manager = switch (project_manager) {
         case (null) return #err(Errors.NotFoundClass("Project manager"));
+        case (?val) val;
+      };
+
+      let _index_counter = switch (index_counter_manager) {
+        case (null) return #err(Errors.NotFoundClass("Index counter"));
         case (?val) val;
       };
 
@@ -306,12 +412,6 @@ module {
         return #err(Errors.AddOnExists(add_on_id));
       };
 
-      // Validate treasury principal
-      let payment_receiver : Principal = switch (treasury) {
-        case (null) { return #err(Errors.TreasuryNotSet()) };
-        case (?val) { val };
-      };
-
       // Find the requested add-on details
       let add_on : Types.AddOnVariant = switch (find_add_on_variant(add_on_id)) {
         case (null) return #err(Errors.NotFound("add-on id " # Nat.toText(add_on_id)));
@@ -323,57 +423,14 @@ module {
       // Get expiry time for add-on
       let expiry = Utility.calculate_expiry_timestamp(add_on.expiry, add_on.expiry_duration);
 
-      // Get id for new add on
-      let new_add_on_id : Nat = _index_counter.get_index(#addon_id);
-
-      // Deduct payment from caller's balance
-      let _success = switch (book.process_payment(caller, payment_receiver, ledger, has_credits_result.need)) {
-        case (false) return #err(Errors.PaymentProcessingFailure());
-        case (true) true;
-      };
-
-      // Get resource id to attach to add on
-      let resource_id : Nat = switch (add_on.type_) {
-        case (#register_subdomain) {
-          let _new_domain_registration : Types.DomainRegistration = switch (_domain_manager.initialize_domain_registration(canister_id, add_on_id)) {
-            case (#err(err)) return #err(err);
-            case (#ok(val)) val;
-          };
-
-          _new_domain_registration.id;
-        };
-        case (#register_domain) {
-          return #err(Errors.NotAvailableService());
-        };
-      };
-
-      // Create add-on for project using new id and attached resource id
-      let new_add_on : Types.AddOnService = {
-        id = new_add_on_id;
-        attached_resource_id = ?resource_id;
-        variant_id = add_on.id;
-        initialized = false;
-        status = #available;
-        type_ = add_on.type_;
-        created_on = now;
-        updated_on = now;
-        expires_at = ?expiry;
-      };
-
-      let existing_addon_ids : [Types.AddOnId] = switch (Map.get(project_addons, Nat.compare, project_id)) {
-        case (null) [];
-        case (?val) val;
-      };
-
-      // Add new addon to project's add on list
-      let new_add_on_ids : [Types.AddOnId] = Array.append(existing_addon_ids, [new_add_on.id]);
-      let next_addons_id = _index_counter.increment_index(#addon_id);
-
-      Map.add(project_addons, Nat.compare, project_id, new_add_on_ids);
-      Map.add(add_ons_map, Nat.compare, new_add_on_id, new_add_on);
-
-      let new_add_ons : [Types.AddOnService] = get_add_ons_by_project(project_id);
-      return #ok(new_add_ons);
+      return #ok({
+        expiry;
+        add_on;
+        project;
+        has_credits_result;
+        canister_id;
+        now;
+      });
     };
 
     public func update_addon_resource_id(addon_id : Types.AddOnId, new_resouce_id : Types.DomainRegistrationId) : Types.Response<()> {
@@ -404,7 +461,11 @@ module {
       };
 
       // Get pricing list
-      let tier : Types.Tier = tiers_list[tier_id];
+      // let tier : Types.Tier = tiers_list[tier_id];
+      let tier : Types.Tier = switch (get_tier(tier_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
 
       // Get user's ICP balance
       let deposited_icp = book.fetchUserIcpBalance(caller, ledger);
@@ -420,11 +481,81 @@ module {
       // Deduct payment from caller's balance
       let success = book.process_payment(caller, payment_receiver, ledger, total_cost);
       if (success) {
-        Map.add(subscriptions, Principal.compare, caller, subscription);
+        add_subscription(caller, subscription);
+        // Map.add(subscriptions, Principal.compare, caller, subscription);
         return #ok(subscription);
       } else {
         return #err(Errors.PaymentProcessingFailure());
       };
+    };
+
+    public func grant_addon(
+      project_id : Types.ProjectId,
+      addon_id : Types.AddOnId,
+      expiry_in_ms : Nat,
+    ) : async Types.Response<[Types.AddOnService]> {
+      let _project_manager = switch (project_manager) {
+        case (null) return #err(Errors.NotFoundClass("Project manager"));
+        case (?val) val;
+      };
+
+      let project : Types.Project = switch (_project_manager.get_project_by_id(project_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      // Prevent freemium project access
+      if (project.plan == #freemium) return #err(Errors.PremiumFeature());
+      let canister_id : Principal = switch (project.canister_id) {
+        case (null) return #err(Errors.NotFoundCanister());
+        case (?val) val;
+      };
+
+      // Find the requested add-on details
+      let add_on : Types.AddOnVariant = switch (find_add_on_variant(addon_id)) {
+        case (null) return #err(Errors.NotFound("add-on id " # Nat.toText(addon_id)));
+        case (?val) val;
+      };
+
+      return _create_addon(add_on.type_, canister_id, project_id, add_on.id, expiry_in_ms);
+
+    };
+
+    public func grant_subscription(user_principal : Principal, tier_id : Nat) : async Types.Response<Types.Subscription> {
+      // // Get pricing list
+      // let tier : Types.Tier = tiers_list[tier_id];
+      let tier : Types.Tier = switch (get_tier(tier_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      let subscription : Types.Subscription = switch (_get_subscription(user_principal)) {
+        case (null) {
+          {
+            user_id = user_principal;
+            tier_id = tier_id;
+            max_slots = tier.slots;
+            used_slots = 0;
+            canisters = [];
+            free_canisters = [];
+            date_created = Utility.get_time_now(#milliseconds);
+            date_updated = Utility.get_time_now(#milliseconds);
+          };
+        };
+        case (?val) {
+          // TODO: Handle downgrading and remove excess canisters to free
+          {
+            val with tier_id = tier_id;
+            used_slots = val.used_slots;
+            max_slots = tier.slots;
+            date_updated = Utility.get_time_now(#milliseconds);
+          };
+        };
+      };
+
+      // Apply changes
+      add_subscription(user_principal, subscription);
+      return #ok(subscription);
     };
 
     public func create_subscription(caller : Principal, tier_id : Nat) : async Types.Response<Types.Subscription> {
@@ -439,10 +570,14 @@ module {
       };
 
       // // Get pricing list
-      let tier : Types.Tier = tiers_list[tier_id];
+      // let tier : Types.Tier = tiers_list[tier_id];
+      let tier : Types.Tier = switch (get_tier(tier_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
 
       // Prevent duplicate subscription
-      let get_subscription_response = await _get_subscription(caller);
+      let get_subscription_response = _get_subscription(caller);
       let create_response = switch (get_subscription_response) {
         case (null) {
           let subscription : Types.Subscription = {
@@ -578,6 +713,10 @@ module {
           return true;
         };
       };
+    };
+
+    private func add_subscription(caller : Principal, subscription : Types.Subscription) : () {
+      Map.add(subscriptions, Principal.compare, caller, subscription);
     };
 
   };
