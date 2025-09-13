@@ -27,6 +27,8 @@ interface CanisterDetailsModalProps {
   open: boolean;
   onClose: () => void;
   canisterId: string;
+  projectId: number;
+  addonId: number;
   canisterData: any;
 }
 
@@ -55,6 +57,8 @@ const CanisterDetailsModal: React.FC<CanisterDetailsModalProps> = ({
   open,
   onClose,
   canisterId,
+  projectId,
+  addonId,
   canisterData,
 }) => {
   const [tabValue, setTabValue] = useState(0);
@@ -107,7 +111,12 @@ const CanisterDetailsModal: React.FC<CanisterDetailsModalProps> = ({
 
     setIsSettingUpDomain(true);
     try {
-      const result = await handleSetupCustomDomain(canisterId, subdomainName);
+      const result = await handleSetupCustomDomain(
+        projectId,
+        canisterId,
+        subdomainName,
+        addonId
+      );
       if (result.status) {
         setToasterData({
           headerContent: "Success",

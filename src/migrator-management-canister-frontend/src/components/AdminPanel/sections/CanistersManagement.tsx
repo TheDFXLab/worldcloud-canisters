@@ -163,7 +163,6 @@ const CanistersManagement: React.FC = () => {
         batch_id: 0n,
         is_last_chunk: true,
       };
-      debugger;
       const result = await handleSetIcDomains(canisterId, staticFile);
 
       if (result.status) {
@@ -479,14 +478,15 @@ canister2.worldcloud.app
         )}
       </div>
 
-      {selectedCanisterForModal && (
+      {/* {selectedCanisterForModal && (
         <CanisterDetailsModal
           open={!!selectedCanisterForModal}
           onClose={() => setSelectedCanisterForModal(null)}
           canisterId={selectedCanisterForModal.canisterId}
+          projectId={}
           canisterData={selectedCanisterForModal.canisterData}
         />
-      )}
+      )} */}
     </div>
   );
 };
