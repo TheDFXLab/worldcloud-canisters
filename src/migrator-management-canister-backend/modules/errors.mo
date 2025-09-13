@@ -75,4 +75,5 @@ module ErrorType {
   public func NameTaken(name : Text) : Text = "Subdomain name " # name # " is taken.";
   public func NotAttachedResourceId() : Text = "The add-on has no attached resource.";
   public func DomainRecordsExist() : Text = "The domain records already exist for this subdomain name. Please delete the resource and recreate it with another name.";
+  public func EmptyPayloadArray(action : Text) : Text = action # " action cannot have an empty payload list.";
 };

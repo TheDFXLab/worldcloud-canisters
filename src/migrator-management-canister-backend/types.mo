@@ -421,6 +421,15 @@ module {
     #year;
   };
 
+  public type ValidateSubscribeAddonResult = {
+    expiry : Nat;
+    add_on : AddOnVariant;
+    project : Project;
+    has_credits_result : EnoughCreditsResult;
+    canister_id : Principal;
+    now : Nat;
+  };
+
   public type AddOnService = {
     id : AddOnId;
     attached_resource_id : ?Nat;
@@ -629,6 +638,12 @@ module {
   public type DomainRegistrationId = Nat;
   public type IcDomainRegistrationId = Text;
 
+  public type DomainRegistrationRecordType = {
+    #txt;
+    #cname_domain;
+    #cname_challenge;
+  };
+
   // Overview of a domain registration's records and status
   public type DomainRegistration = {
     id : Nat;
@@ -656,6 +671,11 @@ module {
 
     #ic_registration_error;
     #none; // no error
+  };
+
+  public type DomainRecordPathType = {
+    record_type : Text;
+    path : Text;
   };
 
   public type DomainRegistrationError = Text;
@@ -726,9 +746,27 @@ module {
     next_trigger_at : Nat;
   };
 
+  public type CloudflareConfig = {
+    email : Text;
+    api_key : Text;
+    zone_id : Text;
+  };
   public type CloudflareCredentials = {
     email : ?Text;
     api_key : ?Text;
+  };
+
+  public type CloudflareMatchOpts = {
+    record_type : DomainRegistrationRecordType;
+    name : CloudflareRecordSearchOpts;
+    content : CloudflareRecordSearchOpts;
+  };
+
+  public type CloudflareRecordSearchOpts = {
+    contains : Text;
+    ends_with : Text;
+    exact : Text;
+    starts_with : Text;
   };
 
   /**********************/
@@ -878,6 +916,9 @@ module {
 
     // Validation
     validate_subscription : (caller : Principal) -> async Bool;
+
+    grant_subscription : (user_principal : Principal, tier_id : Nat) -> async Response<Subscription>;
+    grant_addon : (project_id : ProjectId, addon_id : AddOnId, expiry_in_ms : Nat) -> async Response<[AddOnService]>;
   };
 
   public type IndexCounterInterface = {
@@ -1081,5 +1122,12 @@ module {
   };
 
   /** End of types */
+
+  type SearchRecordsRawPayload = {
+    #Object : {
+      content : CloudflareRecordSearchOpts;
+      name : CloudflareRecordSearchOpts;
+    };
+  };
 
 };
