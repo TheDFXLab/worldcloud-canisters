@@ -342,7 +342,7 @@ export const RegisterSubdomainAddon: React.FC<RegisterSubdomainAddonProps> = ({
     const url = `${ic_registration.subdomain}.${item.ic_registration.domain}`;
     return (
       <div className="addon-container">
-        <Typography variant="body2" sx={{ mt: 0.5 }}>
+        <Typography variant="subtitle2" sx={{ mt: 0.5 }}>
           Status:{" "}
           <Tooltip
             title={getIcRegistrationStatusDetails(
@@ -395,7 +395,7 @@ export const RegisterSubdomainAddon: React.FC<RegisterSubdomainAddonProps> = ({
           <Alert severity="warning" variant="outlined">
             <Typography variant="body2">
               <strong>Error: </strong>
-              <p>{item.error}</p>
+              {item.error}
             </Typography>
           </Alert>
         )}
