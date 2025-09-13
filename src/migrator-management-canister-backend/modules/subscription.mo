@@ -21,18 +21,38 @@ module {
     ledger : Principal,
     subscriptionsInit : Map.Map<Principal, Types.Subscription>,
     treasury_account_init : ?Principal,
-    add_ons_map_init : Types.SubscriptionServices,
+    project_to_addons_map_init : Types.ProjectAddonsMap,
+    add_ons_map_init : Types.AddonsMap,
   ) {
+    // class references
+    private var domain_manager : ?Types.DomainInterface = null;
+    private var project_manager : ?Types.ProjectInterface = null;
+    public var index_counter_manager : ?Types.IndexCounterInterface = null;
+
+    public var initialized = false;
+
+    // Variables
     private var icp_fee : Nat = 10_000;
     public var treasury : ?Principal = treasury_account_init; // Receiver of payments
-    // public var subscriptions : Types.SubscriptionsMap = HashMap.HashMap<Principal, Types.Subscription>(0, Principal.equal, Principal.hash);
-    // public var subscriptions = Map.empty<Principal, Types.Subscription>();
     public var subscriptions = subscriptionsInit;
     public var add_ons_map = add_ons_map_init;
+    public var project_addons = project_to_addons_map_init;
     public var DNS_ADD_ON_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
     public var tiers_list : Types.TiersList = tiers;
     public var addons_list : [Types.AddOnVariant] = addons;
+
+    public func init(
+      domain_manager_init : Types.DomainInterface,
+      project_manager_init : Types.ProjectInterface,
+      index_counter_init : Types.IndexCounterInterface,
+    ) {
+      domain_manager := ?domain_manager_init;
+      project_manager := ?project_manager_init;
+      index_counter_manager := ?index_counter_init;
+
+      initialized := true;
+    };
 
     public func set_treasury(new_treasury : Principal) : () {
       treasury := ?new_treasury;
@@ -53,7 +73,6 @@ module {
         i += 1;
       };
       // If not found, throw error
-      // return Utility.expect(null, Errors.NotFoundTier());
       return #err(Errors.NotFoundTier());
     };
 
@@ -79,15 +98,104 @@ module {
     };
 
     public func get_add_ons_by_project(project_id : Nat) : [Types.AddOnService] {
-      let add_ons : [Types.AddOnService] = switch (Map.get(add_ons_map, Nat.compare, project_id)) {
+      let add_on_ids : [Types.AddOnId] = switch (Map.get(project_addons, Nat.compare, project_id)) {
         case (null) [];
         case (?val) val;
       };
+
+      var add_ons : [Types.AddOnService] = [];
+      for (id in add_on_ids.vals()) {
+        let _addon : ?Types.AddOnService = switch (Map.get(add_ons_map, Nat.compare, id)) {
+          case (null) { null };
+          case (?val) {
+            let _new_array : [Types.AddOnService] = Array.append(add_ons, [val]);
+            add_ons := _new_array;
+            ?val;
+          };
+        };
+      };
+
       return add_ons;
     };
 
-    public func find_add_on(add_on_id : Types.AddOnId) : ?Types.AddOnVariant {
+    public func get_add_on_by_id(project_id : Types.ProjectId, add_on_id : Types.AddOnId) : Types.Response<Types.AddOnService> {
+      let add_ons : [Types.AddOnService] = get_add_ons_by_project(project_id);
+      let add_on : Types.AddOnService = switch (Array.find(add_ons, func(addon : Types.AddOnService) : Bool { add_on_id == addon.id })) {
+        case (null) return #err(Errors.NotFound("add-on with id " # Nat.toText(add_on_id)));
+        case (?val) val;
+      };
+
+      return #ok(add_on);
+    };
+
+    public func get_my_addons_by_project(project_id : Types.ProjectId) : Types.Response<Types.MyAddons> {
+      let _domain_manager : Types.DomainInterface = switch (domain_manager) {
+        case (null) return #err(Errors.NotFoundClass("Domain manager"));
+        case (?val) val;
+      };
+
+      let addons : [Types.AddOnService] = get_add_ons_by_project(project_id);
+      var domain_addons : [Types.MyAddon<Types.DomainRegistration>] = [];
+      for (addon in addons.vals()) {
+        let _resource_id = switch (addon.type_) {
+          // Handle domain resources
+          case (#register_subdomain or #register_domain) {
+            let resource_id : Nat = switch (addon.attached_resource_id) {
+              case (null) return #err(Errors.NotAttachedResourceId());
+              case (?val) val;
+            };
+            let resource : ?Types.DomainRegistration = switch (_domain_manager.get_domain_registration_by_id(resource_id)) {
+              case (null) {
+                null;
+              };
+              case (val) val;
+            };
+
+            let _resource = switch (resource) {
+              case (null) {
+                return #err(Errors.NotFound("Domain registration with id " # Nat.toText(resource_id)));
+              };
+              case (?val) { val };
+            };
+
+            let my_addon : Types.MyAddon<Types.DomainRegistration> = {
+              addon = addon;
+              resource = _resource;
+            };
+
+            let new_array_domain_reg : [Types.MyAddon<Types.DomainRegistration>] = Array.append(domain_addons, [my_addon]);
+            domain_addons := new_array_domain_reg;
+            _resource.id;
+          };
+
+          case (_) {
+            Debug.print("Unsupported addon type: " # debug_show (addon.type_));
+            return #err(Errors.UnsupportedAction("Addon type " # debug_show (addon.type_)));
+          };
+        };
+      };
+
+      let my_addons : Types.MyAddons = {
+        domain_addons = domain_addons;
+      };
+
+      return #ok(my_addons);
+    };
+
+    public func find_add_on_variant(add_on_id : Types.AddOnId) : ?Types.AddOnVariant {
       return Array.find(addons, func(addon : Types.AddOnVariant) : Bool { addon.id == add_on_id });
+    };
+
+    public func find_add_on_by_id(project_id : Types.ProjectId, id : Types.AddOnId) : ?Types.AddOnService {
+      let add_ons : [Types.AddOnService] = get_add_ons_by_project(project_id);
+
+      if (add_ons.size() == 0) return null;
+
+      let match : Types.AddOnService = switch (Array.find(add_ons, func(a : Types.AddOnService) : Bool { a.id == id })) {
+        case (null) return null;
+        case (?val) val;
+      };
+      return ?match;
     };
 
     public func has_add_on(project_id : Types.ProjectId, add_on_id : Types.AddOnId) : Types.HasAddonResult {
@@ -150,7 +258,27 @@ module {
       });
     };
 
-    public func subscribe_add_on(caller : Principal, project_id : Types.ProjectId, add_on_id : Types.AddOnId, project_manager : Types.ProjectInterface, domain_manager : Types.DomainInterface) : Types.Response<[Types.AddOnService]> {
+    public func subscribe_add_on(
+      caller : Principal,
+      project_id : Types.ProjectId,
+      add_on_id : Types.AddOnId,
+    ) : Types.Response<[Types.AddOnService]> {
+
+      let _index_counter = switch (index_counter_manager) {
+        case (null) return #err(Errors.NotFoundClass("Index counter"));
+        case (?val) val;
+      };
+
+      let _domain_manager = switch (domain_manager) {
+        case (null) return #err(Errors.NotFoundClass("Domain manager"));
+        case (?val) val;
+      };
+
+      let _project_manager = switch (project_manager) {
+        case (null) return #err(Errors.NotFoundClass("Project manager"));
+        case (?val) val;
+      };
+
       // Ensure user has paid the total cost for the add on
       let has_credits_result : Types.EnoughCreditsResult = switch (has_enough_credits_add_on(caller, add_on_id)) {
         case (#err(err)) return #err(err);
@@ -158,7 +286,7 @@ module {
       };
 
       // Get project
-      let project : Types.Project = switch (project_manager.get_project_by_id(project_id)) {
+      let project : Types.Project = switch (_project_manager.get_project_by_id(project_id)) {
         case (#err(err)) return #err(err);
         case (#ok(val)) val;
       };
@@ -185,7 +313,7 @@ module {
       };
 
       // Find the requested add-on details
-      let add_on : Types.AddOnVariant = switch (find_add_on(add_on_id)) {
+      let add_on : Types.AddOnVariant = switch (find_add_on_variant(add_on_id)) {
         case (null) return #err(Errors.NotFound("add-on id " # Nat.toText(add_on_id)));
         case (?val) val;
       };
@@ -195,15 +323,8 @@ module {
       // Get expiry time for add-on
       let expiry = Utility.calculate_expiry_timestamp(add_on.expiry, add_on.expiry_duration);
 
-      // Create add-on for project
-      let new_add_on : Types.AddOnService = {
-        id = add_on.id;
-        status = #available;
-        type_ = add_on.type_;
-        created_on = now;
-        updated_on = now;
-        expires_at = ?expiry;
-      };
+      // Get id for new add on
+      let new_add_on_id : Nat = _index_counter.get_index(#addon_id);
 
       // Deduct payment from caller's balance
       let _success = switch (book.process_payment(caller, payment_receiver, ledger, has_credits_result.need)) {
@@ -211,22 +332,73 @@ module {
         case (true) true;
       };
 
-      // Add new add on to the project's list
-      let new_add_ons : [Types.AddOnService] = Array.append(add_on_exists.add_ons, [new_add_on]);
-      Map.add(add_ons_map, Nat.compare, project_id, new_add_ons);
+      // Get resource id to attach to add on
+      let resource_id : Nat = switch (add_on.type_) {
+        case (#register_subdomain) {
+          let _new_domain_registration : Types.DomainRegistration = switch (_domain_manager.initialize_domain_registration(canister_id, add_on_id)) {
+            case (#err(err)) return #err(err);
+            case (#ok(val)) val;
+          };
 
-      let _new_domain_registration : Types.DomainRegistration = switch (domain_manager.initialize_domain_registration(canister_id)) {
-        case (#err(err)) return #err(err);
-        case (#ok(val)) val;
+          _new_domain_registration.id;
+        };
+        case (#register_domain) {
+          return #err(Errors.NotAvailableService());
+        };
       };
 
+      // Create add-on for project using new id and attached resource id
+      let new_add_on : Types.AddOnService = {
+        id = new_add_on_id;
+        attached_resource_id = ?resource_id;
+        variant_id = add_on.id;
+        initialized = false;
+        status = #available;
+        type_ = add_on.type_;
+        created_on = now;
+        updated_on = now;
+        expires_at = ?expiry;
+      };
+
+      let existing_addon_ids : [Types.AddOnId] = switch (Map.get(project_addons, Nat.compare, project_id)) {
+        case (null) [];
+        case (?val) val;
+      };
+
+      // Add new addon to project's add on list
+      let new_add_on_ids : [Types.AddOnId] = Array.append(existing_addon_ids, [new_add_on.id]);
+      let next_addons_id = _index_counter.increment_index(#addon_id);
+
+      Map.add(project_addons, Nat.compare, project_id, new_add_on_ids);
+      Map.add(add_ons_map, Nat.compare, new_add_on_id, new_add_on);
+
+      let new_add_ons : [Types.AddOnService] = get_add_ons_by_project(project_id);
       return #ok(new_add_ons);
+    };
+
+    public func update_addon_resource_id(addon_id : Types.AddOnId, new_resouce_id : Types.DomainRegistrationId) : Types.Response<()> {
+      let addon : Types.AddOnService = switch (Map.get(add_ons_map, Nat.compare, addon_id)) {
+        case (null) return #err(Errors.NotFound("Add-on with id " # Nat.toText(addon_id)));
+        case (?val) val;
+      };
+
+      let updated_addon : Types.AddOnService = {
+        addon with attached_resource_id = ?new_resouce_id;
+      };
+
+      Map.add(add_ons_map, Nat.compare, addon_id, updated_addon);
+      return #ok();
+    };
+    public func update_add_on(project_id : Types.ProjectId, updated_addon : Types.AddOnService) : Types.Response<[Types.AddOnService]> {
+      Map.add(add_ons_map, Nat.compare, updated_addon.id, updated_addon);
+
+      let new_addons : [Types.AddOnService] = get_add_ons_by_project(project_id);
+      return #ok(new_addons);
     };
 
     private func _create_subscription(caller : Principal, tier_id : Nat, subscription : Types.Subscription, payment_receiver : Principal) : async Types.Response<Types.Subscription> {
       // Bypass payment for freemium tier
       if (tier_id == 3) {
-        // subscriptions.put(caller, subscription); // Add subscription plan for caller
         Map.add(subscriptions, Principal.compare, caller, subscription);
         return #ok(subscription);
       };
@@ -248,7 +420,6 @@ module {
       // Deduct payment from caller's balance
       let success = book.process_payment(caller, payment_receiver, ledger, total_cost);
       if (success) {
-        // subscriptions.put(caller, subscription); // Add subscription plan for caller
         Map.add(subscriptions, Principal.compare, caller, subscription);
         return #ok(subscription);
       } else {
