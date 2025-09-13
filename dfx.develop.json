@@ -46,7 +46,7 @@
   },
   "defaults": {
     "build": {
-      "packtool": "mops sources"
+      "packtool": "sh ./mops-wrapper.sh sources"
     }
   },
   "output_env_file": ".env",
