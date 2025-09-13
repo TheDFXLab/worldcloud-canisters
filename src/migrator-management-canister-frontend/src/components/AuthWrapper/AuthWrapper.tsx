@@ -84,19 +84,19 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
       <>
         <div className="auth-container">
           <div className="auth-logo-section">
-            <span className="logo-text-parent">
+            <span className="auth-logo-text-parent">
               <img
                 src={logo}
                 alt="WorldCloud Logo"
                 className="auth-logo-icon"
               />
               <span>
-                <span className="logo-text-child">World</span>
-                <span className="logo-text-child">{"("}</span>
-                <span className="logo-text-child">cloud</span>
-                <span className="logo-text-child">{" )"}</span>
-                <span className="logo-text-child">{";"}</span>
-                <span className="logo-text-child beta-text">{" beta"}</span>
+                <span className="auth-logo-text-child">World</span>
+                <span className="auth-logo-text-child">{"("}</span>
+                <span className="auth-logo-text-child">cloud</span>
+                <span className="auth-logo-text-child">{")"}</span>
+                <span className="auth-logo-text-child">{";"}</span>
+                <span className="auth-beta-text">{" beta"}</span>
               </span>
             </span>
           </div>
