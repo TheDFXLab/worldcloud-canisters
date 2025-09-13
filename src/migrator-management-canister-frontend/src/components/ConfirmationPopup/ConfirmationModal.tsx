@@ -8,6 +8,7 @@ import { useLedger } from "../../context/LedgerContext/LedgerContext";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useConfirmationModal } from "../../context/ConfirmationModalContext/ConfirmationModalContext";
+import { useCyclesLogic } from "../../hooks/useCyclesLogic";
 
 export type ModalType =
   | "topup"
@@ -106,9 +107,10 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     cyclesAvailable,
     cyclesRate,
     cyclesStatus,
-    estimateCycles,
+    // estimateCycles,
     getStatus,
   } = useCycles();
+  const { estimateCycles } = useCyclesLogic();
   const { balance, getBalance, setShouldRefetchBalance } = useLedger();
   const params = useParams();
 
@@ -136,13 +138,15 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       const cycles = await estimateCycles(fromE8sStable(amt));
       setEstimatedOutput(cycles);
     };
-    if (config.showEstimatedCycles) {
+
+    if (showModal && config.showEstimatedCycles) {
       estimateCyclesForInputIcp();
     }
-  }, [amount, config.showEstimatedCycles]);
+  }, [amount, config.showEstimatedCycles, showModal]);
 
   useEffect(() => {
     const updateEstimates = async () => {
+      if (!showModal) return;
       if (!config.showEstimatedCycles) return;
 
       try {
@@ -157,7 +161,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     };
 
     updateEstimates();
-  }, [balance, config.showEstimatedCycles, estimateCycles]);
+  }, [balance, config.showEstimatedCycles, showModal, estimateCycles]);
 
   const handleClickSubmit = async () => {
     setIsSubmitting(true);
