@@ -1224,6 +1224,31 @@ class MainApi {
         await this.actor?.edit_ic_domains(Principal.fromText(canister_id), file);
         return true;
     }
+
+    async admin_grant_subscription(user_principal: string, subscription_tier_id: number) {
+        this.validate();
+
+        const result = await this.actor?.admin_grant_subscription(Principal.fromText(user_principal), BigInt(subscription_tier_id));
+        if (!result) {
+            throw new Error("Failed to grant subscription");
+        }
+        if ("ok" in result) {
+            return result.ok;
+        }
+        throw this.handleResponseError(result.err);
+    }
+
+    async admin_grant_addon(project_id: number, addon_id: number, expiry_in_ms: number) {
+        this.validate();
+        const result = await this.actor?.admin_grant_addon(BigInt(project_id), BigInt(addon_id), BigInt(expiry_in_ms));
+        if (!result) {
+            throw new Error("Failed to grant addon");
+        }
+        if ("ok" in result) {
+            return result.ok;
+        }
+        throw this.handleResponseError(result.err);
+    }
 }
 
 

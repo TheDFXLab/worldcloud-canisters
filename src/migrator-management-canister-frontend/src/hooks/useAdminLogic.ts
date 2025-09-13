@@ -39,6 +39,8 @@ import {
     fetchCanisterDomainRegistrations,
     fetchGlobalTimers,
     setupCustomDomain,
+    adminGrantSubscription,
+    adminGrantAddon,
 } from '../state/slices/adminSlice';
 import { RootState, AppDispatch } from '../state/store';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
@@ -95,6 +97,10 @@ export const useAdminLogic = () => {
         isLoadingGlobalTimers,
         isLoadingCustomDomain,
         isLoadingCanisterDomainRegistrations,
+
+        isLoadingGrantSubscription,
+        isLoadingGrantAddon,
+
         error,
         successMessage,
     } = useSelector((state: RootState) => state.admin);
@@ -532,6 +538,35 @@ export const useAdminLogic = () => {
         }
     }, [dispatch, identity, agent]);
 
+    const handleGrantSubscription = useCallback(async (user_principal: string, subscription_tier_id: number) => {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(adminGrantSubscription({ identity, agent, user_principal, subscription_tier_id })).unwrap();
+            return { status: true, message: 'Subscription granted successfully' };
+        } catch (error: any) {
+            return {
+                status: false,
+                message: error.message || 'Failed to grant subscription',
+            };
+        }
+    }, [dispatch, identity, agent]);
+
+    const handleGrantAddon = useCallback(async (project_id: number, addon_id: number, expiry_in_ms: number) => {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(adminGrantAddon({ identity, agent, project_id, addon_id, expiry_in_ms })).unwrap();
+            return { status: true, message: 'Addon granted successfully' };
+        } catch (error: any) {
+            return {
+                status: false,
+                message: error.message || 'Failed to grant addon',
+            };
+        }
+    }, [dispatch, identity, agent]);
 
     // Fetch initial data on mount
     useEffect(() => {
@@ -587,6 +622,8 @@ export const useAdminLogic = () => {
         isLoadingGlobalTimers,
         isLoadingCustomDomain,
         isLoadingCanisterDomainRegistrations,
+        isLoadingGrantSubscription,
+        isLoadingGrantAddon,
 
         // Messages
         error,
@@ -635,5 +672,7 @@ export const useAdminLogic = () => {
         handleSetIcDomains,
         refreshCanisterDomainRegistrations,
         refreshGlobalTimers,
+        handleGrantSubscription,
+        handleGrantAddon,
     };
 }; 

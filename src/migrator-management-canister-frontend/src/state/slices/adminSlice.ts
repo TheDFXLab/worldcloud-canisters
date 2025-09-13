@@ -119,6 +119,8 @@ export interface AdminState {
     isLoadingCustomDomain: boolean,
 
     isLoadingCanisterDomainRegistrations: boolean
+    isLoadingGrantSubscription: boolean;
+    isLoadingGrantAddon: boolean;
 
 }
 
@@ -166,7 +168,9 @@ const initialState: AdminState = {
     isLoadingDomainRegistrations: false,
     isLoadingGlobalTimers: false,
     isLoadingCustomDomain: false,
-    isLoadingCanisterDomainRegistrations: false
+    isLoadingCanisterDomainRegistrations: false,
+    isLoadingGrantSubscription: false,
+    isLoadingGrantAddon: false
 };
 
 // Async thunks
@@ -883,6 +887,51 @@ export const setupCustomDomain = createAsyncThunk(
         throw new Error('Failed to setup custom domain');
     }
 );
+
+export const adminGrantSubscription = createAsyncThunk(
+    'admin/adminGrantSubscription',
+    async ({
+        identity,
+        agent,
+        user_principal,
+        subscription_tier_id
+    }: {
+        identity: any;
+        agent: any;
+        user_principal: string;
+        subscription_tier_id: number;
+    }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_grant_subscription(user_principal, subscription_tier_id);
+        return response;
+    }
+);
+
+
+export const adminGrantAddon = createAsyncThunk(
+    'admin/adminGrantSubscription',
+    async ({
+        identity,
+        agent,
+        project_id,
+        addon_id,
+        expiry_in_ms
+    }: {
+        identity: any;
+        agent: any;
+        project_id: number;
+        addon_id: number;
+        expiry_in_ms: number;
+    }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        return await api.admin_grant_addon(project_id, addon_id, expiry_in_ms);
+    }
+);
+
+
+
 
 
 // Slice
