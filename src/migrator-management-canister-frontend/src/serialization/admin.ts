@@ -1,6 +1,7 @@
 import { Principal } from "@dfinity/principal";
-import { CreateRecordResponse, DomainRegistration, DomainRegistrationId, IcDomainRegistration, IcDomainRegistrationStatus, ProjectPlan, Role, UsageLog, UsageLogExtended } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { CreateRecordResponse, DomainRegistration, DomainRegistrationId, IcDomainRegistration, IcDomainRegistrationStatus, MyAddonDomainRegistration, MyAddons, ProjectPlan, Role, UsageLog, UsageLogExtended } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { SerializedUsageLogExtended } from "../utility/bigint";
+import { serializeAddOn, SerializedAddOn } from "./addons";
 
 // Activity Log Types
 export interface SerializedActivityLog {
@@ -151,10 +152,13 @@ export interface DeserializedPaginationPayload {
 }
 
 export interface SerializedDomainRegistration {
+    id: number;
+    add_on_id: number;
     txt_domain_record_id: string;
     cname_challenge_record_id: string;
     cname_domain_record_id: string;
     ic_registration: SerializedIcDomainRegistration;
+    error: string;
 }
 export type SerializedIcDomainRegistrationStatus = "inactive" | "pending" | "failed" | "complete";
 export interface SerializedIcDomainRegistration {
@@ -162,11 +166,11 @@ export interface SerializedIcDomainRegistration {
     is_apex: boolean;
     domain: string;
     subdomain: string;
-    status: string;
+    status: SerializedIcDomainRegistrationStatus;
 }
 
 export interface SerializedDomainRegistrationPair {
-    id: string;
+    id: number;
     domainRegistration: SerializedDomainRegistration;
 }
 
@@ -185,6 +189,29 @@ export interface SerializedCreateRecordResponse {
 export interface SerializedGlobalTimer {
     id: string;
     timer_id: number;
+}
+
+export interface SerializedMyAddon<T> {
+    addon: SerializedAddOn;
+    resource: T;
+}
+
+export interface SerializedParsedMyAddons {
+    domain_addons: SerializedMyAddon<SerializedDomainRegistration>[];
+}
+
+export const serializeMyAddonDomainRegistration = (d: MyAddonDomainRegistration): SerializedMyAddon<SerializedDomainRegistration> => {
+    return {
+        addon: serializeAddOn(d.addon),
+        resource: serializeDomainRegistration(d.resource)
+    }
+}
+
+
+export const serializeParsedMyAddons = (result: MyAddons): SerializedParsedMyAddons => {
+    return {
+        domain_addons: result.domain_addons.map(a => serializeMyAddonDomainRegistration(a))
+    }
 }
 
 export const serializeGlobalTimers = (timers: [string, bigint][]): SerializedGlobalTimer[] => {
@@ -220,7 +247,7 @@ export const serializeDomainRegistrationsPairs = (pairs: [DomainRegistrationId, 
 export const serializeDomainRegistrationPair = (pair: [DomainRegistrationId, DomainRegistration]): SerializedDomainRegistrationPair => {
     const [id, domainRegistration] = pair;
     return {
-        id,
+        id: Number(id),
         domainRegistration: serializeDomainRegistration(domainRegistration),
     };
 };
@@ -231,10 +258,13 @@ export const serializeDomainRegistrations = (domainRegistrations: DomainRegistra
 
 export const serializeDomainRegistration = (domainRegistration: DomainRegistration): SerializedDomainRegistration => {
     return {
+        id: Number(domainRegistration.id),
+        add_on_id: Number(domainRegistration.add_on_id),
         txt_domain_record_id: domainRegistration.txt_domain_record_id,
         cname_challenge_record_id: domainRegistration.cname_challenge_record_id,
         cname_domain_record_id: domainRegistration.cname_domain_record_id,
         ic_registration: serializeIcDomainRegistration(domainRegistration.ic_registration),
+        error: domainRegistration.error,
     };
 };
 

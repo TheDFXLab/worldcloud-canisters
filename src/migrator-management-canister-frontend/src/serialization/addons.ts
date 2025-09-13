@@ -5,16 +5,21 @@ export type SerializedAddOnStatus = "available" | "frozen";
 export type SerializedAddOnServiceType = "register_domain" | "register_subdomain";
 
 export interface SerializedAddOn {
+    variant_id: number;
     id: number;
     status: SerializedAddOnStatus;
+    initialized: boolean;
     type: SerializedAddOnServiceType;
     created_on: number;
     updated_on: number;
     expires_at?: number;
 }
+
+
 export type SerializedAddOnExpiry = "none" | "minute" | "hour" | "day" | "month" | "year";
 export interface SerializedAddOnVariant {
     id: number;
+    is_available: boolean; // coming soon flag 
     name: string;
     type: SerializedAddOnServiceType;
     expiry_duration: SerializedAddOnExpiry;
@@ -39,7 +44,9 @@ const serializeAddOnServiceType = (type: { 'register_domain': null } | { 'regist
 
 export const serializeAddOn = (addon: AddOnService): SerializedAddOn => {
     return {
+        variant_id: Number(addon.variant_id),
         id: Number(addon.id),
+        initialized: addon.initialized,
         status: serializeAddOnStatus(addon.status),
         type: serializeAddOnServiceType(addon.type),
         created_on: Number(addon.created_on),
@@ -65,6 +72,7 @@ export const serializeAddonExpiry = (expiry: ExpiryDuration): SerializedAddOnExp
 export const serializeAddOnVariant = (variant: AddOnVariant): SerializedAddOnVariant => {
     return {
         id: Number(variant.id),
+        is_available: variant.is_available,
         name: variant.name,
         type: serializeAddOnServiceType(variant.type),
         expiry: Number(variant.expiry_duration),
