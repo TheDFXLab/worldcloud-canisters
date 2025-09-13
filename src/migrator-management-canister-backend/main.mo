@@ -389,6 +389,26 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return #ok(access_control.is_authorized(msg.caller));
   };
 
+  public shared (msg) func admin_grant_subscription(user_principal : Principal, subscription_tier_id : Nat) : async Types.Response<Types.Subscription> {
+    if (domain.initialized != true) initialize_class_references();
+
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    return await subscription_manager.grant_subscription(user_principal, subscription_tier_id);
+  };
+
+  public shared (msg) func admin_grant_addon(project_id : Types.ProjectId, addon_id : Types.AddOnId, expiry_in_ms : Nat) : async Types.Response<[Types.AddOnService]> {
+    if (domain.initialized != true) initialize_class_references();
+
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    return await subscription_manager.grant_addon(project_id, addon_id, expiry_in_ms);
+  };
+
   public shared (msg) func admin_get_domain_registration_id_by_domain(domain_name : Text, canister_id : Principal) : async Types.Response<Types.IcDomainRegistrationId> {
     if (domain.initialized != true) initialize_class_references();
 
