@@ -53,6 +53,8 @@ export interface ProjectsState {
     isLoadingGetParsedMyAddons: boolean;
     isLoadingSubdomainNameAvailable: boolean;
     isLoadingDeleteDomainRegistration: boolean;
+    isLoadingSetupCustomDomain: boolean;
+
 
     // Errors
     error: string | null;
@@ -84,6 +86,8 @@ const initialState: ProjectsState = {
     isLoadingGetParsedMyAddons: false,
     isLoadingSubdomainNameAvailable: false,
     isLoadingDeleteDomainRegistration: false,
+    isLoadingSetupCustomDomain: false,
+    //
     // Errors
     error: null,
 };
@@ -567,13 +571,14 @@ export const projectsSlice = createSlice({
             })
 
             .addCase(setupCustomDomainByProject.pending, (state) => {
+                state.isLoadingSetupCustomDomain = true;
                 state.error = null;
             })
             .addCase(setupCustomDomainByProject.fulfilled, (state, action) => {
-                // This thunk is for setting up a custom domain.
-                // We don't need to store it in the state as it's a single value.
+                state.isLoadingSetupCustomDomain = false;
             })
             .addCase(setupCustomDomainByProject.rejected, (state, action) => {
+                state.isLoadingSetupCustomDomain = false;
                 state.error = action.error.message || "Failed to setup custom domain";
             })
             .addCase(getParsedMyAddons.pending, (state) => {
