@@ -34,7 +34,7 @@ export default function Subbed({
   if (!subscription || !tiers) return null;
 
   const currentTier = tiers[Number(subscription.tier_id)];
-  const usedSlots = subscription.canisters.length;
+  const usedSlots = subscription.used_slots;
   const maxSlots = Number(currentTier.slots);
   const usagePercentage = (usedSlots / maxSlots) * 100;
 
