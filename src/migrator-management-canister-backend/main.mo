@@ -109,7 +109,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   private stable var project_addons_map : Types.ProjectAddonsMap = Map.empty<Types.ProjectId, [Types.AddOnId]>();
   private stable var addons_map : Types.AddonsMap = Map.empty<Nat, Types.AddOnService>();
   private stable var subdomains_map : Types.SubdomainsMap = Map.empty<Text, Principal>();
-  private transient var subdomain_records : Types.SubdomainRecords = Map.empty<Text, Types.DomainRegistrationRecords>();
+  private stable var subdomain_records : Types.SubdomainRecords = Map.empty<Text, Types.DomainRegistrationRecords>();
 
   private transient var QUOTA_CLEAR_DURATION_SECONDS : Nat = 24 * 60 * 60;
   private transient var QUOTA_CLEAR_DURATION_SECONDS_DEV : Nat = 3 * 60;
@@ -139,34 +139,12 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   private transient let subscription_manager = SubscriptionManager.SubscriptionManager(book, ledger, _subscriptions, TREASURY_ACCOUNT, project_addons_map, addons_map);
   private transient let canisters = Canisters.Canisters(stable_canister_table, stable_user_canisters, stable_deployed_canisters);
   private transient let cloudflare = Cloudflare.Cloudflare(CLOUDFLARE_API_BASE_URL, CLOUDFLARE_EMAIL, CLOUDFLARE_API_KEY, CLOUDFLARE_ZONE_ID, subdomain_records);
-  // initialize_class_references();
 
   /** Transient Storage */
   private transient var chunks = HashMap.HashMap<Text, Blob>(0, Text.equal, Text.hash);
   private transient var pending_cycles : HashMap.HashMap<Principal, Nat> = HashMap.HashMap<Principal, Nat>(0, Principal.equal, Principal.hash);
   private transient var assets = HashMap.HashMap<Types.AssetId, Types.Asset>(0, Text.equal, Text.hash); //Store asset metadata
-  private transient var is_run = false;
-  private transient var secs_since_midnight = 0;
-  private transient var secs_till_midnight = 0;
-  private transient var next_secs_since_midnight = 0;
-  private transient var next_secs_till_midnight = 0;
-  private transient var next_trigger_at = 0;
-  private transient var is_run_recurring = false;
-  private transient var is_init = false;
   private transient var is_updating_icp_price = false;
-
-  public shared (msg) func isInitialized() : async Types.InitializedResponse {
-    return {
-      is_init = is_init;
-      is_run = is_run;
-      is_run_recurring = is_run_recurring;
-      secs_since_midnight = secs_since_midnight;
-      secs_till_midnight = secs_till_midnight;
-      next_secs_since_midnight = next_secs_since_midnight;
-      next_secs_till_midnight = next_secs_till_midnight;
-      next_trigger_at = next_trigger_at;
-    };
-  };
 
   /** Initialization*/
   private func init<system>() {
@@ -187,11 +165,6 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     // Set the next quota reset utc time
     shareable_canister_manager.next_quota_reset_s := now + schedule.seconds_until_next_midnight;
 
-    is_init := true;
-    secs_since_midnight := schedule.seconds_since_midnight;
-    secs_till_midnight := schedule.seconds_until_next_midnight;
-    next_trigger_at := schedule.seconds_until_next_midnight + now;
-
     // Set initial timer to run at next midnight
     let initial_timer_id = Timer.setTimer<system>(
       #seconds(schedule.seconds_until_next_midnight),
@@ -199,9 +172,6 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
         // Reset quotas
         shareable_canister_manager.reset_quotas();
         shareable_canister_manager.next_quota_reset_s := Int.abs(Utility.get_time_now(#seconds)) + clear_duration;
-        is_run := true;
-        next_secs_till_midnight := clear_duration;
-        next_trigger_at := shareable_canister_manager.next_quota_reset_s;
 
         // Set up recurring timer for every 24 hours after this
         let recurring_timer_id = Timer.recurringTimer<system>(
@@ -211,9 +181,6 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
             shareable_canister_manager.reset_quotas();
 
             shareable_canister_manager.next_quota_reset_s := target_time;
-            is_run_recurring := true;
-            next_secs_till_midnight := clear_duration;
-            next_trigger_at := target_time;
           },
         );
 
