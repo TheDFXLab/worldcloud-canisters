@@ -11,7 +11,7 @@ export class HttpAgentManager {
     }
 
     static async getInstance(identity: Identity | null) {
-        if (!this.instance) {
+        if (!this.instance || !this.instance.agent) {
             if (this.isConstructing) {
                 return null;
             }

@@ -36,6 +36,11 @@ import {
     withdrawTreasury,
     setTreasury,
     setIcDomains,
+    fetchCanisterDomainRegistrations,
+    fetchGlobalTimers,
+    setupCustomDomain,
+    adminGrantSubscription,
+    adminGrantAddon,
 } from '../state/slices/adminSlice';
 import { RootState, AppDispatch } from '../state/store';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
@@ -81,10 +86,21 @@ export const useAdminLogic = () => {
         currentUserRole,
         isLoadingCurrentUserRole,
         bookEntries,
+        canisterDomainRegistrations,
+        globalTimers,
+
         isLoadingBookEntries,
         isLoading,
         isLoadingTreasury,
         isLoadingEditIcDomains,
+        isLoadingDomainRegistrations,
+        isLoadingGlobalTimers,
+        isLoadingCustomDomain,
+        isLoadingCanisterDomainRegistrations,
+
+        isLoadingGrantSubscription,
+        isLoadingGrantAddon,
+
         error,
         successMessage,
     } = useSelector((state: RootState) => state.admin);
@@ -494,6 +510,64 @@ export const useAdminLogic = () => {
         }
     }, [dispatch, identity, agent]);
 
+
+    const refreshCanisterDomainRegistrations = useCallback(async (canisterId: string) => {
+        if (identity && agent) {
+            await dispatch(fetchCanisterDomainRegistrations({ identity, agent, canisterId })).unwrap();
+        }
+    }, [dispatch, identity, agent]);
+
+    const refreshGlobalTimers = useCallback(async () => {
+        if (identity && agent) {
+            await dispatch(fetchGlobalTimers({ identity, agent })).unwrap();
+        }
+    }, [dispatch, identity, agent]);
+
+    const handleSetupCustomDomain = useCallback(async (projectId: number, canisterId: string, subdomainName: string, addonId: number) => {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(setupCustomDomain({ identity, agent, projectId, canisterId, subdomainName, addonId })).unwrap();
+            return { status: true, message: 'Custom domain setup successfully' };
+        } catch (error: any) {
+            return {
+                status: false,
+                message: error.message || 'Failed to setup custom domain',
+            };
+        }
+    }, [dispatch, identity, agent]);
+
+    const handleGrantSubscription = useCallback(async (user_principal: string, subscription_tier_id: number) => {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(adminGrantSubscription({ identity, agent, user_principal, subscription_tier_id })).unwrap();
+            return { status: true, message: 'Subscription granted successfully' };
+        } catch (error: any) {
+            return {
+                status: false,
+                message: error.message || 'Failed to grant subscription',
+            };
+        }
+    }, [dispatch, identity, agent]);
+
+    const handleGrantAddon = useCallback(async (project_id: number, addon_id: number, expiry_in_ms: number) => {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(adminGrantAddon({ identity, agent, project_id, addon_id, expiry_in_ms })).unwrap();
+            return { status: true, message: 'Addon granted successfully' };
+        } catch (error: any) {
+            return {
+                status: false,
+                message: error.message || 'Failed to grant addon',
+            };
+        }
+    }, [dispatch, identity, agent]);
+
     // Fetch initial data on mount
     useEffect(() => {
         if (identity && agent) {
@@ -524,6 +598,8 @@ export const useAdminLogic = () => {
         bookEntries,
         treasuryPrincipal,
         treasuryBalance,
+        canisterDomainRegistrations,
+        globalTimers,
 
         // Loading states
         isLoadingSlots,
@@ -542,6 +618,12 @@ export const useAdminLogic = () => {
         isLoading,
         isLoadingTreasury,
         isLoadingEditIcDomains,
+        isLoadingDomainRegistrations,
+        isLoadingGlobalTimers,
+        isLoadingCustomDomain,
+        isLoadingCanisterDomainRegistrations,
+        isLoadingGrantSubscription,
+        isLoadingGrantAddon,
 
         // Messages
         error,
@@ -581,11 +663,16 @@ export const useAdminLogic = () => {
         handleUploadAssetCanisterWasm,
         handleClearError,
         handleClearSuccessMessage,
+        handleSetupCustomDomain,
 
         // Treasury
         handleGetTreasuryPrincipal,
         handleSetTreasury,
         withdrawTreasury: handleWithdrawTreasury,
-        handleSetIcDomains
+        handleSetIcDomains,
+        refreshCanisterDomainRegistrations,
+        refreshGlobalTimers,
+        handleGrantSubscription,
+        handleGrantAddon,
     };
 }; 

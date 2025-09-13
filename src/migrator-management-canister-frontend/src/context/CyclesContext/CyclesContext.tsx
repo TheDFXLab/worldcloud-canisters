@@ -1,9 +1,10 @@
 import { createContext, useContext, ReactNode } from "react";
 import { Principal } from "@dfinity/principal";
-import { CanisterStatusResponse } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+// import { CanisterStatusResponse } from "../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { useCyclesLogic } from "../../hooks/useCyclesLogic";
 import { CreditsResponse } from "../../state/slices/cyclesSlice";
 import { CanisterStatus } from "../../api/authority";
+import { canister_status_result } from "@dfinity/agent/lib/cjs/canisters/management_service";
 
 interface CyclesContextType {
   isLoadingCycles: boolean;
@@ -15,10 +16,10 @@ interface CyclesContextType {
   isLoadingEstimateCycles: boolean;
   currentCanisterId: Principal | null;
   setCurrentCanisterId: (canisterId: Principal) => void;
-  canisterStatus: CanisterStatusResponse | null;
+  canisterStatus: canister_status_result | null;
   estimateCycles: (amountInIcp: number) => Promise<number>;
   getStatus: (projectId: number) => Promise<CanisterStatus | undefined>;
-  cyclesStatus: CanisterStatusResponse | null;
+  cyclesStatus: canister_status_result | null;
   cyclesRate: number;
 }
 

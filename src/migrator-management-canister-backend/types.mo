@@ -1,8 +1,8 @@
 import HashMap "mo:base/HashMap";
 import TimeLib "mo:base/Time";
-import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Map "mo:core/Map";
+import IC "ic:aaaaa-aa";
 
 module {
   // Type definitions
@@ -176,20 +176,20 @@ module {
     body : Blob;
   };
 
-  type Transform = {
-    function : shared query ({
-      response : HttpRequestResult;
-      context : Blob;
-    }) -> async HttpRequestResult;
-    context : Blob;
-  };
+  // type Transform = {
+  //   function : shared query ({
+  //     response : HttpRequestResult;
+  //     context : Blob;
+  //   }) -> async HttpRequestResult;
+  //   context : Blob;
+  // };
 
-  public type TransformationInput = {
-    context : Blob;
-    response : HttpRequestResult;
-  };
+  // public type TransformationInput = {
+  //   context : Blob;
+  //   response : HttpRequestResult;
+  // };
 
-  public type TransformationOutput = HttpRequestResult;
+  // public type TransformationOutput = HttpRequestResult;
 
   public type HttpMethodArgs = {
     #get;
@@ -205,41 +205,41 @@ module {
     transform : ?Transform;
   };
 
-  public type IC = actor {
-    http_request : shared (http_request_args : HttpRequestArgs) -> async HttpRequestResult;
-    canister_status : shared { canister_id : Principal } -> async CanisterStatusResponse;
-    create_canister : shared {
-      settings : ?CanisterSettings;
-    } -> async {
-      canister_id : Principal;
-    };
+  // public type IC = actor {
+  //   http_request : shared (http_request_args : HttpRequestArgs) -> async HttpRequestResult;
+  //   canister_status : shared { canister_id : Principal } -> async CanisterStatusResponse;
+  //   create_canister : shared {
+  //     settings : ?CanisterSettings;
+  //   } -> async {
+  //     canister_id : Principal;
+  //   };
 
-    update_settings : shared ({
-      canister_id : Principal;
-      settings : CanisterSettings;
-    }) -> async ();
-    install_code : shared {
-      arg : [Nat8];
-      wasm_module : [Nat8];
-      mode : { #install; #reinstall; #upgrade };
-      canister_id : Principal;
-    } -> async ();
+  //   update_settings : shared ({
+  //     canister_id : Principal;
+  //     settings : CanisterSettings;
+  //   }) -> async ();
+  //   install_code : shared {
+  //     arg : [Nat8];
+  //     wasm_module : [Nat8];
+  //     mode : { #install; #reinstall; #upgrade };
+  //     canister_id : Principal;
+  //   } -> async ();
 
-    deposit_cycles : shared {
-      canister_id : Principal;
-    } -> async ();
+  //   deposit_cycles : shared {
+  //     canister_id : Principal;
+  //   } -> async ();
 
-    ecdsa_public_key : ({
-      canister_id : ?Principal;
-      derivation_path : [Blob];
-      key_id : { curve : { #secp256k1 }; name : Text };
-    }) -> async ({ public_key : Blob; chain_code : Blob });
-    sign_with_ecdsa : ({
-      message_hash : Blob;
-      derivation_path : [Blob];
-      key_id : { curve : { #secp256k1 }; name : Text };
-    }) -> async ({ signature : Blob });
-  };
+  //   ecdsa_public_key : ({
+  //     canister_id : ?Principal;
+  //     derivation_path : [Blob];
+  //     key_id : { curve : { #secp256k1 }; name : Text };
+  //   }) -> async ({ public_key : Blob; chain_code : Blob });
+  //   sign_with_ecdsa : ({
+  //     message_hash : Blob;
+  //     derivation_path : [Blob];
+  //     key_id : { curve : { #secp256k1 }; name : Text };
+  //   }) -> async ({ signature : Blob });
+  // };
 
   public type CanisterDeploymentStatus = {
     #uninitialized;
@@ -385,6 +385,87 @@ module {
   public type TiersMap = HashMap.HashMap<Nat, Tier>;
   public type TiersList = [Tier];
 
+  /** Add Ons */
+
+  public type MyAddon<T> = {
+    addon : AddOnService;
+    resource : T;
+  };
+
+  public type MyAddonDomainRegistration = {
+    addon : AddOnService;
+    resource : DomainRegistration;
+  };
+
+  public type MyAddons = {
+    domain_addons : [MyAddonDomainRegistration];
+    /** Insert more addons here */
+  };
+
+  public type AddOnServiceType = {
+    #register_subdomain; // Registers a subdomain on worldcloud.app
+    #register_domain; // Registers a domain using custom name servers
+  };
+
+  public type AddOnServiceStatus = {
+    #available;
+    #frozen;
+  };
+
+  public type ExpiryDuration = {
+    #none;
+    #minute;
+    #hour;
+    #day;
+    #month;
+    #year;
+  };
+
+  public type ValidateSubscribeAddonResult = {
+    expiry : Nat;
+    add_on : AddOnVariant;
+    project : Project;
+    has_credits_result : EnoughCreditsResult;
+    canister_id : Principal;
+    now : Nat;
+  };
+
+  public type AddOnService = {
+    id : AddOnId;
+    attached_resource_id : ?Nat;
+    variant_id : Nat;
+    status : AddOnServiceStatus;
+    initialized : Bool;
+    type_ : AddOnServiceType;
+    created_on : Nat;
+    updated_on : Nat; // timestamp in ms
+    expires_at : ?Nat;
+  };
+
+  public type AddOnVariant = {
+    id : Nat;
+    name : Text;
+    type_ : AddOnServiceType;
+    expiry_duration : Nat;
+    expiry : ExpiryDuration;
+    price : Nat;
+    features : [Text];
+    is_available : Bool;
+  };
+
+  public type HasAddonResult = {
+    has_add_on : Bool;
+    add_ons : [AddOnService];
+  };
+
+  public type EnoughCreditsResult = {
+    status : Bool;
+    need : Nat;
+    available : Nat;
+  };
+
+  public type AddOnId = Nat;
+
   /** Access Control */
   public type Role = {
     #super_admin;
@@ -494,6 +575,11 @@ module {
     project_ids : [?Nat];
   };
 
+  public type QuotaSchedulerSeconds = {
+    seconds_until_next_midnight : Nat;
+    seconds_since_midnight : Nat;
+  };
+
   public type WorkflowRunHistoryMap = Map.Map<Nat, [WorkflowRunDetails]>;
   public type UserSubscriptionsMap = Map.Map<Principal, Subscription>;
   public type BookMap = Map.Map<Principal, Map.Map<Token, Nat>>;
@@ -508,14 +594,376 @@ module {
   public type ProjectActivityLogsMap = Map.Map<ProjectId, [ActivityLog]>;
   public type UserCanistersMap = Map.Map<Principal, [Principal]>;
   public type TimersMap = Map.Map<Nat, Nat>;
+  public type GlobalTimersMap = Map.Map<Text, Nat>;
   public type DeployedCanistersMap = Map.Map<Principal, Bool>;
   public type QuotasMap = Map.Map<Principal, Quota>;
+  public type DnsRecordId = Text;
+  public type CanisterToRecordMap = Map.Map<Principal, [DnsRecordId]>;
+  public type CloudflareRecordsMap = Map.Map<DnsRecordId, CreateRecordResponse>;
+  public type DomainRegistrationMap = Map.Map<DomainRegistrationId, DomainRegistration>;
+  public type CanisterToDomainRegistration = Map.Map<Principal, [DomainRegistrationId]>;
+  public type AddonsMap = Map.Map<AddOnId, AddOnService>;
+  public type ProjectAddonsMap = Map.Map<ProjectId, [AddOnId]>;
+  public type SubdomainsMap = Map.Map<Text, Principal>;
+  public type DomainRegistrationTimers = Map.Map<Text, DomainRegistrationTimer>;
+  public type CounterMap = Map.Map<CounterType, Nat>;
+  public type SubdomainRecords = Map.Map<Text, DomainRegistrationRecords>;
 
-  public type QuotaSchedulerSeconds = {
-    seconds_until_next_midnight : Nat;
-    seconds_since_midnight : Nat;
+  public type CounterType = {
+    #addon_id;
+    #project_id;
+    #subscription_id;
+    #domain_registration_id;
   };
 
+  public type DomainRegistrationRecords = {
+    canister_id : Principal;
+    txt_domain_record_id : Text;
+    cname_challenge_record_id : Text;
+    cname_domain_record_id : Text;
+  };
+
+  public type DomainRegistrationTimer = {
+    timer_id : Nat;
+    domain_registration_id : Nat;
+    subdomain : Text;
+    domain : Text;
+    canister_id : Principal;
+    created_at : Nat;
+    max_retries : Nat;
+    current_retries : Nat;
+  };
+
+  // Request id received from calling registration endpoint
+  public type DomainRegistrationId = Nat;
+  public type IcDomainRegistrationId = Text;
+
+  public type DomainRegistrationRecordType = {
+    #txt;
+    #cname_domain;
+    #cname_challenge;
+  };
+
+  // Overview of a domain registration's records and status
+  public type DomainRegistration = {
+    id : Nat;
+    add_on_id : Nat;
+    canister_id : Principal;
+    txt_domain_record_id : Text;
+    cname_challenge_record_id : Text;
+    cname_domain_record_id : Text;
+    ic_registration : IcDomainRegistration;
+    error : DomainRegistrationError;
+  };
+
+  public type DomainRegistrationErrorKey = {
+    #cloudflare_exists_dns_txt_challenge_record;
+    #cloudflare_exists_dns_txt_record;
+    #ic_missing_dns_cname_record;
+    #ic_existing_dns_txt_challenge_record;
+    #ic_missing_dns_txt_record;
+    #ic_invalid_dns_txt_record;
+    #ic_more_than_one_dns_txt_record;
+    #ic_failed_to_retrieve_known_domains;
+    #ic_domain_is_missing_from_list_known_domains;
+    #ic_rate_limit_exceeded;
+    #cloudflare_exist_records;
+
+    #ic_registration_error;
+    #none; // no error
+  };
+
+  public type DomainRecordPathType = {
+    record_type : Text;
+    path : Text;
+  };
+
+  public type DomainRegistrationError = Text;
+
+  public type SetupDomainResult = {
+    domain_registration : DomainRegistration;
+    canister_id : Principal;
+    addon : AddOnService;
+  };
+
+  public type IcDomainRegistrationStatus = {
+    #inactive;
+    #pending;
+    #failed;
+    #complete;
+  };
+
+  public type IcDomainRegistration = {
+    request_id : Text; // Request id from calling registration endpoint
+    is_apex : Bool; // Needed for custom domains outside our DNS
+    domain : Text; // Main domain, should be 'worldcloud.app' for inside canister registration
+    subdomain : Text; // Unique subdomain linking canister application
+    status : IcDomainRegistrationStatus; // Registration status
+  };
+
+  public type AddDnsRecordsForCanisterResponse = {
+    updated_domain_registration : DomainRegistration;
+    txt_domain_record_id : Text;
+    cname_challenge_record_id : Text;
+    cname_domain_record_id : Text;
+  };
+
+  public type CandleData = {
+    timestamp : Int;
+    low : Float;
+    high : Float;
+    open : Float;
+    close : Float;
+    volume : Float;
+  };
+
+  public type TokenPrice = {
+    value : Float;
+    last_updated_seconds : Nat; // time in seconds
+  };
+
+  public type HttpResponse = {
+    response : HttpRequestResult;
+    body : Text;
+  };
+
+  public type TransformationInput = {
+    context : Blob;
+    response : IC.http_request_result;
+  };
+
+  public type TransformationOutput = IC.http_request_result;
+  public type Transform = query TransformationInput -> async TransformationOutput;
+
+  public type InitializedResponse = {
+    is_init : Bool;
+    is_run : Bool;
+    is_run_recurring : Bool;
+    secs_since_midnight : Nat;
+    secs_till_midnight : Nat;
+    next_secs_since_midnight : Nat;
+    next_secs_till_midnight : Nat;
+    next_trigger_at : Nat;
+  };
+
+  public type CloudflareConfig = {
+    email : Text;
+    api_key : Text;
+    zone_id : Text;
+  };
+  public type CloudflareCredentials = {
+    email : ?Text;
+    api_key : ?Text;
+  };
+
+  public type CloudflareMatchOpts = {
+    record_type : DomainRegistrationRecordType;
+    name : CloudflareRecordSearchOpts;
+    content : CloudflareRecordSearchOpts;
+  };
+
+  public type CloudflareRecordSearchOpts = {
+    contains : Text;
+    ends_with : Text;
+    exact : Text;
+    starts_with : Text;
+  };
+
+  /**********************/
+  /**********************/
+  /**********************/
+  /**********************/
+  /**********************/
+  /**********************/
+  /**********************/
+  /**********************/
+  /** Class Interfaces **/
+  /**********************/
+  /**********************/
+  /**********************/
+  /**********************/
+  /**********************/
+  /**********************/
+  /**********************/
+
+  public type Cloudflare = {
+    get_zone_id : () -> Text;
+    list_dns_records : (zone_id : Text, transform : Transform) -> async Response<[DnsRecord]>;
+    create_dns_record : (payload : CreateDnsRecordPayload, transform : Transform) -> async Response<DnsRecord>;
+    // update_dns_record : (zone_id : Text, record_id : Text, record : DnsRecord) -> async Response<DnsRecord>;
+    set_cloudflare_credentials : (email : Text, api_key : Text) -> Response<()>;
+    get_cloudflare_credentials : () -> Response<CloudflareCredentials>;
+    batch_create_records : (payload : CanisterRecordsPayload, transform : Transform) -> async Response<[CreateRecordResponse]>;
+    get_subdomain_records_all : () -> [(Text, DomainRegistrationRecords)];
+    get_subdomain_records_by_name : (subdomain_name : Text) -> Response<DomainRegistrationRecords>;
+    set_subdomain_records : (subdomain_name : Text, txt_id : Text, cname_challenge_id : Text, cname_domain_id : Text, canister_id : Principal) -> ();
+    delete_subdomain_records : (subdomain_name : Text) -> ();
+    find_dns_record_ids : (subdomain_name : Text, domain_name : Text, canister_id : Principal, transform : Transform) -> async Response<DomainRegistrationRecords>;
+    // get_dns_record : (zone_id : Text, record_id : Text) -> async Response<DnsRecord>;
+    // get_dns_zones : () -> async Response<[DnsZone]>;
+    // delete_dns_record : (zone_id : Text, record_id : Text) -> async Response<Bool>;
+  };
+
+  // public type Cloudflare = {
+  //   var CLOUDFLARE_API_BASE_URL : Text;
+  //   var CLOUDFLARE_API_KEY : ?Text;
+  //   var CLOUDFLARE_EMAIL : ?Text;
+  //   var CLOUDFLARE_ZONE_ID : ?Text;
+  //   batch_create_records : (payload : CanisterRecordsPayload, transform : Transform) -> async Response<[CreateRecordResponse]>;
+  //   create_dns_record : (payload : CreateDnsRecordPayload, transform : Transform) -> async Response<DnsRecord>;
+  //   get_cloudflare_credentials : () -> Response<{ api_key : ?Text; email : ?Text }>;
+  //   list_dns_records : (zone_id : Text, transform : Transform) -> async Response<[DnsRecord]>;
+  //   set_cloudflare_credentials : (email : Text, api_key : Text) -> Response<()>;
+  //   set_zone_id : (new_zone_id : Text) -> ();
+  // };
+
+  public type ProjectInterface = {
+    // Query Methods
+    get_project_by_id : (project_id : Nat) -> Response<Project>;
+    get_projects_by_user : (user : Principal, payload : GetProjectsByUserPayload) -> Response<[Project]>;
+    get_all_projects_paginated : (payload : PaginationPayload) -> Response<[(ProjectId, Project)]>;
+    is_freemium_session_active : (project_id : ProjectId) -> Response<Bool>;
+    get_user_projects_batch_paginated : (payload : PaginationPayload) -> Response<[(Principal, [Project])]>;
+
+    // Mutation Methods
+    put_project : (project_id : Nat, payload : Project) -> ();
+    create_project : (user : Principal, payload : CreateProjectPayload) -> Nat;
+    drop_projects : () -> Bool;
+    drop_project : (user : Principal, project_id : Nat) -> Response<Bool>;
+
+    get_next_project_id : () -> Nat;
+  };
+
+  public type DomainInterface = {
+    // Query Methods
+    list_dns_records : (zone_id : Text, transform : Transform) -> async Response<[DnsRecord]>;
+    get_all_records : () -> [(DnsRecordId, CreateRecordResponse)];
+    get_all_registrations : () -> [(DomainRegistrationId, DomainRegistration)];
+    get_records_for_canister : (canister_id : Principal) -> Response<[CreateRecordResponse]>;
+    get_domain_registrations_by_canister : (canister_id : Principal) -> Response<[DomainRegistration]>;
+    get_domain_registration_ids_by_canister : (canister_id : Principal) -> [DomainRegistrationId];
+    get_domain_registration_by_id : (id : DomainRegistrationId) -> ?DomainRegistration;
+    is_available_subdomain : (project_id : ProjectId, subdomain_name : Text, addon_id : AddOnId) -> Response<Bool>;
+
+    // Mutation Methods
+    delete_records : () -> ();
+    delete_canister_to_records_map : () -> ();
+    create_dns_record : (payload : CreateDnsRecordPayload, transform : Transform) -> async Response<DnsRecord>;
+    create_dns_records_for_canister : (
+      associated_add_on_id : AddOnId,
+      project_id : ProjectId,
+      payload : CreateCanisterDNSRecordsPayload,
+      transform : Transform,
+      existing_registration : DomainRegistration,
+    ) -> async Response<DomainRegistration>;
+    edit_ic_domains : (canister_id : Principal, new_ic_domains : StaticFile) -> async Response<()>;
+    get_ic_domain_registration_request_id : (id : Text, transform : Transform) -> async Response<Bool>;
+    register_domain_ic : (canister_id : Principal, domain : Text, transform : Transform) -> async Response<Text>;
+    initialize_domain_registration : (canister_id : Principal, associated_addon_id : Nat) -> Response<DomainRegistration>;
+    setup_custom_domain_by_project : (
+      project_id : ProjectId,
+      subdomain_name : Text,
+      add_on_id : AddOnId,
+      transform : Transform,
+    ) -> async Response<SetupDomainResult>;
+
+    _setup_custom_domain_for_canister : (
+      project_id : ProjectId,
+      canister_id : Principal,
+      subdomain_name : Text,
+      add_on : AddOnService,
+      transform : Transform,
+    ) -> async Response<SetupDomainResult>;
+
+    update_registration_status : (registration_id : Nat, new_status : IcDomainRegistrationStatus, error : DomainRegistrationError) -> Response<DomainRegistration>;
+    delete_domain_registration : (project_id : ProjectId, addon_id : AddOnId) -> Response<Bool>;
+  };
+
+  public type SubscriptionInterface = {
+    // Treasury management
+    set_treasury : (new_treasury : Principal) -> ();
+    get_treasury : () -> ?Principal;
+
+    // Tier management
+    get_tier_id_freemium : () -> Response<Nat>;
+
+    // Subscription queries
+    get_all_subscriptions : () -> [(Principal, Subscription)];
+    get_subscription : (caller : Principal) -> Response<Subscription>;
+
+    // Add-on management
+    get_add_ons_by_project : (project_id : Nat) -> [AddOnService];
+    get_add_on_by_id : (project_id : ProjectId, add_on_id : AddOnId) -> Response<AddOnService>;
+    find_add_on_variant : (add_on_id : AddOnId) -> ?AddOnVariant;
+    find_add_on_by_id : (project_id : ProjectId, id : AddOnId) -> ?AddOnService;
+    has_add_on : (project_id : ProjectId, add_on_id : AddOnId) -> HasAddonResult;
+
+    // Subscription operations
+    subscribe_add_on : (
+      caller : Principal,
+      project_id : ProjectId,
+      add_on_id : AddOnId,
+    ) -> Response<[AddOnService]>;
+
+    update_add_on : (project_id : ProjectId, updated_addon : AddOnService) -> Response<[AddOnService]>;
+    create_subscription : (caller : Principal, tier_id : Nat) -> async Response<Subscription>;
+
+    // Slot management
+    validate_increment_slots_by_user : (user : Principal) -> Bool;
+    push_canister_id : (caller : Principal, canister_id : Principal) -> async Response<Bool>;
+    update_sub_delete_project : (caller : Principal, canister_id : Principal) -> async Response<()>;
+    update_addon_resource_id : (addon_id : AddOnId, new_resource_id : DomainRegistrationId) -> Response<()>;
+
+    // Validation
+    validate_subscription : (caller : Principal) -> async Bool;
+
+    grant_subscription : (user_principal : Principal, tier_id : Nat) -> async Response<Subscription>;
+    grant_addon : (project_id : ProjectId, addon_id : AddOnId, expiry_in_ms : Nat) -> async Response<[AddOnService]>;
+  };
+
+  public type IndexCounterInterface = {
+    get_index : (index_type : CounterType) -> Nat;
+    increment_index : (index_type : CounterType) -> ();
+    reset_index : (index_type : CounterType) -> ();
+  };
+
+  public type ClassType = {
+    #project;
+    #subscription;
+    #domain;
+    #cloudflare;
+  };
+
+  public type Class<T> = {
+    manager : T;
+  };
+
+  public type RegisterDomainSuccessResponse = {
+    id : Text; // request id
+  };
+
+  public type DomainRegistrar = {
+    request_id : Text;
+    canister_id : Principal;
+    domain : Text;
+  };
+
+  /***************/
+  /***************/
+  /***************/
+  /***************/
+  /***************/
+  /***************/
+  /***************/
+  /***************/
+  /** Cloudflare **/
+  /***************/
+  /***************/
+  /***************/
+  /***************/
+  /***************/
+  /***************/
+  /***************/
   // DNS Record Types
   public type DnsRecordType = {
     #A;
@@ -530,16 +978,18 @@ module {
   };
 
   public type DnsRecord = {
-    id : Text;
-    zone_id : Text;
-    zone_name : Text;
     name : Text;
-    dns_type : DnsRecordType;
-    content : Text;
     ttl : Nat;
-    proxied : Bool;
-    created_on : Int;
-    modified_on : Int;
+    type_ : Text;
+    comment : ?Text;
+    content : ?Text;
+    proxied : ?Bool;
+    settings : ?{
+      ipv4_only : ?Bool;
+      ipv6_only : ?Bool;
+    };
+    tags : ?[Text];
+    id : Text;
   };
 
   public type DnsZone = {
@@ -580,25 +1030,6 @@ module {
     };
   };
 
-  public type CandleData = {
-    timestamp : Int;
-    low : Float;
-    high : Float;
-    open : Float;
-    close : Float;
-    volume : Float;
-  };
-
-  public type TokenPrice = {
-    value : Float;
-    last_updated_seconds : Nat; // time in seconds
-  };
-
-  public type HttpResponse = {
-    response : HttpRequestResult;
-    body : Text;
-  };
-
   public type CloudflareRecord = {
     id : Text;
     name : Text;
@@ -623,6 +1054,65 @@ module {
     total_pages : Nat;
   };
 
+  public type CreateDnsRecordPayload = {
+    zone_id : Text;
+    name : Text;
+    ttl : Nat;
+    type_ : Text;
+    comment : ?Text;
+    content : ?Text;
+  };
+  public type DnsRecordPayload = {
+    name : Text;
+    type_ : Text;
+    comment : ?Text; // Make optional
+    content : ?Text; // Make optional for CNAME records
+    target : ?Text; // Add target for CNAME records
+    ttl : ?Nat; // Make TTL optional
+    proxied : ?Bool; // Make proxied optional
+  };
+
+  public type TXTDnsRecordPayload = {
+    name : Text;
+    type_ : Text;
+    comment : Text;
+    content : Text;
+  };
+
+  public type CNAMEDnsRecordPayload = {
+    name : Text;
+    type_ : Text;
+    target : Text;
+    proxied : Bool;
+  };
+
+  public type CreateCanisterDNSRecordsPayload = {
+    domain_name : Text;
+    subdomain_name : Text;
+    user_principal : Principal;
+    canister_id : Principal;
+
+  };
+
+  public type CreateRecordResponse = {
+    id : Text;
+    name : Text;
+    type_ : Text;
+    content : Text;
+    created_on : Text;
+    modified_on : Text;
+    ttl : Nat;
+    proxied : Bool;
+    proxiable : Bool;
+  };
+
+  public type CanisterRecordsPayload = {
+    zone_id : Text;
+    txt_payload : DnsRecordPayload;
+    cname_challenge : DnsRecordPayload;
+    cname_domain : DnsRecordPayload;
+  };
+
   public type CloudflareListDNSRecordsResponse = {
     result : [CloudflareRecord];
     success : Bool;
@@ -630,15 +1120,14 @@ module {
     messages : [Text];
     result_info : CloudflarePaginationInfo;
   };
-  public type InitializedResponse = {
-    is_init : Bool;
-    is_run : Bool;
-    is_run_recurring : Bool;
-    secs_since_midnight : Nat;
-    secs_till_midnight : Nat;
-    next_secs_since_midnight : Nat;
-    next_secs_till_midnight : Nat;
-    next_trigger_at : Nat;
-  };
+
   /** End of types */
+
+  type SearchRecordsRawPayload = {
+    #Object : {
+      content : CloudflareRecordSearchOpts;
+      name : CloudflareRecordSearchOpts;
+    };
+  };
+
 };

@@ -1,0 +1,291 @@
+.grant-management {
+  padding: 0;
+  background: var(--background);
+  color: var(--text-primary);
+}
+
+/* Grid Layout */
+.grant-management-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.grant-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.grant-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.grant-field {
+  width: 100%;
+}
+
+/* Quick Actions Grid */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.quick-action-item {
+  width: 100%;
+}
+
+/* Override Material UI theme colors */
+.grant-management .MuiCard-root {
+  background-color: var(--background) !important;
+  color: var(--text-primary) !important;
+}
+
+.grant-management .MuiTextField-root .MuiOutlinedInput-root {
+  background-color: var(--background) !important;
+  color: var(--text-primary) !important;
+}
+
+.grant-management .MuiTextField-root .MuiInputLabel-root {
+  color: var(--text-secondary) !important;
+}
+
+.grant-management
+  .MuiTextField-root
+  .MuiOutlinedInput-root
+  .MuiOutlinedInput-notchedOutline {
+  border-color: var(--border-color) !important;
+}
+
+.grant-management .MuiFormControl-root .MuiInputLabel-root {
+  color: var(--text-secondary) !important;
+}
+
+.grant-management .MuiSelect-select {
+  background-color: var(--background) !important;
+  color: var(--text-primary) !important;
+}
+
+.grant-management .MuiMenuItem-root {
+  background-color: var(--background) !important;
+  color: var(--text-primary) !important;
+}
+
+.grant-management .MuiMenuItem-root:hover {
+  background-color: var(--background-hover) !important;
+}
+
+.grant-card {
+  height: 100%;
+  transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
+  background: var(--background);
+  color: var(--text-primary);
+}
+
+.grant-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+}
+
+.grant-card .MuiCardContent-root {
+  padding: 24px;
+  background: var(--background);
+  color: var(--text-primary);
+}
+
+.grant-card .MuiTypography-h5 {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.grant-card .MuiTextField-root {
+  margin-bottom: 16px;
+}
+
+.grant-card .MuiFormControl-root {
+  margin-bottom: 16px;
+}
+
+.grant-card .MuiButton-root {
+  text-transform: none;
+  font-weight: 500;
+  border-radius: 8px;
+}
+
+.grant-card .MuiButton-contained {
+  background: var(--color-primary);
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+}
+
+.grant-card .MuiButton-contained:hover {
+  background: var(--color-primary-dark);
+  box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3);
+}
+
+.grant-card .MuiButton-contained:disabled {
+  background: var(--color-disabled);
+  color: var(--text-tertiary);
+  box-shadow: none;
+}
+
+.grant-card .MuiAlert-root {
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.grant-card .MuiChip-root {
+  margin: 2px;
+  font-size: 0.75rem;
+}
+
+.grant-card .MuiInputAdornment-root {
+  margin-left: 8px;
+}
+
+.grant-card .MuiIconButton-root {
+  padding: 4px;
+}
+
+.grant-card .MuiIconButton-root:hover {
+  background-color: rgba(25, 118, 210, 0.04);
+}
+
+/* Quick Actions Section */
+.grant-management .MuiCard-root:last-child {
+  margin-top: 32px;
+}
+
+.grant-management .MuiCard-root:last-child .MuiCardContent-root {
+  padding: 24px;
+}
+
+.grant-management .MuiButton-outlined {
+  border-radius: 8px;
+  text-transform: none;
+  font-weight: 500;
+  padding: 8px 16px;
+}
+
+.grant-management .MuiButton-outlined:hover {
+  background-color: rgba(25, 118, 210, 0.04);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .grant-management-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .grant-card .MuiCardContent-root {
+    padding: 16px;
+  }
+
+  .quick-actions-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+/* Loading States */
+.grant-card .MuiButton-root:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Form Validation */
+.grant-card .MuiTextField-root .MuiFormHelperText-root.Mui-error {
+  color: #d32f2f;
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+
+.grant-card
+  .MuiTextField-root
+  .MuiOutlinedInput-root.Mui-error
+  .MuiOutlinedInput-notchedOutline {
+  border-color: #d32f2f;
+}
+
+/* Icon Styling */
+.grant-card .MuiSvgIcon-root {
+  font-size: 1.25rem;
+}
+
+.grant-card .MuiSvgIcon-root.MuiSvgIcon-fontSizeSmall {
+  font-size: 1rem;
+}
+
+/* Alert Styling */
+.grant-card .MuiAlert-standardInfo {
+  background-color: var(--color-success-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.grant-card .MuiAlert-standardInfo .MuiAlert-icon {
+  color: var(--color-primary);
+}
+
+/* Chip Styling */
+.grant-card .MuiChip-outlined {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background-color: var(--background);
+}
+
+.grant-card .MuiChip-outlined:hover {
+  background-color: var(--background-hover);
+}
+
+/* Select Dropdown Styling */
+.grant-card .MuiSelect-select {
+  padding: 12px 14px;
+}
+
+.grant-card .MuiSelect-select .MuiBox-root {
+  width: 100%;
+}
+
+/* Typography Styling */
+.grant-card .MuiTypography-subtitle2 {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.grant-card .MuiTypography-caption {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+/* Button Group Styling */
+.grant-management .MuiGrid-container .MuiButton-root {
+  min-height: 40px;
+}
+
+/* Focus States */
+.grant-card .MuiButton-root:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.grant-card
+  .MuiTextField-root
+  .MuiOutlinedInput-root:focus-within
+  .MuiOutlinedInput-notchedOutline {
+  border-color: var(--color-primary);
+  border-width: 2px;
+}
+
+.grant-card
+  .MuiFormControl-root
+  .MuiOutlinedInput-root:focus-within
+  .MuiOutlinedInput-notchedOutline {
+  border-color: var(--color-primary);
+  border-width: 2px;
+}
