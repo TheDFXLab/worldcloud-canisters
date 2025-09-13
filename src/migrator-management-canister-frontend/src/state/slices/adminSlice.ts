@@ -801,7 +801,6 @@ export const setIcDomains = createAsyncThunk(
             throw new Error('Failed to create API instance');
         }
         const response = await mainApi.admin_set_ic_domains(canister_id, file);
-        debugger;
         if (!response) {
             throw new Error("Failed to set ic domains.");
         }
@@ -863,17 +862,21 @@ export const setupCustomDomain = createAsyncThunk(
     async ({
         identity,
         agent,
+        projectId,
         canisterId,
-        subdomainName
+        subdomainName,
+        addonId
     }: {
         identity: any;
         agent: any;
+        projectId: number;
         canisterId: string;
         subdomainName: string;
+        addonId: number;
     }) => {
         const api = await MainApi.create(identity, agent);
         if (!api) throw new Error('Failed to create API instance');
-        const response = await api.admin_setup_custom_domain(canisterId, subdomainName);
+        const response = await api.admin_setup_custom_domain(projectId, canisterId, subdomainName, addonId);
         if ('ok' in response) {
             return response.ok;
         }
