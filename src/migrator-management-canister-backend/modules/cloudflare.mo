@@ -12,12 +12,16 @@ import Utility "../utils/Utility";
 import JSON "mo:json.mo/JSON";
 import Blob "mo:base/Blob";
 import Bool "mo:base/Bool";
+import Principal "mo:base/Principal";
+import Map "mo:core/Map";
 module {
-  public class Cloudflare(base_url_init : Text, email_init : ?Text, api_key_init : ?Text, zone_id_init : ?Text) {
+  public class Cloudflare(base_url_init : Text, email_init : ?Text, api_key_init : ?Text, zone_id_init : ?Text, subdomain_records_init : Types.SubdomainRecords) {
     public var CLOUDFLARE_API_BASE_URL : Text = base_url_init;
     public var CLOUDFLARE_EMAIL : ?Text = email_init;
     public var CLOUDFLARE_API_KEY : ?Text = api_key_init;
     public var CLOUDFLARE_ZONE_ID : ?Text = zone_id_init;
+
+    public var subdomain_records : Types.SubdomainRecords = subdomain_records_init;
 
     public func get_cloudflare_credentials() : Types.Response<{ email : ?Text; api_key : ?Text }> {
       return #ok({
@@ -43,6 +47,88 @@ module {
       return #ok();
     };
 
+    /** State**/
+
+    public func get_subdomain_records_all() : [(Text, Types.DomainRegistrationRecords)] {
+      return Iter.toArray(Map.entries(subdomain_records));
+    };
+
+    public func get_subdomain_records_by_name(subdomain_name : Text) : Types.Response<Types.DomainRegistrationRecords> {
+      switch (Map.get(subdomain_records, Text.compare, subdomain_name)) {
+        case (null) return #err(Errors.NotFound("Domain registration records for subdomain " # subdomain_name));
+        case (?val) return #ok(val);
+      };
+    };
+
+    public func set_subdomain_records(subdomain_name : Text, txt_id : Text, cname_challenge_id : Text, cname_domain_id : Text, canister_id : Principal) : () {
+      let records : Types.DomainRegistrationRecords = {
+        canister_id = canister_id;
+        txt_domain_record_id = txt_id;
+        cname_challenge_record_id = cname_challenge_id;
+        cname_domain_record_id = cname_domain_id;
+      };
+      Map.add(subdomain_records, Text.compare, subdomain_name, records);
+    };
+
+    public func delete_subdomain_records(subdomain_name : Text) : () {
+      ignore Map.delete(subdomain_records, Text.compare, subdomain_name);
+    };
+
+    /** Cloudflare API */
+
+    public func find_dns_record_ids(subdomain_name : Text, domain_name : Text, canister_id : Principal, transform : Types.Transform) : async Types.Response<Types.DomainRegistrationRecords> {
+      let zone_id = get_zone_id();
+      let dns_records : [Types.DnsRecord] = switch (await list_dns_records(zone_id, transform)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      var txt_id : ?Text = null;
+      var cname_domain_id : ?Text = null;
+      var cname_challenge_id : ?Text = null;
+
+      for (record in dns_records.vals()) {
+        let content : Text = switch (record.content) {
+          case (null) return #err(Errors.NotFound("DNS record `content`"));
+          case (?val) val;
+        };
+
+        // Find txt record
+        if (Text.contains(content, #text(Principal.toText(canister_id)))) {
+          txt_id := ?record.id;
+        } else if (Text.contains(content, #text(subdomain_name # "." # domain_name # ".icp1.io"))) {
+          // Find cname domain record
+          cname_domain_id := ?record.id;
+        } else if (Text.contains(content, #text("_acme-challenge." # domain_name # ".icp2.io"))) {
+          // Find cname challenge record
+          cname_challenge_id := ?record.id;
+        };
+      };
+
+      let txt_domain_record_id : Text = switch (txt_id) {
+        case (null) return #err(Errors.NotFoundCloudflareRecord(subdomain_name, "TXT"));
+        case (?val) val;
+      };
+      let cname_domain_record_id : Text = switch (cname_domain_id) {
+        case (null) return #err(Errors.NotFoundCloudflareRecord(subdomain_name, "CNAME Domain"));
+        case (?val) val;
+      };
+
+      let cname_challenge_record_id : Text = switch (cname_challenge_id) {
+        case (null) return #err(Errors.NotFoundCloudflareRecord(subdomain_name, "CNAME Challenge"));
+        case (?val) val;
+      };
+
+      let domain_registration_records : Types.DomainRegistrationRecords = {
+        canister_id;
+        txt_domain_record_id;
+        cname_challenge_record_id;
+        cname_domain_record_id;
+      };
+
+      return #ok(domain_registration_records);
+    };
+
     public func list_dns_records(zone_id : Text, transform : Types.Transform) : async Types.Response<[Types.DnsRecord]> {
       // Check if Cloudflare credentials are configured
       if (not has_cloudflare_credentials()) {
@@ -61,7 +147,7 @@ module {
 
       let host = "api.cloudflare.com";
       let url = "https://" # host # "/client/v4/zones/" # zone_id # "/dns_records";
-      Debug.print("URL: " # url);
+
       // Prepare headers
       let request_headers = [
         // { name = "Authorization"; value = "Bearer " # api_key },
@@ -80,7 +166,6 @@ module {
         case (#ok(val)) val;
       };
 
-      Debug.print("Parsed types res list dns records: " # debug_show (parsed_typed));
       return #ok(parsed_typed);
     };
 
@@ -197,10 +282,6 @@ module {
         return #err(Errors.InvalidInput("Generated JSON body is empty"));
       };
 
-      Debug.print("Generated JSON Body: " # string_body);
-      Debug.print("JSON Body Length: " # Nat.toText(Text.size(string_body)));
-
-      Debug.print("URL : " # url);
       // Prepare headers
       let request_headers = [
         { name = "Content-Type"; value = "application/json" },
@@ -208,9 +289,6 @@ module {
         { name = "X-Auth-Key"; value = api_key },
         { name = "X-Auth-Email"; value = email },
       ];
-
-      Debug.print("Headers : " # debug_show (request_headers));
-      Debug.print("BODY : " # debug_show (string_body));
 
       // Convert Text to Blob for the HTTP request body
       let body_blob : Blob = Text.encodeUtf8(string_body);
@@ -221,14 +299,8 @@ module {
         case (#ok(val)) val;
       };
 
-      // Debug HTTP response details
-      Debug.print("HTTP Response Status: " # Nat.toText(res.response.status));
-      Debug.print("HTTP Response Headers: " # debug_show (res.response.headers));
-      Debug.print("HTTP Response Body Size: " # Nat.toText(res.response.body.size()));
-
       // Check if we got an error response
       if (res.response.status != 200) {
-        Debug.print("Cloudflare API Error Response: " # res.body);
         return #err(Errors.UnexpectedError("Cloudflare API returned HTTP " # Nat.toText(res.response.status) # ": " # res.body));
       };
 
@@ -237,7 +309,6 @@ module {
         case (#ok(val)) val;
       };
 
-      Debug.print("Parsed types res list dns records : " # debug_show (parsed_typed));
       return #ok(parsed_typed);
 
     };
@@ -330,7 +401,7 @@ module {
       // Prepare headers
       let request_headers = [
         { name = "Content-Type"; value = "application/json" },
-        // { name = "Authorization"; value = "Bearer " # api_key },
+        { name = "Authorization"; value = "Bearer " # api_key },
         { name = "X-Auth-Key"; value = api_key },
         { name = "X-Auth-Email"; value = email },
       ];
@@ -347,14 +418,14 @@ module {
         case (#ok(val)) val;
       };
 
-      // Debug HTTP response details
-      Debug.print("HTTP Response Status: " # Nat.toText(res.response.status));
-      Debug.print("HTTP Response Headers: " # debug_show (res.response.headers));
-      Debug.print("HTTP Response Body Size: " # Nat.toText(res.response.body.size()));
-
       // Check if we got an error response
       if (res.response.status != 200) {
         Debug.print("Cloudflare API Error Response: " # res.body);
+        if (Text.contains(res.body, #text "An A, AAAA, or CNAME record with that host already exists") == true) {
+          Debug.print("Cloudflare error: Record with name " # payload.cname_domain.name # " already exists");
+          return #err("Cloudflare error: Record with name " # payload.cname_domain.name # " already exists");
+
+        };
         return #err(Errors.UnexpectedError("Cloudflare API returned HTTP " # Nat.toText(res.response.status) # ": " # res.body));
       };
 
