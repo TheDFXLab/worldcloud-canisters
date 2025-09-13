@@ -33,6 +33,8 @@ export const internetIdentityConfig = {
     identityProvider: internet_identity_canister_id_url,
     loggedOutPrincipal: "2vxsx-fae",
     loginExpiryInHours: 12, // in hours
+    identityProviderII1: internet_identity_canister_id_url,
+    identityProviderII2: "https://id.ai"
 }
 
 

@@ -12,6 +12,7 @@ import { AuthClient, IdbStorage } from "@dfinity/auth-client";
 
 import { Identity } from "@dfinity/agent";
 import {
+  environment,
   frontend_canister_id_url,
   internetIdentityConfig,
 } from "../../config/config";
@@ -36,12 +37,16 @@ interface IdentityProviderProps {
   children: ReactNode;
 }
 
+type InternetIdentityVersion = "ii1" | "ii2";
 interface IdentityContextType {
   isConnected: boolean;
   identity: Identity | null;
   isLoadingIdentity: boolean;
   refreshIdentity: () => Promise<Identity | null>;
-  connectWallet: (principal?: Principal) => Promise<Identity | null>;
+  connectWallet: (
+    principal: Principal,
+    ii_version: InternetIdentityVersion
+  ) => Promise<Identity | null>;
   disconnect: () => Promise<boolean>;
 }
 
@@ -234,8 +239,18 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
     }
   };
 
-  const connectWallet = async () => {
+  const connectWallet = async (
+    principal: Principal,
+    ii_version: InternetIdentityVersion
+  ) => {
     try {
+      const provider_url =
+        environment === "ic"
+          ? ii_version === "ii1"
+            ? internetIdentityConfig.identityProviderII1
+            : internetIdentityConfig.identityProviderII2
+          : internetIdentityConfig.identityProviderII1;
+
       setIsLoadingIdentity(true);
       summon("Logging in...");
       const _authClient = await AuthClient.create({
@@ -306,7 +321,8 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         //
         _authClient.login({
           derivationOrigin: frontend_canister_id_url,
-          identityProvider: internetIdentityConfig.identityProvider,
+          // identityProvider: internetIdentityConfig.identityProvider,
+          identityProvider: provider_url,
           windowOpenerFeatures: `toolbar=0,location=0,menubar=0,width=${popUpWidth},height=${popUpHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`,
 
           maxTimeToLive: BigInt(
