@@ -46,6 +46,7 @@ import {
     fetchDomainRegistrationsPaginated,
     fetchFreemiumRegistrationByCanister,
     deleteDomainRegistration,
+    setCanisterToSlot,
 } from '../state/slices/adminSlice';
 import { RootState, AppDispatch } from '../state/store';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
@@ -113,6 +114,7 @@ export const useAdminLogic = () => {
         isLoadingDomainRegistrationsPaginated,
         isLoadingFreemiumDomainRegistrationsPaginated,
         isLoadingDeleteDomainRegistration,
+        isLoadingSetCanisterToSlot,
 
         error,
         successMessage,
@@ -596,22 +598,36 @@ export const useAdminLogic = () => {
         }
     }, [dispatch, identity, agent]);
 
-    const handleDeleteDomainRegistration = useCallback(async (registration_id: number, type: SerializedProjectPlan) => {
+    const handleDeleteDomainRegistration =
+        useCallback(async (registration_id: number, type: SerializedProjectPlan) => {
+            if (!identity || !agent) {
+                throw new Error('Missing required dependencies');
+            }
+            try {
+                await dispatch(deleteDomainRegistration({ identity, agent, registration_id, type })).unwrap();
+                return { status: true, message: 'Deleted domain registration' };
+            } catch (error: any) {
+                return {
+                    status: false,
+                    message: error.message || 'Failed to delete domain registration',
+                }
+            }
+        }, [dispatch, identity, agent]);
+
+    const handleSetCanisterToSlot = useCallback(async (canister_id: Principal, slot_id: number) => {
         if (!identity || !agent) {
             throw new Error('Missing required dependencies');
         }
         try {
-            await dispatch(deleteDomainRegistration({ identity, agent, registration_id, type })).unwrap();
-            return { status: true, message: 'Deleted domain registration' };
+            await dispatch(setCanisterToSlot({ identity, agent, canister_id, slot_id })).unwrap();
+            return { status: true, message: 'Set slot id to canister' };
         } catch (error: any) {
             return {
                 status: false,
-                message: error.message || 'Failed to delete domain registration',
+                message: error.message || 'Failed to set canister to slot id',
             }
         }
     }, [dispatch, identity, agent]);
-
-
 
 
     // Fetch freemium domain registrations paginated
@@ -697,6 +713,8 @@ export const useAdminLogic = () => {
         isLoadingFreemiumRegistrationByCanister,
         isLoadingDomainRegistrationsPaginated,
         isLoadingFreemiumDomainRegistrationsPaginated,
+        isLoadingSetCanisterToSlot,
+
 
 
         // Messages
@@ -753,6 +771,7 @@ export const useAdminLogic = () => {
         refreshDomainRegistrationsPaginated,
         refreshFreemiumRegistrationByCanister,
         handleDeleteDomainRegistration,
+        handleSetCanisterToSlot,
         freemiumRegistrationByCanister,
         domainRegistrationsPaginated,
         freemiumDomainRegistrationsPaginated,

@@ -541,7 +541,7 @@ module {
       return #ok(next_slot_id - 1);
     };
 
-    private func create_canister_to_slot(canister_id : Principal, slot_id : Nat) : () {
+    public func create_canister_to_slot(canister_id : Principal, slot_id : Nat) : () {
       Map.add(canister_to_slot, Principal.compare, canister_id, slot_id);
     };
 
