@@ -936,9 +936,11 @@ const DomainManagement: React.FC = () => {
           setSelectedRegistration(null);
         }}
       >
-        <DialogTitle>Retry Domain Registration</DialogTitle>
+        <DialogTitle sx={{ color: "text.primary" }}>
+          Retry Domain Registration
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText>
+          <DialogContentText sx={{ color: "text.primary" }}>
             Are you sure you want to retry the domain registration for "
             {selectedRegistration?.ic_registration?.domain || "N/A"}"?
           </DialogContentText>
@@ -976,9 +978,11 @@ const DomainManagement: React.FC = () => {
           }
         }}
       >
-        <DialogTitle>Delete Domain Registration</DialogTitle>
+        <DialogTitle sx={{ color: "text.primary" }}>
+          Delete Domain Registration
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText>
+          <DialogContentText sx={{ color: "text.primary" }}>
             Are you sure you want to delete the domain registration for "
             {selectedRegistration?.ic_registration?.subdomain || "N/A"}.
             {selectedRegistration?.ic_registration?.domain || "N/A"}"? This
@@ -1026,13 +1030,15 @@ const DomainManagement: React.FC = () => {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Domain Registration Details</DialogTitle>
+        <DialogTitle sx={{ color: "text.primary" }}>
+          Domain Registration Details
+        </DialogTitle>
         <DialogContent>
           {selectedRegistration && (
             <Box>
               {/* Status Section */}
               <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="h6" gutterBottom color="text.primary">
                   Status
                 </Typography>
                 <Box
@@ -1052,7 +1058,7 @@ const DomainManagement: React.FC = () => {
                     size="medium"
                     variant="outlined"
                   />
-                  <Typography variant="body2" color="textSecondary">
+                  <Typography variant="body2" color="text.secondary">
                     {getRegistrationStatusDetails(
                       selectedRegistration.ic_registration
                         ?.status as SerializedIcDomainRegistrationStatus
@@ -1061,7 +1067,7 @@ const DomainManagement: React.FC = () => {
                 </Box>
                 {selectedRegistration.ic_registration?.status ===
                   "complete" && (
-                  <Typography variant="body2">
+                  <Typography variant="body2" color="text.primary">
                     <strong>Domain: </strong>
                     <a
                       target="_blank"
@@ -1075,20 +1081,20 @@ const DomainManagement: React.FC = () => {
                 )}
                 {selectedRegistration.ic_registration?.status ===
                   "inactive" && (
-                  <Typography variant="body2">
+                  <Typography variant="body2" color="text.primary">
                     <strong>Domain: </strong>{" "}
                     <span>No domain registration yet.</span>
                   </Typography>
                 )}
                 {selectedRegistration.ic_registration?.status === "pending" && (
-                  <Typography variant="body2">
+                  <Typography variant="body2" color="text.primary">
                     <strong>Domain:</strong>{" "}
                     {selectedRegistration.ic_registration.subdomain}
                     .worldcloud.app
                   </Typography>
                 )}
                 {selectedRegistration.ic_registration?.status === "failed" && (
-                  <Typography variant="body2">
+                  <Typography variant="body2" color="text.primary">
                     <strong>Domain:</strong>{" "}
                     {selectedRegistration.ic_registration.subdomain}
                     .worldcloud.app
@@ -1111,7 +1117,7 @@ const DomainManagement: React.FC = () => {
               <Divider sx={{ my: 2 }} />
 
               {/* Registration Details */}
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" gutterBottom color="text.primary">
                 Registration Details
               </Typography>
 
@@ -1124,10 +1130,18 @@ const DomainManagement: React.FC = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <Typography variant="body2" sx={{ minWidth: 170 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ minWidth: 170 }}
+                  color="text.primary"
+                >
                   <strong>Registration ID:</strong>
                 </Typography>
-                <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
+                <Typography
+                  variant="body2"
+                  sx={{ wordBreak: "break-all" }}
+                  color="text.primary"
+                >
                   {selectedRegistration.id}
                 </Typography>
                 <IconButton
@@ -1151,10 +1165,18 @@ const DomainManagement: React.FC = () => {
                     flexWrap: "wrap",
                   }}
                 >
-                  <Typography variant="body2" sx={{ minWidth: 170 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ minWidth: 170 }}
+                    color="text.primary"
+                  >
                     <strong>Add-on ID:</strong>
                   </Typography>
-                  <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ wordBreak: "break-all" }}
+                    color="text.primary"
+                  >
                     {selectedRegistration.add_on_id}
                   </Typography>
                   <IconButton
@@ -1180,10 +1202,18 @@ const DomainManagement: React.FC = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <Typography variant="body2" sx={{ minWidth: 170 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ minWidth: 170 }}
+                  color="text.primary"
+                >
                   <strong>TXT Record ID:</strong>
                 </Typography>
-                <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
+                <Typography
+                  variant="body2"
+                  sx={{ wordBreak: "break-all" }}
+                  color="text.primary"
+                >
                   {selectedRegistration.txt_domain_record_id}
                 </Typography>
                 <IconButton
@@ -1208,10 +1238,18 @@ const DomainManagement: React.FC = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <Typography variant="body2" sx={{ minWidth: 170 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ minWidth: 170 }}
+                  color="text.primary"
+                >
                   <strong>CNAME Challenge ID:</strong>
                 </Typography>
-                <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
+                <Typography
+                  variant="body2"
+                  sx={{ wordBreak: "break-all" }}
+                  color="text.primary"
+                >
                   {selectedRegistration.cname_challenge_record_id}
                 </Typography>
                 <IconButton
@@ -1236,10 +1274,18 @@ const DomainManagement: React.FC = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <Typography variant="body2" sx={{ minWidth: 170 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ minWidth: 170 }}
+                  color="text.primary"
+                >
                   <strong>CNAME Domain ID:</strong>
                 </Typography>
-                <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
+                <Typography
+                  variant="body2"
+                  sx={{ wordBreak: "break-all" }}
+                  color="text.primary"
+                >
                   {selectedRegistration.cname_domain_record_id}
                 </Typography>
                 <IconButton
@@ -1264,10 +1310,18 @@ const DomainManagement: React.FC = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <Typography variant="body2" sx={{ minWidth: 170 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ minWidth: 170 }}
+                  color="text.primary"
+                >
                   <strong>IC Request ID:</strong>
                 </Typography>
-                <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
+                <Typography
+                  variant="body2"
+                  sx={{ wordBreak: "break-all" }}
+                  color="text.primary"
+                >
                   {selectedRegistration.ic_registration?.request_id}
                 </Typography>
                 <IconButton
@@ -1286,7 +1340,7 @@ const DomainManagement: React.FC = () => {
               <Divider sx={{ my: 2 }} />
 
               {/* Domain Details */}
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" gutterBottom color="text.primary">
                 Domain Information
               </Typography>
 
@@ -1299,10 +1353,18 @@ const DomainManagement: React.FC = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <Typography variant="body2" sx={{ minWidth: 170 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ minWidth: 170 }}
+                  color="text.primary"
+                >
                   <strong>Domain:</strong>
                 </Typography>
-                <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
+                <Typography
+                  variant="body2"
+                  sx={{ wordBreak: "break-all" }}
+                  color="text.primary"
+                >
                   {selectedRegistration.ic_registration?.domain}
                 </Typography>
                 <IconButton
@@ -1327,10 +1389,18 @@ const DomainManagement: React.FC = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <Typography variant="body2" sx={{ minWidth: 170 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ minWidth: 170 }}
+                  color="text.primary"
+                >
                   <strong>Subdomain:</strong>
                 </Typography>
-                <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
+                <Typography
+                  variant="body2"
+                  sx={{ wordBreak: "break-all" }}
+                  color="text.primary"
+                >
                   {selectedRegistration.ic_registration?.subdomain}
                 </Typography>
                 <IconButton
@@ -1355,10 +1425,14 @@ const DomainManagement: React.FC = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <Typography variant="body2" sx={{ minWidth: 170 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ minWidth: 170 }}
+                  color="text.primary"
+                >
                   <strong>Is Apex:</strong>
                 </Typography>
-                <Typography variant="body2">
+                <Typography variant="body2" color="text.primary">
                   {selectedRegistration.ic_registration?.is_apex ? "Yes" : "No"}
                 </Typography>
               </Box>
@@ -1372,10 +1446,18 @@ const DomainManagement: React.FC = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <Typography variant="body2" sx={{ minWidth: 170 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ minWidth: 170 }}
+                  color="text.primary"
+                >
                   <strong>Canister ID:</strong>
                 </Typography>
-                <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
+                <Typography
+                  variant="body2"
+                  sx={{ wordBreak: "break-all" }}
+                  color="text.primary"
+                >
                   {selectedRegistration.canister_id}
                 </Typography>
                 <IconButton

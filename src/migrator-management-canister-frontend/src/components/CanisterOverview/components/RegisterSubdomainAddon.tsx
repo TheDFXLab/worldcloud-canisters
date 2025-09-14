@@ -60,6 +60,7 @@ export const RegisterSubdomainAddon: React.FC<RegisterSubdomainAddonProps> = ({
     handleSetupCustomDomainByProject,
     handleCheckSubdomainNameAvailability,
     handleDeleteDomainRegistration,
+    refreshProjectAddOns,
   } = useProjectsLogic();
 
   const [subdomainName, setSubdomainName] = useState("");
@@ -305,7 +306,16 @@ export const RegisterSubdomainAddon: React.FC<RegisterSubdomainAddonProps> = ({
         setCurrentDomain(null);
         setDomainStatus(null);
         setSubdomainName("");
-        handleGetParsedMyAddons(parseInt(projectId));
+        debugger;
+
+        // Refresh the parsed addons data first
+        console.log("Refreshing parsed addons after deletion...");
+        await handleGetParsedMyAddons(parseInt(projectId));
+        console.log("Parsed addons refreshed:", parsedMyAddons);
+
+        // Then refresh the project addons
+        console.log("Refreshing project addons after deletion...");
+        await refreshProjectAddOns(parseInt(projectId));
       } else {
         setToasterData({
           headerContent: "Error",
