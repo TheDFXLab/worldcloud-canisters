@@ -369,6 +369,16 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return await subscription_manager.grant_subscription(user_principal, subscription_tier_id);
   };
 
+  public shared (msg) func admin_set_canister_to_slot(canister_id : Principal, slot_id : Nat) : async Types.Response<()> {
+    if (domain.initialized != true) initialize_class_references();
+
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    return #ok(shareable_canister_manager.create_canister_to_slot(canister_id, slot_id));
+  };
+
   public shared (msg) func admin_grant_addon(project_id : Types.ProjectId, addon_id : Types.AddOnId, expiry_in_ms : Nat) : async Types.Response<[Types.AddOnService]> {
     if (domain.initialized != true) initialize_class_references();
 

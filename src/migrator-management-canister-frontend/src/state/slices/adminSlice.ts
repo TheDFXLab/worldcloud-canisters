@@ -136,8 +136,10 @@ export interface AdminState {
     isLoadingDomainRegistrationsPaginated: boolean,
     isLoadingFreemiumDomainRegistrationsPaginated: boolean,
     isLoadingDeleteDomainRegistration: boolean,
+    isLoadingSetCanisterToSlot: boolean,
 
     freemiumRegistrationByCanister: SerializedFreemiumDomainRegistration[],
+
 
 
 }
@@ -199,6 +201,7 @@ const initialState: AdminState = {
     isLoadingDomainRegistrationsPaginated: false,
     isLoadingFreemiumDomainRegistrationsPaginated: false,
     isLoadingDeleteDomainRegistration: false,
+    isLoadingSetCanisterToSlot: false,
 
     freemiumRegistrationByCanister: [],
 };
@@ -1026,6 +1029,18 @@ export const deleteDomainRegistration = createAsyncThunk(
     }
 )
 
+
+export const setCanisterToSlot = createAsyncThunk(
+    'admin/setCanisterToSlot',
+    async ({ identity, agent, canister_id, slot_id }: { identity: any, agent: any, canister_id: Principal, slot_id: number }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_set_canister_to_slot(canister_id, slot_id);
+        return true;
+    }
+)
+
+
 // Slice
 const adminSlice = createSlice({
     name: 'admin',
@@ -1637,6 +1652,9 @@ const adminSlice = createSlice({
             .addCase(deleteDomainRegistration.rejected, (state, action) => {
                 state.isLoadingDeleteDomainRegistration = false;
                 state.error = action.error.message ? action.error.message : "Failed to delete domain registration";
+            })
+            .addCase(setCanisterToSlot.pending, (state) => {
+                state.isLoadingSetCanisterToSlot = true;
             })
 
     },

@@ -53,11 +53,17 @@ interface FreemiumDomainForm {
   subdomain_name: string;
 }
 
+interface CanisterSlotForm {
+  canister_id: string;
+  slot_id: string;
+}
+
 const GrantManagement: React.FC = () => {
   const {
     handleGrantSubscription,
     handleGrantAddon,
     handleAdminSetupFreemiumDomain,
+    handleSetCanisterToSlot,
     isLoadingGrantSubscription,
     isLoadingGrantAddon,
   } = useAdminLogic();
@@ -85,14 +91,20 @@ const GrantManagement: React.FC = () => {
       subdomain_name: "",
     });
 
+  const [canisterSlotForm, setCanisterSlotForm] = useState<CanisterSlotForm>({
+    canister_id: "",
+    slot_id: "",
+  });
+
   // Loading states
   const [isGrantingSubscription, setIsGrantingSubscription] = useState(false);
   const [isGrantingAddon, setIsGrantingAddon] = useState(false);
   const [isSettingUpDomain, setIsSettingUpDomain] = useState(false);
+  const [isSettingCanisterSlot, setIsSettingCanisterSlot] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const [grantType, setGrantType] = useState<
-    "subscription" | "addon" | "freemium-domain"
+    "subscription" | "addon" | "freemium-domain" | "canister-slot"
   >("subscription");
   // Load data on component mount
   useEffect(() => {
@@ -182,6 +194,11 @@ const GrantManagement: React.FC = () => {
       subdomain.length <= 63 &&
       subdomainRegex.test(subdomain)
     );
+  };
+
+  const validateSlotId = (slotId: string): boolean => {
+    const num = parseInt(slotId, 10);
+    return !isNaN(num) && num >= 0;
   };
 
   // Copy to clipboard function
@@ -348,6 +365,84 @@ const GrantManagement: React.FC = () => {
     }
   };
 
+  // Set canister to slot handler
+  const handleSetCanisterSlotSubmit = async () => {
+    if (!validateCanisterId(canisterSlotForm.canister_id)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Please enter a valid canister ID",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    if (!validateSlotId(canisterSlotForm.slot_id)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Please enter a valid slot ID (0 or greater)",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    setIsSettingCanisterSlot(true);
+    try {
+      // Convert string to Principal
+      const { Principal } = await import("@dfinity/principal");
+      const canisterPrincipal = Principal.fromText(
+        canisterSlotForm.canister_id
+      );
+
+      const result = await handleSetCanisterToSlot(
+        canisterPrincipal,
+        parseInt(canisterSlotForm.slot_id, 10)
+      );
+
+      if (result.status) {
+        setToasterData({
+          headerContent: "Success",
+          toastStatus: true,
+          toastData: result.message,
+          textColor: "green",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+
+        // Reset form
+        setCanisterSlotForm({
+          canister_id: "",
+          slot_id: "",
+        });
+      } else {
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: false,
+          toastData: result.message,
+          textColor: "red",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+      }
+    } catch (error: any) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: error.message || "Failed to set canister to slot",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+    } finally {
+      setIsSettingCanisterSlot(false);
+    }
+  };
+
   const handleConfirm = async () => {
     if (grantType === "subscription") {
       await handleGrantSubscriptionSubmit();
@@ -355,6 +450,8 @@ const GrantManagement: React.FC = () => {
       await handleGrantAddonSubmit();
     } else if (grantType === "freemium-domain") {
       await handleFreemiumDomainSubmit();
+    } else if (grantType === "canister-slot") {
+      await handleSetCanisterSlotSubmit();
     }
   };
 
@@ -500,6 +597,35 @@ const GrantManagement: React.FC = () => {
         headerContent: "Error",
         toastStatus: false,
         toastData: "Please enter a valid subdomain name first",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    setShowModal(true);
+  };
+
+  const handleSetCanisterSlotClick = () => {
+    setGrantType("canister-slot");
+    if (!validateCanisterId(canisterSlotForm.canister_id)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Please enter a valid canister ID first",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    if (!validateSlotId(canisterSlotForm.slot_id)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Please enter a valid slot ID first (0 or greater)",
         textColor: "red",
         timeout: 3000,
       });
@@ -1002,6 +1128,111 @@ const GrantManagement: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Set Canister to Slot Section */}
+        <div className="grant-section">
+          <Card className="grant-card">
+            <CardContent>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                <Extension sx={{ mr: 2, color: "var(--color-primary)" }} />
+                <Typography variant="h5" component="h2">
+                  Set Canister to Slot
+                </Typography>
+              </Box>
+
+              <div className="grant-form-fields">
+                <div className="grant-field">
+                  <TextField
+                    fullWidth
+                    label="Canister ID"
+                    value={canisterSlotForm.canister_id}
+                    onChange={(e) =>
+                      setCanisterSlotForm((prev) => ({
+                        ...prev,
+                        canister_id: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter canister principal ID"
+                    error={
+                      canisterSlotForm.canister_id.length > 0 &&
+                      !validateCanisterId(canisterSlotForm.canister_id)
+                    }
+                    helperText={
+                      canisterSlotForm.canister_id.length > 0 &&
+                      !validateCanisterId(canisterSlotForm.canister_id)
+                        ? "Invalid canister ID format"
+                        : ""
+                    }
+                    InputProps={{
+                      endAdornment: canisterSlotForm.canister_id && (
+                        <InputAdornment position="end">
+                          <Tooltip title="Copy Canister ID">
+                            <IconButton
+                              onClick={() =>
+                                handleCopyToClipboard(
+                                  canisterSlotForm.canister_id
+                                )
+                              }
+                              edge="end"
+                            >
+                              <ContentCopy />
+                            </IconButton>
+                          </Tooltip>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </div>
+
+                <div className="grant-field">
+                  <TextField
+                    fullWidth
+                    label="Slot ID"
+                    type="number"
+                    value={canisterSlotForm.slot_id}
+                    onChange={(e) =>
+                      setCanisterSlotForm((prev) => ({
+                        ...prev,
+                        slot_id: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter slot ID"
+                    error={
+                      canisterSlotForm.slot_id !== "" &&
+                      !validateSlotId(canisterSlotForm.slot_id)
+                    }
+                    helperText={
+                      canisterSlotForm.slot_id !== "" &&
+                      !validateSlotId(canisterSlotForm.slot_id)
+                        ? "Slot ID must be 0 or greater"
+                        : ""
+                    }
+                  />
+                </div>
+
+                <div className="grant-field">
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    onClick={handleSetCanisterSlotClick}
+                    disabled={
+                      !validateCanisterId(canisterSlotForm.canister_id) ||
+                      !validateSlotId(canisterSlotForm.slot_id) ||
+                      isSettingCanisterSlot
+                    }
+                    startIcon={<Extension />}
+                    sx={{ py: 1.5 }}
+                  >
+                    {isSettingCanisterSlot
+                      ? "Setting..."
+                      : "Set Canister to Slot"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Quick Actions Section */}
@@ -1038,6 +1269,10 @@ const GrantManagement: React.FC = () => {
                     setFreemiumDomainForm({
                       canister_id: "",
                       subdomain_name: "",
+                    });
+                    setCanisterSlotForm({
+                      canister_id: "",
+                      slot_id: "",
                     });
                   }}
                 >
@@ -1093,6 +1328,22 @@ const GrantManagement: React.FC = () => {
                 <Button
                   fullWidth
                   variant="outlined"
+                  startIcon={<Extension />}
+                  onClick={() => {
+                    setCanisterSlotForm((prev) => ({
+                      ...prev,
+                      canister_id: "rdmx6-jaaaa-aaaaa-aaadq-cai",
+                      slot_id: "1",
+                    }));
+                  }}
+                >
+                  Fill Test Slot
+                </Button>
+              </div>
+              <div className="quick-action-item">
+                <Button
+                  fullWidth
+                  variant="outlined"
                   startIcon={<Warning />}
                   color="warning"
                   onClick={() => {
@@ -1116,12 +1367,24 @@ const GrantManagement: React.FC = () => {
 
       <SimpleConfirmationModal
         show={showModal}
-        title={`${grantType === "freemium-domain" ? "Setup" : "Grant"} ${
-          grantType === "freemium-domain" ? "Freemium Domain" : grantType
+        title={`${
+          grantType === "freemium-domain"
+            ? "Setup"
+            : grantType === "canister-slot"
+            ? "Set"
+            : "Grant"
+        } ${
+          grantType === "freemium-domain"
+            ? "Freemium Domain"
+            : grantType === "canister-slot"
+            ? "Canister to Slot"
+            : grantType
         }`}
         message={
           grantType === "freemium-domain"
             ? `Are you sure you want to setup the domain "${freemiumDomainForm.subdomain_name}.ic0.app" for canister ${freemiumDomainForm.canister_id}?`
+            : grantType === "canister-slot"
+            ? `Are you sure you want to set canister ${canisterSlotForm.canister_id} to slot ${canisterSlotForm.slot_id}?`
             : "Are you sure you want to perform this action?"
         }
         confirmText="Confirm"
@@ -1130,7 +1393,10 @@ const GrantManagement: React.FC = () => {
         onConfirm={handleConfirm}
         onCancel={handleCancel}
         isLoading={
-          isLoadingGrantSubscription || isLoadingGrantAddon || isSettingUpDomain
+          isLoadingGrantSubscription ||
+          isLoadingGrantAddon ||
+          isSettingUpDomain ||
+          isSettingCanisterSlot
         }
       />
     </div>

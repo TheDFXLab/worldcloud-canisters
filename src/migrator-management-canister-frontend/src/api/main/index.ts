@@ -1314,6 +1314,19 @@ class MainApi {
         throw this.handleResponseError(result.err);
     }
 
+
+    async admin_set_canister_to_slot(canister_id: Principal, slot_id: number) {
+        this.validate();
+        const result = await this.actor?.admin_set_canister_to_slot(canister_id, BigInt(slot_id));
+        if (!result) {
+            throw new Error("Failed to set canister slot id");
+        }
+        if ('ok' in result) {
+            return result.ok;
+        }
+        throw this.handleResponseError(result.err);
+    }
+
 }
 
 
