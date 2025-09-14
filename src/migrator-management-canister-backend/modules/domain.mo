@@ -331,16 +331,16 @@ module {
         };
 
         case (#ok(val)) {
-          let created_records = switch (val.create_record_response) {
-            case (#err(err)) return #err(err);
-            case (#ok(val)) val;
-          };
+          // let created_records = switch (val.create_record_response) {
+          // case (#err(err)) return #err(err);
+          // case (#ok(val)) val;
+          // };
 
           // Saves dns records in map and for canister
           let add_records_res : Types.AddDnsRecordsForCanisterResponse = switch (
             await add_records_for_canister(
               payload.canister_id,
-              created_records,
+              val.create_record_response,
               val.txt_payload.name,
               val.cname_challenge_payload.name,
               val.cname_domain_payload.name,
@@ -363,7 +363,7 @@ module {
       update_domain_registration(updated_domain_registration.id, updated_domain_registration);
 
       // Get existing add ons for project
-      let _new_addons : [Types.AddOnService] = switch (handle_update_project_addons(project_id, associated_add_on_id)) {
+      let _new_addons : [Types.AddOnService] = switch (handle_update_project_addons(project_id, associated_add_on_id, updated_domain_registration.id)) {
         case (#err(err)) return #err(err);
         case (#ok(val)) val;
       };
@@ -422,7 +422,12 @@ module {
       Debug.print("Calling cloudflare api");
 
       // Batch create records with cloudflare
-      let create_records_response = await _cloudflare_manager.batch_create_records(create_payload, transform);
+      let create_records_response = switch (await _cloudflare_manager.batch_create_records(create_payload, transform)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      Debug.print("Response is: ");
       return #ok({
         create_record_response = create_records_response;
         txt_payload;
@@ -899,6 +904,7 @@ module {
       // Build payload and create dns records in batch with cloudflare
       let updated_domain_registration : Types.FreemiumDomainRegistration = switch (await build_domain_registration_records(payload, transform)) {
         case (#err(err)) {
+          Debug.print("Error with cloudflare(((((((())))))))");
           let _updated_registration : Types.FreemiumDomainRegistration = switch (
             // Handle cloudflare error
             await handle_freemium_batch_create_records_error(
@@ -917,15 +923,15 @@ module {
           _updated_registration;
         };
         case (#ok(val)) {
-          let created_records = switch (val.create_record_response) {
-            case (#err(err)) return #err(err);
-            case (#ok(val)) val;
-          };
+          // let created_records = switch (val.create_record_response) {
+          //   case (#err(err)) return #err(err);
+          //   case (#ok(val)) val;
+          // };
 
           let add_records_res : Types.AddDnsRecordsForFreemiumCanisterResponse = switch (
             await add_records_for_freemium_canister(
               payload.canister_id,
-              created_records,
+              val.create_record_response,
               val.txt_payload.name,
               val.cname_challenge_payload.name,
               val.cname_domain_payload.name,
@@ -1155,6 +1161,7 @@ module {
         let records = switch (_cloudflare_manager.get_subdomain_records_by_name(subdomain_name)) {
           // In case record ids are not found, return empty strings
           case (#err(err)) {
+            Debug.print("Eror with getting subdomain records bu name");
             let domain_records : Types.DomainRegistrationRecords = switch (await _cloudflare_manager.find_dns_record_ids(subdomain_name, domain_name, existing_registration.canister_id, transform)) {
               case (#err(err)) {
                 if (Text.contains(err, #text("not found"))) return #err(Errors.DomainRecordsExist());
@@ -1163,6 +1170,7 @@ module {
               case (#ok(val)) val;
             };
 
+            Debug.print("FOund domain recordssss: " # debug_show (domain_records));
             // TODO: Handle this error case to get the record ids from cloudflare and set them
             let record_ids : Types.DomainRegistrationRecords = {
               canister_id = existing_registration.canister_id;
@@ -1172,7 +1180,12 @@ module {
             };
             record_ids;
           };
-          case (#ok(val)) { val };
+          case (#ok(val)) {
+            Debug.print("Foudn sundomain records" # debug_show (val));
+
+            val;
+          };
+
         };
 
         // Ensure the same canister id is using the domain records
@@ -1239,18 +1252,21 @@ module {
         case (?val) val;
       };
 
+      Debug.print("**********handling error cloudflare..");
       // Handle batch create records error
       let _updated = if (Text.contains(err, #text "already exists")) {
+        Debug.print("COntains alread exist");
         // Get record ids if they exist
         let records = switch (_cloudflare_manager.get_subdomain_records_by_name(subdomain_name)) {
           // In case record ids are not found, return empty strings
           case (#err(err)) {
+            Debug.print("Eror with getting subdomain records bu name");
             let domain_records : Types.DomainRegistrationRecords = switch (await _cloudflare_manager.find_dns_record_ids(subdomain_name, domain_name, existing_registration.canister_id, transform)) {
               case (#err(err)) {
                 if (Text.contains(err, #text("not found"))) return #err(Errors.DomainRecordsExist());
                 return #err(err);
               };
-              case (#ok(val)) val;
+              case (#ok(val)) { val };
             };
 
             // TODO: Handle this error case to get the record ids from cloudflare and set them
@@ -1262,8 +1278,11 @@ module {
             };
             record_ids;
           };
-          case (#ok(val)) { val };
+          case (#ok(val)) {
+            val;
+          };
         };
+        Debug.print("FOund domain recordssss: " # debug_show (records));
 
         // Ensure the same canister id is using the domain records
         if (records.canister_id != existing_registration.canister_id) {
@@ -1309,13 +1328,14 @@ module {
       } else {
         // Different cloudflare error
         // TODO: Handle errors
+
         return #err(err);
       };
 
       return #ok(_updated);
     };
 
-    private func handle_update_project_addons(project_id : Types.ProjectId, associated_add_on_id : Types.AddOnId) : Types.Response<[Types.AddOnService]> {
+    private func handle_update_project_addons(project_id : Types.ProjectId, associated_add_on_id : Types.AddOnId, domain_registration_id : Types.DomainRegistrationId) : Types.Response<[Types.AddOnService]> {
       let _subscription_manager : Types.SubscriptionInterface = switch (subscription_manager) {
         case (null) return #err(Errors.NotFound("Subscription manager class reference"));
         case (?val) val;
@@ -1329,6 +1349,7 @@ module {
       // Update add on details
       let updated_add_on : Types.AddOnService = {
         existing_add_on with initialized = true;
+        attached_resource_id = ?domain_registration_id;
         updated_on = Int.abs(Utility.get_time_now(#milliseconds));
       };
 
@@ -1402,11 +1423,13 @@ module {
       };
 
       if (addon.type_ != #register_domain and addon.type_ != #register_subdomain) return #err(Errors.UnsupportedAction("Deleting non-domain resource"));
-
+      Debug.print("deleting...");
       let resource_id : Nat = switch (addon.attached_resource_id) {
         case (null) return #err(Errors.NotAttachedResourceId());
         case (?val) val;
       };
+
+      Debug.print("continue deleting...");
 
       // Delete subdomain name and domain registration references
       switch (_delete_domain_registration(resource_id, canister_id)) {

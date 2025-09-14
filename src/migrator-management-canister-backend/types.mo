@@ -1123,7 +1123,7 @@ module {
   };
 
   public type BuildDomainRegistrationRequest = {
-    create_record_response : Response<[CreateRecordResponse]>;
+    create_record_response : [CreateRecordResponse];
     txt_payload : DnsRecordPayload;
     cname_challenge_payload : DnsRecordPayload;
     cname_domain_payload : DnsRecordPayload;
