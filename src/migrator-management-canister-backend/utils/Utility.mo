@@ -252,6 +252,9 @@ module {
       case (#project_id, #project_id) { #equal };
       case (#subscription_id, #subscription_id) { #equal };
       case (#domain_registration_id, #domain_registration_id) { #equal };
+      case (#freemium_domain_registration_id, #freemium_domain_registration_id) {
+        #equal;
+      };
 
       // addon_id is the smallest
       case (#addon_id, _) { #less };
@@ -264,6 +267,9 @@ module {
       // subscription_id next
       case (#subscription_id, _) { #less };
       case (_, #subscription_id) { #greater };
+
+      case (#domain_registration_id, _) { #less };
+      case (_, #domain_registration_id) { #greater };
     };
   };
 

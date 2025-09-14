@@ -99,7 +99,10 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   private stable var canister_to_records_map : Types.CanisterToRecordMap = Map.empty<Principal, [Types.DnsRecordId]>();
   private stable var cloudflare_records_map : Types.CloudflareRecordsMap = Map.empty<Types.DnsRecordId, Types.CreateRecordResponse>();
   private stable var domain_registration : Types.DomainRegistrationMap = Map.empty<Types.DomainRegistrationId, Types.DomainRegistration>();
+  private stable var freemium_domain_registration : Types.FreemiumDomainRegistrationMap = Map.empty<Types.DomainRegistrationId, Types.FreemiumDomainRegistration>();
   private stable var canister_to_domain_registration : Types.CanisterToDomainRegistration = Map.empty<Principal, [Types.DomainRegistrationId]>();
+  private stable var canister_to_freemium_domain_registration : Types.CanisterToDomainRegistration = Map.empty<Principal, [Types.DomainRegistrationId]>();
+  private stable var canister_to_slot : Types.CanisterToSlot = Map.empty<Principal, Nat>();
   private stable var index_counter_map : Types.CounterMap = Map.empty<Types.CounterType, Nat>();
 
   // private transient var project_addons_map : Types.ProjectAddonsMap = Map.empty<Types.ProjectId, [Types.AddOnId]>();
@@ -131,10 +134,10 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   private transient let project_manager = ProjectManager.ProjectManager(stable_projects, stable_user_to_projects, index_counter);
   private transient let access_control = AccessControl.AccessControl(deployMsg.caller, stable_role_map);
   private transient let signatures = HashMap.HashMap<Principal, Blob>(0, Principal.equal, Principal.hash);
-  private transient let shareable_canister_manager = CanisterShareable.ShareableCanisterManager(stable_slots, stable_user_to_slot, stable_used_slots, stable_usage_logs, stable_next_slot_id, stable_quotas);
+  private transient let shareable_canister_manager = CanisterShareable.ShareableCanisterManager(stable_slots, canister_to_slot, stable_user_to_slot, stable_used_slots, stable_usage_logs, stable_next_slot_id, stable_quotas);
   private transient let workflow_manager = WorkflowManager.WorkflowManager(stable_workflow_run_history);
   private transient let activity_manager = ActivityManager.ActivityManager(stable_project_activity_logs);
-  private transient let domain = Domain.Domain(cloudflare_records_map, canister_to_records_map, canister_to_domain_registration, domain_registration, subdomains_map);
+  private transient let domain = Domain.Domain(cloudflare_records_map, canister_to_records_map, canister_to_domain_registration, domain_registration, subdomains_map, freemium_domain_registration, canister_to_freemium_domain_registration);
   // TODO: create init method for each class and pass reference of other classes after creation
   private transient let subscription_manager = SubscriptionManager.SubscriptionManager(book, ledger, _subscriptions, TREASURY_ACCOUNT, project_addons_map, addons_map);
   private transient let canisters = Canisters.Canisters(stable_canister_table, stable_user_canisters, stable_deployed_canisters);
@@ -376,6 +379,49 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return await subscription_manager.grant_addon(project_id, addon_id, expiry_in_ms);
   };
 
+  public shared (msg) func admin_delete_domain_registration(registration_id : Types.DomainRegistrationId, type_ : Types.ProjectPlan) : async Types.Response<()> {
+    if (domain.initialized != true) initialize_class_references();
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    return domain.admin_delete_domain_registration(registration_id, type_);
+  };
+
+  public shared query (msg) func admin_get_freemium_domain_registrations(canister_id : Principal) : async Types.Response<[Types.FreemiumDomainRegistration]> {
+    if (domain.initialized != true) initialize_class_references();
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    return domain.get_freemium_domain_registration_by_canister(canister_id);
+  };
+
+  public shared query (msg) func admin_get_freemium_domain_registrations_paginated(limit : ?Nat, page : ?Nat) : async Types.Response<[(Types.DomainRegistrationId, Types.FreemiumDomainRegistration)]> {
+    if (domain.initialized != true) initialize_class_references();
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    let payload : Types.PaginationPayload = {
+      limit = limit;
+      page = page;
+    };
+    return #ok(domain.get_freemium_domain_registrations_paginated(payload));
+  };
+
+  public shared query (msg) func admin_get_domain_registrations_paginated(limit : ?Nat, page : ?Nat) : async Types.Response<[(Types.DomainRegistrationId, Types.DomainRegistration)]> {
+    if (domain.initialized != true) initialize_class_references();
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    let payload : Types.PaginationPayload = {
+      limit = limit;
+      page = page;
+    };
+    return #ok(domain.get_domain_registrations_paginated(payload));
+  };
+
   public shared (msg) func admin_get_domain_registration_id_by_domain(domain_name : Text, canister_id : Principal) : async Types.Response<Types.IcDomainRegistrationId> {
     if (domain.initialized != true) initialize_class_references();
 
@@ -443,6 +489,58 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       return [];
     };
     return Iter.toArray(Map.entries(domain_registration_timers));
+  };
+
+  public shared (msg) func admin_setup_freemium_subdomain(canister_id : Principal, subdomain_name : Text) : async Types.Response<Types.FreemiumDomainRegistration> {
+    if (domain.initialized != true or subscription_manager.initialized != true) initialize_class_references();
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    // Get freemium slot
+    let slot : Types.ShareableCanister = switch (shareable_canister_manager.get_slot_by_canister(canister_id)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    // Get canister id associated with slot
+    let slot_canister_id : Principal = switch (slot.canister_id) {
+      case (null) return #err(Errors.NotFoundCanister());
+      case (?val) val;
+    };
+
+    // Prevent cross canister usage
+    if (slot_canister_id != canister_id) return #err(Errors.NotMatch("Canister id"));
+
+    // create ic file
+
+    let ic_domains_file : Types.StaticFile = {
+      path = "/.well-known/ic-domains";
+      content = Text.encodeUtf8(subdomain_name # "." # "worldcloud.app");
+      content_type = "application/octet-stream";
+      content_encoding = null;
+      is_chunked = false;
+      chunk_id = 0;
+      batch_id = 0;
+      is_last_chunk = true;
+    };
+
+    // Create the `ic-domains` file in `.well-known` directory
+    let create_ic_domains = switch (await domain.edit_ic_domains(canister_id, ic_domains_file)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    // Setup domain for freemium canister
+    let registration : Types.FreemiumDomainRegistration = switch (await domain.setup_freemium_canister_subdomain(canister_id, "worldcloud.app", subdomain_name, Principal.fromActor(this), transform)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    // Schedule ic registration
+    schedule_register_domain(null, canister_id, "worldcloud.app", subdomain_name, domain.cooldown_ic_registration, registration.id);
+
+    return #ok(registration);
   };
 
   public shared (msg) func admin_setup_custom_domain(project_id : Types.ProjectId, canister_id : Principal, subdomain_name : Text, add_on_id : Types.AddOnId) : async Types.Response<Types.DomainRegistration> {
@@ -942,6 +1040,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
             description = project.description;
             tags = project.tags;
             plan = project.plan;
+            url = null;
             date_created = project.date_created;
             date_updated = Utility.get_time_now(#milliseconds);
           };
@@ -1116,6 +1215,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       description = project.description;
       tags = project.tags;
       plan = project.plan;
+      url = null;
       date_created = project.date_created;
       date_updated = Utility.get_time_now(#milliseconds);
     };
@@ -1181,6 +1281,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
           description = project.description;
           tags = project.tags;
           plan = project.plan;
+          url = null;
           date_created = project.date_created;
           date_updated = Utility.get_time_now(#milliseconds);
         };
@@ -2202,7 +2303,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   private func _recover_domain_registration_timers<system>() : () {
     for ((key, timer_data) in Map.entries(domain_registration_timers)) {
-      schedule_register_domain(timer_data.canister_id, timer_data.domain, key, 5 * 60, timer_data.domain_registration_id);
+      schedule_register_domain(timer_data.project_id, timer_data.canister_id, timer_data.domain, key, 5 * 60, timer_data.domain_registration_id);
     };
   };
 
@@ -2639,6 +2740,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       case (#ok(val)) val;
     };
 
+    if (project.plan == #freemium) return #err(Errors.PremiumFeature());
     let canister_id : Principal = switch (project.canister_id) {
       case (null) return #err(Errors.PremiumFeature());
       case (?val) val;
@@ -2672,7 +2774,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       case (?val) val;
     };
 
-    schedule_register_domain(result.canister_id, result.domain_registration.ic_registration.domain, subdomain_name, domain.cooldown_ic_registration, resource_id);
+    schedule_register_domain(?project.id, result.canister_id, result.domain_registration.ic_registration.domain, subdomain_name, domain.cooldown_ic_registration, resource_id);
     return #ok(result.domain_registration);
   };
 
@@ -2692,7 +2794,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     active_global_timers := new_active_global_timers;
   };
 
-  private func schedule_register_domain<system>(canister_id : Principal, domain_name : Text, subdomain_name : Text, duration_seconds : Nat, domain_registration_id : Nat) : () {
+  private func schedule_register_domain<system>(project_id : ?Types.ProjectId, canister_id : Principal, domain_name : Text, subdomain_name : Text, duration_seconds : Nat, domain_registration_id : Nat) : () {
     if (domain.initialized != true or subscription_manager.initialized != true) initialize_class_references();
     let timer_id = Timer.setTimer<system>(
       #seconds duration_seconds,
@@ -2700,65 +2802,44 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
         Debug.print("[schedule_register_domain] triggered register domain job for domain: " # subdomain_name # ".");
         let register_domain_request_id = switch (await domain.register_domain_ic(canister_id, subdomain_name # ".worldcloud.app", transform)) {
           case (#err(err)) {
-            Debug.print("[schedule_register_domain] Error registering domain with IC: " # err);
-            // Delete reference for current timer
-            // _delete_domain_registration_timer(subdomain_name);
-
-            let target_timer_data = switch (Map.get(domain_registration_timers, Text.compare, subdomain_name)) {
-              case (null) {
-                return;
-              };
-              case (?val) val;
-            };
-            // Handle error with missing ic-domains file
-            if (Text.contains(err, #text "failed to retrieve known domains from canister")) {
-              Debug.print("[schedule_register_domain] Canister is missing ic-domains file with content.");
-              let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_failed_to_retrieve_known_domains));
-
-              let ic_domains_file : Types.StaticFile = {
-                path = "/.well-known/ic-domains";
-                content = Text.encodeUtf8(subdomain_name # "." # domain_name);
-                content_type = "application/octet-stream";
-                content_encoding = null;
-                is_chunked = false;
-                chunk_id = 0;
-                batch_id = 0;
-                is_last_chunk = true;
-              };
-
-              let add_ic_domains_res = domain.edit_ic_domains(canister_id, ic_domains_file);
-
-            } else if (Text.contains(err, #text "missing DNS CNAME record")) {
-              let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_missing_dns_cname_record));
-            } else if (Text.contains(err, #text "existing DNS TXT challenge record")) {
-              let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_existing_dns_txt_challenge_record));
-            } else if (Text.contains(err, #text "missing DNS TXT record")) {
-              let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_missing_dns_txt_record));
-            } else if (Text.contains(err, #text "invalid DNS TXT record")) {
-              let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_invalid_dns_txt_record));
-            } else if (Text.contains(err, #text "more than one DNS TXT record")) {
-              let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_more_than_one_dns_txt_record));
-            } else if (Text.contains(err, #text "rate limit exceeded for apex domain")) {
-              let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_rate_limit_exceeded));
-
-            } else {
-              _delete_domain_registration_timer(subdomain_name);
-
-              // Schedule another registration later with backoff
-              schedule_register_domain(canister_id, domain_name, subdomain_name, duration_seconds * 2, domain_registration_id);
-              Debug.print("Scheduled new timer. Triggering in " # Nat.toText(duration_seconds) # " seconds");
-              return;
-            };
-
-            Timer.cancelTimer(target_timer_data.timer_id);
-            _delete_domain_registration_timer(subdomain_name);
+            await handle_schedule_domain_error(err, project_id, canister_id, domain_registration_id, domain_name, subdomain_name, duration_seconds);
             return;
-
           };
           case (#ok(val)) {
             Debug.print("[schedule_register_domain] Successfully triggered register domain: " # val);
             _delete_domain_registration_timer(subdomain_name);
-            let _res = domain.update_registration_status(domain_registration_id, #complete, Utility.get_domain_registration_error(#none));
+            let url = subdomain_name # "." #domain_name;
+
+            let slot : ?Types.ShareableCanister = switch (shareable_canister_manager.get_slot_by_canister(canister_id)) {
+              // Handle updating url for paid project
+              case (#err(err)) {
+                // Get project id to update url
+                let _project_id = switch (project_id) {
+                  case (null) return ();
+                  case (?id) id;
+                };
+
+                // Update domain registration with new url
+                let _res = domain.update_registration_status(domain_registration_id, #complete, Utility.get_domain_registration_error(#none));
+                let updated_project : ?Types.Project = switch (project_manager.set_project_url(_project_id, url)) {
+                  case (#err(err)) null;
+                  case (#ok(_updated_project)) ?_updated_project;
+                };
+                null;
+              };
+              // Handle updating url for freemium canister by admin
+              case (#ok(freemium_slot)) {
+                let _res = domain.update_registration_status_freemium(domain_registration_id, #complete, Utility.get_domain_registration_error(#none));
+
+                // handle freemium registration
+                let updated_slot : Types.ShareableCanister = switch (shareable_canister_manager.set_canister_url(freemium_slot.id, url)) {
+                  case (#err(err)) freemium_slot;
+                  case (#ok(_updated_slot)) _updated_slot;
+                };
+
+                ?updated_slot;
+              };
+            };
             val;
           };
         };
@@ -2770,6 +2851,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       case (null) {
         let timer_data : Types.DomainRegistrationTimer = {
           domain_registration_id = domain_registration_id;
+          project_id = project_id;
           timer_id = timer_id;
           domain = domain_name;
           subdomain = subdomain_name;
@@ -2801,6 +2883,79 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       Map.add(domain_registration_timers, Text.compare, subdomain_name, new_timer_data);
     };
 
+  };
+
+  private func handle_schedule_domain_error(err : Text, project_id : ?Types.ProjectId, canister_id : Principal, domain_registration_id : Types.DomainRegistrationId, domain_name : Text, subdomain_name : Text, duration_seconds : Nat) : async () {
+    Debug.print("[schedule_register_domain] Error registering domain with IC: " # err);
+    // Delete reference for current timer
+    // _delete_domain_registration_timer(subdomain_name);
+
+    let target_timer_data = switch (Map.get(domain_registration_timers, Text.compare, subdomain_name)) {
+      case (null) {
+        return;
+      };
+      case (?val) val;
+    };
+    // Handle error with missing ic-domains file
+    let error_type : Types.DomainRegistrationErrorKey = if (Text.contains(err, #text "failed to retrieve known domains from canister")) {
+      Debug.print("[schedule_register_domain] Canister is missing ic-domains file with content.");
+      // if (project_id == null) {
+      //   let _res = domain.update_registration_status_freemium(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_failed_to_retrieve_known_domains));
+      // } else {
+      //   let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_failed_to_retrieve_known_domains));
+      // };
+
+      let ic_domains_file : Types.StaticFile = {
+        path = "/.well-known/ic-domains";
+        content = Text.encodeUtf8(subdomain_name # "." # domain_name);
+        content_type = "application/octet-stream";
+        content_encoding = null;
+        is_chunked = false;
+        chunk_id = 0;
+        batch_id = 0;
+        is_last_chunk = true;
+      };
+
+      let add_ic_domains_res = await domain.edit_ic_domains(canister_id, ic_domains_file);
+      #ic_failed_to_retrieve_known_domains;
+
+    } else if (Text.contains(err, #text "missing DNS CNAME record")) {
+      // let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_missing_dns_cname_record));
+      #ic_missing_dns_cname_record;
+    } else if (Text.contains(err, #text "existing DNS TXT challenge record")) {
+      // let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_existing_dns_txt_challenge_record));
+      #ic_existing_dns_txt_challenge_record;
+    } else if (Text.contains(err, #text "missing DNS TXT record")) {
+      // let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_missing_dns_txt_record));
+      #ic_missing_dns_txt_record;
+    } else if (Text.contains(err, #text "invalid DNS TXT record")) {
+      // let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_invalid_dns_txt_record));
+      #ic_invalid_dns_txt_record;
+    } else if (Text.contains(err, #text "more than one DNS TXT record")) {
+      // let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_more_than_one_dns_txt_record));
+      #ic_more_than_one_dns_txt_record;
+    } else if (Text.contains(err, #text "rate limit exceeded for apex domain")) {
+      // let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(#ic_rate_limit_exceeded));
+      #ic_rate_limit_exceeded;
+    } else {
+      _delete_domain_registration_timer(subdomain_name);
+
+      // Schedule another registration later with backoff
+      schedule_register_domain(project_id, canister_id, domain_name, subdomain_name, duration_seconds * 2, domain_registration_id);
+      Debug.print("Scheduled new timer. Triggering in " # Nat.toText(duration_seconds) # " seconds");
+      return;
+    };
+
+    // Handle freemium registration error
+    if (project_id == null) {
+      let _res = domain.update_registration_status_freemium(domain_registration_id, #inactive, Utility.get_domain_registration_error(error_type));
+    } else {
+      // Handle paid plan registration error
+      let _res = domain.update_registration_status(domain_registration_id, #inactive, Utility.get_domain_registration_error(error_type));
+    };
+
+    Timer.cancelTimer(target_timer_data.timer_id);
+    _delete_domain_registration_timer(subdomain_name);
   };
 
   /// Get project canister's domain registration

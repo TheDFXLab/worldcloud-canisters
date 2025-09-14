@@ -273,6 +273,7 @@ module {
     description : Text;
     tags : [Text];
     plan : ProjectPlan;
+    url : ?Text;
     date_created : TimeLib.Time;
     date_updated : TimeLib.Time;
   };
@@ -507,6 +508,7 @@ module {
     duration : Nat; //total time allowed for a single user to occupy a canister
     start_cycles : Nat; // total cycles available at start_timestamp
     status : SharedCanisterStatus;
+    url : ?Text; // migration
   };
 
   public type ShareableCanisterStatistics = {
@@ -588,6 +590,7 @@ module {
   public type UserToProjectsMap = Map.Map<Principal, [Nat]>;
   public type CanisterDeploymentMap = Map.Map<Principal, CanisterDeployment>;
   public type SlotsMap = Map.Map<Nat, ShareableCanister>;
+  public type CanisterToSlot = Map.Map<Principal, Nat>; // canister to slot id
   public type UserToSlotMap = Map.Map<Principal, ?Nat>;
   public type UsedSlotsMap = Map.Map<Nat, Bool>;
   public type UsageLogsMap = Map.Map<Principal, UsageLog>;
@@ -601,6 +604,7 @@ module {
   public type CanisterToRecordMap = Map.Map<Principal, [DnsRecordId]>;
   public type CloudflareRecordsMap = Map.Map<DnsRecordId, CreateRecordResponse>;
   public type DomainRegistrationMap = Map.Map<DomainRegistrationId, DomainRegistration>;
+  public type FreemiumDomainRegistrationMap = Map.Map<DomainRegistrationId, FreemiumDomainRegistration>;
   public type CanisterToDomainRegistration = Map.Map<Principal, [DomainRegistrationId]>;
   public type AddonsMap = Map.Map<AddOnId, AddOnService>;
   public type ProjectAddonsMap = Map.Map<ProjectId, [AddOnId]>;
@@ -614,6 +618,7 @@ module {
     #project_id;
     #subscription_id;
     #domain_registration_id;
+    #freemium_domain_registration_id;
   };
 
   public type DomainRegistrationRecords = {
@@ -625,6 +630,7 @@ module {
 
   public type DomainRegistrationTimer = {
     timer_id : Nat;
+    project_id : ?ProjectId;
     domain_registration_id : Nat;
     subdomain : Text;
     domain : Text;
@@ -642,6 +648,16 @@ module {
     #txt;
     #cname_domain;
     #cname_challenge;
+  };
+
+  public type FreemiumDomainRegistration = {
+    id : Nat;
+    canister_id : Principal;
+    txt_domain_record_id : Text;
+    cname_challenge_record_id : Text;
+    cname_domain_record_id : Text;
+    ic_registration : IcDomainRegistration;
+    error : DomainRegistrationError;
   };
 
   // Overview of a domain registration's records and status
@@ -686,6 +702,11 @@ module {
     addon : AddOnService;
   };
 
+  public type SetupFreemiumDomainResult = {
+    domain_registration : DomainRegistration;
+    canister_id : Principal;
+  };
+
   public type IcDomainRegistrationStatus = {
     #inactive;
     #pending;
@@ -703,6 +724,13 @@ module {
 
   public type AddDnsRecordsForCanisterResponse = {
     updated_domain_registration : DomainRegistration;
+    txt_domain_record_id : Text;
+    cname_challenge_record_id : Text;
+    cname_domain_record_id : Text;
+  };
+
+  public type AddDnsRecordsForFreemiumCanisterResponse = {
+    updated_domain_registration : FreemiumDomainRegistration;
     txt_domain_record_id : Text;
     cname_challenge_record_id : Text;
     cname_domain_record_id : Text;
@@ -1091,6 +1119,14 @@ module {
     subdomain_name : Text;
     user_principal : Principal;
     canister_id : Principal;
+
+  };
+
+  public type BuildDomainRegistrationRequest = {
+    create_record_response : Response<[CreateRecordResponse]>;
+    txt_payload : DnsRecordPayload;
+    cname_challenge_payload : DnsRecordPayload;
+    cname_domain_payload : DnsRecordPayload;
 
   };
 

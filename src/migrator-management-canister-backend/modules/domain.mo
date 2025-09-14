@@ -21,6 +21,8 @@ module {
     canister_to_domain_registration_init : Types.CanisterToDomainRegistration,
     domain_registration_init : Types.DomainRegistrationMap,
     subdomains_init : Types.SubdomainsMap,
+    freemium_registration_init : Types.FreemiumDomainRegistrationMap,
+    canister_to_freemium_domain_registration_init : Types.CanisterToDomainRegistration,
   ) {
     // Class References
     public var project_manager : ?Types.ProjectInterface = null;
@@ -31,8 +33,10 @@ module {
     public var records : Types.CloudflareRecordsMap = records_map_init;
     public var canister_to_records : Types.CanisterToRecordMap = canister_to_records_init;
     public var canister_to_domain_registration : Types.CanisterToDomainRegistration = canister_to_domain_registration_init;
+    public var canister_to_freemium_domain_registration : Types.CanisterToDomainRegistration = canister_to_freemium_domain_registration_init;
     public var domain_registration : Types.DomainRegistrationMap = domain_registration_init;
     public var used_subdomains : Types.SubdomainsMap = subdomains_init;
+    public var freemium_domain_registration : Types.FreemiumDomainRegistrationMap = freemium_registration_init;
     public var initialized = false;
     public var cooldown_ic_registration = 1 * 60;
 
@@ -133,6 +137,11 @@ module {
       };
     };
 
+    private func get_subdomain_record(subdomain_name : Text) : ?Principal {
+      Debug.print("Subdomain: checking " # subdomain_name);
+      Map.get(used_subdomains, Text.compare, subdomain_name);
+    };
+
     public func get_records_for_canister(canister_id : Principal) : Types.Response<[Types.CreateRecordResponse]> {
       let record_ids : [Types.DnsRecordId] = switch (Map.get(canister_to_records, Principal.compare, canister_id)) {
         case (null) return #ok([]);
@@ -153,11 +162,60 @@ module {
       return #ok(_records);
     };
 
+    public func get_freemium_domain_registration_by_id(registration_id : Types.DomainRegistrationId) : ?Types.FreemiumDomainRegistration {
+      Map.get(freemium_domain_registration, Nat.compare, registration_id);
+    };
+
     public func get_domain_registration_ids_by_canister(canister_id : Principal) : [Types.DomainRegistrationId] {
       switch (Map.get(canister_to_domain_registration, Principal.compare, canister_id)) {
         case (null) return [];
         case (?val) return val;
       };
+    };
+
+    public func get_freemium_domain_registration_ids_by_canister(canister_id : Principal) : [Types.DomainRegistrationId] {
+      switch (Map.get(canister_to_freemium_domain_registration, Principal.compare, canister_id)) {
+        case (null) return [];
+        case (?val) return val;
+      };
+    };
+
+    public func get_freemium_domain_registration_by_canister(canister_id : Principal) : Types.Response<[Types.FreemiumDomainRegistration]> {
+      let registration_ids : [Types.DomainRegistrationId] = switch (Map.get(canister_to_freemium_domain_registration, Principal.compare, canister_id)) {
+        case (null) return #ok([]);
+        case (?val) val;
+      };
+
+      Debug.print("finding regs");
+
+      var registrations : [Types.FreemiumDomainRegistration] = [];
+      for (id in registration_ids.vals()) {
+        Debug.print("reg for id" # debug_show (id));
+
+        let reg : Types.FreemiumDomainRegistration = switch (get_freemium_domain_registration_by_id(id)) {
+          case (null) return #err(Errors.NotFound("Freemium domain registration with id " # Nat.toText(id)));
+          case (?val) val;
+        };
+        registrations := Array.append(registrations, [reg]);
+      };
+
+      return #ok(registrations);
+    };
+
+    public func get_freemium_domain_registrations() : [(Types.DomainRegistrationId, Types.FreemiumDomainRegistration)] {
+      return Iter.toArray(Map.entries(freemium_domain_registration));
+    };
+
+    public func get_freemium_domain_registrations_paginated(payload : Types.PaginationPayload) : [(Types.DomainRegistrationId, Types.FreemiumDomainRegistration)] {
+      let all_entries = Iter.toArray(Map.entries(freemium_domain_registration));
+      let paginated_entries = Utility.paginate(all_entries, payload);
+      return paginated_entries;
+    };
+
+    public func get_domain_registrations_paginated(payload : Types.PaginationPayload) : [(Types.DomainRegistrationId, Types.DomainRegistration)] {
+      let all_entries = Iter.toArray(Map.entries(domain_registration));
+      let paginated_entries = Utility.paginate(all_entries, payload);
+      return paginated_entries;
     };
 
     public func get_domain_registrations_by_canister(canister_id : Principal) : Types.Response<[Types.DomainRegistration]> {
@@ -253,6 +311,74 @@ module {
         case (?val) val;
       };
 
+      let updated_domain_registration : Types.DomainRegistration = switch (await build_domain_registration_records(payload, transform)) {
+        case (#err(err)) {
+          let _updated_registration : Types.DomainRegistration = switch (
+            // Handle cloudflare error
+            await handle_batch_create_records_error(
+              err,
+              existing_registration,
+              payload.domain_name,
+              payload.subdomain_name,
+              associated_add_on_id,
+              transform,
+            ),
+          ) {
+            case (#err(err)) return #err(err);
+            case (#ok(val)) val;
+          };
+          _updated_registration;
+        };
+
+        case (#ok(val)) {
+          let created_records = switch (val.create_record_response) {
+            case (#err(err)) return #err(err);
+            case (#ok(val)) val;
+          };
+
+          // Saves dns records in map and for canister
+          let add_records_res : Types.AddDnsRecordsForCanisterResponse = switch (
+            await add_records_for_canister(
+              payload.canister_id,
+              created_records,
+              val.txt_payload.name,
+              val.cname_challenge_payload.name,
+              val.cname_domain_payload.name,
+              payload.domain_name,
+              payload.subdomain_name,
+              existing_registration,
+              associated_add_on_id,
+            )
+          ) {
+            case (#err(err)) return #err(err);
+            case (#ok(val)) val;
+          };
+
+          // Return updated domain registration
+          add_records_res.updated_domain_registration;
+        };
+      };
+
+      // Apply domain registration update
+      update_domain_registration(updated_domain_registration.id, updated_domain_registration);
+
+      // Get existing add ons for project
+      let _new_addons : [Types.AddOnService] = switch (handle_update_project_addons(project_id, associated_add_on_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      return #ok(updated_domain_registration);
+    };
+
+    private func build_domain_registration_records(payload : Types.CreateCanisterDNSRecordsPayload, transform : Types.Transform) : async Types.Response<Types.BuildDomainRegistrationRequest> {
+      let _cloudflare_manager : Types.Cloudflare = switch (cloudflare_manager) {
+        case (null) return #err(Errors.NotFoundClass("Cloudflare"));
+        case (?val) val;
+      };
+
+      Debug.print("building...");
+
       // Create records for payload
       let txt_payload : Types.DnsRecordPayload = {
         name = "_canister-id." # payload.subdomain_name;
@@ -293,62 +419,19 @@ module {
         cname_domain = cname_domain_payload;
       };
 
+      Debug.print("Calling cloudflare api");
+
       // Batch create records with cloudflare
-      let updated_domain_registration : Types.DomainRegistration = switch (await _cloudflare_manager.batch_create_records(create_payload, transform)) {
-        case (#err(err)) {
-          let _updated_registration : Types.DomainRegistration = switch (
-            // Handle cloudflare error
-            await handle_batch_create_records_error(
-              err,
-              existing_registration,
-              payload.domain_name,
-              payload.subdomain_name,
-              associated_add_on_id,
-              transform,
-            ),
-          ) {
-            case (#err(err)) return #err(err);
-            case (#ok(val)) val;
-          };
-          _updated_registration;
-        };
-
-        case (#ok(val)) {
-          // Saves dns records in map and for canister
-          let add_records_res : Types.AddDnsRecordsForCanisterResponse = switch (
-            await add_records_for_canister(
-              payload.canister_id,
-              val,
-              txt_payload.name,
-              cname_challenge_payload.name,
-              cname_domain_payload.name,
-              payload.domain_name,
-              payload.subdomain_name,
-              existing_registration,
-              associated_add_on_id,
-            )
-          ) {
-            case (#err(err)) return #err(err);
-            case (#ok(val)) val;
-          };
-
-          // Return updated domain registration
-          add_records_res.updated_domain_registration;
-        };
-      };
-
-      // Apply domain registration update
-      update_domain_registration(updated_domain_registration.id, updated_domain_registration);
-
-      // Get existing add ons for project
-      let _new_addons : [Types.AddOnService] = switch (handle_update_project_addons(project_id, associated_add_on_id)) {
-        case (#err(err)) return #err(err);
-        case (#ok(val)) val;
-      };
-
-      return #ok(updated_domain_registration);
+      let create_records_response = await _cloudflare_manager.batch_create_records(create_payload, transform);
+      return #ok({
+        create_record_response = create_records_response;
+        txt_payload;
+        cname_challenge_payload;
+        cname_domain_payload;
+      });
     };
 
+    /// Retrieve available domain registration slot
     private func find_available_domain_registration_id(canister_id : Principal) : Types.Response<Nat> {
       // Get existing registrations list for id calculation
       let existing_registrations : [Types.DomainRegistration] = switch (get_domain_registrations_by_canister(canister_id)) {
@@ -389,44 +472,23 @@ module {
       let record_ids : [Text] = Array.map(records_to_add, func(r : Types.CreateRecordResponse) : Text { r.id });
 
       // Assign ids to canister
+      // TODO check if this is needed
       Map.add(canister_to_records, Principal.compare, canister_id, record_ids);
 
-      var txt_record_id_opt : ?Text = null;
-      var cname_challenge_record_id_opt : ?Text = null;
-      var cname_domain_record_id_opt : ?Text = null;
-
-      // Add records to map
-      for (index in Iter.range(0, records_to_add.size() -1)) {
-        var _rec : Types.CreateRecordResponse = records_to_add[index];
-
-        if (_rec.name == txt_record_name # "." # domain_name) {
-          txt_record_id_opt := ?_rec.id;
-        } else if (_rec.name == cname_challenge_record_name # "." # domain_name) {
-          cname_challenge_record_id_opt := ?_rec.id;
-        } else if (_rec.name == cname_domain_record_name # "." # domain_name) {
-          cname_domain_record_id_opt := ?_rec.id;
-        };
-
-        Map.add(records, Text.compare, records_to_add[index].id, records_to_add[index]);
-      };
-
-      // Ensure records are not null
-      let txt_record_id = switch (txt_record_id_opt) {
-        case (null) { return #err(Errors.NotFound("TXT dns record id")) };
-        case (?val) { val };
-      };
-
-      let cname_domain_record_id = switch (cname_domain_record_id_opt) {
-        case (null) {
-          return #err(Errors.NotFound("CNAME domain dns record id"));
-        };
-        case (?val) { val };
-      };
-      let cname_challenge_record_id = switch (cname_challenge_record_id_opt) {
-        case (null) {
-          return #err(Errors.NotFound("CNAME challenge dns record id"));
-        };
-        case (?val) { val };
+      // Parse records ids from created dns response
+      let records_response = switch (
+        resolve_record_ids(
+          records_to_add,
+          canister_id,
+          txt_record_name,
+          cname_challenge_record_name,
+          cname_domain_record_name,
+          domain_name,
+          subdomain_name,
+        )
+      ) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
       };
 
       // Updated domain registration
@@ -434,9 +496,9 @@ module {
         id = existing_registration.id;
         canister_id;
         add_on_id = associated_add_on_id;
-        txt_domain_record_id = txt_record_id;
-        cname_challenge_record_id = cname_challenge_record_id;
-        cname_domain_record_id = cname_domain_record_id;
+        txt_domain_record_id = records_response.txt_domain_record_id;
+        cname_challenge_record_id = records_response.cname_challenge_record_id;
+        cname_domain_record_id = records_response.cname_domain_record_id;
         ic_registration = {
           request_id = existing_registration.ic_registration.request_id;
           is_apex = false;
@@ -458,9 +520,136 @@ module {
 
       return #ok({
         updated_domain_registration = updated_canister_domain_registration;
-        txt_domain_record_id = txt_record_id;
-        cname_domain_record_id = cname_domain_record_id;
-        cname_challenge_record_id = cname_challenge_record_id;
+        txt_domain_record_id = records_response.txt_domain_record_id;
+        cname_domain_record_id = records_response.cname_domain_record_id;
+        cname_challenge_record_id = records_response.cname_challenge_record_id;
+      });
+    };
+
+    private func add_records_for_freemium_canister(
+      canister_id : Principal,
+      records_to_add : [Types.CreateRecordResponse],
+      txt_record_name : Text,
+      cname_challenge_record_name : Text,
+      cname_domain_record_name : Text,
+      domain_name : Text,
+      subdomain_name : Text,
+      existing_registration : Types.FreemiumDomainRegistration,
+    ) : async Types.Response<Types.AddDnsRecordsForFreemiumCanisterResponse> {
+      let _cloudflare_manager : Types.Cloudflare = switch (cloudflare_manager) {
+        case (null) return #err(Errors.NotFoundClass("Cloudflare"));
+        case (?val) val;
+      };
+
+      // Get records ids
+      let record_ids : [Text] = Array.map(records_to_add, func(r : Types.CreateRecordResponse) : Text { r.id });
+
+      // Assign ids to canister
+      // TODO check if this is needed
+      // Map.add(canister_to_records, Principal.compare, canister_id, record_ids);
+
+      // Parse records ids from created dns response
+      let records_response = switch (
+        resolve_record_ids(
+          records_to_add,
+          canister_id,
+          txt_record_name,
+          cname_challenge_record_name,
+          cname_domain_record_name,
+          domain_name,
+          subdomain_name,
+        )
+      ) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      // Updated domain registration
+      let updated_canister_domain_registration : Types.FreemiumDomainRegistration = {
+        id = existing_registration.id;
+        canister_id;
+        txt_domain_record_id = records_response.txt_domain_record_id;
+        cname_challenge_record_id = records_response.cname_challenge_record_id;
+        cname_domain_record_id = records_response.cname_domain_record_id;
+        ic_registration = {
+          request_id = existing_registration.ic_registration.request_id;
+          is_apex = false;
+          domain = domain_name;
+          subdomain = subdomain_name;
+          status = #pending;
+        };
+        error = Utility.get_domain_registration_error(#none);
+      };
+
+      // Save references to dns record ids for subdomain name
+      _cloudflare_manager.set_subdomain_records(
+        subdomain_name,
+        updated_canister_domain_registration.txt_domain_record_id,
+        updated_canister_domain_registration.cname_challenge_record_id,
+        updated_canister_domain_registration.cname_domain_record_id,
+        canister_id,
+      );
+
+      return #ok({
+        updated_domain_registration = updated_canister_domain_registration;
+        txt_domain_record_id = records_response.txt_domain_record_id;
+        cname_domain_record_id = records_response.cname_domain_record_id;
+        cname_challenge_record_id = records_response.cname_challenge_record_id;
+      });
+    };
+
+    private func resolve_record_ids(
+      records_to_add : [Types.CreateRecordResponse],
+      canister_id : Principal,
+      txt_record_name : Text,
+      cname_challenge_record_name : Text,
+      cname_domain_record_name : Text,
+      domain_name : Text,
+      subdomain_name : Text,
+    ) : Types.Response<Types.DomainRegistrationRecords> {
+      var txt_record_id_opt : ?Text = null;
+      var cname_challenge_record_id_opt : ?Text = null;
+      var cname_domain_record_id_opt : ?Text = null;
+
+      // Add records to map
+      for (index in Iter.range(0, records_to_add.size() -1)) {
+        var _rec : Types.CreateRecordResponse = records_to_add[index];
+
+        if (_rec.name == txt_record_name # "." # domain_name) {
+          txt_record_id_opt := ?_rec.id;
+        } else if (_rec.name == cname_challenge_record_name # "." # domain_name) {
+          cname_challenge_record_id_opt := ?_rec.id;
+        } else if (_rec.name == cname_domain_record_name # "." # domain_name) {
+          cname_domain_record_id_opt := ?_rec.id;
+        };
+
+        Map.add(records, Text.compare, records_to_add[index].id, records_to_add[index]);
+      };
+
+      // Ensure records are not null
+      let txt_domain_record_id = switch (txt_record_id_opt) {
+        case (null) { return #err(Errors.NotFound("TXT dns record id")) };
+        case (?val) { val };
+      };
+
+      let cname_domain_record_id = switch (cname_domain_record_id_opt) {
+        case (null) {
+          return #err(Errors.NotFound("CNAME domain dns record id"));
+        };
+        case (?val) { val };
+      };
+      let cname_challenge_record_id = switch (cname_challenge_record_id_opt) {
+        case (null) {
+          return #err(Errors.NotFound("CNAME challenge dns record id"));
+        };
+        case (?val) { val };
+      };
+
+      return #ok({
+        canister_id;
+        txt_domain_record_id;
+        cname_domain_record_id;
+        cname_challenge_record_id;
       });
     };
 
@@ -478,6 +667,33 @@ module {
       return #ok();
     };
 
+    // handler for updating freemium domain registration status
+    public func update_registration_status_freemium(registration_id : Nat, new_status : Types.IcDomainRegistrationStatus, error : Types.DomainRegistrationError) : Types.Response<Types.FreemiumDomainRegistration> {
+      let target : Types.FreemiumDomainRegistration = switch (Map.get(freemium_domain_registration, Nat.compare, registration_id)) {
+        case (null) return #err(Errors.NotFound("freemium domain registration"));
+        case (?val) val;
+      };
+
+      let new_registration : Types.FreemiumDomainRegistration = {
+        target with ic_registration = {
+          request_id = target.ic_registration.request_id;
+          is_apex = target.ic_registration.is_apex;
+          domain = target.ic_registration.domain;
+          subdomain = target.ic_registration.subdomain;
+          status = new_status;
+        }
+      };
+
+      let updated_registration : Types.FreemiumDomainRegistration = {
+        new_registration with error = error;
+      };
+
+      Map.add(freemium_domain_registration, Nat.compare, registration_id, updated_registration);
+
+      return #ok(new_registration);
+    };
+
+    // handler for updating paid plan domain registration status
     public func update_registration_status(registration_id : Nat, new_status : Types.IcDomainRegistrationStatus, error : Types.DomainRegistrationError) : Types.Response<Types.DomainRegistration> {
       let target : Types.DomainRegistration = switch (Map.get(domain_registration, Nat.compare, registration_id)) {
         case (null) return #err(Errors.NotFound("domain registration"));
@@ -501,6 +717,18 @@ module {
       Map.add(domain_registration, Nat.compare, registration_id, updated_registration);
 
       return #ok(new_registration);
+    };
+
+    private func update_freemium_domain_registration(domain_registration_id : Types.DomainRegistrationId, new_domain_registration : Types.FreemiumDomainRegistration) : () {
+      Map.add(freemium_domain_registration, Nat.compare, domain_registration_id, new_domain_registration);
+      Map.add(canister_to_freemium_domain_registration, Principal.compare, new_domain_registration.canister_id, [domain_registration_id]);
+      Map.add(used_subdomains, Text.compare, new_domain_registration.ic_registration.subdomain, new_domain_registration.canister_id);
+    };
+
+    private func _delete_freemium_domain_registration(domain_registration_id : Types.DomainRegistrationId, canister_id : Principal) : () {
+      ignore Map.delete(freemium_domain_registration, Nat.compare, domain_registration_id);
+      ignore Map.delete(canister_to_freemium_domain_registration, Principal.compare, canister_id);
+      // TODO: Add delete for subdomain name
     };
 
     private func update_domain_registration(domain_registration_id : Types.DomainRegistrationId, new_domain_registration : Types.DomainRegistration) : () {
@@ -604,6 +832,237 @@ module {
       Map.add(used_subdomains, Text.compare, subdomain_name, canister_id);
 
       return #ok(res);
+    };
+
+    public func setup_freemium_canister_subdomain(
+      canister_id : Principal,
+      domain_name : Text,
+      subdomain_name : Text,
+      backend_canister : Principal,
+      transform : Types.Transform,
+    ) : async Types.Response<Types.FreemiumDomainRegistration> {
+      let _cloudflare_manager = switch (cloudflare_manager) {
+        case (null) return #err(Errors.NotFoundClass("Cloudflare manager"));
+        case (?val) val;
+      };
+
+      Debug.print("Checkong domai nae");
+
+      let is_available = switch (get_subdomain_record(subdomain_name)) {
+        case (null) true;
+        case (?val) {
+          let result = if (canister_id == val) true else false;
+
+          result;
+        };
+      };
+
+      Debug.print("is available?");
+
+      if (is_available == false) return #err(Errors.NameTaken(subdomain_name));
+      Debug.print("is available");
+
+      let payload : Types.CreateCanisterDNSRecordsPayload = {
+        canister_id;
+        user_principal = backend_canister;
+        domain_name = "worldcloud.app";
+        subdomain_name = subdomain_name;
+      };
+
+      Debug.print("getting rgi");
+
+      let existing_registration : Types.FreemiumDomainRegistration = switch (get_freemium_domain_registration_by_canister(canister_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) {
+          Debug.print("Creating freemium regi");
+
+          let target_registration = if (val.size() == 0) {
+            let registration : Types.FreemiumDomainRegistration = switch (create_freemium_domain_registration(domain_name, subdomain_name, canister_id, "", "", "")) {
+              case (#err(err)) return #err(err);
+              case (#ok(val)) val;
+            };
+            Debug.print("Created reg");
+
+            registration;
+          } else {
+            val[0];
+          };
+
+          target_registration;
+        };
+      };
+
+      Debug.print("Created regggg");
+
+      // };
+
+      // Build payload and create dns records in batch with cloudflare
+      let updated_domain_registration : Types.FreemiumDomainRegistration = switch (await build_domain_registration_records(payload, transform)) {
+        case (#err(err)) {
+          let _updated_registration : Types.FreemiumDomainRegistration = switch (
+            // Handle cloudflare error
+            await handle_freemium_batch_create_records_error(
+              err,
+              existing_registration,
+              payload.domain_name,
+              payload.subdomain_name,
+              transform,
+            ),
+          ) {
+            case (#err(err)) return #err(err);
+            case (#ok(reg)) reg;
+          };
+
+          update_freemium_domain_registration(_updated_registration.id, _updated_registration);
+          _updated_registration;
+        };
+        case (#ok(val)) {
+          let created_records = switch (val.create_record_response) {
+            case (#err(err)) return #err(err);
+            case (#ok(val)) val;
+          };
+
+          let add_records_res : Types.AddDnsRecordsForFreemiumCanisterResponse = switch (
+            await add_records_for_freemium_canister(
+              payload.canister_id,
+              created_records,
+              val.txt_payload.name,
+              val.cname_challenge_payload.name,
+              val.cname_domain_payload.name,
+              payload.domain_name,
+              payload.subdomain_name,
+              existing_registration,
+            )
+          ) {
+            case (#err(err)) return #err(err);
+            case (#ok(val)) val;
+          };
+
+          // Return updated domain registration
+          add_records_res.updated_domain_registration;
+
+        };
+      };
+
+      // // Create the new domain registration record
+      // let _domain_registration : Types.FreemiumDomainRegistration = switch (create_result.create_record_response) {
+      //   case (#err(err)) return #err(err);
+      //   case (#ok(val)) {
+
+      //     // // Get the registration record ids to store them in new registration
+      //     // let parsed_record_ids : Types.DomainRegistrationRecords = switch (
+      //     //   resolve_record_ids(
+      //     //     val,
+      //     //     canister_id,
+      //     //     create_result.txt_payload.name,
+      //     //     create_result.cname_challenge_payload.name,
+      //     //     create_result.cname_domain_payload.name,
+      //     //     domain_name,
+      //     //     subdomain_name,
+      //     //   )
+      //     // ) {
+      //     //   case (#err(err)) return #err(err);
+      //     //   case (#ok(val)) val;
+      //     // };
+
+      //     // Create the registration
+      //     let registration : Types.FreemiumDomainRegistration = switch (
+      //       create_freemium_domain_registration(
+      //         domain_name,
+      //         subdomain_name,
+      //         canister_id,
+      //         parsed_record_ids.txt_domain_record_id,
+      //         parsed_record_ids.cname_challenge_record_id,
+      //         parsed_record_ids.cname_domain_record_id,
+      //       )
+      //     ) {
+      //       case (#err(err)) return #err(err);
+      //       case (#ok(val)) val;
+      //     };
+
+      //     registration;
+      //   };
+      // };
+
+      update_freemium_domain_registration(updated_domain_registration.id, updated_domain_registration);
+      return #ok(updated_domain_registration);
+    };
+
+    private func create_freemium_domain_registration(
+      domain_name : Text,
+      subdomain_name : Text,
+      canister_id : Principal,
+      txt_domain_record_id : Text,
+      cname_challenge_record_id : Text,
+      cname_domain_record_id : Text,
+    ) : Types.Response<Types.FreemiumDomainRegistration> {
+      let _index_counter = switch (index_counter_manager) {
+        case (null) return #err(Errors.NotFoundClass("Index counter manager"));
+        case (?val) val;
+      };
+
+      Debug.print("gettin next index..");
+
+      let registration_id : Types.DomainRegistrationId = _index_counter.get_index(#freemium_domain_registration_id);
+      Debug.print("got next index  " # Nat.toText(registration_id));
+
+      let registration : Types.FreemiumDomainRegistration = {
+        id = registration_id;
+        canister_id;
+        txt_domain_record_id;
+        cname_challenge_record_id;
+        cname_domain_record_id;
+        ic_registration = {
+          request_id = "";
+          is_apex = false;
+          domain = domain_name;
+          subdomain = subdomain_name;
+          status = #inactive;
+        };
+        error = Utility.get_domain_registration_error(#none);
+      };
+
+      update_freemium_domain_registration(registration_id, registration);
+      _index_counter.increment_index(#freemium_domain_registration_id);
+      return #ok(registration);
+    };
+
+    private func create_domain_registration(
+      domain_name : Text,
+      subdomain_name : Text,
+      canister_id : Principal,
+      txt_domain_record_id : Text,
+      cname_domain_record_id : Text,
+      cname_challenge_record_id : Text,
+      add_on_id : Types.AddOnId,
+    ) : Types.Response<Types.DomainRegistration> {
+      let _index_counter = switch (index_counter_manager) {
+        case (null) return #err(Errors.NotFoundClass("Index counter manager"));
+        case (?val) val;
+      };
+      let registration_id : Types.DomainRegistrationId = _index_counter.get_index(#domain_registration_id);
+
+      let domain_registration : Types.DomainRegistration = {
+        id = registration_id;
+        add_on_id;
+        canister_id;
+        txt_domain_record_id;
+        cname_domain_record_id;
+        cname_challenge_record_id;
+        ic_registration = {
+          request_id = "";
+          domain = domain_name;
+          subdomain = subdomain_name;
+          is_apex = false;
+          status = #inactive;
+        };
+        error = Utility.get_domain_registration_error(#none);
+      };
+
+      _index_counter.increment_index(#domain_registration_id);
+      update_domain_registration(registration_id, domain_registration);
+      Map.add(used_subdomains, Text.compare, subdomain_name, canister_id);
+      return #ok(domain_registration);
     };
 
     // Setup custom domain handler
@@ -768,6 +1227,94 @@ module {
       return #ok(_updated);
     };
 
+    private func handle_freemium_batch_create_records_error(
+      err : Text,
+      existing_registration : Types.FreemiumDomainRegistration,
+      domain_name : Text,
+      subdomain_name : Text,
+      transform : Types.Transform,
+    ) : async Types.Response<Types.FreemiumDomainRegistration> {
+      let _cloudflare_manager = switch (cloudflare_manager) {
+        case (null) return #err(Errors.NotFoundClass("Cloudflare manager"));
+        case (?val) val;
+      };
+
+      // Handle batch create records error
+      let _updated = if (Text.contains(err, #text "already exists")) {
+        // Get record ids if they exist
+        let records = switch (_cloudflare_manager.get_subdomain_records_by_name(subdomain_name)) {
+          // In case record ids are not found, return empty strings
+          case (#err(err)) {
+            let domain_records : Types.DomainRegistrationRecords = switch (await _cloudflare_manager.find_dns_record_ids(subdomain_name, domain_name, existing_registration.canister_id, transform)) {
+              case (#err(err)) {
+                if (Text.contains(err, #text("not found"))) return #err(Errors.DomainRecordsExist());
+                return #err(err);
+              };
+              case (#ok(val)) val;
+            };
+
+            // TODO: Handle this error case to get the record ids from cloudflare and set them
+            let record_ids : Types.DomainRegistrationRecords = {
+              canister_id = existing_registration.canister_id;
+              txt_domain_record_id = domain_records.txt_domain_record_id;
+              cname_challenge_record_id = domain_records.cname_challenge_record_id;
+              cname_domain_record_id = domain_records.cname_domain_record_id;
+            };
+            record_ids;
+          };
+          case (#ok(val)) { val };
+        };
+
+        // Ensure the same canister id is using the domain records
+        if (records.canister_id != existing_registration.canister_id) {
+          // Update domain registration
+          let updated : Types.FreemiumDomainRegistration = {
+            id = existing_registration.id;
+            canister_id = existing_registration.canister_id;
+            txt_domain_record_id = "";
+            cname_challenge_record_id = "";
+            cname_domain_record_id = "";
+            ic_registration = {
+              request_id = existing_registration.ic_registration.request_id;
+              is_apex = false;
+              domain = domain_name;
+              subdomain = subdomain_name;
+              status = #failed;
+            };
+            error = Utility.get_domain_registration_error(#cloudflare_exist_records);
+          };
+          // Return updated registration
+          updated;
+        } else {
+          // Update domain registration
+          let updated : Types.FreemiumDomainRegistration = {
+            id = existing_registration.id;
+            canister_id = existing_registration.canister_id;
+            txt_domain_record_id = records.txt_domain_record_id;
+            cname_challenge_record_id = records.cname_challenge_record_id;
+            cname_domain_record_id = records.cname_domain_record_id;
+            ic_registration = {
+              request_id = existing_registration.ic_registration.request_id;
+              is_apex = false;
+              domain = domain_name;
+              subdomain = subdomain_name;
+              status = #pending;
+            };
+            error = Utility.get_domain_registration_error(#none);
+          };
+          // Return updated registration
+          updated;
+        };
+
+      } else {
+        // Different cloudflare error
+        // TODO: Handle errors
+        return #err(err);
+      };
+
+      return #ok(_updated);
+    };
+
     private func handle_update_project_addons(project_id : Types.ProjectId, associated_add_on_id : Types.AddOnId) : Types.Response<[Types.AddOnService]> {
       let _subscription_manager : Types.SubscriptionInterface = switch (subscription_manager) {
         case (null) return #err(Errors.NotFound("Subscription manager class reference"));
@@ -885,6 +1432,25 @@ module {
       };
 
       return #ok(true);
+    };
+
+    public func admin_delete_domain_registration(domain_registration_id : Types.DomainRegistrationId, type_ : Types.ProjectPlan) : Types.Response<()> {
+      if (type_ == #freemium) {
+        let registration : Types.FreemiumDomainRegistration = switch (get_freemium_domain_registration_by_id(domain_registration_id)) {
+          case (null) return #err(Errors.NotFound("Freemium domain registration"));
+          case (?val) val;
+        };
+
+        let res = _delete_freemium_domain_registration(domain_registration_id, registration.canister_id);
+      } else {
+        let registration : Types.DomainRegistration = switch (get_domain_registration_by_id(domain_registration_id)) {
+          case (null) return #err(Errors.NotFound("Domain registration"));
+          case (?val) val;
+        };
+        let res = _delete_domain_registration(domain_registration_id, registration.canister_id);
+      };
+
+      return #ok();
     };
 
     private func _delete_domain_registration(domain_registration_id : Types.DomainRegistrationId, canister_id : Principal) : Types.Response<()> {
