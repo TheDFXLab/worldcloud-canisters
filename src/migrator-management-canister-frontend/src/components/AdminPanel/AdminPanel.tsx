@@ -14,6 +14,7 @@ import {
   AccountBalance,
   Code,
   Add,
+  Language,
 } from "@mui/icons-material";
 import "./AdminPanel.css";
 
@@ -26,6 +27,7 @@ import AccessControlManagement from "./sections/AccessControlManagement";
 import SystemManagement from "./sections/SystemManagement";
 import BookManagement from "./sections/BookManagement";
 import GrantManagement from "./sections/GrantManagement";
+import DomainManagement from "./sections/DomainManagement";
 import WasmUploader from "../WasmUploader/WasmUploader";
 import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 import { useAdmin } from "../../context/AdminContext/AdminContext";
@@ -39,6 +41,7 @@ type AdminSection =
   | "system"
   | "book"
   | "grant-management"
+  | "domain-management"
   | "wasm-uploader";
 
 interface AdminPanelProps {}
@@ -76,6 +79,7 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
       "system",
       "book",
       "grant-management",
+      "domain-management",
       "wasm-uploader",
     ];
 
@@ -216,6 +220,12 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
       description: "Grant subscriptions and addons to users and projects",
     },
     {
+      id: "domain-management" as AdminSection,
+      label: "Domain Management",
+      icon: <Language />,
+      description: "Manage custom domains and freemium domain registrations",
+    },
+    {
       id: "wasm-uploader" as AdminSection,
       label: "WASM Uploader",
       icon: <Code />,
@@ -241,6 +251,8 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
         return <BookManagement />;
       case "grant-management":
         return <GrantManagement />;
+      case "domain-management":
+        return <DomainManagement />;
       case "wasm-uploader":
         return <WasmUploader />;
       default:

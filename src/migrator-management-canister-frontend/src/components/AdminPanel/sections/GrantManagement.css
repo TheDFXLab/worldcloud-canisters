@@ -7,7 +7,7 @@
 /* Grid Layout */
 .grant-management-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 2rem;
   margin-bottom: 2rem;
 }
@@ -176,6 +176,13 @@
 }
 
 /* Responsive Design */
+@media (max-width: 1200px) {
+  .grant-management-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+}
+
 @media (max-width: 768px) {
   .grant-management-grid {
     grid-template-columns: 1fr;

@@ -49,10 +49,8 @@ import {
 } from '../serialization/addons';
 
 export const getPlanDisplayName = (plan: any): string => {
-    if (typeof plan === 'object' && plan !== null) {
-        if ('freemium' in plan) return 'Freemium';
-        if ('paid' in plan) return 'Paid';
-    }
+    if (plan === 'freemium') return "Freemium";
+    if (plan === 'paid') return "Paid";
     return 'Unknown';
 };
 

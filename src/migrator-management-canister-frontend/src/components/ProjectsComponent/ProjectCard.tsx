@@ -106,7 +106,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           <LanguageIcon />
 
           <div
-            className={`plan-badge ${project.plan}`}
+            className={`plan-badge`}
             style={{
               display: "flex",
               alignItems: "center",

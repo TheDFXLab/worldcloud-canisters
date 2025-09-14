@@ -20,6 +20,7 @@ export interface FreemiumUsageData {
     tier_id?: number;
     canisters?: string[];
     reset_time: Date;
+    url: string | null;
 }
 
 export interface FreemiumState {
@@ -39,7 +40,8 @@ const convertUsageData = (usage: any): FreemiumUsageData => {
             create_timestamp: 0,
             duration: 0,
             status: 'unknown',
-            reset_time: new Date()
+            reset_time: new Date(),
+            url: null
         };
     }
 
@@ -56,7 +58,9 @@ const convertUsageData = (usage: any): FreemiumUsageData => {
         status: usage.status ? Object.keys(usage.status)[0] : 'unknown',
         tier_id: usage.tier_id ? Number(usage.tier_id) : undefined,
         canisters: usage.canisters ? usage.canisters.map((p: Principal) => p.toString()) : undefined,
-        reset_time: usage.reset_time
+        reset_time: usage.reset_time,
+        url: usage.url ? usage.url[0] && usage.url.length > 0 ? usage.url[0] : null : null,
+
     };
 };
 
