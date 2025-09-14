@@ -5,7 +5,7 @@ import { _SERVICE, ActivityLog, GetProjectsByUserPayload, Project, ProjectPlan, 
 import { backend_canister_id, http_host, internetIdentityConfig } from "../../config/config";
 import { StaticFile } from "../../utility/compression";
 import { DeserializedProject, DeserializedUsageLog, SerializedUsageLog, serializedUsageLog, SerializedUsageLogExtended } from "../../utility/bigint";
-import { DeserializedActivityLog, DeserializedPaginationPayload, PaginationPayload, serializePaginationPayload } from "../../serialization/admin";
+import { DeserializedActivityLog, DeserializedPaginationPayload, PaginationPayload, SerializedProjectPlan, serializePaginationPayload } from "../../serialization/admin";
 // import { CanisterStatus } from "../authority";
 
 interface CreateProjectPayload {
@@ -361,6 +361,7 @@ class MainApi {
                     duration: slot.duration,
                     start_cycles: slot.start_cycles,
                     status: slot.status,
+                    url: slot.url ? slot.url[0] && slot.url.length > 0 ? slot.url[0] : null : null
                 };
             }
             else {
@@ -408,7 +409,8 @@ class MainApi {
                     name: project_name,
                     description,
                     tags,
-                    plan: projectPlan,
+                    plan: 'freemium' in projectPlan ? 'freemium' : 'paid',
+                    url: null,
                     canister_id: null,
                     date_created: Number(currentTime),
                     date_updated: Number(currentTime)
@@ -488,7 +490,8 @@ class MainApi {
                     name: project.name,
                     description: project.description,
                     tags: project.tags,
-                    plan: project.plan,
+                    plan: "freemium" in project.plan ? "freemium" : "paid",
+                    url: project.url ? project.url.length > 0 && project.url[0] ? project.url[0] : null : null,
                     canister_id: canisterId ? canisterId.toText() : null,
                     date_created: Number(project.date_created),
                     date_updated: Number(project.date_updated)
@@ -1249,6 +1252,68 @@ class MainApi {
         }
         throw this.handleResponseError(result.err);
     }
+
+    async admin_setup_freemium_domain(canister_id: Principal, subdomain_name: string) {
+        this.validate();
+        debugger;
+        const result = await this.actor?.admin_setup_freemium_subdomain(canister_id, subdomain_name);
+        if (!result) {
+            throw new Error("Failed to setup freemium canister subdomain");
+        }
+        if ('ok' in result) return result.ok;
+        throw this.handleResponseError(result.err);
+    }
+
+
+    async admin_get_freemium_domain_registrations_paginated(limit: number, page: number) {
+        this.validate();
+        const result = await this.actor?.admin_get_freemium_domain_registrations_paginated([BigInt(limit)], [BigInt(page)]);
+        if (!result) {
+            throw new Error("Failed to get freemium domain registrations");
+        }
+        if ('ok' in result) {
+            return result.ok;
+        }
+        throw this.handleResponseError(result.err);
+    }
+
+    async admin_get_freemium_domain_registrations(canisterId: Principal) {
+        this.validate();
+        const result = await this.actor?.admin_get_freemium_domain_registrations(canisterId);
+        if (!result) {
+            throw new Error("Failed to get freemium domain registrations by canister");
+        }
+        if ('ok' in result) {
+            return result.ok;
+        }
+        throw this.handleResponseError(result.err);
+    }
+
+    async admin_get_domain_registrations_paginated(limit: number, page: number) {
+        this.validate();
+        const result = await this.actor?.admin_get_domain_registrations_paginated([BigInt(limit)], [BigInt(page)]);
+        if (!result) {
+            throw new Error("Failed to get domain registrations");
+        }
+        if ('ok' in result) {
+            return result.ok;
+        }
+        throw this.handleResponseError(result.err);
+    }
+
+    async admin_delete_domain_registration(registration_id: number, type: SerializedProjectPlan) {
+        this.validate();
+        let _type = type === "freemium" ? { freemium: null } : { paid: null };
+        const result = await this.actor?.admin_delete_domain_registration(BigInt(registration_id), _type);
+        if (!result) {
+            throw new Error("Failed to delete domain registration");
+        }
+        if ('ok' in result) {
+            return result.ok;
+        }
+        throw this.handleResponseError(result.err);
+    }
+
 }
 
 

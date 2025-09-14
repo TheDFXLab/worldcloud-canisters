@@ -108,6 +108,7 @@ export const CanisterOverview: React.FC = () => {
     handleAddCycles,
   } = useCyclesLogic();
 
+  const { usageData } = useFreemiumLogic();
   const {
     handleFetchActivityLogs,
     handleClearProjectAssets,
@@ -248,16 +249,35 @@ export const CanisterOverview: React.FC = () => {
 
     switch (action) {
       case "visit":
-        if (currentProject.canister_id) {
+        // Handle freemium projects
+        if (currentProject.plan === "freemium") {
+          // Use domain name if available
+          if (usageData?.url) {
+            window.open(`https://${usageData.url}`);
+          }
+          if (!currentProject.canister_id) return;
           window.open(getCanisterUrl(currentProject.canister_id), "_blank");
-        } else {
-          setToasterData({
-            headerContent: "Failed",
-            toastStatus: false,
-            toastData: "Runner not attached.",
-            timeout: 2000,
-          });
-          setShowToaster(true);
+        }
+        // Handle paid projects
+        else {
+          // Canister is attached to project
+          if (currentProject.canister_id) {
+            // Use project url if available
+            if (!currentProject.url) {
+              window.open(getCanisterUrl(currentProject.canister_id), "_blank");
+              return;
+            }
+            window.open(`https://${currentProject.url}`, "_blank");
+          } else {
+            // Canister is not attached to project
+            setToasterData({
+              headerContent: "Failed",
+              toastStatus: false,
+              toastData: "Runner not attached.",
+              timeout: 2000,
+            });
+            setShowToaster(true);
+          }
         }
         break;
       case "deploy":
@@ -283,7 +303,7 @@ export const CanisterOverview: React.FC = () => {
             !!currentProject.canister_id,
             BigInt(currentProject.id),
             currentProject.canister_id,
-            "freemium" in currentProject.plan,
+            currentProject.plan === "freemium",
             identity,
             agent
           );
@@ -589,7 +609,7 @@ export const CanisterOverview: React.FC = () => {
           onActionClick={handleQuickAction}
           project={currentProject}
           hasCanister={!!currentProject.canister_id}
-          isFreemium={"freemium" in (currentProject.plan || {})}
+          isFreemium={currentProject.plan === "freemium"}
           deploymentStatus={selectedDeployment?.status}
           showAddOns={showAddOns}
           onToggleAddOns={handleToggleAddOns}
@@ -642,7 +662,7 @@ export const CanisterOverview: React.FC = () => {
 
           {currentProject.canister_id && (
             <CyclesCard
-              isFreemium={"freemium" in currentProject.plan}
+              isFreemium={currentProject.plan === "freemium"}
               isLoadingBalance={isLoadingBalance}
               isLoadingAddCycles={isLoadingAddCycles}
               balance={balance}
@@ -662,7 +682,7 @@ export const CanisterOverview: React.FC = () => {
           <UsageStatisticsCard
             deployment={selectedDeployment}
             hasCanister={!!currentProject.canister_id}
-            isFreemium={"freemium" in currentProject.plan}
+            isFreemium={currentProject.plan === "freemium"}
           />
           <ActivityCard
             isLoadingActivityLogs={isLoadingActivityLogs}

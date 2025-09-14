@@ -1,5 +1,5 @@
 import { Principal } from "@dfinity/principal";
-import { CreateRecordResponse, DomainRegistration, DomainRegistrationId, IcDomainRegistration, IcDomainRegistrationStatus, MyAddonDomainRegistration, MyAddons, ProjectPlan, Role, UsageLog, UsageLogExtended } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
+import { CreateRecordResponse, DomainRegistration, DomainRegistrationId, FreemiumDomainRegistration, IcDomainRegistration, IcDomainRegistrationStatus, MyAddonDomainRegistration, MyAddons, ProjectPlan, Role, UsageLog, UsageLogExtended } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { SerializedUsageLogExtended } from "../utility/bigint";
 import { serializeAddOn, SerializedAddOn } from "./addons";
 
@@ -200,6 +200,9 @@ export interface SerializedParsedMyAddons {
     domain_addons: SerializedMyAddon<SerializedDomainRegistration>[];
 }
 
+
+export interface SerializedFreemiumDomainRegistration extends Omit<SerializedDomainRegistration, "add_on_id"> { };
+
 export const serializeMyAddonDomainRegistration = (d: MyAddonDomainRegistration): SerializedMyAddon<SerializedDomainRegistration> => {
     return {
         addon: serializeAddOn(d.addon),
@@ -254,6 +257,25 @@ export const serializeDomainRegistrationPair = (pair: [DomainRegistrationId, Dom
 
 export const serializeDomainRegistrations = (domainRegistrations: DomainRegistration[]): SerializedDomainRegistration[] => {
     return domainRegistrations.map(serializeDomainRegistration);
+};
+
+export const serializeFreemiumDomainRegistration = (domainRegistration: FreemiumDomainRegistration): SerializedFreemiumDomainRegistration => {
+    return {
+        id: Number(domainRegistration.id),
+        txt_domain_record_id: domainRegistration.txt_domain_record_id,
+        cname_challenge_record_id: domainRegistration.cname_challenge_record_id,
+        cname_domain_record_id: domainRegistration.cname_domain_record_id,
+        ic_registration: serializeIcDomainRegistration(domainRegistration.ic_registration),
+        error: domainRegistration.error,
+    };
+}
+
+export const serializeFreemiumDomainRegistrations = (v: [DomainRegistrationId, FreemiumDomainRegistration][]): [number, SerializedFreemiumDomainRegistration][] => {
+    return v.map(([id, domainRegistration]) => [Number(id), serializeFreemiumDomainRegistration(domainRegistration)]);
+};
+
+export const serializeFreemiumDomainRegistrationsArray = (v: FreemiumDomainRegistration[]): SerializedFreemiumDomainRegistration[] => {
+    return v.map(serializeFreemiumDomainRegistration);
 };
 
 export const serializeDomainRegistration = (domainRegistration: DomainRegistration): SerializedDomainRegistration => {

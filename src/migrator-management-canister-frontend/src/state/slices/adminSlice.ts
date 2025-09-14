@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import MainApi from '../../api/main';
 import { backend_canister_id } from '../../config/config';
 import { Principal } from '@dfinity/principal';
-import { Subscription } from '../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did';
+import { DomainRegistrationId, Subscription } from '../../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did';
 import { SerializedSubscription, serializePrincipal, serializeSlot, serializeSubscription } from '../../serialization/subscription';
 import { handleBackendResponse, handleError } from '../../utility/errorHandler';
 import {
@@ -35,6 +35,10 @@ import {
     serializeGlobalTimers,
     serializeDomainRegistrations,
     SerializedGlobalTimer,
+    serializeFreemiumDomainRegistration,
+    SerializedFreemiumDomainRegistration,
+    serializeFreemiumDomainRegistrations,
+    SerializedProjectPlan,
 } from '../../serialization/admin';
 import { SerializedUsageLogExtended } from '../../utility/bigint';
 import { StaticFile } from '../../utility/compression';
@@ -113,6 +117,10 @@ export interface AdminState {
     globalTimers: SerializedGlobalTimer[],
 
     domainRegistrations: SerializedDomainRegistrationPair[],
+
+    freemiumDomainRegistrationsPaginated: [number, SerializedFreemiumDomainRegistration][],
+    domainRegistrationsPaginated: [number, SerializedDomainRegistration][],
+
     isLoadingDomainRegistrations: boolean,
 
     isLoadingGlobalTimers: boolean,
@@ -121,6 +129,16 @@ export interface AdminState {
     isLoadingCanisterDomainRegistrations: boolean
     isLoadingGrantSubscription: boolean;
     isLoadingGrantAddon: boolean;
+
+    isLoadingSetupFreemiumDomain: boolean;
+
+    isLoadingFreemiumRegistrationByCanister: boolean,
+    isLoadingDomainRegistrationsPaginated: boolean,
+    isLoadingFreemiumDomainRegistrationsPaginated: boolean,
+    isLoadingDeleteDomainRegistration: boolean,
+
+    freemiumRegistrationByCanister: SerializedFreemiumDomainRegistration[],
+
 
 }
 
@@ -165,12 +183,24 @@ const initialState: AdminState = {
     canisterDomainRegistrations: [],
     globalTimers: [],
     domainRegistrations: [],
+    freemiumDomainRegistrationsPaginated: [],
+    domainRegistrationsPaginated: [],
+
+
+    // Loading state
     isLoadingDomainRegistrations: false,
     isLoadingGlobalTimers: false,
     isLoadingCustomDomain: false,
     isLoadingCanisterDomainRegistrations: false,
     isLoadingGrantSubscription: false,
-    isLoadingGrantAddon: false
+    isLoadingGrantAddon: false,
+    isLoadingSetupFreemiumDomain: false,
+    isLoadingFreemiumRegistrationByCanister: false,
+    isLoadingDomainRegistrationsPaginated: false,
+    isLoadingFreemiumDomainRegistrationsPaginated: false,
+    isLoadingDeleteDomainRegistration: false,
+
+    freemiumRegistrationByCanister: [],
 };
 
 // Async thunks
@@ -930,9 +960,71 @@ export const adminGrantAddon = createAsyncThunk(
     }
 );
 
+export const adminSetupFreemiumDomain = createAsyncThunk(
+    'admin/adminSetupFreemiumDomain',
+    async ({
+        identity,
+        agent,
+        canister_id,
+        subdomain_name
+    }: {
+        identity: any;
+        agent: any;
+        canister_id: Principal;
+        subdomain_name: string;
+    }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        let result = await api.admin_setup_freemium_domain(canister_id, subdomain_name);
+
+        return serializeFreemiumDomainRegistration(result);
+    }
+);
 
 
+export const fetchFreemiumDomainRegistrationsPaginated = createAsyncThunk(
+    'admin/fetchFreemiumDomainRegistrationsPaginated',
+    async ({ identity, agent, payload }: { identity: any; agent: any; payload: PaginationPayload }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        let result = await api.admin_get_freemium_domain_registrations_paginated(payload.limit || 20, payload.page || 0);
 
+        return serializeFreemiumDomainRegistrations(result);
+    }
+);
+
+export const fetchDomainRegistrationsPaginated = createAsyncThunk(
+    'admin/fetchDomainRegistrationsPaginated',
+    async ({ identity, agent, payload }: { identity: any; agent: any; payload: PaginationPayload }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        let response = await api.admin_get_domain_registrations_paginated(payload.limit || 20, payload.page || 0);
+        return serializeDomainRegistrationsPairs(response);
+    }
+);
+export const fetchFreemiumRegistrationByCanister = createAsyncThunk(
+    'admin/fetchFreemiumRegistrationByCanister',
+    async ({ identity, agent, canisterId }: { identity: any; agent: any; canisterId: Principal }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_get_freemium_domain_registrations(canisterId);
+        if ('ok' in response) {
+            return (response.ok as any[]).map(serializeFreemiumDomainRegistration);
+        }
+        throw new Error('Failed to fetch freemium registrations by canister');
+    }
+);
+
+
+export const deleteDomainRegistration = createAsyncThunk(
+    'admin/deleteDomainRegistration',
+    async ({ identity, agent, registration_id, type }: { identity: any, agent: any, registration_id: number, type: SerializedProjectPlan }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_delete_domain_registration(registration_id, type);
+        return true;
+    }
+)
 
 // Slice
 const adminSlice = createSlice({
@@ -1492,6 +1584,59 @@ const adminSlice = createSlice({
             .addCase(fetchDomainRegistrations.rejected, (state, action) => {
                 state.isLoadingDomainRegistrations = false;
                 state.error = handleError(action.error);
+            })
+            .addCase(adminSetupFreemiumDomain.pending, (state) => {
+                state.isLoadingSetupFreemiumDomain = true;
+            })
+            .addCase(adminSetupFreemiumDomain.fulfilled, (state, action) => {
+                state.isLoadingSetupFreemiumDomain = false;
+            })
+            .addCase(adminSetupFreemiumDomain.rejected, (state, action) => {
+                state.isLoadingSetupFreemiumDomain = false;
+                state.error = action.error.message ? action.error.message : "Failed to setup custom domain for freemium canister.";
+            })
+            .addCase(fetchFreemiumRegistrationByCanister.pending, (state) => {
+                state.isLoadingFreemiumRegistrationByCanister = true;
+            })
+            .addCase(fetchFreemiumRegistrationByCanister.fulfilled, (state, action) => {
+                state.isLoadingFreemiumRegistrationByCanister = false;
+                state.freemiumRegistrationByCanister = action.payload;
+            })
+            .addCase(fetchFreemiumRegistrationByCanister.rejected, (state, action) => {
+                state.isLoadingFreemiumRegistrationByCanister = false;
+                state.error = action.error.message ? action.error.message : "Failed to fetch freemium registration by canister.";
+            })
+            .addCase(fetchFreemiumDomainRegistrationsPaginated.pending, (state) => {
+                state.isLoadingFreemiumDomainRegistrationsPaginated = true;
+            })
+            .addCase(fetchFreemiumDomainRegistrationsPaginated.fulfilled, (state, action) => {
+                state.isLoadingFreemiumDomainRegistrationsPaginated = false;
+                state.freemiumDomainRegistrationsPaginated = action.payload;
+            })
+            .addCase(fetchFreemiumDomainRegistrationsPaginated.rejected, (state, action) => {
+                state.isLoadingFreemiumDomainRegistrationsPaginated = false;
+                state.error = action.error.message ? action.error.message : "Failed to fetch freemium domain registrations paginated.";
+            })
+            .addCase(fetchDomainRegistrationsPaginated.pending, (state) => {
+                state.isLoadingDomainRegistrationsPaginated = true;
+            })
+            .addCase(fetchDomainRegistrationsPaginated.fulfilled, (state, action) => {
+                state.isLoadingDomainRegistrationsPaginated = false;
+                state.domainRegistrationsPaginated = action.payload as any;
+            })
+            .addCase(fetchDomainRegistrationsPaginated.rejected, (state, action) => {
+                state.isLoadingDomainRegistrationsPaginated = false;
+                state.error = action.error.message ? action.error.message : "Failed to fetch domain registrations paginated.";
+            })
+            .addCase(deleteDomainRegistration.pending, (state) => {
+                state.isLoadingDeleteDomainRegistration = true;
+            })
+            .addCase(deleteDomainRegistration.fulfilled, (state, action) => {
+                state.isLoadingDeleteDomainRegistration = false;
+            })
+            .addCase(deleteDomainRegistration.rejected, (state, action) => {
+                state.isLoadingDeleteDomainRegistration = false;
+                state.error = action.error.message ? action.error.message : "Failed to delete domain registration";
             })
 
     },

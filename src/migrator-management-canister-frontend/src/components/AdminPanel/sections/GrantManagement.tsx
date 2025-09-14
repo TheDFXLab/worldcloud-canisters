@@ -32,6 +32,7 @@ import {
   ContentCopy,
   Refresh,
   Delete,
+  Language,
 } from "@mui/icons-material";
 import "./GrantManagement.css";
 import { SimpleConfirmationModal } from "../../ConfirmationPopup/SimpleConfirmationModal";
@@ -47,10 +48,16 @@ interface GrantAddonForm {
   expiry_in_ms: number;
 }
 
+interface FreemiumDomainForm {
+  canister_id: string;
+  subdomain_name: string;
+}
+
 const GrantManagement: React.FC = () => {
   const {
     handleGrantSubscription,
     handleGrantAddon,
+    handleAdminSetupFreemiumDomain,
     isLoadingGrantSubscription,
     isLoadingGrantAddon,
   } = useAdminLogic();
@@ -72,14 +79,21 @@ const GrantManagement: React.FC = () => {
     expiry_in_ms: 0,
   });
 
+  const [freemiumDomainForm, setFreemiumDomainForm] =
+    useState<FreemiumDomainForm>({
+      canister_id: "",
+      subdomain_name: "",
+    });
+
   // Loading states
   const [isGrantingSubscription, setIsGrantingSubscription] = useState(false);
   const [isGrantingAddon, setIsGrantingAddon] = useState(false);
+  const [isSettingUpDomain, setIsSettingUpDomain] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
-  const [grantType, setGrantType] = useState<"subscription" | "addon">(
-    "subscription"
-  );
+  const [grantType, setGrantType] = useState<
+    "subscription" | "addon" | "freemium-domain"
+  >("subscription");
   // Load data on component mount
   useEffect(() => {
     const loadData = async () => {
@@ -153,6 +167,21 @@ const GrantManagement: React.FC = () => {
 
   const validateProjectId = (projectId: number): boolean => {
     return projectId > 0;
+  };
+
+  const validateCanisterId = (canisterId: string): boolean => {
+    // Basic canister ID validation - should be a valid principal string
+    return canisterId.length > 0 && canisterId.includes("-");
+  };
+
+  const validateSubdomainName = (subdomain: string): boolean => {
+    // Subdomain validation - alphanumeric and hyphens only, 3-63 characters
+    const subdomainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
+    return (
+      subdomain.length >= 3 &&
+      subdomain.length <= 63 &&
+      subdomainRegex.test(subdomain)
+    );
   };
 
   // Copy to clipboard function
@@ -240,11 +269,92 @@ const GrantManagement: React.FC = () => {
     }
   };
 
+  // Freemium domain setup handler
+  const handleFreemiumDomainSubmit = async () => {
+    if (!validateCanisterId(freemiumDomainForm.canister_id)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Please enter a valid canister ID",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    if (!validateSubdomainName(freemiumDomainForm.subdomain_name)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData:
+          "Please enter a valid subdomain name (3-63 characters, alphanumeric and hyphens only)",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    setIsSettingUpDomain(true);
+    try {
+      // Convert string to Principal
+      const { Principal } = await import("@dfinity/principal");
+      const canisterPrincipal = Principal.fromText(
+        freemiumDomainForm.canister_id
+      );
+
+      const result = await handleAdminSetupFreemiumDomain(
+        canisterPrincipal,
+        freemiumDomainForm.subdomain_name
+      );
+
+      if (result.status) {
+        setToasterData({
+          headerContent: "Success",
+          toastStatus: true,
+          toastData: result.message,
+          textColor: "green",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+
+        // Reset form
+        setFreemiumDomainForm({
+          canister_id: "",
+          subdomain_name: "",
+        });
+      } else {
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: false,
+          toastData: result.message,
+          textColor: "red",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+      }
+    } catch (error: any) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: error.message || "Failed to setup freemium domain",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+    } finally {
+      setIsSettingUpDomain(false);
+    }
+  };
+
   const handleConfirm = async () => {
     if (grantType === "subscription") {
       await handleGrantSubscriptionSubmit();
-    } else {
+    } else if (grantType === "addon") {
       await handleGrantAddonSubmit();
+    } else if (grantType === "freemium-domain") {
+      await handleFreemiumDomainSubmit();
     }
   };
 
@@ -369,6 +479,35 @@ const GrantManagement: React.FC = () => {
     );
     setShowModal(true);
     // Note: The actual modal configuration would be handled by the ConfirmationModalContext
+  };
+
+  const handleFreemiumDomainClick = () => {
+    setGrantType("freemium-domain");
+    if (!validateCanisterId(freemiumDomainForm.canister_id)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Please enter a valid canister ID first",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    if (!validateSubdomainName(freemiumDomainForm.subdomain_name)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Please enter a valid subdomain name first",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    setShowModal(true);
   };
 
   // Show loading state while data is being fetched
@@ -740,6 +879,129 @@ const GrantManagement: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Freemium Domain Setup Section */}
+        <div className="grant-section">
+          <Card className="grant-card">
+            <CardContent>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                <Language sx={{ mr: 2, color: "var(--color-primary)" }} />
+                <Typography variant="h5" component="h2">
+                  Freemium Domain
+                </Typography>
+              </Box>
+
+              <div className="grant-form-fields">
+                <div className="grant-field">
+                  <TextField
+                    fullWidth
+                    label="Canister ID"
+                    value={freemiumDomainForm.canister_id}
+                    onChange={(e) =>
+                      setFreemiumDomainForm((prev) => ({
+                        ...prev,
+                        canister_id: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter canister principal ID"
+                    error={
+                      freemiumDomainForm.canister_id.length > 0 &&
+                      !validateCanisterId(freemiumDomainForm.canister_id)
+                    }
+                    helperText={
+                      freemiumDomainForm.canister_id.length > 0 &&
+                      !validateCanisterId(freemiumDomainForm.canister_id)
+                        ? "Invalid canister ID format"
+                        : ""
+                    }
+                    InputProps={{
+                      endAdornment: freemiumDomainForm.canister_id && (
+                        <InputAdornment position="end">
+                          <Tooltip title="Copy Canister ID">
+                            <IconButton
+                              onClick={() =>
+                                handleCopyToClipboard(
+                                  freemiumDomainForm.canister_id
+                                )
+                              }
+                              edge="end"
+                            >
+                              <ContentCopy />
+                            </IconButton>
+                          </Tooltip>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </div>
+
+                <div className="grant-field">
+                  <TextField
+                    fullWidth
+                    label="Subdomain Name"
+                    value={freemiumDomainForm.subdomain_name}
+                    style={{ color: "var(--text-primary) !important" }}
+                    onChange={(e) =>
+                      setFreemiumDomainForm((prev) => ({
+                        ...prev,
+                        subdomain_name: e.target.value.toLowerCase(),
+                      }))
+                    }
+                    placeholder="Enter subdomain name (e.g., myapp)"
+                    error={
+                      freemiumDomainForm.subdomain_name.length > 0 &&
+                      !validateSubdomainName(freemiumDomainForm.subdomain_name)
+                    }
+                    helperText={
+                      freemiumDomainForm.subdomain_name.length > 0 &&
+                      !validateSubdomainName(freemiumDomainForm.subdomain_name)
+                        ? "Invalid subdomain format (3-63 chars, alphanumeric and hyphens only)"
+                        : "Will be accessible at: yoursubdomain.ic0.app"
+                    }
+                  />
+                </div>
+
+                {/* Domain Preview */}
+                {freemiumDomainForm.subdomain_name &&
+                  validateSubdomainName(freemiumDomainForm.subdomain_name) && (
+                    <div className="grant-field">
+                      <Alert severity="info" sx={{ mb: 2 }}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Domain Preview:
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontFamily: "monospace" }}
+                        >
+                          {freemiumDomainForm.subdomain_name}.worldcloud.app
+                        </Typography>
+                      </Alert>
+                    </div>
+                  )}
+
+                <div className="grant-field">
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    onClick={handleFreemiumDomainClick}
+                    disabled={
+                      !validateCanisterId(freemiumDomainForm.canister_id) ||
+                      !validateSubdomainName(
+                        freemiumDomainForm.subdomain_name
+                      ) ||
+                      isSettingUpDomain
+                    }
+                    startIcon={<Language />}
+                    sx={{ py: 1.5 }}
+                  >
+                    {isSettingUpDomain ? "Setting up..." : "Setup Domain"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Quick Actions Section */}
@@ -772,6 +1034,10 @@ const GrantManagement: React.FC = () => {
                       project_id: 0,
                       addon_id: 0,
                       expiry_in_ms: 0,
+                    });
+                    setFreemiumDomainForm({
+                      canister_id: "",
+                      subdomain_name: "",
                     });
                   }}
                 >
@@ -811,6 +1077,22 @@ const GrantManagement: React.FC = () => {
                 <Button
                   fullWidth
                   variant="outlined"
+                  startIcon={<Language />}
+                  onClick={() => {
+                    setFreemiumDomainForm((prev) => ({
+                      ...prev,
+                      canister_id: "rdmx6-jaaaa-aaaaa-aaadq-cai",
+                      subdomain_name: "testapp",
+                    }));
+                  }}
+                >
+                  Fill Test Domain
+                </Button>
+              </div>
+              <div className="quick-action-item">
+                <Button
+                  fullWidth
+                  variant="outlined"
                   startIcon={<Warning />}
                   color="warning"
                   onClick={() => {
@@ -834,14 +1116,22 @@ const GrantManagement: React.FC = () => {
 
       <SimpleConfirmationModal
         show={showModal}
-        title={`Grant ${grantType}`}
-        message={"Are you sure you want to perform this action?"}
+        title={`${grantType === "freemium-domain" ? "Setup" : "Grant"} ${
+          grantType === "freemium-domain" ? "Freemium Domain" : grantType
+        }`}
+        message={
+          grantType === "freemium-domain"
+            ? `Are you sure you want to setup the domain "${freemiumDomainForm.subdomain_name}.ic0.app" for canister ${freemiumDomainForm.canister_id}?`
+            : "Are you sure you want to perform this action?"
+        }
         confirmText="Confirm"
         cancelText="Cancel"
         confirmButtonVariant="danger"
         onConfirm={handleConfirm}
         onCancel={handleCancel}
-        isLoading={isLoadingGrantSubscription || isLoadingGrantAddon}
+        isLoading={
+          isLoadingGrantSubscription || isLoadingGrantAddon || isSettingUpDomain
+        }
       />
     </div>
   );
