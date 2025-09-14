@@ -137,11 +137,8 @@ export interface AdminState {
     isLoadingFreemiumDomainRegistrationsPaginated: boolean,
     isLoadingDeleteDomainRegistration: boolean,
     isLoadingSetCanisterToSlot: boolean,
-
+    isLoadingSetCloudflareConfig: boolean,
     freemiumRegistrationByCanister: SerializedFreemiumDomainRegistration[],
-
-
-
 }
 
 
@@ -189,6 +186,7 @@ const initialState: AdminState = {
     domainRegistrationsPaginated: [],
 
 
+
     // Loading state
     isLoadingDomainRegistrations: false,
     isLoadingGlobalTimers: false,
@@ -202,7 +200,7 @@ const initialState: AdminState = {
     isLoadingFreemiumDomainRegistrationsPaginated: false,
     isLoadingDeleteDomainRegistration: false,
     isLoadingSetCanisterToSlot: false,
-
+    isLoadingSetCloudflareConfig: false,
     freemiumRegistrationByCanister: [],
 };
 
@@ -1040,6 +1038,16 @@ export const setCanisterToSlot = createAsyncThunk(
     }
 )
 
+export const setCloudflareConfig = createAsyncThunk(
+    'admin/setCloudflareConfig',
+    async ({ identity, agent, email, api_key, zone_id }: { identity: any, agent: any, email: string, api_key: string, zone_id: string }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_set_clouflare_config(email, api_key, zone_id);
+        return true;
+    }
+)
+
 
 // Slice
 const adminSlice = createSlice({
@@ -1655,6 +1663,24 @@ const adminSlice = createSlice({
             })
             .addCase(setCanisterToSlot.pending, (state) => {
                 state.isLoadingSetCanisterToSlot = true;
+            })
+            .addCase(setCanisterToSlot.fulfilled, (state, action) => {
+                state.isLoadingSetCanisterToSlot = false;
+            })
+            .addCase(setCanisterToSlot.rejected, (state, action) => {
+                state.isLoadingSetCanisterToSlot = false;
+                state.error = action.error.message ? action.error.message : "Failed to set canister id to slot id";
+            })
+
+            .addCase(setCloudflareConfig.pending, (state) => {
+                state.isLoadingSetCanisterToSlot = true;
+            })
+            .addCase(setCloudflareConfig.fulfilled, (state, action) => {
+                state.isLoadingSetCanisterToSlot = false;
+            })
+            .addCase(setCloudflareConfig.rejected, (state, action) => {
+                state.isLoadingSetCanisterToSlot = false;
+                state.error = action.error.message ? action.error.message : "Failed to set cloudflare config.";
             })
 
     },

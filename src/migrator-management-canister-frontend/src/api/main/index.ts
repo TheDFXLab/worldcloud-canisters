@@ -1327,6 +1327,18 @@ class MainApi {
         throw this.handleResponseError(result.err);
     }
 
+    async admin_set_clouflare_config(email: string, api_key: string, zone_id: string) {
+        this.validate();
+        const result = await this.actor?.admin_set_clouflare_config(email, api_key, zone_id);
+        if (!result) {
+            throw new Error("Failed to set cloudflare config");
+        }
+        if ('ok' in result) {
+            return result.ok;
+        }
+        throw this.handleResponseError(result.err);
+    }
+
 }
 
 

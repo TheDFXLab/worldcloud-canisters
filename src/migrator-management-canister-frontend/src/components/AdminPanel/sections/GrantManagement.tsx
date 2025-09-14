@@ -58,12 +58,19 @@ interface CanisterSlotForm {
   slot_id: string;
 }
 
+interface CloudflareConfigForm {
+  email: string;
+  api_key: string;
+  zone_id: string;
+}
+
 const GrantManagement: React.FC = () => {
   const {
     handleGrantSubscription,
     handleGrantAddon,
     handleAdminSetupFreemiumDomain,
     handleSetCanisterToSlot,
+    handleSetCloudflareConfig,
     isLoadingGrantSubscription,
     isLoadingGrantAddon,
   } = useAdminLogic();
@@ -96,15 +103,28 @@ const GrantManagement: React.FC = () => {
     slot_id: "",
   });
 
+  const [cloudflareConfigForm, setCloudflareConfigForm] =
+    useState<CloudflareConfigForm>({
+      email: "",
+      api_key: "",
+      zone_id: "",
+    });
+
   // Loading states
   const [isGrantingSubscription, setIsGrantingSubscription] = useState(false);
   const [isGrantingAddon, setIsGrantingAddon] = useState(false);
   const [isSettingUpDomain, setIsSettingUpDomain] = useState(false);
   const [isSettingCanisterSlot, setIsSettingCanisterSlot] = useState(false);
+  const [isSettingCloudflareConfig, setIsSettingCloudflareConfig] =
+    useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const [grantType, setGrantType] = useState<
-    "subscription" | "addon" | "freemium-domain" | "canister-slot"
+    | "subscription"
+    | "addon"
+    | "freemium-domain"
+    | "canister-slot"
+    | "cloudflare-config"
   >("subscription");
   // Load data on component mount
   useEffect(() => {
@@ -199,6 +219,19 @@ const GrantManagement: React.FC = () => {
   const validateSlotId = (slotId: string): boolean => {
     const num = parseInt(slotId, 10);
     return !isNaN(num) && num >= 0;
+  };
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return email.length > 0 && emailRegex.test(email);
+  };
+
+  const validateApiKey = (apiKey: string): boolean => {
+    return apiKey.length > 0;
+  };
+
+  const validateZoneId = (zoneId: string): boolean => {
+    return zoneId.length > 0;
   };
 
   // Copy to clipboard function
@@ -443,6 +476,92 @@ const GrantManagement: React.FC = () => {
     }
   };
 
+  // Set Cloudflare configuration handler
+  const handleSetCloudflareConfigSubmit = async () => {
+    if (!validateEmail(cloudflareConfigForm.email)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Please enter a valid email address",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    if (!validateApiKey(cloudflareConfigForm.api_key)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Please enter a valid API key",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    if (!validateZoneId(cloudflareConfigForm.zone_id)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Please enter a valid zone ID",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    setIsSettingCloudflareConfig(true);
+    try {
+      const result = await handleSetCloudflareConfig(
+        cloudflareConfigForm.email,
+        cloudflareConfigForm.api_key,
+        cloudflareConfigForm.zone_id
+      );
+
+      if (result.status) {
+        setToasterData({
+          headerContent: "Success",
+          toastStatus: true,
+          toastData: result.message,
+          textColor: "green",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+
+        // Reset form
+        setCloudflareConfigForm({
+          email: "",
+          api_key: "",
+          zone_id: "",
+        });
+      } else {
+        setToasterData({
+          headerContent: "Error",
+          toastStatus: false,
+          toastData: result.message,
+          textColor: "red",
+          timeout: 3000,
+        });
+        setShowToaster(true);
+      }
+    } catch (error: any) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: error.message || "Failed to set Cloudflare configuration",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+    } finally {
+      setIsSettingCloudflareConfig(false);
+    }
+  };
+
   const handleConfirm = async () => {
     if (grantType === "subscription") {
       await handleGrantSubscriptionSubmit();
@@ -452,6 +571,8 @@ const GrantManagement: React.FC = () => {
       await handleFreemiumDomainSubmit();
     } else if (grantType === "canister-slot") {
       await handleSetCanisterSlotSubmit();
+    } else if (grantType === "cloudflare-config") {
+      await handleSetCloudflareConfigSubmit();
     }
   };
 
@@ -626,6 +747,47 @@ const GrantManagement: React.FC = () => {
         headerContent: "Error",
         toastStatus: false,
         toastData: "Please enter a valid slot ID first (0 or greater)",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    setShowModal(true);
+  };
+
+  const handleSetCloudflareConfigClick = () => {
+    setGrantType("cloudflare-config");
+    if (!validateEmail(cloudflareConfigForm.email)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Please enter a valid email address first",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    if (!validateApiKey(cloudflareConfigForm.api_key)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Please enter a valid API key first",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+      return;
+    }
+
+    if (!validateZoneId(cloudflareConfigForm.zone_id)) {
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Please enter a valid zone ID first",
         textColor: "red",
         timeout: 3000,
       });
@@ -1233,6 +1395,138 @@ const GrantManagement: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Set Cloudflare Configuration Section */}
+        <div className="grant-section">
+          <Card className="grant-card">
+            <CardContent>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                <Extension sx={{ mr: 2, color: "var(--color-primary)" }} />
+                <Typography variant="h5" component="h2">
+                  Set Cloudflare Configuration
+                </Typography>
+              </Box>
+
+              <div className="grant-form-fields">
+                <div className="grant-field">
+                  <TextField
+                    fullWidth
+                    label="Email"
+                    type="email"
+                    value={cloudflareConfigForm.email}
+                    onChange={(e) =>
+                      setCloudflareConfigForm((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter Cloudflare account email"
+                    error={
+                      cloudflareConfigForm.email.length > 0 &&
+                      !validateEmail(cloudflareConfigForm.email)
+                    }
+                    helperText={
+                      cloudflareConfigForm.email.length > 0 &&
+                      !validateEmail(cloudflareConfigForm.email)
+                        ? "Invalid email format"
+                        : ""
+                    }
+                  />
+                </div>
+
+                <div className="grant-field">
+                  <TextField
+                    fullWidth
+                    label="API Key"
+                    type="password"
+                    value={cloudflareConfigForm.api_key}
+                    onChange={(e) =>
+                      setCloudflareConfigForm((prev) => ({
+                        ...prev,
+                        api_key: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter Cloudflare API key"
+                    error={
+                      cloudflareConfigForm.api_key.length > 0 &&
+                      !validateApiKey(cloudflareConfigForm.api_key)
+                    }
+                    helperText={
+                      cloudflareConfigForm.api_key.length > 0 &&
+                      !validateApiKey(cloudflareConfigForm.api_key)
+                        ? "API key is required"
+                        : ""
+                    }
+                  />
+                </div>
+
+                <div className="grant-field">
+                  <TextField
+                    fullWidth
+                    label="Zone ID"
+                    value={cloudflareConfigForm.zone_id}
+                    onChange={(e) =>
+                      setCloudflareConfigForm((prev) => ({
+                        ...prev,
+                        zone_id: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter Cloudflare zone ID"
+                    error={
+                      cloudflareConfigForm.zone_id.length > 0 &&
+                      !validateZoneId(cloudflareConfigForm.zone_id)
+                    }
+                    helperText={
+                      cloudflareConfigForm.zone_id.length > 0 &&
+                      !validateZoneId(cloudflareConfigForm.zone_id)
+                        ? "Zone ID is required"
+                        : ""
+                    }
+                    InputProps={{
+                      endAdornment: cloudflareConfigForm.zone_id && (
+                        <InputAdornment position="end">
+                          <Tooltip title="Copy Zone ID">
+                            <IconButton
+                              onClick={() =>
+                                handleCopyToClipboard(
+                                  cloudflareConfigForm.zone_id
+                                )
+                              }
+                              edge="end"
+                            >
+                              <ContentCopy />
+                            </IconButton>
+                          </Tooltip>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </div>
+
+                <div className="grant-field">
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    onClick={handleSetCloudflareConfigClick}
+                    disabled={
+                      !validateEmail(cloudflareConfigForm.email) ||
+                      !validateApiKey(cloudflareConfigForm.api_key) ||
+                      !validateZoneId(cloudflareConfigForm.zone_id) ||
+                      isSettingCloudflareConfig
+                    }
+                    startIcon={<Extension />}
+                    sx={{ py: 1.5 }}
+                  >
+                    {isSettingCloudflareConfig
+                      ? "Setting..."
+                      : "Set Cloudflare Config"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Quick Actions Section */}
@@ -1273,6 +1567,11 @@ const GrantManagement: React.FC = () => {
                     setCanisterSlotForm({
                       canister_id: "",
                       slot_id: "",
+                    });
+                    setCloudflareConfigForm({
+                      email: "",
+                      api_key: "",
+                      zone_id: "",
                     });
                   }}
                 >
@@ -1344,6 +1643,23 @@ const GrantManagement: React.FC = () => {
                 <Button
                   fullWidth
                   variant="outlined"
+                  startIcon={<Extension />}
+                  onClick={() => {
+                    setCloudflareConfigForm((prev) => ({
+                      ...prev,
+                      email: "admin@example.com",
+                      api_key: "test-api-key-123",
+                      zone_id: "test-zone-id-456",
+                    }));
+                  }}
+                >
+                  Fill Test Cloudflare
+                </Button>
+              </div>
+              <div className="quick-action-item">
+                <Button
+                  fullWidth
+                  variant="outlined"
                   startIcon={<Warning />}
                   color="warning"
                   onClick={() => {
@@ -1372,12 +1688,16 @@ const GrantManagement: React.FC = () => {
             ? "Setup"
             : grantType === "canister-slot"
             ? "Set"
+            : grantType === "cloudflare-config"
+            ? "Set"
             : "Grant"
         } ${
           grantType === "freemium-domain"
             ? "Freemium Domain"
             : grantType === "canister-slot"
             ? "Canister to Slot"
+            : grantType === "cloudflare-config"
+            ? "Cloudflare Configuration"
             : grantType
         }`}
         message={
@@ -1385,6 +1705,8 @@ const GrantManagement: React.FC = () => {
             ? `Are you sure you want to setup the domain "${freemiumDomainForm.subdomain_name}.ic0.app" for canister ${freemiumDomainForm.canister_id}?`
             : grantType === "canister-slot"
             ? `Are you sure you want to set canister ${canisterSlotForm.canister_id} to slot ${canisterSlotForm.slot_id}?`
+            : grantType === "cloudflare-config"
+            ? `Are you sure you want to set Cloudflare configuration for email ${cloudflareConfigForm.email}?`
             : "Are you sure you want to perform this action?"
         }
         confirmText="Confirm"
@@ -1396,7 +1718,8 @@ const GrantManagement: React.FC = () => {
           isLoadingGrantSubscription ||
           isLoadingGrantAddon ||
           isSettingUpDomain ||
-          isSettingCanisterSlot
+          isSettingCanisterSlot ||
+          isSettingCloudflareConfig
         }
       />
     </div>

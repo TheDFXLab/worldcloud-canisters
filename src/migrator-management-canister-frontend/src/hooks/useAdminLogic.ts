@@ -47,6 +47,7 @@ import {
     fetchFreemiumRegistrationByCanister,
     deleteDomainRegistration,
     setCanisterToSlot,
+    setCloudflareConfig,
 } from '../state/slices/adminSlice';
 import { RootState, AppDispatch } from '../state/store';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
@@ -115,6 +116,7 @@ export const useAdminLogic = () => {
         isLoadingFreemiumDomainRegistrationsPaginated,
         isLoadingDeleteDomainRegistration,
         isLoadingSetCanisterToSlot,
+        isLoadingSetCloudflareConfig,
 
         error,
         successMessage,
@@ -629,6 +631,23 @@ export const useAdminLogic = () => {
         }
     }, [dispatch, identity, agent]);
 
+    const handleSetCloudflareConfig = useCallback(async (email: string, api_key: string, zone_id: string) => {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(setCloudflareConfig({ identity, agent, email, api_key, zone_id })).unwrap();
+            return { status: true, message: 'Set cloudflare configuration.' };
+        } catch (error: any) {
+            return {
+                status: false,
+                message: error.message || 'Failed to set cloudflare configuration.',
+            }
+        }
+    }, [dispatch, identity, agent]);
+
+
+
 
     // Fetch freemium domain registrations paginated
     const refreshFreemiumDomainRegistrationsPaginated = useCallback(async (payload: PaginationPayload) => {
@@ -772,6 +791,7 @@ export const useAdminLogic = () => {
         refreshFreemiumRegistrationByCanister,
         handleDeleteDomainRegistration,
         handleSetCanisterToSlot,
+        handleSetCloudflareConfig,
         freemiumRegistrationByCanister,
         domainRegistrationsPaginated,
         freemiumDomainRegistrationsPaginated,

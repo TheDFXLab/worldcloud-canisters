@@ -58,7 +58,11 @@ module {
         case (?val) val;
       };
     };
-
+    public func set_config(email : Text, api_key : Text, new_zone_id : Text) : () {
+      CLOUDFLARE_EMAIL := ?email;
+      CLOUDFLARE_API_KEY := ?api_key;
+      CLOUDFLARE_ZONE_ID := ?new_zone_id;
+    };
     public func set_cloudflare_credentials(email : Text, api_key : Text) : Types.Response<()> {
       CLOUDFLARE_EMAIL := ?email;
       CLOUDFLARE_API_KEY := ?api_key;
