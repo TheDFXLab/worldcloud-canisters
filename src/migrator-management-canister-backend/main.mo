@@ -2642,7 +2642,20 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return await domain.list_dns_records(zone_id, transform);
   };
 
+  public shared (msg) func admin_set_clouflare_config(email : Text, a : Text, zone_id : Text) : async Types.Response<()> {
+    if (domain.initialized != true or subscription_manager.initialized != true) initialize_class_references();
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+
+    CLOUDFLARE_EMAIL := ?email;
+    CLOUDFLARE_API_KEY := ?a;
+    CLOUDFLARE_ZONE_ID := ?zone_id;
+    return #ok(cloudflare.set_config(email, a, zone_id));
+  };
+
   public shared (msg) func set_cloudflare_credentials(email : Text, api_key : Text) : async Types.Response<()> {
+    if (domain.initialized != true or subscription_manager.initialized != true) initialize_class_references();
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
@@ -2653,6 +2666,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   };
 
   public shared (msg) func set_cloudflare_zone_id(zone_id : Text) : async Types.Response<()> {
+    if (domain.initialized != true or subscription_manager.initialized != true) initialize_class_references();
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
@@ -2661,6 +2675,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
   };
 
   public query (msg) func get_cloudflare_credentials() : async Types.Response<{ email : ?Text; api_key : ?Text }> {
+    if (domain.initialized != true or subscription_manager.initialized != true) initialize_class_references();
     if (not access_control.is_authorized(msg.caller)) {
       return #err(Errors.Unauthorized());
     };
