@@ -200,7 +200,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
         // Otherwise, use handle deploy function directly
         await handleDeploy(
           BigInt(result.newProject.id),
-          "freemium" in result.newProject.plan
+          result.newProject.plan == "freemium"
         );
       }
     } catch (error: any) {

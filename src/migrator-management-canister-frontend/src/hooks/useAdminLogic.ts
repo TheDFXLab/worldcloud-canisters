@@ -41,12 +41,18 @@ import {
     setupCustomDomain,
     adminGrantSubscription,
     adminGrantAddon,
+    adminSetupFreemiumDomain,
+    fetchFreemiumDomainRegistrationsPaginated,
+    fetchDomainRegistrationsPaginated,
+    fetchFreemiumRegistrationByCanister,
+    deleteDomainRegistration,
 } from '../state/slices/adminSlice';
 import { RootState, AppDispatch } from '../state/store';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
 import { useHttpAgent } from '../context/HttpAgentContext/HttpAgentContext';
-import { PaginationPayload } from '../serialization/admin';
+import { PaginationPayload, SerializedProjectPlan } from '../serialization/admin';
 import { StaticFile } from '../utility/compression';
+import { Principal } from '@dfinity/principal';
 
 // Add typed dispatch hook
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -100,6 +106,13 @@ export const useAdminLogic = () => {
 
         isLoadingGrantSubscription,
         isLoadingGrantAddon,
+        freemiumRegistrationByCanister,
+        isLoadingFreemiumRegistrationByCanister,
+        domainRegistrationsPaginated,
+        freemiumDomainRegistrationsPaginated,
+        isLoadingDomainRegistrationsPaginated,
+        isLoadingFreemiumDomainRegistrationsPaginated,
+        isLoadingDeleteDomainRegistration,
 
         error,
         successMessage,
@@ -568,6 +581,62 @@ export const useAdminLogic = () => {
         }
     }, [dispatch, identity, agent]);
 
+    const handleAdminSetupFreemiumDomain = useCallback(async (canister_id: Principal, subdomain_name: string) => {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(adminSetupFreemiumDomain({ identity, agent, canister_id, subdomain_name })).unwrap();
+            return { status: true, message: 'Freemium domain setup successfully' };
+        } catch (error: any) {
+            return {
+                status: false,
+                message: error.message || 'Failed to setup freemium domain',
+            }
+        }
+    }, [dispatch, identity, agent]);
+
+    const handleDeleteDomainRegistration = useCallback(async (registration_id: number, type: SerializedProjectPlan) => {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(deleteDomainRegistration({ identity, agent, registration_id, type })).unwrap();
+            return { status: true, message: 'Deleted domain registration' };
+        } catch (error: any) {
+            return {
+                status: false,
+                message: error.message || 'Failed to delete domain registration',
+            }
+        }
+    }, [dispatch, identity, agent]);
+
+
+
+
+    // Fetch freemium domain registrations paginated
+    const refreshFreemiumDomainRegistrationsPaginated = useCallback(async (payload: PaginationPayload) => {
+        if (identity && agent) {
+            await dispatch(fetchFreemiumDomainRegistrationsPaginated({ identity, agent, payload })).unwrap();
+        }
+    }, [dispatch, identity, agent]);
+
+    // Fetch domain registrations paginated
+    const refreshDomainRegistrationsPaginated = useCallback(async (payload: PaginationPayload) => {
+        if (identity && agent) {
+            await dispatch(fetchDomainRegistrationsPaginated({ identity, agent, payload })).unwrap();
+        }
+    }, [dispatch, identity, agent]);
+
+    // Fetch freemium registration by canister
+    const refreshFreemiumRegistrationByCanister = useCallback(async (canisterId: Principal) => {
+        if (identity && agent) {
+            await dispatch(fetchFreemiumRegistrationByCanister({ identity, agent, canisterId })).unwrap();
+        }
+    }, [dispatch, identity, agent]);
+
+
+
     // Fetch initial data on mount
     useEffect(() => {
         if (identity && agent) {
@@ -624,6 +693,11 @@ export const useAdminLogic = () => {
         isLoadingCanisterDomainRegistrations,
         isLoadingGrantSubscription,
         isLoadingGrantAddon,
+        isLoadingDeleteDomainRegistration,
+        isLoadingFreemiumRegistrationByCanister,
+        isLoadingDomainRegistrationsPaginated,
+        isLoadingFreemiumDomainRegistrationsPaginated,
+
 
         // Messages
         error,
@@ -674,5 +748,14 @@ export const useAdminLogic = () => {
         refreshGlobalTimers,
         handleGrantSubscription,
         handleGrantAddon,
+        handleAdminSetupFreemiumDomain,
+        refreshFreemiumDomainRegistrationsPaginated,
+        refreshDomainRegistrationsPaginated,
+        refreshFreemiumRegistrationByCanister,
+        handleDeleteDomainRegistration,
+        freemiumRegistrationByCanister,
+        domainRegistrationsPaginated,
+        freemiumDomainRegistrationsPaginated,
+
     };
 }; 

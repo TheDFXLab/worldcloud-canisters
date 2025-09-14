@@ -2,6 +2,7 @@ import { Principal } from "@dfinity/principal";
 import { CanisterDeployment, Project, UsageLogExtended } from "../../../declarations/migrator-management-canister-backend/migrator-management-canister-backend.did";
 import { CanisterDeploymentStatus } from "./principal";
 import { canister_settings, canister_status_result } from "@dfinity/agent/lib/cjs/canisters/management_service";
+import { SerializedProjectPlan } from "../serialization/admin";
 export interface SerializedCanisterStatus {
     status: string;
     cycles: number;
@@ -33,7 +34,9 @@ export interface SerializedProject {
     name: string;
     description: string;
     tags: string[];
-    plan: Project["plan"];
+    // plan: Project["plan"];
+    plan: SerializedProjectPlan;
+    url: string | null;
     date_created: number;
     date_updated: number;
 }
@@ -44,7 +47,8 @@ export interface DeserializedProject {
     name: string;
     description: string;
     tags: string[];
-    plan: Project["plan"];
+    plan: SerializedProjectPlan;
+    url: string | null;
     date_created: number;
     date_updated: number;
 }

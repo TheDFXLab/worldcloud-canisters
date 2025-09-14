@@ -16,7 +16,7 @@ import Access "access";
 
 module {
 
-  public class ShareableCanisterManager(slots_init : Types.SlotsMap, user_to_slot_init : Types.UserToSlotMap, used_slots_init : Types.UsedSlotsMap, usage_logs_init : Types.UsageLogsMap, next_slot_id_init : Nat, quotas_map_init : Types.QuotasMap) {
+  public class ShareableCanisterManager(slots_init : Types.SlotsMap, canister_to_slot_init : Types.CanisterToSlot, user_to_slot_init : Types.UserToSlotMap, used_slots_init : Types.UsedSlotsMap, usage_logs_init : Types.UsageLogsMap, next_slot_id_init : Nat, quotas_map_init : Types.QuotasMap) {
     // private let DEFAULT_DURATION_MS = 60 * 1_000; // 1 mins
     // private let DEFAULT_DURATION_MS = 1200 * 1_000; // 20 mins
     // private let DEFAULT_DURATION_MS = 14_400 * 1_000; // 4 hrs
@@ -28,6 +28,7 @@ module {
     public var MIN_CYCLES_INIT = 1_000_000_000_000;
 
     public var slots : Types.SlotsMap = slots_init;
+    public var canister_to_slot : Types.CanisterToSlot = canister_to_slot_init;
     public var user_to_slot : Types.UserToSlotMap = user_to_slot_init;
     public var used_slots : Types.UsedSlotsMap = used_slots_init;
     public var usage_logs : Types.UsageLogsMap = usage_logs_init;
@@ -52,6 +53,7 @@ module {
           duration = DEFAULT_DURATION_MS;
           start_cycles = slot.start_cycles;
           status = #available;
+          url = null;
         };
 
         // Delete mapped user to slot
@@ -108,6 +110,19 @@ module {
       Iter.toArray(Map.entries(used_slots));
     };
 
+    public func get_slot_by_canister(canister_id : Principal) : Types.Response<Types.ShareableCanister> {
+      let slot_id : Nat = switch (Map.get(canister_to_slot, Principal.compare, canister_id)) {
+        case (null) return #err(Errors.NotExists("Slot for canister " # Principal.toText(canister_id)));
+        case (?val) val;
+      };
+
+      let slot : Types.ShareableCanister = switch (get_canister_by_slot(slot_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      return #ok(slot);
+    };
     public func get_canister_by_slot(slot_id : Nat) : Types.Response<Types.ShareableCanister> {
       let slot : Types.ShareableCanister = switch (Map.get(slots, Nat.compare, slot_id)) {
         case (null) {
@@ -236,6 +251,19 @@ module {
     public func is_active_session(user : Principal) : Types.Response<Bool> {
       let usage_log : Types.UsageLog = get_usage_log(user);
       return #ok(usage_log.is_active);
+    };
+
+    public func set_canister_url(slot_id : Nat, url : Text) : Types.Response<Types.ShareableCanister> {
+      let slot : Types.ShareableCanister = switch (get_canister_by_slot(slot_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      let updated_slot : Types.ShareableCanister = {
+        slot with url = ?url;
+      };
+
+      return update_slot(slot_id, updated_slot);
     };
 
     private func _create_usage_log(user : Principal) : Types.UsageLog {
@@ -431,6 +459,7 @@ module {
         duration = slot.duration;
         start_cycles = slot.start_cycles; // set cycle balance at start of session
         status = #occupied;
+        url = slot.url;
       };
 
       // Update slot and set user session
@@ -460,6 +489,7 @@ module {
         duration = slot.duration;
         start_cycles = end_cycles; // get new cycles balance
         status = #available;
+        url = slot.url;
       };
 
       let quota : Types.Quota = get_quota(slot.user);
@@ -500,12 +530,19 @@ module {
         duration = DEFAULT_DURATION_MS;
         start_cycles = start_cycles;
         status = #available;
+        url = null;
       };
 
       Map.add(slots, Nat.compare, next_slot_id, new_slot_canister);
+      create_canister_to_slot(canister_id, next_slot_id); // Link canister to slot id
+
       next_slot_id += 1;
 
       return #ok(next_slot_id - 1);
+    };
+
+    private func create_canister_to_slot(canister_id : Principal, slot_id : Nat) : () {
+      Map.add(canister_to_slot, Principal.compare, canister_id, slot_id);
     };
 
     public func set_all_slot_duration(new_duration_ms : Nat) : Types.Response<()> {
@@ -522,6 +559,7 @@ module {
           duration = new_duration_ms;
           start_cycles = slot.start_cycles;
           status = slot.status;
+          url = slot.url;
         };
         let response = update_slot(slot_id, updated_slot);
         switch (response) {
@@ -535,6 +573,7 @@ module {
 
     // Method for assignign new canister to a slot
     public func update_slot(slot_id : Nat, updated_slot : Types.ShareableCanister) : Types.Response<Types.ShareableCanister> {
+      Debug.print("Update slot: " # Nat.toText(slot_id) # "updatd slot: " #debug_show (updated_slot));
       // Ensure updating of existing slots only
       if (slot_id >= next_slot_id) {
         return #err(Errors.IndexOutOfBounds());

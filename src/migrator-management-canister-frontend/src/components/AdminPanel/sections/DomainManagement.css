@@ -1,0 +1,289 @@
+.domain-management {
+  padding: 0;
+  background: var(--background);
+  color: var(--text-primary);
+}
+
+/* Tab Styling */
+.domain-management .MuiTabs-root {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.domain-management .MuiTab-root {
+  color: var(--text-secondary);
+  text-transform: none;
+  font-weight: 500;
+  min-height: 48px;
+}
+
+.domain-management .MuiTab-root.Mui-selected {
+  color: var(--color-primary);
+}
+
+.domain-management .MuiTabs-indicator {
+  background-color: var(--color-primary);
+}
+
+/* Card Styling */
+.domain-management .MuiCard-root {
+  background-color: var(--background);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.domain-management .MuiCard-root:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Table Styling */
+.domain-management .MuiTableContainer-root {
+  background-color: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.domain-management .MuiTable-root {
+  background-color: var(--background);
+}
+
+.domain-management .MuiTableHead-root {
+  background-color: var(--background-hover);
+}
+
+.domain-management .MuiTableHead-root .MuiTableCell-root {
+  color: var(--text-primary);
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-color);
+  padding: 16px;
+}
+
+.domain-management .MuiTableBody-root .MuiTableRow-root {
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s ease;
+}
+
+.domain-management .MuiTableBody-root .MuiTableRow-root:hover {
+  background-color: var(--background-hover);
+}
+
+.domain-management .MuiTableBody-root .MuiTableCell-root {
+  color: var(--text-primary);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Chip Styling */
+.domain-management .MuiChip-root {
+  font-size: 0.75rem;
+  height: 24px;
+}
+
+.domain-management .MuiChip-root.MuiChip-colorSuccess {
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.domain-management .MuiChip-root.MuiChip-colorError {
+  background-color: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.domain-management .MuiChip-root.MuiChip-colorWarning {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.domain-management .MuiChip-root.MuiChip-colorPrimary {
+  background-color: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+
+/* Button Styling */
+.domain-management .MuiButton-root {
+  text-transform: none;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+.domain-management .MuiButton-outlined {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.domain-management .MuiButton-outlined:hover {
+  background-color: var(--background-hover);
+  border-color: var(--color-primary);
+}
+
+/* TextField Styling */
+.domain-management .MuiTextField-root .MuiOutlinedInput-root {
+  background-color: var(--background);
+  color: var(--text-primary);
+}
+
+.domain-management .MuiTextField-root .MuiInputLabel-root {
+  color: var(--text-secondary);
+}
+
+.domain-management
+  .MuiTextField-root
+  .MuiOutlinedInput-root
+  .MuiOutlinedInput-notchedOutline {
+  border-color: var(--border-color);
+}
+
+.domain-management
+  .MuiTextField-root
+  .MuiOutlinedInput-root:hover
+  .MuiOutlinedInput-notchedOutline {
+  border-color: var(--color-primary);
+}
+
+.domain-management
+  .MuiTextField-root
+  .MuiOutlinedInput-root.Mui-focused
+  .MuiOutlinedInput-notchedOutline {
+  border-color: var(--color-primary);
+  border-width: 2px;
+}
+
+/* IconButton Styling */
+.domain-management .MuiIconButton-root {
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.domain-management .MuiIconButton-root:hover {
+  color: var(--color-primary);
+  background-color: var(--background-hover);
+}
+
+/* Pagination Styling */
+.domain-management .MuiPagination-root {
+  color: var(--text-primary);
+}
+
+.domain-management .MuiPaginationItem-root {
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.domain-management .MuiPaginationItem-root:hover {
+  background-color: var(--background-hover);
+}
+
+.domain-management .MuiPaginationItem-root.Mui-selected {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.domain-management .MuiPaginationItem-root.Mui-selected:hover {
+  background-color: var(--color-primary-dark);
+}
+
+/* Alert Styling */
+.domain-management .MuiAlert-root {
+  background-color: var(--background);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.domain-management .MuiAlert-standardInfo {
+  background-color: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+/* Loading Spinner */
+.domain-management .MuiCircularProgress-root {
+  color: var(--color-primary);
+}
+
+/* Typography Styling */
+.domain-management .MuiTypography-h4 {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.domain-management .MuiTypography-h6 {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.domain-management .MuiTypography-body1 {
+  color: var(--text-secondary);
+}
+
+.domain-management .MuiTypography-body2 {
+  color: var(--text-primary);
+}
+
+/* Monospace text for request IDs */
+.domain-management .MuiTypography-root[style*="monospace"] {
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+  font-size: 0.875rem;
+  background-color: var(--background-hover);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .domain-management .MuiTableContainer-root {
+    overflow-x: auto;
+  }
+
+  .domain-management .MuiTable-root {
+    min-width: 600px;
+  }
+
+  .domain-management .MuiCardContent-root {
+    padding: 16px;
+  }
+
+  .domain-management .MuiTabs-root {
+    flex-direction: column;
+  }
+
+  .domain-management .MuiTab-root {
+    min-width: auto;
+    padding: 8px 16px;
+  }
+}
+
+/* Tooltip Styling */
+.domain-management .MuiTooltip-tooltip {
+  background-color: var(--background-dark);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+}
+
+/* Focus States */
+.domain-management .MuiButton-root:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.domain-management .MuiIconButton-root:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Status-specific styling */
+.domain-management .status-complete {
+  color: var(--color-success);
+}
+
+.domain-management .status-pending {
+  color: var(--color-warning);
+}
+
+.domain-management .status-failed {
+  color: var(--color-error);
+}
+
+.domain-management .status-inactive {
+  color: var(--text-tertiary);
+}

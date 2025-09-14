@@ -154,6 +154,7 @@ module {
         description = payload.project_description;
         tags = payload.tags;
         plan = payload.plan;
+        url = null;
         date_created = Utility.get_time_now(#milliseconds);
         date_updated = Utility.get_time_now(#milliseconds);
       };
@@ -167,6 +168,25 @@ module {
       index_counter.increment_index(#project_id);
 
       return next_project_id;
+    };
+
+    public func set_project_url(project_id : Types.ProjectId, url : Text) : Types.Response<Types.Project> {
+      let project : Types.Project = switch (get_project_by_id(project_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      // Prevent freemium projects from updating project url
+      if (project.plan == #freemium) return #err(Errors.PremiumFeature());
+
+      // Update url
+      let updated_project : Types.Project = {
+        project with url = ?url;
+      };
+
+      Map.add(projects, Nat.compare, project_id, updated_project);
+
+      return #ok(project);
     };
 
     // Function to get current next_project_id for syncing with stable variable

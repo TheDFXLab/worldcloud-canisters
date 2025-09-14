@@ -76,4 +76,6 @@ module ErrorType {
   public func NotAttachedResourceId() : Text = "The add-on has no attached resource.";
   public func DomainRecordsExist() : Text = "The domain records already exist for this subdomain name. Please delete the resource and recreate it with another name.";
   public func EmptyPayloadArray(action : Text) : Text = action # " action cannot have an empty payload list.";
+  public func NotExists(item : Text) : Text = item # " does not exist.";
+  public func NotMatch(item : Text) : Text = item # " does not match with existing records.";
 };

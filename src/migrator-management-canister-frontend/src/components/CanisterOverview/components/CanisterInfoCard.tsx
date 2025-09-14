@@ -65,12 +65,12 @@ export const CanisterInfoCard: React.FC<CanisterInfoCardProps> = ({
             <div className="info-value">
               <Chip
                 label={
-                  currentProject?.plan && "freemium" in currentProject.plan
+                  currentProject?.plan && currentProject.plan === "freemium"
                     ? "Freemium"
                     : "Paid"
                 }
                 color={
-                  currentProject?.plan && "freemium" in currentProject.plan
+                  currentProject?.plan && currentProject.plan === "freemium"
                     ? "success"
                     : "primary"
                 }
