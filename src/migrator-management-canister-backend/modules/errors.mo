@@ -78,4 +78,5 @@ module ErrorType {
   public func EmptyPayloadArray(action : Text) : Text = action # " action cannot have an empty payload list.";
   public func NotExists(item : Text) : Text = item # " does not exist.";
   public func NotMatch(item : Text) : Text = item # " does not match with existing records.";
+  public func NotFoundRecord() : Text = "Failed to find dns record(s)";
 };

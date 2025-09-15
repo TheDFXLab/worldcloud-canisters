@@ -430,6 +430,8 @@ module {
 
         Debug.print("got records:" # debug_show (parsed_typed));
 
+        if (parsed_typed.size() == 0) return #err(Errors.NotFoundRecord());
+
         let updated_records = switch (opt.record_type) {
           case ("txt") {
             {
