@@ -150,6 +150,23 @@ The following outlines the main achieved and pending milestones:
 [ ] Encrypted File Storage
 [ ] Unity Application Hosting
 
+### License
+
+---
+
+No license yet.
+
+### Acknowledgements
+
+- I would like to thank the Dfinity Foundation for supporting this project with a Grant
+- Big shout out to Dfinity engineering team for all the hard work, sleepless hours, and **innovation**
+
+### References
+
+---
+
+- [Internet Computer](https://internetcomputer.org/)
+
 ## Screenshots
 
 ---
