@@ -263,7 +263,9 @@ module {
         slot with url = ?url;
       };
 
-      return update_slot(slot_id, updated_slot);
+      Map.add(slots, Nat.compare, slot_id, updated_slot);
+
+      return #ok(updated_slot);
     };
 
     private func _create_usage_log(user : Principal) : Types.UsageLog {
@@ -585,9 +587,9 @@ module {
         case (?val) { val };
       };
 
-      if (slot.status == #occupied) {
-        return #err(Errors.SlotUnavailable());
-      };
+      // if (slot.status == #occupied) {
+      //   return #err(Errors.SlotUnavailable());
+      // };
 
       Map.add(slots, Nat.compare, slot_id, updated_slot);
       return #ok(updated_slot);
