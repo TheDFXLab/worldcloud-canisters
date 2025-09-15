@@ -123,6 +123,7 @@ export interface SerializedShareableCanister {
     duration: number;
     start_cycles: number;
     status: string;
+    url: string | null;
 }
 
 export interface DeserializedShareableCanister {
@@ -136,6 +137,7 @@ export interface DeserializedShareableCanister {
     duration: bigint;
     start_cycles: bigint;
     status: any;
+    url: string | any;
 }
 
 export type SerializedRole = "super_admin" | "admin";
@@ -417,6 +419,7 @@ export const serializeShareableCanister = (canister: any): SerializedShareableCa
         duration: Number(canister.duration),
         start_cycles: Number(canister.start_cycles),
         status: canister.status,
+        url: canister.url
     };
 };
 

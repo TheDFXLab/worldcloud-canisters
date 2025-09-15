@@ -59,7 +59,7 @@ const convertUsageData = (usage: any): FreemiumUsageData => {
         tier_id: usage.tier_id ? Number(usage.tier_id) : undefined,
         canisters: usage.canisters ? usage.canisters.map((p: Principal) => p.toString()) : undefined,
         reset_time: usage.reset_time,
-        url: usage.url ? usage.url[0] && usage.url.length > 0 ? usage.url[0] : null : null,
+        url: usage.url
 
     };
 };
