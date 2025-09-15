@@ -10,7 +10,7 @@ tools they are familiar with.
 
 Screenshots:
 
-![New Project](./documentation/assets/page_new_project.png)
+![New Project](./documentation/assets/page_new_project.png =250x)
 ![My Projects](./documentation/assets/page_projects.png)
 ![Code Deployment](./documentation/assets/page_deployment.png)
 ![Project](./documentation/assets/page_project.png)
