@@ -7,6 +7,9 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: '../../.env' });
 
+// const keepConsole = process.env.VITE_KEEP_CONSOLE === 'true' || process.env.KEEP_CONSOLE === 'true';
+const keepConsole = true
+
 export default defineConfig({
   build: {
     emptyOutDir: true,
@@ -19,8 +22,8 @@ export default defineConfig({
     },
     terserOptions: {
       compress: {
-        drop_console: true,
-        drop_debugger: true,
+        drop_console: !keepConsole,
+        drop_debugger: !keepConsole,
       },
       mangle: {
         toplevel: true,
@@ -39,7 +42,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    allowedHosts: ["a2756d34b554.ngrok.app"],
+    allowedHosts: ["b561db5a449e.ngrok.app"],
     proxy: {
       "/api": {
         target: "http://0.0.0.0:8000",

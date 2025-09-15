@@ -2136,9 +2136,10 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
         return #ok(shareable_canister_manager.MIN_CYCLES_INIT);
       };
       case (false) {
-        let min_deposit = subscription_manager.tiers_list[tier_id].min_deposit;
-        let cyclesForCanister = await _convert_e8s_to_cycles(min_deposit.e8s, subscription_manager.tiers_list[tier_id].slots);
-        return cyclesForCanister;
+        // let min_deposit = subscription_manager.tiers_list[tier_id].min_deposit;
+        // let cyclesForCanister = await _convert_e8s_to_cycles(min_deposit.e8s, subscription_manager.tiers_list[tier_id].slots);
+        // return cyclesForCanister;
+        return #ok(shareable_canister_manager.MIN_CYCLES_INIT);
       };
     };
   };
@@ -2781,6 +2782,24 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     let _is_authorized = switch (_validate_project_access(msg.caller, project_id)) {
       case (#err(_msg)) { return #err(_msg) };
       case (#ok(authorized)) { authorized };
+    };
+
+    // Setup ic-domains file
+    let ic_domains_file : Types.StaticFile = {
+      path = "/.well-known/ic-domains";
+      content = Text.encodeUtf8(subdomain_name # "." # "worldcloud.app");
+      content_type = "application/octet-stream";
+      content_encoding = null;
+      is_chunked = false;
+      chunk_id = 0;
+      batch_id = 0;
+      is_last_chunk = true;
+    };
+
+    // Create the `ic-domains` file in `.well-known` directory
+    let create_ic_domains = switch (await domain.edit_ic_domains(canister_id, ic_domains_file)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
     };
 
     let result : Types.SetupDomainResult = switch (await domain.setup_custom_domain_by_project(project_id, subdomain_name, add_on_id, transform)) {
