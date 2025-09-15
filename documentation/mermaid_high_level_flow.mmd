@@ -1,0 +1,34 @@
+flowchart LR
+    %% Publishing New Website Flow
+    A[Signup] --> B[Connect GitHub Account]
+    B --> C[Select Branch]
+    C --> D[Build and Deploy to Canister]
+    
+    %% Linking Custom Domain Flow
+    D --> E[Publish Site]
+    E --> F[Choose Domain Name and Submit]
+    F --> G[Wait for DNS Propagation]
+    G --> H[Visit Link at name.worldcloud.app]
+    
+    %% Freemium Project Flow
+    I[Signup] --> J[Create Project with Freemium Plan]
+    J --> K[Connect GitHub]
+    K --> L[Choose Repo]
+    L --> M[Publish to Free Canister for 4hrs]
+    
+    %% Technical Working Flow
+    N[Deploy Code Start] --> O[Trigger GitHub Actions Workflow Run]
+    O --> P[Pull Artifacts]
+    P --> Q[Upload to Project's Canister]
+    Q --> R[Serve Static Site]
+    
+    %% Styling
+    classDef userFlow fill:#e1f5fe
+    classDef domainFlow fill:#f3e5f5
+    classDef freemiumFlow fill:#e8f5e8
+    classDef technicalFlow fill:#fff3e0
+    
+    class A,B,C,D userFlow
+    class E,F,G,H domainFlow
+    class I,J,K,L,M freemiumFlow
+    class N,O,P,Q,R technicalFlow
