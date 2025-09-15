@@ -2784,6 +2784,17 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       case (#ok(authorized)) { authorized };
     };
 
+    let project : Types.Project = switch (project_manager.get_project_by_id(project_id)) {
+      case (#err(err)) return #err(err);
+      case (#ok(val)) val;
+    };
+
+    if (project.plan == #freemium) return #err(Errors.PremiumFeature());
+    let canister_id : Principal = switch (project.canister_id) {
+      case (null) return #err(Errors.PremiumFeature());
+      case (?val) val;
+    };
+
     // Setup ic-domains file
     let ic_domains_file : Types.StaticFile = {
       path = "/.well-known/ic-domains";
@@ -2805,17 +2816,6 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     let result : Types.SetupDomainResult = switch (await domain.setup_custom_domain_by_project(project_id, subdomain_name, add_on_id, transform)) {
       case (#err(err)) return #err(err);
       case (#ok(val)) val;
-    };
-
-    let project : Types.Project = switch (project_manager.get_project_by_id(project_id)) {
-      case (#err(err)) return #err(err);
-      case (#ok(val)) val;
-    };
-
-    if (project.plan == #freemium) return #err(Errors.PremiumFeature());
-    let canister_id : Principal = switch (project.canister_id) {
-      case (null) return #err(Errors.PremiumFeature());
-      case (?val) val;
     };
 
     let resource_id : Nat = switch (result.addon.attached_resource_id) {
