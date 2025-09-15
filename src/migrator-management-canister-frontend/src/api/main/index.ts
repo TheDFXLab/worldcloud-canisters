@@ -1255,7 +1255,6 @@ class MainApi {
 
     async admin_setup_freemium_domain(canister_id: Principal, subdomain_name: string) {
         this.validate();
-        debugger;
         const result = await this.actor?.admin_setup_freemium_subdomain(canister_id, subdomain_name);
         if (!result) {
             throw new Error("Failed to setup freemium canister subdomain");
@@ -1332,6 +1331,18 @@ class MainApi {
         const result = await this.actor?.admin_set_clouflare_config(email, api_key, zone_id);
         if (!result) {
             throw new Error("Failed to set cloudflare config");
+        }
+        if ('ok' in result) {
+            return result.ok;
+        }
+        throw this.handleResponseError(result.err);
+    }
+
+    async admin_reset_quotas() {
+        this.validate();
+        const result = await this.actor?.admin_reset_quotas();
+        if (!result) {
+            throw new Error("Failed to reset quotas");
         }
         if ('ok' in result) {
             return result.ok;

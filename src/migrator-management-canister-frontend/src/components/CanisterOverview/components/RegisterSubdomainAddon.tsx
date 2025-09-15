@@ -306,7 +306,6 @@ export const RegisterSubdomainAddon: React.FC<RegisterSubdomainAddonProps> = ({
         setCurrentDomain(null);
         setDomainStatus(null);
         setSubdomainName("");
-        debugger;
 
         // Refresh the parsed addons data first
         console.log("Refreshing parsed addons after deletion...");

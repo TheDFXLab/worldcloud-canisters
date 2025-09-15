@@ -359,6 +359,16 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return #ok(access_control.is_authorized(msg.caller));
   };
 
+  public shared (msg) func admin_reset_quotas() : async Types.Response<()> {
+    if (domain.initialized != true) initialize_class_references();
+
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    shareable_canister_manager.reset_quotas();
+    return #ok();
+  };
+
   public shared (msg) func admin_grant_subscription(user_principal : Principal, subscription_tier_id : Nat) : async Types.Response<Types.Subscription> {
     if (domain.initialized != true) initialize_class_references();
 
@@ -703,13 +713,21 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     };
   };
 
+  // public shared (msg) func admin_clear_project_session(project_id : ?Nat) : Types.Response<Bool> {
+  //   if (domain.initialized != true or subscription_manager.initialized != true) initialize_class_references();
+  //   if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
+  //   return clear_project_session(project_id);
+  // };
+
   public shared (msg) func admin_set_all_slot_duration(new_duration_ms : Nat) : async Types.Response<()> {
+    if (domain.initialized != true or subscription_manager.initialized != true) initialize_class_references();
     if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
     return shareable_canister_manager.set_all_slot_duration(new_duration_ms);
   };
 
   /// TAG: Admin
   public shared (msg) func admin_delete_usage_logs() : async () {
+    if (domain.initialized != true or subscription_manager.initialized != true) initialize_class_references();
     if (not access_control.is_authorized(msg.caller)) return;
     shareable_canister_manager.admin_clear_usage_logs();
     // stable_usage_logs := shareable_canister_manager.usage_logs; // Update stable storage
@@ -718,6 +736,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   /// TAG: Admin
   public shared (msg) func update_slot(slot_id : Nat, updated_slot : Types.ShareableCanister) : async Types.Response<Types.ShareableCanister> {
+    if (domain.initialized != true or subscription_manager.initialized != true) initialize_class_references();
     if (not access_control.is_authorized(msg.caller)) return #err(Errors.Unauthorized());
     let response = shareable_canister_manager.update_slot(slot_id, updated_slot);
     // stable_slots := shareable_canister_manager.slots; // update stable storage
@@ -726,6 +745,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   /// TAG: Admin
   public shared (msg) func delete_projects() : async Bool {
+    if (domain.initialized != true or subscription_manager.initialized != true) initialize_class_references();
     if (not access_control.is_authorized(msg.caller)) return false;
 
     let is_dropped = project_manager.drop_projects();
@@ -740,6 +760,7 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
   /// TAG: Admin
   public shared (msg) func delete_workflow_run_history() : async () {
+    if (domain.initialized != true or subscription_manager.initialized != true) initialize_class_references();
     if (not access_control.is_authorized(msg.caller)) return;
     let response = workflow_manager.delete_run_history_all();
     // stable_workflow_run_history := workflow_manager.workflow_run_history; // update stable storage
@@ -1260,7 +1281,8 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     // let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
     let cycles = 0;
 
-    if (slot.user != slot_user) return #err(Errors.Unauthorized());
+    // TODO: check this validation
+    // if (slot.user != slot_user) return #err(Errors.Unauthorized());
 
     // Ensure updating the correct project
     let is_cleared = switch (clear_project_session(slot.project_id)) {
@@ -2336,10 +2358,16 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
 
       // Only recover valid non-expired session. Force end if less than 50s is left before expiry
       if (remaining_duration_s > 50) {
+        Debug.print("Duration remaining greater than 50 sec" # Nat.toText(remaining_duration_s));
+
         _set_cleanup_timer<system>(remaining_duration_s, slot_id, slot.canister_id);
       } else {
-        let _project_id = _end_freemium_session(slot_id, slot.user);
-        _delete_timer(slot_id);
+        // Clean up timer immediately
+        let dur = if (remaining_duration_s < 30) remaining_duration_s + 30 else remaining_duration_s;
+        Debug.print("Duration remaining less than 50 sec" # Nat.toText(dur));
+        _set_cleanup_timer<system>(dur, slot_id, slot.canister_id);
+        // let _project_id = _end_freemium_session(slot_id, slot.user);
+        // _delete_timer(slot_id);
       };
     };
   };

@@ -10,6 +10,7 @@ import {
 } from "@mui/icons-material";
 import AdminConfirmationModal from "../AdminConfirmationModal";
 import "./SlotsManagement.css";
+import { useAdminLogic } from "../../../hooks/useAdminLogic";
 
 const SlotsManagement: React.FC = () => {
   const {
@@ -25,6 +26,8 @@ const SlotsManagement: React.FC = () => {
     error,
     successMessage,
   } = useAdmin();
+
+  const { handleResetQuotas } = useAdminLogic();
 
   const { setToasterData, setShowToaster } = useToaster();
   const [newDuration, setNewDuration] = useState("");
@@ -158,6 +161,35 @@ const SlotsManagement: React.FC = () => {
     }
   };
 
+  const handleConfirmResetQuotas = async () => {
+    try {
+      await handleResetQuotas();
+      setToasterData({
+        headerContent: "Success",
+        toastStatus: true,
+        toastData: "Reset quotas",
+        textColor: "green",
+        timeout: 3000,
+      });
+
+      setShowToaster(true);
+      closeConfirmationModal();
+      // setConfirmationModal((p) => {
+      //   return { ...p, show: false };
+      // });
+    } catch (error) {
+      console.error("Failed to reset quotas:", error);
+      setToasterData({
+        headerContent: "Error",
+        toastStatus: false,
+        toastData: "Failed to reset quotas",
+        textColor: "red",
+        timeout: 3000,
+      });
+      setShowToaster(true);
+    }
+  };
+
   // Confirmation modal handlers
   const confirmResetAllSlots = () => {
     setConfirmationModal({
@@ -194,6 +226,19 @@ const SlotsManagement: React.FC = () => {
       confirmText: "Delete Logs",
       cancelText: "Cancel",
       onConfirm: handleDeleteLogs,
+      confirmButtonVariant: "danger",
+    });
+  };
+
+  const confirmResetQuotas = () => {
+    setConfirmationModal({
+      show: true,
+      title: "Reset Quotas",
+      message:
+        "Are you sure you want to reset all quotas? This action cannot be undone and will permanently remove all quota records.",
+      confirmText: "Reset",
+      cancelText: "Cancel",
+      onConfirm: handleConfirmResetQuotas,
       confirmButtonVariant: "danger",
     });
   };
@@ -317,6 +362,9 @@ const SlotsManagement: React.FC = () => {
             </button>
             <button onClick={confirmDeleteLogs} className="danger">
               Delete Usage Logs
+            </button>
+            <button onClick={confirmResetQuotas} className="danger">
+              Reset Quotas
             </button>
           </div>
         </div>

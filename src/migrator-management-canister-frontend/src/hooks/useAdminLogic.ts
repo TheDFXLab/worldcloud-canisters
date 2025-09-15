@@ -48,6 +48,7 @@ import {
     deleteDomainRegistration,
     setCanisterToSlot,
     setCloudflareConfig,
+    adminResetQuotas,
 } from '../state/slices/adminSlice';
 import { RootState, AppDispatch } from '../state/store';
 import { useIdentity } from '../context/IdentityContext/IdentityContext';
@@ -117,6 +118,7 @@ export const useAdminLogic = () => {
         isLoadingDeleteDomainRegistration,
         isLoadingSetCanisterToSlot,
         isLoadingSetCloudflareConfig,
+        isLoadingResetQuotas,
 
         error,
         successMessage,
@@ -646,6 +648,20 @@ export const useAdminLogic = () => {
         }
     }, [dispatch, identity, agent]);
 
+    const handleResetQuotas = useCallback(async () => {
+        if (!identity || !agent) {
+            throw new Error('Missing required dependencies');
+        }
+        try {
+            await dispatch(adminResetQuotas({ identity, agent })).unwrap();
+            return { status: true, message: 'Reset quotas.' };
+        } catch (error: any) {
+            return {
+                status: false,
+                message: error.message || 'Failed to reset quotas.',
+            }
+        }
+    }, [dispatch, identity, agent]);
 
 
 
@@ -792,6 +808,7 @@ export const useAdminLogic = () => {
         handleDeleteDomainRegistration,
         handleSetCanisterToSlot,
         handleSetCloudflareConfig,
+        handleResetQuotas,
         freemiumRegistrationByCanister,
         domainRegistrationsPaginated,
         freemiumDomainRegistrationsPaginated,
