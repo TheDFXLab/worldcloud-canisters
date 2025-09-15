@@ -28,8 +28,37 @@ such as Vercel, Microsoft Azure, and AWS to easily bootstrap and host their favo
 - Plug and play: Seemlessly build and publish web applications directly from your Github repo.
 - Custom: Choose your favorite name for your site and link it to your project
 
-### Freemium Project Flow
+### Technical Overview
+
+The publishing process works as follows:
+
+- a source branch is selected containing the frontend web application source code (reactjs, angular, plain vanilla)
+- a custom workflow file is created and triggered with Github Actions
+- artifacts are pulled and uploaded to an **asset canister** on the _IC_
+- asset canister now serves the uploaded static content directly from the project's asset canister
+
+![Technical Flow](./documentation/assets/technical-flow-high-level.svg)
+
+### Freemium Plan Publishing Flow
 
 Publishing a frontend application for free for a duration of 4 hours, 3 times per day.
 
 ![Freemium Flow](./documentation/assets/freemium-flow-high-level.png)
+
+### Paid Plan Publishing Flow
+
+Publishing a frontend web application to a project with a _paid plan_ means that the user owns the **asset canister** and
+are the controllers of the canisters. The publishing flow is similar to the freemium plan.
+
+![Paid Plan Flow](./documentation/assets/paid-flow-high-level.svg)
+
+### Link Custom Subdomain Flow
+
+When a project publishes a frontend application, the url used to access the application will typically follow the pattern:
+
+`<canister-id>.icp0.io`
+
+In order for users to access their sites from a custom domain like `mywebsite.worldcloud.app`, an add-on can be attached to
+the project to allow registering the DNS records required to serve the frontend application from the user's chosen _subdomain_ name.
+
+![Register DNS Flow](./documentation/assets/link-dns-high-level.png)
