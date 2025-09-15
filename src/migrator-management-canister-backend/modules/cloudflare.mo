@@ -373,7 +373,10 @@ module {
 
         // var content_query = "content.contains=" # opt.content.contains # "&content.endsWith=" # opt.content.ends_with # "&content.exact=" # opt.content.exact # "&content.startsWith=" # opt.content.starts_with;
         // var name_query = "name.contains=" # opt.content.contains # "&name.endsWith=" # opt.content.ends_with # "&name.exact=" # opt.content.exact # "&name.startsWith=" # opt.content.starts_with;
-        var content_query = "content.exact=" # opt.content.exact;
+        // var content_query = "content.exact=" # opt.content.exact;
+        // Handle double quotes for txt record content, hence 'contains'
+        var content_query = if (opt.record_type == #txt) "content.contains=" # opt.content.contains else "content.exact=" # opt.content.exact;
+
         var name_query = "name.exact=" # opt.name.exact;
         var full_query = content_query # "&" # name_query;
 
