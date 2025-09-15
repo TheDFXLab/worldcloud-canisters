@@ -8,12 +8,14 @@ The vision is to bridge the gap between traditional DevOps and ICP infrastructur
 related concepts to Worldcloud, developers are minimally exposed to new material and continue to use the
 tools they are familiar with.
 
-Screenshots at the end of page.
+- Live Website: [World Cloud](https://worldcloud.app)
+- Live Backend Canister: `7nopf-3qaaa-aaaam-aeeoq-cai`
 
-Live Website: [World Cloud](https://worldcloud.app)
-Live Backend Canister: `7nopf-3qaaa-aaaam-aeeoq-cai`
+_Screenshots at the end of page._
 
 ## Introduction
+
+---
 
 World Cloud is a platform used by developers to get started with frontend web application hosting on the _Internet Computer_. With
 it's unique approach towards sourcing, building, and publishing your website, World Cloud makes it possible for users of platforms
@@ -58,9 +60,9 @@ the project to allow registering the DNS records required to serve the frontend 
 
 ![Register DNS Flow](./documentation/assets/link-dns-high-level.png)
 
----
-
 ## Installation
+
+---
 
 Step-by-step guide to get a copy of the project up and running locally for development and testing.
 
@@ -93,7 +95,64 @@ sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
 npm i -g ic-mops
 ```
 
+### Install and Run
+
+---
+
+```
+git clone https://github.com/georgiod9/icp-migrator-canisters # clone repo
+cd icp-migrator-canisters
+dfx start --clean                                             # start the local replica
+sh commands/deploy-ledger.sh                                  # deploy ICP ledger canister
+sh commands/workflow/deploy.sh develop                         # deploy project canisters and dependencies
+sh commands/fabricate_cycles.sh                               # fund the backend canister with cycles
+cd src/migrator-management-canister-frontend                  # switch to frontend directory
+npm install                                                   # ensure node modules are installed
+npm run dev                                                   # run development server
+
+```
+
+### Usage
+
+---
+
+#### User Facing
+
+This project is intended to be used from the frontend web application.
+Visit the dashboard: [World Cloud](https://worldcloud.app/dashboard)
+
+User flow - freemium:
+
+1. Subscribe to freemium plan
+2. Connect Github account
+3. Choose source branch
+4. Start deployment process
+5. Visit website at generated link
+
+### Documentation
+
+---
+
+User-facing methods: [here](./documentation/basic_actor_user_methods.md)
+Admin methods: [here](./documentation/basic_actor_admin_methods.md)
+
+### Roadmap
+
+---
+
+The following outlines the main achieved and pending milestones:
+
+[-] Integrate Github Actions to handle build process
+[-] Create Subscription plans to manage user activity and access
+[-] Freemium Model and Seamless Cycles Management
+[-] Custom Domains and Web2 Auth
+[ ] Publish to private domains with user's nameservers
+[ ] Encrypted File Storage
+[ ] Unity Application Hosting
+
 ## Screenshots
+
+---
 
 ![New Project](./documentation/assets/page_new_project.png)
 ![My Projects](./documentation/assets/page_projects.png)
