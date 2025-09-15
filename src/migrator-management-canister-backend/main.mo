@@ -359,6 +359,16 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
     return #ok(access_control.is_authorized(msg.caller));
   };
 
+  public shared (msg) func admin_reset_quotas() : async Types.Response<()> {
+    if (domain.initialized != true) initialize_class_references();
+
+    if (not access_control.is_authorized(msg.caller)) {
+      return #err(Errors.Unauthorized());
+    };
+    shareable_canister_manager.reset_quotas();
+    return #ok();
+  };
+
   public shared (msg) func admin_grant_subscription(user_principal : Principal, subscription_tier_id : Nat) : async Types.Response<Types.Subscription> {
     if (domain.initialized != true) initialize_class_references();
 

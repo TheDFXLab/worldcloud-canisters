@@ -138,6 +138,8 @@ export interface AdminState {
     isLoadingDeleteDomainRegistration: boolean,
     isLoadingSetCanisterToSlot: boolean,
     isLoadingSetCloudflareConfig: boolean,
+    isLoadingResetQuotas: boolean,
+
     freemiumRegistrationByCanister: SerializedFreemiumDomainRegistration[],
 }
 
@@ -201,6 +203,8 @@ const initialState: AdminState = {
     isLoadingDeleteDomainRegistration: false,
     isLoadingSetCanisterToSlot: false,
     isLoadingSetCloudflareConfig: false,
+    isLoadingResetQuotas: false,
+
     freemiumRegistrationByCanister: [],
 };
 
@@ -1047,6 +1051,15 @@ export const setCloudflareConfig = createAsyncThunk(
         return true;
     }
 )
+export const adminResetQuotas = createAsyncThunk(
+    'admin/adminResetQuotas',
+    async ({ identity, agent }: { identity: any, agent: any }) => {
+        const api = await MainApi.create(identity, agent);
+        if (!api) throw new Error('Failed to create API instance');
+        const response = await api.admin_reset_quotas();
+        return true;
+    }
+)
 
 
 // Slice
@@ -1681,6 +1694,16 @@ const adminSlice = createSlice({
             .addCase(setCloudflareConfig.rejected, (state, action) => {
                 state.isLoadingSetCanisterToSlot = false;
                 state.error = action.error.message ? action.error.message : "Failed to set cloudflare config.";
+            })
+            .addCase(adminResetQuotas.pending, (state) => {
+                state.isLoadingResetQuotas = true;
+            })
+            .addCase(adminResetQuotas.fulfilled, (state, action) => {
+                state.isLoadingResetQuotas = false;
+            })
+            .addCase(adminResetQuotas.rejected, (state, action) => {
+                state.isLoadingResetQuotas = false;
+                state.error = action.error.message ? action.error.message : "Failed to reset quotas"
             })
 
     },
