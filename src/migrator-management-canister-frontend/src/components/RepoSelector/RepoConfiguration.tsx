@@ -183,8 +183,8 @@ const RepoConfiguration: React.FC<RepoConfigurationProps> = ({
                 <div className="tip-content">
                   <h5>Branch Selection</h5>
                   <p>
-                    Choose the branch that contains your latest changes. The
-                    main branch is recommended for production deployments.
+                    Ensure your repo is public or your Github account has enough
+                    credits to run Github Actions workflows.
                   </p>
                 </div>
               </div>
