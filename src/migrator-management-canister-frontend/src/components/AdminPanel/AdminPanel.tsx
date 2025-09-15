@@ -29,6 +29,7 @@ import BookManagement from "./sections/BookManagement";
 import GrantManagement from "./sections/GrantManagement";
 import DomainManagement from "./sections/DomainManagement";
 import WasmUploader from "../WasmUploader/WasmUploader";
+import ProjectsManagement from "./sections/ProjectsManagement";
 import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 import { useAdmin } from "../../context/AdminContext/AdminContext";
 
@@ -40,6 +41,7 @@ type AdminSection =
   | "access-control"
   | "system"
   | "book"
+  | "projects"
   | "grant-management"
   | "domain-management"
   | "wasm-uploader";
@@ -78,6 +80,7 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
       "access-control",
       "system",
       "book",
+      "projects",
       "grant-management",
       "domain-management",
       "wasm-uploader",
@@ -214,6 +217,12 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
       description: "Manage user balances and token deposits",
     },
     {
+      id: "projects" as AdminSection,
+      label: "Projects Management",
+      icon: <Build />,
+      description: "View and manage projects (paginated)",
+    },
+    {
       id: "grant-management" as AdminSection,
       label: "Grant Management",
       icon: <Add />,
@@ -249,6 +258,8 @@ const AdminPanel: React.FC<AdminPanelProps> = () => {
         return <SystemManagement />;
       case "book":
         return <BookManagement />;
+      case "projects":
+        return <ProjectsManagement />;
       case "grant-management":
         return <GrantManagement />;
       case "domain-management":
