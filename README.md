@@ -62,3 +62,38 @@ In order for users to access their sites from a custom domain like `mywebsite.wo
 the project to allow registering the DNS records required to serve the frontend application from the user's chosen _subdomain_ name.
 
 ![Register DNS Flow](./documentation/assets/link-dns-high-level.png)
+
+---
+
+## Installation
+
+Step-by-step guide to get a copy of the project up and running locally for development and testing.
+
+### Prerequisites
+
+- Node: `>=16.0.0`
+- npm: `>=7.0.0`
+- dfx: `0.29.1`
+- mops
+
+#### Node and npm
+
+Follow the guide to install node on your machine.
+
+```
+https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
+```
+
+#### dfx
+
+You will need the latest version of `dfx`
+
+```
+sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+```
+
+#### mops
+
+```
+npm i -g ic-mops
+```
