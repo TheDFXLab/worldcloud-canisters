@@ -8,12 +8,7 @@ The vision is to bridge the gap between traditional DevOps and ICP infrastructur
 related concepts to Worldcloud, developers are minimally exposed to new material and continue to use the
 tools they are familiar with.
 
-Screenshots:
-
-![New Project](./documentation/assets/page_new_project.png =250x)
-![My Projects](./documentation/assets/page_projects.png)
-![Code Deployment](./documentation/assets/page_deployment.png)
-![Project](./documentation/assets/page_project.png)
+Screenshots at the end of page.
 
 Live Website: [World Cloud](https://worldcloud.app)
 Live Backend Canister: `7nopf-3qaaa-aaaam-aeeoq-cai`
@@ -97,3 +92,10 @@ sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
 ```
 npm i -g ic-mops
 ```
+
+## Screenshots
+
+![New Project](./documentation/assets/page_new_project.png)
+![My Projects](./documentation/assets/page_projects.png)
+![Code Deployment](./documentation/assets/page_deployment.png)
+![Project](./documentation/assets/page_project.png)
