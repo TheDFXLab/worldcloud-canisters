@@ -1,5 +1,10 @@
 
 dfx identity use default
+
+# Copy development dfx config file
+echo "Using develop dfx.json"
+cp dfx.develop.json dfx.json
+
 echo "===========Deploying ICP Ledger========="
 dfx deploy --specified-id ryjl3-tyaaa-aaaaa-aaaba-cai icp_ledger_canister --argument "(variant {
     Init = record {

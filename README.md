@@ -1,17 +1,81 @@
-# World Cloud
+<div align="center">
+  <img src="world cloud final logo-05.png" alt="World Cloud Logo" width="200" height="200">
+</div>
+
+<div align="center">
+  <h1>World Cloud</h1>
+</div>
+
+<div align="center">
+  <a href="https://worldcloud.app">
+    <img src="https://img.shields.io/badge/website-worldcloud.app-blue" alt="Website">
+  </a>
+  <a href="https://internetcomputer.org/">
+    <img src="https://img.shields.io/badge/platform-Internet%20Computer-00d4aa" alt="Internet Computer">
+  </a>
+  <a href="https://github.com/georgiod9/icp-migrator-canisters">
+    <img src="https://img.shields.io/badge/github-repository-black" alt="GitHub">
+  </a>
+  <a href="https://worldcloud.app/dashboard">
+    <img src="https://img.shields.io/badge/dashboard-live-green" alt="Dashboard">
+  </a>
+  <a href="https://internetcomputer.org/docs/current/developer-docs/">
+    <img src="https://img.shields.io/badge/docs-IC%20Docs-orange" alt="Documentation">
+  </a>
+</div>
+
+<div align="center">
+  <h3>🌐 Deploy static web applications to the Internet Computer with ease</h3>
+</div>
+
+<div align="center">
+  <p>
+    <strong>World Cloud</strong> is a cloud services provider specializing in front-end <em>web application</em> deployment.
+    World Cloud utilizes the <em>Internet Computer</em> to host static web applications directly on ICP's network.
+    The vision is to bridge the gap between traditional DevOps and ICP infrastructure.
+  </p>
+</div>
+
+<div align="center">
+  <p>
+    <a href="https://worldcloud.app">Live Website</a> •
+    <a href="https://worldcloud.app/dashboard">Dashboard</a> •
+    <a href="#installation">Installation</a> •
+    <a href="#documentation">Documentation</a>
+  </p>
+</div>
 
 ---
 
-Worldcloud is a _cloud services_ provider specializing in front-end _web application_ deployment.
-Worldcloud utilizes the _Internet Computer_ to host static web applications directly ICP's network.
-The vision is to bridge the gap between traditional DevOps and ICP infrastructure. By off-loading blockchain
-related concepts to Worldcloud, developers are minimally exposed to new material and continue to use the
-tools they are familiar with.
+## ✨ Features
 
-- Live Website: [World Cloud](https://worldcloud.app)
-- Live Backend Canister: `7nopf-3qaaa-aaaam-aeeoq-cai`
+- **🚀 Zero-Config Deployment**: Deploy directly from your GitHub repository
+- **⚡ Lightning Fast**: Built on Internet Computer for optimal performance
+- **🎯 Developer Friendly**: Familiar workflow similar to Vercel, Netlify, and AWS
+- **🌍 Custom Domains**: Link your own domain with `name.worldcloud.app`
+- **💳 Flexible Plans**: Freemium (4hr sessions) and paid plans available
+- **🔧 GitHub Integration**: Seamless CI/CD with GitHub Actions
+- **📱 Multi-Framework**: Support for React, Angular, Vue, and vanilla projects
 
-_Screenshots at the end of page._
+---
+
+## 🎯 Quick Start
+
+Get your static site deployed in minutes:
+
+1. **Sign up** at [worldcloud.app](https://worldcloud.app)
+2. **Connect** your GitHub account
+3. **Select** your repository and branch
+4. **Deploy** with one click
+5. **Visit** your live site at `your-project.worldcloud.app`
+
+---
+
+## 📊 Live Stats
+
+- **Live Website**: [worldcloud.app](https://worldcloud.app)
+- **Backend Canister**: `7nopf-3qaaa-aaaam-aeeoq-cai`
+- **Status**: Production Ready ✅
 
 ## Introduction
 
@@ -147,6 +211,7 @@ The following outlines the main achieved and pending milestones:
 [-] Freemium Model and Seamless Cycles Management
 [-] Custom Domains and Web2 Auth
 [ ] Publish to private domains with user's nameservers
+[ ] Automatically detect pushes to branches and trigger workflow run for redeploying application
 [ ] Encrypted File Storage
 [ ] Unity Application Hosting
 
