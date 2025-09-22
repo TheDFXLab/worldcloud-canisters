@@ -206,22 +206,39 @@ Admin methods: [here](./documentation/basic_actor_admin_methods.md)
 
 The following outlines the main achieved and pending milestones:
 
-[-] Integrate Github Actions to handle build process
-[-] Create Subscription plans to manage user activity and access
-[-] Freemium Model and Seamless Cycles Management
-[-] Custom Domains and Web2 Auth
-[ ] Publish to private domains with user's nameservers
-[ ] Automatically detect pushes to branches and trigger workflow run for redeploying application
-[ ] Encrypted File Storage
-[ ] Unity Application Hosting
+- [x] Integrate Github Actions to handle build process
+- [x] Create Subscription plans to manage user activity and access
+- [x] Freemium Model and Seamless Cycles Management
+- [x] Custom Domains and Web2 Auth
+- [ ] Publish to private domains with user's nameservers
+- [ ] Automatically detect pushes to branches and trigger workflow run for redeploying application
+- [ ] Encrypted File Storage
+- [ ] Unity Application Hosting
 
 ### License
 
 ---
 
-No license yet.
+This project is licensed under the [GNU AGPLv3](LICENSE). 
+
+Commercial licenses are also available.  
+If you are interested in using this software without the obligations of the AGPL,  
+please contact us at dev@TheDFXLab.com.
+
+#### Contribution
+
+Contributions made under this Individual Contributor License Agreement (“Agreement”)  
+will be incorporated into Projects that TheDFXLab distributes under the GNU Affero General Public License v3.0 (AGPLv3).  
+
+TheDFXLab also offers commercial licenses for the Projects. By signing this Agreement,  
+you acknowledge and agree that your Contributions may be included in versions of the Projects  
+that are licensed under the AGPLv3, as well as in versions of the Projects distributed  
+under a separate commercial license by TheDFXLab.
+
 
 ### Acknowledgements
+
+---
 
 - I would like to thank the Dfinity Foundation for supporting this project with a Grant
 - Big shout out to Dfinity engineering team for all the hard work, sleepless hours, and **innovation**
