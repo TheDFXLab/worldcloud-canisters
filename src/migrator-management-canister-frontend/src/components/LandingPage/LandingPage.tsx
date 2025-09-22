@@ -21,7 +21,7 @@ function LandingPage() {
   const handleLaunchApp = () => {
     navigate("/dashboard");
   };
-  const { tiers } = usePricing();
+  const { tiers, preset_tiers } = usePricing();
 
   useEffect(() => {
     // Mouse trail effect
@@ -367,7 +367,7 @@ function LandingPage() {
             <NonSubbed
               hideButtons={true}
               subscription={null}
-              tiers={tiers}
+              tiers={tiers ? tiers : preset_tiers}
               handleSelectPlan={() => {}}
               pricingState={[false, () => {}]}
             />
