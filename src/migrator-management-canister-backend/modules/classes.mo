@@ -25,7 +25,7 @@ module {
       cloudflare_manager_init : Types.Cloudflare,
       index_counter_init : Types.IndexCounterInterface,
       shareable_canister_init : Types.ShareableCanisterInterface,
-      book_init : Book.Book,
+      book_init : Types.BookInterface,
       domain_manager_init : Types.DomainInterface,
       canister_manager_init : Types.CanisterInterface,
       price_feed_manager_init : Types.PriceFeedInterface,
@@ -47,6 +47,7 @@ module {
       workflow_manager := ?workflow_manager_init;
       activity_manager := ?activity_manager_init;
       timers_manager := ?timers_manager_init;
+
       initialized := true;
     };
   };

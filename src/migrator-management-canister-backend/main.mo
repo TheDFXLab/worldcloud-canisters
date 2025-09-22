@@ -177,6 +177,13 @@ shared (deployMsg) persistent actor class CanisterManager() = this {
       activity_manager,
       timers_manager,
     );
+
+    project_manager.init(classes);
+    domain.init(classes);
+    subscription_manager.init(classes);
+    canisters.init(classes);
+    shareable_canister_manager.init(classes);
+
   };
 
   private func init_quota_timer<system>() {

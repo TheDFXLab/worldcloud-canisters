@@ -4,8 +4,6 @@ import Blob "mo:base/Blob";
 import Iter "mo:base/Iter";
 import Map "mo:core/Map";
 import IC "ic:aaaaa-aa";
-// import Book "book";
-// import Book "book";
 
 module {
   // Type definitions
@@ -875,6 +873,8 @@ module {
   // };
 
   public type ProjectInterface = {
+    init : (class_reference : ClassesInterface) -> ();
+
     // Query Methods
     get_project_by_id : (project_id : Nat) -> Response<Project>;
     get_projects_by_user : (user : Principal, payload : GetProjectsByUserPayload) -> Response<[Project]>;
@@ -899,6 +899,8 @@ module {
   };
 
   public type DomainInterface = {
+    init : (class_reference : ClassesInterface) -> ();
+
     // Query Methods
     list_dns_records : (zone_id : Text, transform : Transform) -> async Response<[DnsRecord]>;
     get_all_records : () -> [(DnsRecordId, CreateRecordResponse)];
@@ -944,6 +946,8 @@ module {
   };
 
   public type SubscriptionInterface = {
+    init : (class_reference : ClassesInterface) -> ();
+
     // Treasury management
     set_treasury : (new_treasury : Principal) -> ();
     get_treasury : () -> ?Principal;
@@ -1105,6 +1109,7 @@ module {
   };
 
   public type BookInterface = {
+    // init: (class_reference: ClassesInterface) -> ();
     // Basic operations
     get : (user : Principal) -> ?Map.Map<Token, Nat>;
     put : (user : Principal, userBalances : Map.Map<Token, Nat>) -> ();
@@ -1130,19 +1135,37 @@ module {
   };
 
   public type ClassesInterface = {
-    project_manager : ?ProjectInterface;
-    subscription_manager : ?SubscriptionInterface;
-    cloudflare_manager : ?Cloudflare;
-    index_counter_manager : ?IndexCounterInterface;
-    shareable_canister_manager : ?ShareableCanisterInterface;
-    book_manager : ?BookInterface;
-    domain_manager : ?DomainInterface;
-    canister_manager : ?CanisterInterface;
-    price_feed_manager : ?PriceFeedInterface;
-    access_control_manager : ?AccessControlInterface;
-    workflow_manager : ?WorkflowInterface;
-    activity_manager : ?ActivityInterface;
-    timers_manager : ?TimersInterface;
+    var project_manager : ?ProjectInterface;
+    var subscription_manager : ?SubscriptionInterface;
+    var cloudflare_manager : ?Cloudflare;
+    var index_counter_manager : ?IndexCounterInterface;
+    var shareable_canister_manager : ?ShareableCanisterInterface;
+    var book_manager : ?BookInterface;
+    var domain_manager : ?DomainInterface;
+    var canister_manager : ?CanisterInterface;
+    var price_feed_manager : ?PriceFeedInterface;
+    var access_control_manager : ?AccessControlInterface;
+    var workflow_manager : ?WorkflowInterface;
+    var activity_manager : ?ActivityInterface;
+    var timers_manager : ?TimersInterface;
+    var initialized : Bool;
+
+    init : (
+      project_manager_init : ProjectInterface,
+      subscription_manager_init : SubscriptionInterface,
+      cloudflare_manager_init : Cloudflare,
+      index_counter_init : IndexCounterInterface,
+      shareable_canister_init : ShareableCanisterInterface,
+      book_init : BookInterface,
+      domain_manager_init : DomainInterface,
+      canister_manager_init : CanisterInterface,
+      price_feed_manager_init : PriceFeedInterface,
+      access_control_init : AccessControlInterface,
+      workflow_manager_init : WorkflowInterface,
+      activity_manager_init : ActivityInterface,
+      timers_manager_init : TimersInterface,
+    ) -> ();
+
   };
 
   public type PriceFeedInterface = {
