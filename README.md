@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="world cloud final logo-05.png" alt="World Cloud Logo" width="200" height="200">
+  <img src="https://ipfs.io/ipfs/QmTZtAeX3E4xKxn9BQBF8eDaD9NRj3tBtPE2CzUmCL35zF?filename=world%20cloud%20cropped%20-%201324x794px.png" alt="World Cloud Logo" width="100" height="auto">
 </div>
 
 <div align="center">
@@ -13,7 +13,7 @@
   <a href="https://internetcomputer.org/">
     <img src="https://img.shields.io/badge/platform-Internet%20Computer-00d4aa" alt="Internet Computer">
   </a>
-  <a href="https://github.com/georgiod9/icp-migrator-canisters">
+  <a href="https://github.com/TheDFXLab/worldcloud-canisters">
     <img src="https://img.shields.io/badge/github-repository-black" alt="GitHub">
   </a>
   <a href="https://worldcloud.app/dashboard">
