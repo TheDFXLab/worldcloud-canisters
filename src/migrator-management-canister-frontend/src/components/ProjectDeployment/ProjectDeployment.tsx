@@ -70,7 +70,12 @@ const ProjectDeployment: React.FC<ProjectDeploymentProps> = ({
   };
 
   const handleGithubConnectFlow = async () => {
-    await handleGithubConnect();
+    try {
+      await handleGithubConnect();
+    } catch (error) {
+      // Error is already handled in GithubContext, so we don't need to do anything here
+      console.error("GitHub connection flow error:", error);
+    }
   };
 
   if (!onMethodSelected && (!canisterId || !projectId)) {

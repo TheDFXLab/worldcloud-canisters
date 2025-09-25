@@ -5,11 +5,17 @@ import GitHubIcon from "@mui/icons-material/GitHub";
 import { useGithub } from "../../context/GithubContext/GithubContext";
 
 import "./GithubCallback.css";
+import { useError } from "../../context/ErrorContext/ErrorContext";
+import ErrorDisplay from "../ErrorDisplay/ErrorDisplay";
+import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 
 const GitHubCallback: React.FC = () => {
   /** Hooks */
   const navigate = useNavigate();
-  const { refreshGithubUser } = useGithub();
+  const { showError } = useError();
+
+  const { disconnect } = useIdentity();
+  const { refreshGithubUser, handleGithubError } = useGithub();
 
   /** State */
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +49,7 @@ const GitHubCallback: React.FC = () => {
           setError("Authentication failed");
         }
       } catch (err) {
+        // handleGithubError(err);
         setError(
           err instanceof Error
             ? err.message
@@ -83,7 +90,43 @@ const GitHubCallback: React.FC = () => {
   }, []);
 
   if (error) {
-    return <div className="error-message">Error: {error}</div>;
+    // showError({
+    //   title: "GitHub Authentication Failed",
+    //   message: error,
+    //   icon: GitHubIcon,
+    //   retryText: "Try Again",
+    //   onRetry: () => {
+    //     window.location.reload();
+    //   },
+    // });
+
+    if (error.includes("No access token found")) {
+      return (
+        <ErrorDisplay
+          title="GitHub Authentication Failed"
+          message={error}
+          icon={GitHubIcon}
+          retryText="Login Again"
+          onRetry={async () => {
+            await disconnect();
+            navigate("/dashboard");
+          }}
+        />
+      );
+    } else {
+      return (
+        <ErrorDisplay
+          title="GitHub Authentication Failed"
+          message={error}
+          icon={GitHubIcon}
+          retryText="Try Again"
+          onRetry={() => {
+            window.location.reload();
+          }}
+        />
+      );
+    }
+    // return <div className="error-message">Error: {error}</div>;
   }
 
   if (userCode && verificationUri) {

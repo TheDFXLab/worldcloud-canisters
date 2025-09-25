@@ -22,6 +22,8 @@ import { useHttpAgent } from "../../context/HttpAgentContext/HttpAgentContext";
 import HeaderCard from "../HeaderCard/HeaderCard";
 import { useHeaderCard } from "../../context/HeaderCardContext/HeaderCardContext";
 import { serializeDeployment } from "../../utility/principal";
+import ErrorDisplay from "../ErrorDisplay/ErrorDisplay";
+import { useError } from "../../context/ErrorContext/ErrorContext";
 
 interface AppLayoutProps {
   state: State;
@@ -47,6 +49,7 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
   const { agent } = useHttpAgent();
   const { headerCard } = useHeaderCard();
   const { toasterData, showToaster, setShowToaster } = useToaster();
+  const { error, isErrorVisible, hideError } = useError();
   const location = useLocation();
 
   /** State */
@@ -123,6 +126,32 @@ function AppLayout({ state, setState, children }: AppLayoutProps) {
           link=""
           overrideTextStyle=""
         />
+      )}
+
+      {/* Error Display Overlay */}
+      {isErrorVisible && error && (
+        <div
+          className="error-overlay"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            zIndex: 300000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backdropFilter: "blur(5px)",
+            WebkitBackdropFilter: "blur(5px)",
+          }}
+          onClick={hideError}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <ErrorDisplay {...error} onRetry={error.onRetry || hideError} />
+          </div>
+        </div>
       )}
 
       <Sidebar

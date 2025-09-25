@@ -532,6 +532,7 @@ export class GithubApi {
                     continue;
                 }
 
+                console.log(`Response: `, runResult)
                 const workflowRunResult = runResult as GithubWorkflowRunResult;
 
                 if (workflowRunResult && workflowRunResult.targetArtifact) {
