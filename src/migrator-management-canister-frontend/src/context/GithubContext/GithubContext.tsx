@@ -10,6 +10,8 @@ import { GithubApi } from "../../api/github/GithubApi";
 import { environment } from "../../config/config";
 import AuthState from "../../state/AuthState";
 import { useIdentity } from "../IdentityContext/IdentityContext";
+import { useError } from "../ErrorContext/ErrorContext";
+import PersonIcon from "@mui/icons-material/Person";
 
 interface GithubUser {
   login: string;
@@ -31,6 +33,7 @@ interface GithubContextType {
   setGithubUser: (user: GithubUser | null) => void;
   handleGithubConnect: () => Promise<void>;
   handleGithubDisconnect: () => Promise<void>;
+  handleGithubError: (error: any) => void;
 }
 
 const GithubContext = createContext<GithubContextType | undefined>(undefined);
@@ -40,10 +43,46 @@ export function GithubProvider({ children }: GithubProviderProps) {
   const [githubUser, setGithubUser] = useState<GithubUser | null>(null);
 
   const { identity } = useIdentity();
+  const { showError } = useError();
+
+  const handleGithubError = (error: any) => {
+    console.error("GitHub authentication error:", error);
+
+    // Handle "No access token found" error specifically
+    if (error.message && error.message.includes("No access token found")) {
+      showError({
+        title: "Authentication Required",
+        message:
+          "Your session has expired. Please sign in again to continue using GitHub integration.",
+        icon: PersonIcon,
+        retryText: "Sign In Again",
+        onRetry: () => {
+          // Redirect to login or refresh the page to trigger re-authentication
+          window.location.reload();
+        },
+      });
+    } else {
+      // Handle other GitHub authentication errors
+      showError({
+        title: "GitHub Connection Failed",
+        message:
+          error.message ||
+          "Failed to connect to GitHub. Please try again or check your internet connection.",
+        retryText: "Try Again",
+        onRetry: async () => {
+          await handleGithubConnect();
+        },
+      });
+    }
+  };
 
   const handleGithubConnect = async () => {
-    const github = GithubApi.getInstance();
-    await github.authenticate();
+    try {
+      const github = GithubApi.getInstance();
+      await github.authenticate();
+    } catch (error: any) {
+      handleGithubError(error);
+    }
   };
 
   const handleGithubDisconnect = async () => {
@@ -129,6 +168,7 @@ export function GithubProvider({ children }: GithubProviderProps) {
         setGithubUser,
         handleGithubConnect,
         handleGithubDisconnect,
+        handleGithubError,
       }}
     >
       {children}
