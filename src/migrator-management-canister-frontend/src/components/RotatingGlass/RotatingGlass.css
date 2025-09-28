@@ -1,0 +1,157 @@
+.rotating-glass {
+  position: absolute;
+  pointer-events: none;
+  left: 0;
+  z-index: -1;
+  opacity: 0.7;
+  /* animation: ellipticalRotation var(--duration, 20s) linear infinite; */
+  transform-origin: center center;
+}
+
+.rotating-glass .glass-image {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 20px rgba(147, 51, 234, 0.3));
+  animation: glassRotation var(--duration, 20s) linear infinite;
+  transform-origin: center center;
+  object-fit: contain;
+  max-width: none;
+  max-height: none;
+}
+
+/* Elliptical movement animation - moves the container in an elliptical path */
+@keyframes ellipticalRotation {
+  0% {
+    transform: translateX(0px) translateY(0px) scale(1);
+  }
+  25% {
+    transform: translateX(100px) translateY(-50px) scale(1.1);
+  }
+  50% {
+    transform: translateX(0px) translateY(-100px) scale(1.2);
+  }
+  75% {
+    transform: translateX(-100px) translateY(-50px) scale(1.1);
+  }
+  100% {
+    transform: translateX(0px) translateY(0px) scale(1);
+  }
+}
+
+/* Continuous rotation for the glass image around its center */
+/* @keyframes glassRotation {
+  0% {
+    transform: rotate(0deg);
+    filter: drop-shadow(0 0 20px rgba(147, 51, 234, 0.3));
+  }
+  25% {
+    transform: rotate(90deg);
+    filter: drop-shadow(5px 5px 25px rgba(168, 85, 247, 0.4));
+  }
+  50% {
+    transform: rotate(180deg);
+    filter: drop-shadow(0 10px 30px rgba(196, 181, 253, 0.3));
+  }
+  75% {
+    transform: rotate(270deg);
+    filter: drop-shadow(-5px 5px 25px rgba(139, 92, 246, 0.4));
+  }
+  100% {
+    transform: rotate(360deg);
+    filter: drop-shadow(0 0 20px rgba(147, 51, 234, 0.3));
+  }
+} */
+
+@keyframes glassRotation {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .rotating-glass {
+    opacity: 0.4;
+    animation-duration: 25s;
+  }
+
+  @keyframes ellipticalRotation {
+    0% {
+      transform: translateX(0px) translateY(0px) scale(0.8);
+    }
+    25% {
+      transform: translateX(50px) translateY(-25px) scale(0.9);
+    }
+    50% {
+      transform: translateX(0px) translateY(-50px) scale(1);
+    }
+    75% {
+      transform: translateX(-50px) translateY(-25px) scale(0.9);
+    }
+    100% {
+      transform: translateX(0px) translateY(0px) scale(0.8);
+    }
+  }
+}
+
+/* Variants for different positioning */
+.rotating-glass.variant-1 {
+  animation-delay: 0s;
+  opacity: 0.6;
+}
+
+.rotating-glass.variant-2 {
+  animation-delay: -7s;
+  opacity: 0.4;
+  animation-direction: reverse;
+}
+
+.rotating-glass.variant-3 {
+  animation-delay: -14s;
+  opacity: 0.5;
+  animation-duration: 30s;
+}
+
+/* Full screen glass objects */
+.rotating-glass.fullscreen {
+  opacity: 0.3;
+  z-index: -2;
+}
+
+.rotating-glass.fullscreen .glass-image {
+  filter: drop-shadow(0 0 40px rgba(147, 51, 234, 0.2));
+}
+
+/* Adjust animations for full screen */
+@keyframes fullScreenElliptical {
+  0% {
+    transform: translateX(0px) translateY(0px) scale(0.8);
+  }
+  25% {
+    transform: translateX(200px) translateY(-100px) scale(1);
+  }
+  50% {
+    transform: translateX(0px) translateY(-200px) scale(1.2);
+  }
+  75% {
+    transform: translateX(-200px) translateY(-100px) scale(1);
+  }
+  100% {
+    transform: translateX(0px) translateY(0px) scale(0.8);
+  }
+}
+
+/* Pause animation on reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .rotating-glass {
+    animation: none;
+    transform: translateX(0) translateY(0) rotate(0deg) scale(1);
+  }
+
+  .rotating-glass .glass-svg {
+    animation: none;
+  }
+}

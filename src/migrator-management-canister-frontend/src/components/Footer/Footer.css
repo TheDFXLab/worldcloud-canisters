@@ -16,6 +16,26 @@
   gap: 1rem;
 }
 
+.footer-logo,
+.footer-info,
+.footer-powered {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.footer-logo {
+  justify-content: flex-start;
+}
+
+.footer-info {
+  justify-content: center;
+}
+
+.footer-powered {
+  justify-content: flex-end;
+}
+
 .footer-logo a {
   color: var(--text-primary);
   text-decoration: none;
@@ -38,10 +58,45 @@
   color: var(--color-primary-dark);
 }
 
+.footer-powered {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.powered-by {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.icp-logo {
+  height: 20px;
+  width: auto;
+  filter: brightness(0.8) contrast(1.1);
+  transition: all 0.2s ease;
+}
+
+.icp-logo:hover {
+  filter: brightness(1) contrast(1.2);
+  transform: scale(1.05);
+}
+
 @media (max-width: 768px) {
   .footer-content {
     flex-direction: column;
     text-align: center;
     gap: 0.5rem;
+  }
+
+  .footer-logo,
+  .footer-info,
+  .footer-powered {
+    justify-content: center;
+    flex: none;
+  }
+
+  .powered-by {
+    justify-content: center;
   }
 }

@@ -1,0 +1,21 @@
+.dotted-mask {
+  position: absolute;
+  transform-origin: center center;
+  z-index: -1;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.dotted-mask.fullscreen {
+  opacity: 0.1; /* Very subtle for large sizes */
+}
+
+.dotted-mask.how-it-works-dotted {
+  opacity: 0.08; /* Even more subtle for the specific placement */
+}
+
+.dotted-image {
+  display: block;
+  filter: contrast(1.5) brightness(0.6) saturate(0.8);
+  mix-blend-mode: multiply; /* Blend with background */
+}

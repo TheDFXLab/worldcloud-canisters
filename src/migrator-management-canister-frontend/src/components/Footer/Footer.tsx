@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import "./Footer.css";
+import ICPLogo from "../../../assets/images/socials/internet-computer-icp-logo.svg";
 
 const Footer = () => {
   const currentDate = new Date().getFullYear();
@@ -20,6 +21,16 @@ const Footer = () => {
             >
               TheDFXLab
             </a>
+          </p>
+        </div>
+        <div className="footer-powered">
+          <p className="powered-by">
+            Powered by the Internet Computer{" "}
+            <img
+              src={ICPLogo}
+              alt="Internet Computer Protocol"
+              className="icp-logo"
+            />
           </p>
         </div>
       </div>

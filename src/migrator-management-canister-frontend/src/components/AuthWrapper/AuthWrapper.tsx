@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import "./AuthWrapper.css";
 import plugLogo from "../../../assets//images/plug-connect.png";
 import ii from "../../../assets/images/ii.png";
+import appleIcon from "../../../assets/images/socials/apple-icon.svg";
+import googleIcon from "../../../assets/images/socials/google-tile.svg";
+import microsoftIcon from "../../../assets/images/socials/microsoft-icon.svg";
 import { useIdentity } from "../../context/IdentityContext/IdentityContext";
 import { Principal } from "@dfinity/principal";
 import { internet_identity_canister_id } from "../../config/config";
@@ -120,15 +123,21 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
                   </span>
                 </button>
 
-                <button onClick={loginII2} className="auth-button ii">
+                <div className="auth-divider">
+                  <span className="divider-text">OR</span>
+                </div>
+
+                <button
+                  onClick={loginII2}
+                  className="auth-button social-logins"
+                >
+                  <img className="social-icon" src={appleIcon} alt="Apple" />
+                  <img className="social-icon" src={googleIcon} alt="Google" />
                   <img
-                    className="auth-button-icon iiLogo"
-                    src={ii}
-                    alt="Internet Identity 2.0"
+                    className="social-icon"
+                    src={microsoftIcon}
+                    alt="Microsoft"
                   />
-                  <span className="auth-button-text">
-                    Continue with Internet Identity 2.0
-                  </span>
                 </button>
 
                 {/* <div onClick={loginWithPlug} className="auth-button-image">
