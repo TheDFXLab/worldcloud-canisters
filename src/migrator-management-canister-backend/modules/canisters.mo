@@ -450,12 +450,14 @@ module {
       return #ok(false);
     };
 
+    // TODO: Look into this usage of MIN_CYCLES_INIT_E8S
     public func validate_canister_cycles(canister_id : Principal) : async Types.Response<Nat> {
       // let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
       let cycles_balance : Nat = switch (await IC.canister_status({ canister_id = canister_id })) {
         case (val) {
           // Canister low on cycles
-          let current_balance : Nat = if (val.cycles < Constants.MIN_CYCLES_INIT_E8S) {
+          // let current_balance : Nat = if (val.cycles < Constants.MIN_CYCLES_INIT_E8S) {
+          let current_balance : Nat = if (val.cycles < Constants.MIN_CYCLES_INIT / 5) {
             // Top up canister to maintain min required cycles on init
             let amount_added = await _add_cycles(canister_id, Constants.MIN_CYCLES_INIT_E8S);
             amount_added;
