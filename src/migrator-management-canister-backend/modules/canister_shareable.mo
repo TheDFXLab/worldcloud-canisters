@@ -26,18 +26,6 @@ module {
     next_slot_id_init : Nat,
     quotas_map_init : Types.QuotasMap,
   ) {
-    // private let DEFAULT_DURATION_MS = 60 * 1_000; // 1 mins
-    // private let DEFAULT_DURATION_MS = 1200 * 1_000; // 20 mins
-    // private let DEFAULT_DURATION_MS = 14_400 * 1_000; // 4 hrs
-    private let DEFAULT_DURATION_MS = 3 * 60 * 1_000; // 3 mins
-    private let RATE_LIMIT_WINDOW_MS = 86_400 * 1_000; // 1 day
-    private let MAX_USES_THRESHOLD = 3; // 3 uses per day
-    public var MAX_SHAREABLE_CANISTERS = 10;
-    public var MIN_CYCLES_INIT_E8S = 200_000_000;
-    public var MIN_CYCLES_INIT = 1_000_000_000_000;
-
-    // private var canister_manager : ?Types.CanisterInterface = null;
-
     public var class_references : ?Types.ClassesInterface = null;
 
     public var slots : Types.SlotsMap = slots_init;
@@ -69,7 +57,7 @@ module {
           user = slot.owner;
           start_timestamp = 0;
           create_timestamp = Int.abs(Utility.get_time_now(#milliseconds));
-          duration = DEFAULT_DURATION_MS;
+          duration = Constants.DEFAULT_DURATION_MS;
           start_cycles = slot.start_cycles;
           status = #available;
           url = null;
@@ -290,14 +278,14 @@ module {
     private func _create_usage_log(user : Principal) : Types.UsageLog {
       let quota : Types.Quota = {
         consumed = 0;
-        total = MAX_USES_THRESHOLD;
+        total = Constants.MAX_USES_THRESHOLD;
       };
       let log : Types.UsageLog = {
         is_active = false;
         usage_count = 0;
         last_used = 0;
-        rate_limit_window = RATE_LIMIT_WINDOW_MS;
-        max_uses_threshold = MAX_USES_THRESHOLD;
+        rate_limit_window = Constants.RATE_LIMIT_WINDOW_MS;
+        max_uses_threshold = Constants.MAX_USES_THRESHOLD;
         quota = quota;
       };
 
@@ -309,7 +297,7 @@ module {
     private func calculate_usage_count(usage_count : Nat, last_used : Nat, increment : Bool) : Nat {
       let now : Int = Utility.get_time_now(#milliseconds);
       if (now < last_used) return usage_count;
-      switch (Int.abs(now) - last_used > RATE_LIMIT_WINDOW_MS) {
+      switch (Int.abs(now) - last_used > Constants.RATE_LIMIT_WINDOW_MS) {
         case (false) {
           // Reset if time window is passed
           if (increment == true) {
@@ -533,7 +521,10 @@ module {
     public func get_quota(user : Principal) : Types.Quota {
       let quota : Types.Quota = switch (Map.get(quotas, Principal.compare, user)) {
         case (null) {
-          let q : Types.Quota = { consumed = 0; total = MAX_USES_THRESHOLD };
+          let q : Types.Quota = {
+            consumed = 0;
+            total = Constants.MAX_USES_THRESHOLD;
+          };
           Map.add(quotas, Principal.compare, user, q);
           q;
         };
@@ -704,8 +695,8 @@ module {
         is_active = true;
         usage_count = usage_log.usage_count + 1;
         last_used = Int.abs(Utility.get_time_now(#milliseconds));
-        rate_limit_window = RATE_LIMIT_WINDOW_MS;
-        max_uses_threshold = MAX_USES_THRESHOLD;
+        rate_limit_window = Constants.RATE_LIMIT_WINDOW_MS;
+        max_uses_threshold = Constants.MAX_USES_THRESHOLD;
         quota = updated_quota;
       };
       Map.add(usage_logs, Principal.compare, user, updated_usage_log);
@@ -792,7 +783,7 @@ module {
 
     public func create_slot(owner : Principal, user : Principal, canister_id : Principal, project_id : ?Nat, start_cycles : Nat) : Types.Response<Nat> {
       // Limit number of canisters createable
-      if (Iter.toArray(Map.keys(slots)).size() >= MAX_SHAREABLE_CANISTERS) {
+      if (Iter.toArray(Map.keys(slots)).size() >= Constants.MAX_SHAREABLE_CANISTERS) {
         return #err(Errors.MaxSlotsReached());
       };
 
@@ -805,7 +796,7 @@ module {
         user = owner;
         create_timestamp = Int.abs(Utility.get_time_now(#milliseconds));
         start_timestamp = Int.abs(Utility.get_time_now(#milliseconds));
-        duration = DEFAULT_DURATION_MS;
+        duration = Constants.DEFAULT_DURATION_MS;
         start_cycles = start_cycles;
         status = #available;
         url = null;

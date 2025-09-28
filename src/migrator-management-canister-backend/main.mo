@@ -51,13 +51,6 @@ import TimersManager "modules/timers";
 shared (deployMsg) persistent actor class CanisterManager() = this {
   transient let IC_MANAGEMENT_CANISTER = "aaaaa-aa"; // Production
   transient let ledger : Principal = Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai");
-  transient let BASE_CANISTER_START_CYCLES = 230_949_972_000;
-
-  transient let XDR_PRICE : Float = 1.3;
-  transient let E8S_PER_ICP : Nat = 100_000_000;
-  transient let CYCLES_PER_XDR : Float = 1_000_000_000_000;
-  transient let REFRESH_PRICE_INTERVAL_SECONDS = 3600;
-
   transient let icp_fee : Nat = 10_000;
   transient let Ledger : Types.Ledger = actor (Principal.toText(ledger));
 
