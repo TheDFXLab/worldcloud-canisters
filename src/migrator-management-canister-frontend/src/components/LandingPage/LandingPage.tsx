@@ -11,6 +11,8 @@ import { usePricing } from "../../context/PricingContext/PricingContext";
 import { Spinner } from "react-bootstrap";
 import NonSubbed from "../BillingPage/NonSubbed/NonSubbed";
 import SEO from "../SEO/SEO";
+import RotatingGlass from "../RotatingGlass/RotatingGlass";
+import DottedMask from "./DottedMask/DottedMask";
 
 function LandingPage() {
   const navigate = useNavigate();
@@ -259,7 +261,20 @@ function LandingPage() {
         </nav>
       </header>
 
+      <RotatingGlass
+        size={2500}
+        duration={0}
+        className="variant-1"
+        style={{ top: "10%", right: "5%" }}
+      />
+
       <section className="hero" aria-labelledby="hero-heading">
+        {/* <RotatingGlass
+          size={2500}
+          duration={0}
+          className="variant-1"
+          style={{ top: "10%", right: "5%" }}
+        /> */}
         <div className="hero-shapes">
           <div className="hero-shape"></div>
           <div className="hero-shape"></div>
@@ -310,21 +325,6 @@ function LandingPage() {
         </div>
       </section>
 
-      <section aria-label="Supported Technologies">
-        <div className="tech-stack">
-          <div className="icon-container">
-            <GitHubIcon className="icon" aria-label="GitHub" />
-            <img
-              className="icon"
-              src={isDarkMode ? reactLogo : reactLogo}
-              alt="React Logo"
-            ></img>
-            <img className="icon" src={vueLogo} alt="Vue.js Logo"></img>
-            <img className="icon" src={angularLogo} alt="Angular Logo"></img>
-          </div>
-        </div>
-      </section>
-
       <section
         id="how-it-works"
         className="how-it-works"
@@ -350,6 +350,21 @@ function LandingPage() {
               <h3>Deploy</h3>
               <p>Launch your website canister with one click</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-label="Supported Technologies">
+        <div className="tech-stack">
+          <div className="icon-container">
+            <GitHubIcon className="icon" aria-label="GitHub" />
+            <img
+              className="icon"
+              src={isDarkMode ? reactLogo : reactLogo}
+              alt="React Logo"
+            ></img>
+            <img className="icon" src={vueLogo} alt="Vue.js Logo"></img>
+            <img className="icon" src={angularLogo} alt="Angular Logo"></img>
           </div>
         </div>
       </section>
@@ -384,8 +399,7 @@ function LandingPage() {
           </div>
           <h2 id="beta-heading">Try Our Beta</h2>
           <p className="section-description">
-            Experience the future of canister deployment. Join our beta testing
-            program.
+            Experience the future of web hosting. Join our beta testing program.
           </p>
           <button onClick={handleLaunchApp}>Launch App</button>
         </div>

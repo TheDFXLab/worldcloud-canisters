@@ -401,7 +401,88 @@
 .auth-button-text {
   flex: 1;
   text-align: center;
+  color: white;
   margin-left: -28px; /* Offset for the icon width to center the text */
+}
+
+/* OR Divider */
+.auth-divider {
+  position: relative;
+  text-align: center;
+  margin: 1.5rem 0;
+}
+
+.auth-divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3) 20%,
+    rgba(255, 255, 255, 0.3) 80%,
+    transparent
+  );
+}
+
+.divider-text {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 0.5rem 1.5rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  position: relative;
+  z-index: 1;
+  /* text-decoration: underline; */
+  text-underline-offset: 4px;
+  text-decoration-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Social Login Button */
+.auth-button.social-logins {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%);
+  color: #1e293b;
+  box-shadow: 0 8px 25px rgba(255, 255, 255, 0.1), 0 4px 15px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1.2rem 2rem;
+}
+
+.auth-button.social-logins:hover {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+  box-shadow: 0 12px 35px rgba(255, 255, 255, 0.15),
+    0 8px 25px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.social-icon {
+  width: 32px;
+  height: 32px;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.auth-button.social-logins:hover .social-icon {
+  transform: scale(1.1);
+}
+
+.social-icon:nth-child(1) {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.social-icon:nth-child(2) {
+  filter: drop-shadow(0 2px 4px rgba(66, 133, 244, 0.3));
+}
+
+.social-icon:nth-child(3) {
+  filter: drop-shadow(0 2px 4px rgba(0, 120, 215, 0.3));
 }
 
 /* Responsive Design */
@@ -447,6 +528,16 @@
     font-size: 0.7rem;
     padding: 0.2rem 0.6rem;
   }
+
+  .social-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .auth-button.social-logins {
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -485,5 +576,20 @@
   .auth-beta-text {
     font-size: 0.65rem;
     padding: 0.15rem 0.5rem;
+  }
+
+  .social-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .auth-button.social-logins {
+    gap: 0.8rem;
+    padding: 0.9rem 1.2rem;
+  }
+
+  .divider-text {
+    font-size: 0.8rem;
+    padding: 0.4rem 1.2rem;
   }
 }
