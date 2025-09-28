@@ -25,11 +25,12 @@ module {
     add_ons_map_init : Types.AddonsMap,
   ) {
     // class references
-    private var domain_manager : ?Types.DomainInterface = null;
-    private var project_manager : ?Types.ProjectInterface = null;
-    public var index_counter_manager : ?Types.IndexCounterInterface = null;
+    // private var domain_manager : ?Types.DomainInterface = null;
+    // private var project_manager : ?Types.ProjectInterface = null;
+    // public var index_counter_manager : ?Types.IndexCounterInterface = null;
+    public var class_references : ?Types.ClassesInterface = null;
 
-    public var initialized = false;
+    // public var initialized = false;
 
     // Variables
     private var icp_fee : Nat = 10_000;
@@ -42,16 +43,22 @@ module {
     public var tiers_list : Types.TiersList = tiers;
     public var addons_list : [Types.AddOnVariant] = addons;
 
-    public func init(
-      domain_manager_init : Types.DomainInterface,
-      project_manager_init : Types.ProjectInterface,
-      index_counter_init : Types.IndexCounterInterface,
-    ) {
-      domain_manager := ?domain_manager_init;
-      project_manager := ?project_manager_init;
-      index_counter_manager := ?index_counter_init;
+    // public func init(
+    //   domain_manager_init : Types.DomainInterface,
+    //   project_manager_init : Types.ProjectInterface,
+    //   index_counter_init : Types.IndexCounterInterface,
+    // ) {
+    //   domain_manager := ?domain_manager_init;
+    //   project_manager := ?project_manager_init;
+    //   index_counter_manager := ?index_counter_init;
 
-      initialized := true;
+    //   initialized := true;
+    // };
+
+    public func init(
+      classes_reference_init : Types.ClassesInterface
+    ) {
+      class_references := ?classes_reference_init;
     };
 
     public func set_treasury(new_treasury : Principal) : () {
@@ -134,7 +141,12 @@ module {
     };
 
     public func get_my_addons_by_project(project_id : Types.ProjectId) : Types.Response<Types.MyAddons> {
-      let _domain_manager : Types.DomainInterface = switch (domain_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _domain_manager : Types.DomainInterface = switch (_classes.domain_manager) {
         case (null) return #err(Errors.NotFoundClass("Domain manager"));
         case (?val) val;
       };
@@ -276,6 +288,10 @@ module {
       project_id : Types.ProjectId,
       addon_variant_id : Types.AddOnId,
     ) : Types.Response<[Types.AddOnService]> {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
 
       // Validate treasury principal
       let payment_receiver : Principal = switch (treasury) {
@@ -283,12 +299,12 @@ module {
         case (?val) { val };
       };
 
-      let _index_counter = switch (index_counter_manager) {
+      let _index_counter = switch (_classes.index_counter_manager) {
         case (null) return #err(Errors.NotFoundClass("Index counter"));
         case (?val) val;
       };
 
-      let _domain_manager = switch (domain_manager) {
+      let _domain_manager = switch (_classes.domain_manager) {
         case (null) return #err(Errors.NotFoundClass("Domain manager"));
         case (?val) val;
       };
@@ -314,12 +330,17 @@ module {
       addon_variant_id : Nat,
       expiry_ms : Nat,
     ) : Types.Response<[Types.AddOnService]> {
-      let _domain_manager = switch (domain_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _domain_manager = switch (_classes.domain_manager) {
         case (null) return #err(Errors.NotFoundClass("Domain manager"));
         case (?val) val;
       };
 
-      let _index_counter = switch (index_counter_manager) {
+      let _index_counter = switch (_classes.index_counter_manager) {
         case (null) return #err(Errors.NotFoundClass("Index counter"));
         case (?val) val;
       };
@@ -375,12 +396,17 @@ module {
 
     /// Validate subscription before creating it
     private func validate_subscribe_addon(caller : Principal, add_on_id : Types.AddOnId, project_id : Types.ProjectId) : Types.Response<Types.ValidateSubscribeAddonResult> {
-      let _project_manager = switch (project_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _project_manager = switch (_classes.project_manager) {
         case (null) return #err(Errors.NotFoundClass("Project manager"));
         case (?val) val;
       };
 
-      let _index_counter = switch (index_counter_manager) {
+      let _index_counter = switch (_classes.index_counter_manager) {
         case (null) return #err(Errors.NotFoundClass("Index counter"));
         case (?val) val;
       };
@@ -494,7 +520,12 @@ module {
       addon_id : Types.AddOnId,
       expiry_in_ms : Nat,
     ) : async Types.Response<[Types.AddOnService]> {
-      let _project_manager = switch (project_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _project_manager = switch (_classes.project_manager) {
         case (null) return #err(Errors.NotFoundClass("Project manager"));
         case (?val) val;
       };

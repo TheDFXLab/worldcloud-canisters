@@ -365,8 +365,7 @@ function LandingPage() {
             <NonSubbed
               hideButtons={true}
               subscription={null}
-              tiers={preset_tiers}
-              // tiers={tiers ? tiers : preset_tiers}
+              tiers={tiers ? tiers : preset_tiers}
               handleSelectPlan={() => {}}
               pricingState={[false, () => {}]}
             />
