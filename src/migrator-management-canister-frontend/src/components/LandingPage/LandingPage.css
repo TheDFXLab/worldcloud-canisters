@@ -692,6 +692,8 @@ body {
   border-radius: 12px;
   width: 80vw;
   margin: 0 auto;
+  background: rgba(255, 255, 255, 0);
+  border: none;
 }
 
 /* Title styling */
