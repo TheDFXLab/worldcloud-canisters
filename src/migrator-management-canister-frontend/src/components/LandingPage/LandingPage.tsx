@@ -252,7 +252,12 @@ function LandingPage() {
               <a href="#features">Features</a>
               <a href="#how-it-works">How It Works</a>
               <a href="#pricing">Pricing</a>
-              {/* <a href="#docs">Documentation</a> */}
+              <a
+                target="_blank"
+                href="https://github.com/TheDFXLab/worldcloud-canisters/blob/master/README.md"
+              >
+                Documentation
+              </a>
               <a href="/dashboard" className="action-button">
                 Launch App
               </a>
@@ -261,20 +266,17 @@ function LandingPage() {
         </nav>
       </header>
 
-      <RotatingGlass
-        size={2500}
-        duration={0}
-        className="variant-1"
-        style={{ top: "10%", right: "5%" }}
-      />
-
-      <section className="hero" aria-labelledby="hero-heading">
-        {/* <RotatingGlass
+      {/* spans entire page */}
+      <div className="page-background-container">
+        <RotatingGlass
           size={2500}
           duration={0}
           className="variant-1"
           style={{ top: "10%", right: "5%" }}
-        /> */}
+        />
+      </div>
+
+      <section className="hero" aria-labelledby="hero-heading">
         <div className="hero-shapes">
           <div className="hero-shape"></div>
           <div className="hero-shape"></div>
@@ -283,7 +285,7 @@ function LandingPage() {
         <div className="container">
           <h1 id="hero-heading">Deploy Website to ICP in One Click</h1>
           <p>
-            Deploy and migrate your websites to the Internet Computer Protocol
+            Build and Deploy your websites to the Internet Computer Protocol
             (ICP) with a click of a button. Experience the future of web hosting
             with unparalleled security and scalability.
           </p>

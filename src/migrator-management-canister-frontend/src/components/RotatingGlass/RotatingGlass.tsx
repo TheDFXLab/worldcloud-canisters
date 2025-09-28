@@ -29,6 +29,9 @@ const RotatingGlass: React.FC<RotatingGlassProps> = ({
         animationName: isFullScreen
           ? "fullScreenElliptical"
           : "ellipticalRotation",
+        position: "absolute",
+        zIndex: -1,
+        pointerEvents: "none",
         ...style,
       }}
     >
