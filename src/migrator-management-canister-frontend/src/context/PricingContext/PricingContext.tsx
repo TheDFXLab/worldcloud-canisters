@@ -6,6 +6,7 @@ import { useIdentity } from "../IdentityContext/IdentityContext";
 import { useQuery } from "@tanstack/react-query";
 import { sanitizeObject } from "../../utility/sanitize";
 import { useHttpAgent } from "../HttpAgentContext/HttpAgentContext";
+import { preset_tiers } from "./tiers";
 
 export interface TierListData {
   id: number;
@@ -112,7 +113,7 @@ export function PricingProvider({ children }: { children: ReactNode }) {
       value={{
         tiers,
         isLoadingTiers,
-        preset_tiers,
+        preset_tiers: preset_tiers,
       }}
     >
       {children}

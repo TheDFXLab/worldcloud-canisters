@@ -335,16 +335,14 @@ function LandingPage() {
           <div className="steps">
             <div className="step">
               <div className="step-number">1</div>
-              <h3>Connect</h3>
-              <p>Connect to your Internet Computer network</p>
+              <h3>Signup</h3>
+              <p>Subscribe to a plan. Freemium plans available.</p>
             </div>
 
             <div className="step">
               <div className="step-number">2</div>
               <h3>Configure</h3>
-              <p>
-                Build your frontend app with GitHub or upload your static files
-              </p>
+              <p>Create a project and select a Github repository</p>
             </div>
 
             <div className="step">
@@ -363,7 +361,7 @@ function LandingPage() {
       >
         <h2 id="pricing-heading">Pricing</h2>
         <div>
-          {tiers ? (
+          {tiers || preset_tiers ? (
             <NonSubbed
               hideButtons={true}
               subscription={null}
