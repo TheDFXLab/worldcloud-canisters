@@ -1,6 +1,7 @@
 import HashMap "mo:base/HashMap";
 import TimeLib "mo:base/Time";
 import Blob "mo:base/Blob";
+import Iter "mo:base/Iter";
 import Map "mo:core/Map";
 import IC "ic:aaaaa-aa";
 
@@ -702,6 +703,13 @@ module {
     addon : AddOnService;
   };
 
+  public type DomainRegistrationResult = {
+    domain_registration : DomainRegistration;
+    canister_id : Principal;
+    addon : AddOnService;
+    resource_id : DomainRegistrationId;
+  };
+
   public type SetupFreemiumDomainResult = {
     domain_registration : DomainRegistration;
     canister_id : Principal;
@@ -797,6 +805,25 @@ module {
     starts_with : Text;
   };
 
+  public type GetAvailableSlotIdResponse = {
+    id : Nat;
+    is_new : Bool;
+  };
+
+  public type RequestFreemiumSessionResponse = {
+    project : Project;
+    is_new_slot : Bool;
+    canister_id : Principal;
+  };
+
+  public type DeployAssetCanisterResponse = {
+    is_new_slot : Bool;
+    slot : ?ShareableCanister;
+    project : Project;
+    canister_id : Principal;
+
+  };
+
   /**********************/
   /**********************/
   /**********************/
@@ -846,6 +873,8 @@ module {
   // };
 
   public type ProjectInterface = {
+    init : (class_reference : ClassesInterface) -> ();
+
     // Query Methods
     get_project_by_id : (project_id : Nat) -> Response<Project>;
     get_projects_by_user : (user : Principal, payload : GetProjectsByUserPayload) -> Response<[Project]>;
@@ -855,14 +884,23 @@ module {
 
     // Mutation Methods
     put_project : (project_id : Nat, payload : Project) -> ();
-    create_project : (user : Principal, payload : CreateProjectPayload) -> Nat;
+    create_project : (user : Principal, payload : CreateProjectPayload) -> async Response<CreateProjectResponse>;
     drop_projects : () -> Bool;
-    drop_project : (user : Principal, project_id : Nat) -> Response<Bool>;
+    // drop_project : (user : Principal, project_id : Nat) -> Response<Bool>;
+    delete_project : (project_id : ProjectId, caller : Principal, actor_principal : Principal) -> async Response<Bool>;
 
     get_next_project_id : () -> Nat;
+    validate_project_access : (user : Principal, project_id : Nat) -> Response<Bool>;
+    set_project_url : (project_id : ProjectId, url : Text) -> Response<Project>;
+    clear_project_session : (project_id : ?ProjectId) -> Response<Bool>;
+    upload_assets_to_project : (caller : Principal, payload : StoreAssetInCanisterPayload) -> async Response<Bool>;
+    clear_project_assets : (caller : Principal, project_id : ProjectId) -> async Response<()>;
+    deploy_asset_canister : (project_id : ProjectId, backend_principal : Principal) -> async Response<DeployAssetCanisterResponse>;
   };
 
   public type DomainInterface = {
+    init : (class_reference : ClassesInterface) -> ();
+
     // Query Methods
     list_dns_records : (zone_id : Text, transform : Transform) -> async Response<[DnsRecord]>;
     get_all_records : () -> [(DnsRecordId, CreateRecordResponse)];
@@ -908,6 +946,8 @@ module {
   };
 
   public type SubscriptionInterface = {
+    init : (class_reference : ClassesInterface) -> ();
+
     // Treasury management
     set_treasury : (new_treasury : Principal) -> ();
     get_treasury : () -> ?Principal;
@@ -953,6 +993,240 @@ module {
     get_index : (index_type : CounterType) -> Nat;
     increment_index : (index_type : CounterType) -> ();
     reset_index : (index_type : CounterType) -> ();
+  };
+
+  public type WorkflowInterface = {
+    // Query methods
+    get_workflow_history : (project_id : Nat) -> [WorkflowRunDetails];
+    get_workflow_history_all : (payload : PaginationPayload) -> Response<[(Nat, [WorkflowRunDetails])]>;
+
+    // Update methods
+    update_workflow_run : (project_id : Nat, workflow_run_details : WorkflowRunDetails) -> async Result;
+
+    // Delete methods
+    delete_run_history_all : () -> ();
+    delete_run_history : (project_id : ProjectId) -> ();
+  };
+
+  public type CanisterInterface = {
+    // Initialization
+    init : (
+      class_reference_init : ClassesInterface
+    ) -> ();
+
+    set_asset_canister_wasm : (wasm : [Nat8]) -> ();
+    get_asset_list : (canister_id : Principal) -> async Response<ListResponse>;
+
+    // Canister deployment management
+    put_canister_table : (canister_id : Principal, payload : CanisterDeployment) -> ();
+    get_deployment_by_canister : (canister_id : Principal) -> ?CanisterDeployment;
+    add_canister_deployment : (caller : Principal, canister_id : Principal, is_freemium : Bool) -> async ();
+    update_deployment_size : (canister_id : Principal, new_file_size : Nat) -> ();
+    update_deployment_status : (canister_id : Principal, status : CanisterDeploymentStatus) -> ();
+
+    // Query methods
+    get_canister_principals_all : (payload : PaginationPayload) -> Response<[Principal]>;
+    get_canister_deployments_all : (payload : PaginationPayload) -> Response<[(Principal, CanisterDeployment)]>;
+    get_canister_deployments : (project_id : ProjectId) -> Response<?CanisterDeployment>;
+    get_canister_status : (project_id : ProjectId) -> async Response<IC.canister_status_result>;
+
+    // File upload and batch management
+    handle_upload_file : (canister_id : Principal, files : [StaticFile], workflow_run_details : ?WorkflowRunDetails) -> async Response<Bool>;
+    handle_chunked_file : (file : StaticFile, asset_canister : AssetCanister, batch_id : Nat, canister_id : Principal) -> async ();
+    get_chunk_ids_for_canister : (canister_id : Principal, batch_id : Nat) -> [Nat];
+    get_batch_id : (canister_id : Principal, file_batch_id : Nat) -> (Bool, Nat);
+    set_batch_map : (canister_id : Principal, file_batch_id : Nat, batch_id : Nat) -> ();
+    clear_batch_map : (canister_id : Principal) -> ();
+
+    // Cycles management
+    validate_canister_cycles : (canister_id : Principal) -> async Response<Nat>;
+    get_cycles_to_add : (amount_in_e8s : ?Int, caller_principal : Principal, transform : Transform) -> async Response<Nat>;
+    add_cycles : (project_id : ProjectId, amount_in_e8s : Nat, caller : Principal, transform : Transform) -> async Response<Nat>;
+    deploy_asset_canister : (user : Principal, is_freemium : Bool, default_controller : Principal) -> async Response<Principal>;
+    calculate_cycles_to_add : (amount : Int, transform : Transform) -> async Response<Nat>;
+    add_controller : (canister_id : Principal, new_controller : Principal) -> async Result;
+    storeInAssetCanister : (caller : Principal, project_id : Nat, files : [StaticFile], workflow_run_details : ?WorkflowRunDetails) -> async Response<Bool>;
+    is_controller : (canister_id : Principal, caller : Principal) -> async Bool;
+    get_canister_id_by_project : (project_id : Nat) -> Response<Principal>;
+    clear_asset_canister : (canister_id : Principal) -> async Response<()>;
+    get_canister_asset : (canister_id : Principal, asset_key : Text) -> async Response<?AssetCanisterAsset>;
+    remove_controller : (canister_id : Principal, to_remove : Principal) -> async Result;
+    get_controllers : (canister_id : Principal) -> async Response<[Principal]>;
+  };
+
+  public type ShareableCanisterInterface = {
+    // Initialization
+    init : (classes_reference_init : ClassesInterface) -> ();
+
+    // Slot management
+    reset_slots : (actor_principal : Principal) -> ResetSlotsResult;
+    get_slot_by_canister : (canister_id : Principal) -> Response<ShareableCanister>;
+    get_canister_by_slot : (slot_id : Nat) -> Response<ShareableCanister>;
+    get_slot_id_by_user : (user : Principal) -> Response<?Nat>;
+    get_canister_by_user : (user : Principal) -> Response<?ShareableCanister>;
+    get_next_slot_id : () -> Nat;
+    get_slots : (limit : ?Nat, index : ?Nat) -> [ShareableCanister];
+    get_used_slot_ids : () -> [Nat];
+    get_available_slots : () -> [Nat];
+
+    // Session management
+    request_freemium_session : (project_id : Nat, caller : Principal, default_controller : Principal) -> async Response<RequestFreemiumSessionResponse>;
+    request_session : (user : Principal, project_id : Nat) -> async Response<?ShareableCanister>;
+    terminate_session : (slot_id : Nat, end_cycles : Nat, actor_principal : Principal) -> Response<?Nat>;
+    end_freemium_session : (slot_id : Nat, slot_user : Principal, actor_principal : Principal) -> Response<?Nat>;
+    cleanup_session : (slot_id : Nat, canister_id : ?Principal, backend_principal : Principal) -> async Response<()>;
+    is_expired_session : (slot_id : Nat) -> Response<Bool>;
+    is_active_session : (user : Principal) -> Response<Bool>;
+
+    // Quota and usage management
+    get_quota : (user : Principal) -> Quota;
+    get_usage_log : (user : Principal) -> UsageLog;
+    get_usage_logs_paginated : (payload : PaginationPayload) -> Response<[(Principal, UsageLog)]>;
+    reset_quotas : () -> ();
+    admin_clear_usage_logs : () -> ();
+
+    // Slot operations
+    create_slot : (owner : Principal, user : Principal, canister_id : Principal, project_id : ?Nat, start_cycles : Nat) -> Response<Nat>;
+    create_canister_to_slot : (canister_id : Principal, slot_id : Nat) -> ();
+    update_slot : (slot_id : Nat, updated_slot : ShareableCanister) -> Response<ShareableCanister>;
+    set_canister_url : (slot_id : Nat, url : Text) -> Response<ShareableCanister>;
+    set_all_slot_duration : (new_duration_ms : Nat) -> Response<()>;
+
+    // Utility methods
+    get_used_slots : () -> [(Nat, Bool)];
+
+    // Stable management
+    get_stable_data_slots : () -> [(Nat, ShareableCanister)];
+    get_stable_data_user_to_slot : () -> [(Principal, ?Nat)];
+    get_stable_data_used_slots : () -> [(Nat, Bool)];
+    get_stable_data_usage_logs : () -> [(Principal, UsageLog)];
+    get_stable_data_next_slot_id : () -> Nat;
+    load_from_stable_slots : (stable_data : [(Nat, ShareableCanister)]) -> ();
+    load_from_stable_user_to_slot : (stable_data : [(Principal, ?Nat)]) -> ();
+    load_from_stable_used_slots : (stable_data : [(Nat, Bool)]) -> ();
+    load_from_stable_usage_logs : (stable_data : [(Principal, UsageLog)]) -> ();
+    load_from_stable_next_slot_id : (stable_data : Nat) -> ();
+  };
+
+  public type BookInterface = {
+    // init: (class_reference: ClassesInterface) -> ();
+    // Basic operations
+    get : (user : Principal) -> ?Map.Map<Token, Nat>;
+    put : (user : Principal, userBalances : Map.Map<Token, Nat>) -> ();
+    entries : () -> Iter.Iter<(Principal, Map.Map<Token, Nat>)>;
+    size : () -> Nat;
+
+    // Query methods
+    get_all_entries : () -> Response<[(Principal, Map.Map<Token, Nat>)]>;
+    get_all_entries_paginated : (payload : PaginationPayload) -> Response<[(Principal, Map.Map<Token, Nat>)]>;
+
+    // Token management
+    addTokens : (user : Principal, token : Token, amount : Nat) -> ();
+    removeTokens : (user : Principal, token : Token, amount : Nat) -> ?Nat;
+    process_payment : (from : Principal, to : Principal, token : Token, amount : Nat) -> Bool;
+    hasEnoughBalance : (user : Principal, token : Principal, amount : Nat) -> Bool;
+    fetchUserIcpBalance : (user : Principal, token : Principal) -> Nat;
+    getUsersCumulativeBalance : (canisterPrincipal : Principal, token : Token) -> Nat;
+
+    // Utility methods
+    clear : () -> ();
+    toStable : () -> [(Principal, [(Token, Nat)])];
+    fromStable : (stable_data : [(Principal, [(Token, Nat)])]) -> ();
+  };
+
+  public type ClassesInterface = {
+    var project_manager : ?ProjectInterface;
+    var subscription_manager : ?SubscriptionInterface;
+    var cloudflare_manager : ?Cloudflare;
+    var index_counter_manager : ?IndexCounterInterface;
+    var shareable_canister_manager : ?ShareableCanisterInterface;
+    var book_manager : ?BookInterface;
+    var domain_manager : ?DomainInterface;
+    var canister_manager : ?CanisterInterface;
+    var price_feed_manager : ?PriceFeedInterface;
+    var access_control_manager : ?AccessControlInterface;
+    var workflow_manager : ?WorkflowInterface;
+    var activity_manager : ?ActivityInterface;
+    var timers_manager : ?TimersInterface;
+    var initialized : Bool;
+
+    init : (
+      project_manager_init : ProjectInterface,
+      subscription_manager_init : SubscriptionInterface,
+      cloudflare_manager_init : Cloudflare,
+      index_counter_init : IndexCounterInterface,
+      shareable_canister_init : ShareableCanisterInterface,
+      book_init : BookInterface,
+      domain_manager_init : DomainInterface,
+      canister_manager_init : CanisterInterface,
+      price_feed_manager_init : PriceFeedInterface,
+      access_control_init : AccessControlInterface,
+      workflow_manager_init : WorkflowInterface,
+      activity_manager_init : ActivityInterface,
+      timers_manager_init : TimersInterface,
+    ) -> ();
+
+  };
+
+  public type PriceFeedInterface = {
+    // icp_last_price : TokenPrice;
+    // is_updating_icp_price : Bool;
+    get_icp_price : (transform : Transform) -> async Response<Float>;
+    update_icp_price : (transform : Transform) -> async Response<TokenPrice>;
+  };
+
+  public type AccessControlInterface = {
+    // Query methods
+    get_role_users : (payload : PaginationPayload) -> Response<[(Principal, Role)]>;
+    check_role : (principal : Principal) -> Response<Role>;
+
+    // Authorization methods
+    assert_super_admin : (caller : Principal) -> Bool;
+    assert_admin : (caller : Principal) -> Bool;
+    is_authorized : (principal : Principal) -> Bool;
+
+    // CRUD operations
+    add_role : (principal : Principal, role : Role, caller : Principal) -> Response<Text>;
+    remove_role : (principal : Principal, caller : Principal) -> Response<Text>;
+  };
+
+  public type ActivityInterface = {
+    // Query methods
+    get_project_activity : (project_id : ProjectId) -> Response<[ActivityLog]>;
+    get_project_activity_all : (payload : PaginationPayload) -> Response<[(ProjectId, [ActivityLog])]>;
+
+    // Create methods
+    create_project_activity : (project_id : ProjectId) -> Response<Bool>;
+    update_project_activity : (project_id : ProjectId, category : Text, description : Text) -> Response<Bool>;
+
+    // Delete methods
+    clear_all_logs : () -> ();
+    clear_project_activity_logs : (project_id : ProjectId) -> Response<Bool>;
+    delete_project_activity_log : (project_id : ProjectId, log_id : Nat) -> Response<Bool>;
+
+    // Stable management
+    get_stable_data_project_activity : () -> [(ProjectId, [ActivityLog])];
+    load_from_stable_project_activity : (stable_data : [(ProjectId, [ActivityLog])]) -> ();
+  };
+
+  public type TimersInterface = {
+    // Domain registration timer methods
+    get_domain_registration_timer_by_subdomain : (subdomain : Text) -> ?DomainRegistrationTimer;
+    set_timer_domain_registration : (subdomain : Text, data : DomainRegistrationTimer) -> ();
+
+    // Text-based timer methods
+    get_timer_by_text : (key : Text) -> ?Nat;
+    set_timer_by_text : (key : Text, id : Nat) -> ();
+
+    // Number-based timer methods
+    get_timer_by_number : (key : Nat) -> ?Nat;
+    set_timer_by_number : (key : Nat, id : Nat) -> ();
+
+    // Delete methods
+    delete_timer_by_number : (key : Nat) -> ();
+    delete_timer_by_text : (key : Text) -> ();
+    delete_domain_registration_timer : (subdomain : Text) -> ();
+
   };
 
   public type ClassType = {

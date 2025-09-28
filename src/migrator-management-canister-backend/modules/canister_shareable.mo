@@ -13,10 +13,19 @@ import Int "mo:base/Int";
 import Prelude "mo:base/Prelude";
 import Error "mo:base/Error";
 import Access "access";
+import Constants "../utils/constants";
 
 module {
 
-  public class ShareableCanisterManager(slots_init : Types.SlotsMap, canister_to_slot_init : Types.CanisterToSlot, user_to_slot_init : Types.UserToSlotMap, used_slots_init : Types.UsedSlotsMap, usage_logs_init : Types.UsageLogsMap, next_slot_id_init : Nat, quotas_map_init : Types.QuotasMap) {
+  public class ShareableCanisterManager(
+    slots_init : Types.SlotsMap,
+    canister_to_slot_init : Types.CanisterToSlot,
+    user_to_slot_init : Types.UserToSlotMap,
+    used_slots_init : Types.UsedSlotsMap,
+    usage_logs_init : Types.UsageLogsMap,
+    next_slot_id_init : Nat,
+    quotas_map_init : Types.QuotasMap,
+  ) {
     // private let DEFAULT_DURATION_MS = 60 * 1_000; // 1 mins
     // private let DEFAULT_DURATION_MS = 1200 * 1_000; // 20 mins
     // private let DEFAULT_DURATION_MS = 14_400 * 1_000; // 4 hrs
@@ -27,6 +36,10 @@ module {
     public var MIN_CYCLES_INIT_E8S = 200_000_000;
     public var MIN_CYCLES_INIT = 1_000_000_000_000;
 
+    // private var canister_manager : ?Types.CanisterInterface = null;
+
+    public var class_references : ?Types.ClassesInterface = null;
+
     public var slots : Types.SlotsMap = slots_init;
     public var canister_to_slot : Types.CanisterToSlot = canister_to_slot_init;
     public var user_to_slot : Types.UserToSlotMap = user_to_slot_init;
@@ -36,6 +49,12 @@ module {
 
     public var next_slot_id : Nat = next_slot_id_init;
     public var next_quota_reset_s : Nat = 0;
+
+    public func init(
+      classes_reference_init : Types.ClassesInterface
+    ) {
+      class_references := ?classes_reference_init;
+    };
 
     public func reset_slots(actor_principal : Principal) : Types.ResetSlotsResult {
       var reset_project_ids : [?Nat] = [];
@@ -311,6 +330,83 @@ module {
       };
     };
 
+    private func get_available_slot_id(caller : Principal, project_id : Nat, canister_manager : Types.CanisterInterface, default_controller : Principal) : async Types.Response<Types.GetAvailableSlotIdResponse> {
+      // Find available slots
+      let available_slot_ids : [Nat] = get_available_slots();
+      // Create new canister and slot if no available shared canisters
+      if (available_slot_ids.size() == 0) {
+
+        let new_canister_id : Principal = switch (await canister_manager.deploy_asset_canister(default_controller, true, default_controller)) {
+          case (#err(_errMsg)) { return #err(_errMsg) };
+          case (#ok(id)) { id };
+        };
+
+        let slot_id = switch (
+          create_slot(
+            default_controller,
+            caller,
+            new_canister_id,
+            ?project_id,
+            Constants.MIN_CYCLES_INIT,
+          )
+        ) {
+          case (#err(errMsg)) { return #err(errMsg) };
+          case (#ok(id)) { id };
+        };
+
+        return #ok({ id = slot_id; is_new = true });
+      } else {
+        return #ok({ id = available_slot_ids[0]; is_new = false });
+      };
+    };
+
+    public func purge_expired_sessions(backend_principal : Principal) : Types.Response<()> {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _shareable_canister_manager = switch (_classes.shareable_canister_manager) {
+        case (null) return #err(Errors.NotFoundClass("Shareable canister manager"));
+        case (?val) val;
+      };
+
+      let _timers_manager = switch (_classes.timers_manager) {
+        case (null) return #err(Errors.NotFoundClass("Timers manager"));
+        case (?val) val;
+      };
+
+      let all_slots : [Types.ShareableCanister] = get_slots(null, null);
+      var failed : [Nat] = [];
+      for ((slot_id, slot_entry) in Map.entries(slots)) {
+        let is_expired = switch (is_expired_session(slot_id)) {
+          case (#err(errMsg)) { return #err(errMsg) };
+          case (#ok(is_e)) { is_e };
+        };
+
+        // Handle expired slots
+        if (is_expired) {
+          let project_id : ?Nat = switch (end_freemium_session(slot_id, slot_entry.user, backend_principal)) {
+            case (#err(msg)) {
+              let _new_array = Array.append(failed, [slot_id]);
+              null;
+            };
+            case (#ok(id)) {
+              // _delete_timer(slot_id);
+              _timers_manager.delete_timer_by_number(slot_id);
+              id;
+            };
+          };
+        };
+      };
+
+      if (failed.size() > 0) {
+        return #err(Errors.FailedToPurge(failed.size()));
+      };
+
+      return #ok();
+    };
+
     /** Freemium session **/
     //
     //
@@ -319,6 +415,87 @@ module {
     //
     //
     //
+
+    // Entrypoint for deploying a free canister
+    public func request_freemium_session(project_id : Nat, caller : Principal, default_controller : Principal) : async Types.Response<Types.RequestFreemiumSessionResponse> {
+      if (Utility.is_anonymous(caller)) return #err(Errors.Unauthorized());
+
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _canister_manager = switch (_classes.canister_manager) {
+        case (null) return #err(Errors.NotFoundClass("Canister manager"));
+        case (?val) val;
+      };
+
+      let _project_manager = switch (_classes.project_manager) {
+        case (null) return #err(Errors.NotFoundClass("Project manager"));
+        case (?val) val;
+      };
+
+      let quota : Types.Quota = get_quota(caller);
+
+      if (quota.consumed >= quota.total) return #err(Errors.QuotaReached(quota.total));
+
+      // Get project
+      let project : Types.Project = switch (_project_manager.get_project_by_id(project_id)) {
+        case (#err(errMsg)) { return #err(errMsg) };
+        case (#ok(_project)) { _project };
+      };
+
+      // Ensure freemium project type
+      if (not (project.plan == #freemium)) {
+        return #err(Errors.NotFreemiumType());
+      };
+
+      // Find available slots
+      let available_slot_response : Types.GetAvailableSlotIdResponse = switch (await get_available_slot_id(caller, project_id, _canister_manager, default_controller)) {
+        case (#err(_errMsg)) { return #err(_errMsg) };
+        case (#ok(val)) { val };
+      };
+
+      // Request a session - updates slot with new project session
+      let slot : Types.ShareableCanister = switch (await request_session(caller, project_id)) {
+        case (#err(errMsg)) { return #err(errMsg) };
+        case (#ok(null)) { return #err(Errors.NotFoundSlot()) };
+        case (#ok(?_slot)) { _slot };
+      };
+
+      // Get canister id for validating canister cycles balance
+      let canister_id : Principal = switch (slot.canister_id) {
+        case (null) { return #err(Errors.NotFoundCanister()) };
+        case (?id) { id };
+      };
+
+      // Ensure canister has minimum required cycles balance
+      let cycles_balance = switch (await _canister_manager.validate_canister_cycles(canister_id)) {
+        case (#err(err)) { return #err(err) };
+        case (#ok(balance)) { balance };
+      };
+
+      // Update project record with new session
+      let updated_project : Types.Project = {
+        user = caller;
+        id = project.id;
+        canister_id = slot.canister_id;
+        name = project.name;
+        description = project.description;
+        tags = project.tags;
+        plan = project.plan;
+        url = null;
+        date_created = project.date_created;
+        date_updated = Utility.get_time_now(#milliseconds);
+      };
+      _project_manager.put_project(project_id, updated_project);
+
+      return #ok({
+        project = updated_project;
+        is_new_slot = available_slot_response.is_new;
+        canister_id = canister_id;
+      });
+    };
 
     // Requesting a new freemium session
     public func request_session(user : Principal, project_id : Nat) : async Types.Response<?Types.ShareableCanister> {
@@ -384,6 +561,105 @@ module {
         max_uses_threshold = usage_log.max_uses_threshold;
         quota = quota;
       };
+    };
+
+    public func cleanup_session(slot_id : Nat, canister_id : ?Principal, backend_principal : Principal) : async Types.Response<()> {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _canister_manager = switch (_classes.canister_manager) {
+        case (null) return #err(Errors.NotFoundClass("Canister manager"));
+        case (?val) val;
+      };
+
+      let _timers_manager = switch (_classes.timers_manager) {
+        case (null) return #err(Errors.NotFoundClass("Timers manager"));
+        case (?val) val;
+      };
+
+      // This code runs after the specified duration
+      // Clear asset canister files
+      let _is_deleted = switch (canister_id) {
+        case (null) { true };
+        case (?val) {
+          let is_cleared = switch (await _canister_manager.clear_asset_canister(val)) {
+            case (#err(err)) {
+              false;
+            };
+            case (#ok(_val)) {
+              true;
+            };
+          };
+          is_cleared;
+        };
+      };
+
+      switch (get_canister_by_slot(slot_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) {
+          let res = end_freemium_session(slot_id, val.user, backend_principal);
+          switch (res) {
+            case (#err(error)) return (#err(error));
+            case (#ok(?project_id)) {
+              _timers_manager.delete_timer_by_number(slot_id);
+              #ok();
+            };
+            case (#ok(null)) {
+              _timers_manager.delete_timer_by_number(slot_id);
+              #ok();
+            };
+          };
+        };
+      };
+
+    };
+
+    public func end_freemium_session(slot_id : Nat, slot_user : Principal, actor_principal : Principal) : Types.Response<?Nat> {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _canister_manager = switch (_classes.canister_manager) {
+        case (null) return #err(Errors.NotFoundClass("Canister manager"));
+        case (?val) val;
+      };
+
+      let _project_manager = switch (_classes.project_manager) {
+        case (null) return #err(Errors.NotFoundClass("Canister manager"));
+        case (?val) val;
+      };
+
+      // Ensure caller is user of slot
+      let _user_slot_id : Nat = switch (get_slot_id_by_user(slot_user)) {
+        case (#ok(null)) { return #err(Errors.NotFoundSlot()) };
+        case (#err(err)) { return #err(err) };
+        case (#ok(?val)) {
+          if (not (val == slot_id)) return #err(Errors.Unauthorized());
+          val;
+        };
+      };
+
+      let slot : Types.ShareableCanister = switch (get_canister_by_slot(slot_id)) {
+        case (#err(_msg)) { return #err(_msg) };
+        case (#ok(_slot)) { _slot };
+      };
+      // let IC : Types.IC = actor (IC_MANAGEMENT_CANISTER);
+      let cycles = 0;
+
+      // TODO: check this validation
+      // if (slot.user != slot_user) return #err(Errors.Unauthorized());
+
+      // Ensure updating the correct project
+      let is_cleared = switch (_project_manager.clear_project_session(slot.project_id)) {
+        case (#err(errMsg)) { return #err(errMsg) };
+        case (#ok(cleared)) { cleared };
+      };
+
+      let response = terminate_session(slot_id, cycles, actor_principal);
+      response;
     };
     /** Update methods **/
     //

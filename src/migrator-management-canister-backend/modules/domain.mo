@@ -25,10 +25,11 @@ module {
     canister_to_freemium_domain_registration_init : Types.CanisterToDomainRegistration,
   ) {
     // Class References
-    public var project_manager : ?Types.ProjectInterface = null;
-    public var subscription_manager : ?Types.SubscriptionInterface = null;
-    public var cloudflare_manager : ?Types.Cloudflare = null;
-    public var index_counter_manager : ?Types.IndexCounterInterface = null;
+    public var class_references : ?Types.ClassesInterface = null;
+    // public var project_manager : ?Types.ProjectInterface = null;
+    // public var subscription_manager : ?Types.SubscriptionInterface = null;
+    // public var cloudflare_manager : ?Types.Cloudflare = null;
+    // public var index_counter_manager : ?Types.IndexCounterInterface = null;
 
     public var records : Types.CloudflareRecordsMap = records_map_init;
     public var canister_to_records : Types.CanisterToRecordMap = canister_to_records_init;
@@ -41,22 +42,19 @@ module {
     public var cooldown_ic_registration = 1 * 60;
 
     public func init(
-      project_manager_init : Types.ProjectInterface,
-      subscription_manager_init : Types.SubscriptionInterface,
-      cloudflare_manager_init : Types.Cloudflare,
-      index_counter_init : Types.IndexCounterInterface,
+      classes_reference_init : Types.ClassesInterface
     ) {
-      project_manager := ?project_manager_init;
-      subscription_manager := ?subscription_manager_init;
-      cloudflare_manager := ?cloudflare_manager_init;
-      index_counter_manager := ?index_counter_init;
-
-      initialized := true;
+      class_references := ?classes_reference_init;
     };
 
     // List DNS records for a zone
     public func list_dns_records(zone_id : Text, transform : Types.Transform) : async Types.Response<[Types.DnsRecord]> {
-      let _cloudflare_manager = switch (cloudflare_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _cloudflare_manager = switch (_classes.cloudflare_manager) {
         case (null) return #err(Errors.NotFoundClass("Cloudflare manager"));
         case (?val) val;
       };
@@ -84,12 +82,17 @@ module {
     };
 
     public func is_available_subdomain(project_id : Types.ProjectId, subdomain_name : Text, addon_id : Types.AddOnId) : Types.Response<Bool> {
-      let _subscription_manager = switch (subscription_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _subscription_manager = switch (_classes.subscription_manager) {
         case (null) return #ok(false);
         case (?val) val;
       };
 
-      let _project_manager = switch (project_manager) {
+      let _project_manager = switch (_classes.project_manager) {
         case (null) return #ok(false);
         case (?val) val;
       };
@@ -240,7 +243,12 @@ module {
 
     // Usedto initializethe domain registration object when an add-on is purchased
     public func initialize_domain_registration(canister_id : Principal, associated_add_on_id : Nat) : Types.Response<Types.DomainRegistration> {
-      let _index_counter = switch (index_counter_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _index_counter = switch (_classes.index_counter_manager) {
         case (null) return #err(Errors.NotFoundClass("Index counter manager"));
         case (?val) val;
       };
@@ -284,7 +292,12 @@ module {
     };
     // Create a new DNS record
     public func create_dns_record(payload : Types.CreateDnsRecordPayload, transform : Types.Transform) : async Types.Response<Types.DnsRecord> {
-      let cloudflare = switch (cloudflare_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let cloudflare = switch (_classes.cloudflare_manager) {
         case (null) return #err(Errors.NotFoundClass("Cloudflare manager"));
         case (?val) val;
       };
@@ -302,11 +315,16 @@ module {
       transform : Types.Transform,
       existing_registration : Types.DomainRegistration,
     ) : async Types.Response<Types.DomainRegistration> {
-      let _subscription_manager = switch (subscription_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _subscription_manager = switch (_classes.subscription_manager) {
         case (null) return #err(Errors.NotFoundClass("Cloudflare manager"));
         case (?val) val;
       };
-      let _cloudflare_manager : Types.Cloudflare = switch (cloudflare_manager) {
+      let _cloudflare_manager : Types.Cloudflare = switch (_classes.cloudflare_manager) {
         case (null) return #err(Errors.NotFoundClass("Cloudflare"));
         case (?val) val;
       };
@@ -372,7 +390,12 @@ module {
     };
 
     private func build_domain_registration_records(payload : Types.CreateCanisterDNSRecordsPayload, transform : Types.Transform) : async Types.Response<Types.BuildDomainRegistrationRequest> {
-      let _cloudflare_manager : Types.Cloudflare = switch (cloudflare_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _cloudflare_manager : Types.Cloudflare = switch (_classes.cloudflare_manager) {
         case (null) return #err(Errors.NotFoundClass("Cloudflare"));
         case (?val) val;
       };
@@ -468,7 +491,12 @@ module {
       existing_registration : Types.DomainRegistration,
       associated_add_on_id : Types.AddOnId,
     ) : async Types.Response<Types.AddDnsRecordsForCanisterResponse> {
-      let _cloudflare_manager : Types.Cloudflare = switch (cloudflare_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _cloudflare_manager : Types.Cloudflare = switch (_classes.cloudflare_manager) {
         case (null) return #err(Errors.NotFoundClass("Cloudflare"));
         case (?val) val;
       };
@@ -541,7 +569,12 @@ module {
       subdomain_name : Text,
       existing_registration : Types.FreemiumDomainRegistration,
     ) : async Types.Response<Types.AddDnsRecordsForFreemiumCanisterResponse> {
-      let _cloudflare_manager : Types.Cloudflare = switch (cloudflare_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _cloudflare_manager : Types.Cloudflare = switch (_classes.cloudflare_manager) {
         case (null) return #err(Errors.NotFoundClass("Cloudflare"));
         case (?val) val;
       };
@@ -783,7 +816,51 @@ module {
       subdomain_name : Text,
       add_on_id : Types.AddOnId,
       transform : Types.Transform,
-    ) : async Types.Response<Types.SetupDomainResult> {
+    ) : async Types.Response<Types.DomainRegistrationResult> {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _project_manager : Types.ProjectInterface = switch (_classes.project_manager) {
+        case (null) return #err(Errors.NotFound("Project manager class reference"));
+        case (?val) val;
+      };
+
+      let _subscription_manager : Types.SubscriptionInterface = switch (_classes.subscription_manager) {
+        case (null) return #err(Errors.NotFound("Subscription manager class reference"));
+        case (?val) val;
+      };
+
+      let project : Types.Project = switch (_project_manager.get_project_by_id(project_id)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
+      if (project.plan == #freemium) return #err(Errors.PremiumFeature());
+      let canister_id : Principal = switch (project.canister_id) {
+        case (null) return #err(Errors.PremiumFeature());
+        case (?val) val;
+      };
+
+      // Setup ic-domains file
+      let ic_domains_file : Types.StaticFile = {
+        path = "/.well-known/ic-domains";
+        content = Text.encodeUtf8(subdomain_name # "." # "worldcloud.app");
+        content_type = "application/octet-stream";
+        content_encoding = null;
+        is_chunked = false;
+        chunk_id = 0;
+        batch_id = 0;
+        is_last_chunk = true;
+      };
+
+      // Create the `ic-domains` file in `.well-known` directory
+      let create_ic_domains = switch (await edit_ic_domains(canister_id, ic_domains_file)) {
+        case (#err(err)) return #err(err);
+        case (#ok(val)) val;
+      };
+
       let is_available_name = switch (is_available_subdomain(project_id, subdomain_name, add_on_id)) {
         case (#err(err)) return #err(err);
         case (#ok(val)) val;
@@ -793,30 +870,20 @@ module {
         return #err(Errors.NameTaken(subdomain_name));
       };
 
-      let _project_manager : Types.ProjectInterface = switch (project_manager) {
-        case (null) return #err(Errors.NotFound("Project manager class reference"));
-        case (?val) val;
-      };
-
-      let _subscription_manager : Types.SubscriptionInterface = switch (subscription_manager) {
-        case (null) return #err(Errors.NotFound("Subscription manager class reference"));
-        case (?val) val;
-      };
-
-      // Get project
-      let project : Types.Project = switch (_project_manager.get_project_by_id(project_id)) {
-        case (#err(err)) return #err(err);
-        case (#ok(val)) val;
-      };
+      // // Get project
+      // let project : Types.Project = switch (_project_manager.get_project_by_id(project_id)) {
+      //   case (#err(err)) return #err(err);
+      //   case (#ok(val)) val;
+      // };
 
       // Prevent freemium project access
-      if (project.plan == #freemium) return #err(Errors.PremiumFeature());
+      // if (project.plan == #freemium) return #err(Errors.PremiumFeature());
 
       // Validate canister id
-      let canister_id : Principal = switch (project.canister_id) {
-        case (null) return #err(Errors.NotFoundCanister());
-        case (?val) val;
-      };
+      // let canister_id : Principal = switch (project.canister_id) {
+      //   case (null) return #err(Errors.NotFoundCanister());
+      //   case (?val) val;
+      // };
 
       // Get target addon
       let add_on : Types.AddOnService = switch (_subscription_manager.get_add_on_by_id(project_id, add_on_id)) {
@@ -836,7 +903,41 @@ module {
       // Mark domain name as used by the canister
       Map.add(used_subdomains, Text.compare, subdomain_name, canister_id);
 
-      return #ok(res);
+      let resource_id : Nat = switch (res.addon.attached_resource_id) {
+        // case (null) return #err(Errors.NotAttachedResourceId());
+        case (null) {
+          // Attempt to refresh attached resource id in case it was created recently
+          let refreshed_resouce_id : Types.DomainRegistrationId = switch (_subscription_manager.get_add_on_by_id(project_id, add_on_id)) {
+            case (#err(err)) return #err(err);
+            case (#ok(val)) {
+              let id : Types.DomainRegistrationId = switch (val.attached_resource_id) {
+                case (null) return #err(Errors.NotFound("Domain registration"));
+                case (?id_val) id_val;
+              };
+              id;
+            };
+          };
+
+          let domain_registration = switch (initialize_domain_registration(canister_id, refreshed_resouce_id)) {
+            case (#err(err)) return #err(err);
+            case (#ok(val)) val;
+          };
+
+          let updated_addon_response = switch (_subscription_manager.update_addon_resource_id(res.addon.id, domain_registration.id)) {
+            case (#err(err)) return #err(err);
+            case (#ok(val)) val;
+          };
+          domain_registration.id;
+        };
+        case (?val) val;
+      };
+
+      return #ok({
+        resource_id;
+        domain_registration = res.domain_registration;
+        canister_id = res.canister_id;
+        addon = res.addon;
+      });
     };
 
     public func setup_freemium_canister_subdomain(
@@ -846,7 +947,12 @@ module {
       backend_canister : Principal,
       transform : Types.Transform,
     ) : async Types.Response<Types.FreemiumDomainRegistration> {
-      let _cloudflare_manager = switch (cloudflare_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _cloudflare_manager = switch (_classes.cloudflare_manager) {
         case (null) return #err(Errors.NotFoundClass("Cloudflare manager"));
         case (?val) val;
       };
@@ -1002,7 +1108,12 @@ module {
       cname_challenge_record_id : Text,
       cname_domain_record_id : Text,
     ) : Types.Response<Types.FreemiumDomainRegistration> {
-      let _index_counter = switch (index_counter_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _index_counter = switch (_classes.index_counter_manager) {
         case (null) return #err(Errors.NotFoundClass("Index counter manager"));
         case (?val) val;
       };
@@ -1042,7 +1153,12 @@ module {
       cname_challenge_record_id : Text,
       add_on_id : Types.AddOnId,
     ) : Types.Response<Types.DomainRegistration> {
-      let _index_counter = switch (index_counter_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _index_counter = switch (_classes.index_counter_manager) {
         case (null) return #err(Errors.NotFoundClass("Index counter manager"));
         case (?val) val;
       };
@@ -1079,7 +1195,12 @@ module {
       add_on : Types.AddOnService,
       transform : Types.Transform,
     ) : async Types.Response<Types.SetupDomainResult> {
-      let _subscription_manager : Types.SubscriptionInterface = switch (subscription_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _subscription_manager : Types.SubscriptionInterface = switch (_classes.subscription_manager) {
         case (null) return #err(Errors.NotFound("Subscription manager class reference"));
         case (?val) val;
       };
@@ -1150,7 +1271,12 @@ module {
       associated_add_on_id : Types.AddOnId,
       transform : Types.Transform,
     ) : async Types.Response<Types.DomainRegistration> {
-      let _cloudflare_manager = switch (cloudflare_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _cloudflare_manager = switch (_classes.cloudflare_manager) {
         case (null) return #err(Errors.NotFoundClass("Cloudflare manager"));
         case (?val) val;
       };
@@ -1247,7 +1373,12 @@ module {
       subdomain_name : Text,
       transform : Types.Transform,
     ) : async Types.Response<Types.FreemiumDomainRegistration> {
-      let _cloudflare_manager = switch (cloudflare_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _cloudflare_manager = switch (_classes.cloudflare_manager) {
         case (null) return #err(Errors.NotFoundClass("Cloudflare manager"));
         case (?val) val;
       };
@@ -1336,7 +1467,12 @@ module {
     };
 
     private func handle_update_project_addons(project_id : Types.ProjectId, associated_add_on_id : Types.AddOnId, domain_registration_id : Types.DomainRegistrationId) : Types.Response<[Types.AddOnService]> {
-      let _subscription_manager : Types.SubscriptionInterface = switch (subscription_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _subscription_manager : Types.SubscriptionInterface = switch (_classes.subscription_manager) {
         case (null) return #err(Errors.NotFound("Subscription manager class reference"));
         case (?val) val;
       };
@@ -1362,7 +1498,12 @@ module {
     };
 
     private func handle_attach_resource_id(canister_id : Principal, add_on_id : Types.AddOnId) : Types.Response<Types.DomainRegistrationId> {
-      let _subscription_manager : Types.SubscriptionInterface = switch (subscription_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _subscription_manager : Types.SubscriptionInterface = switch (_classes.subscription_manager) {
         case (null) return #err(Errors.NotFound("Subscription manager class reference"));
         case (?val) val;
       };
@@ -1395,12 +1536,17 @@ module {
     };
 
     public func delete_domain_registration(project_id : Types.ProjectId, addon_id : Types.AddOnId) : Types.Response<Bool> {
-      let _subscription_manager = switch (subscription_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _subscription_manager = switch (_classes.subscription_manager) {
         case (null) return #err(Errors.NotFoundClass("Subscription manager"));
         case (?val) val;
       };
 
-      let _project_manager = switch (project_manager) {
+      let _project_manager = switch (_classes.project_manager) {
         case (null) return #err(Errors.NotFoundClass("Project manager"));
         case (?val) val;
       };
@@ -1477,7 +1623,12 @@ module {
     };
 
     private func _delete_domain_registration(domain_registration_id : Types.DomainRegistrationId, canister_id : Principal) : Types.Response<()> {
-      let _cloudflare_manager = switch (cloudflare_manager) {
+      let _classes = switch (class_references) {
+        case (null) return #err(Errors.NotFoundClass(""));
+        case (?val) val;
+      };
+
+      let _cloudflare_manager = switch (_classes.cloudflare_manager) {
         case (null) return #err(Errors.NotFoundClass("Cloudflare manager"));
         case (?val) val;
       };
